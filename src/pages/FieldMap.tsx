@@ -7,7 +7,7 @@ import { PropertyBottomSheet } from "@/components/field-map/PropertyBottomSheet"
 import { Button } from "@/components/ui/button";
 import { MapPin, Locate } from "lucide-react";
 
-mapboxgl.accessToken = "pk.eyJ1IjoibG92YWJsZS1kZXYiLCJhIjoiY20xcmJhN2k2MGh6ZTJqcTB1MTVnMzZsciJ9.u_VZKv7RlpUxjLfVqFXwqg";
+mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
 interface FieldProperty {
   id: string;
