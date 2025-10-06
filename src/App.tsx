@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Customers from "./pages/Customers";
+import FieldMap from "./pages/FieldMap";
 import Measurements from "./pages/Measurements";
 import Estimates from "./pages/Estimates";
 import Presentations from "./pages/Presentations";
@@ -26,6 +27,11 @@ const App = () => (
           <Route path="/customers" element={
             <AppLayout>
               <Customers />
+            </AppLayout>
+          } />
+          <Route path="/field-map" element={
+            <AppLayout>
+              <FieldMap />
             </AppLayout>
           } />
           <Route path="/measurements" element={

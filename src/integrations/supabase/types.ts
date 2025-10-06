@@ -247,6 +247,68 @@ export type Database = {
           },
         ]
       }
+      field_properties: {
+        Row: {
+          address: string
+          city: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          disposition: string | null
+          id: string
+          last_contacted_at: string | null
+          last_contacted_by: string | null
+          latitude: number
+          longitude: number
+          notes: string | null
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address: string
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          disposition?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          last_contacted_by?: string | null
+          latitude: number
+          longitude: number
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          disposition?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          last_contacted_by?: string | null
+          latitude?: number
+          longitude?: number
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_properties_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurements: {
         Row: {
           created_at: string | null

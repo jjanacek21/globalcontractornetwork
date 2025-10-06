@@ -6,6 +6,7 @@ import {
   FileText,
   Presentation,
   Building2,
+  Map,
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,6 +23,7 @@ import {
 const navigation = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
+  { title: "Field Map", url: "/field-map", icon: Map },
   { title: "Measurements", url: "/measurements", icon: Ruler },
   { title: "Estimates", url: "/estimates", icon: FileText },
   { title: "Presentations", url: "/presentations", icon: Presentation },
