@@ -115,7 +115,7 @@ export default function FieldMap() {
       center: [-80.19, 25.76], // Default to Miami area
       zoom: 13,
     });
-
+    
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     // Try to get user location on load
