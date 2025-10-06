@@ -52,27 +52,57 @@ export default function FieldMap() {
 
   // Get user's current location
   const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords: [number, number] = [
-            position.coords.longitude,
-            position.coords.latitude,
-          ];
-          setUserLocation(coords);
-          if (map.current) {
-            map.current.flyTo({ center: coords, zoom: 16 });
-          }
-        },
-        (error) => {
-          toast({
-            title: "Location error",
-            description: "Unable to get your location",
-            variant: "destructive",
-          });
-        }
-      );
+    if (!navigator.geolocation) {
+      toast({
+        title: "Location not supported",
+        description: "Your browser doesn't support geolocation",
+        variant: "destructive",
+      });
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords: [number, number] = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        setUserLocation(coords);
+        if (map.current) {
+          map.current.flyTo({ center: coords, zoom: 16 });
+        }
+        toast({
+          title: "Location found",
+          description: "Successfully located your position",
+        });
+      },
+      (error) => {
+        let description = "Unable to get your location";
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            description = "Please enable location permissions in your browser settings";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            description = "Location information is unavailable";
+            break;
+          case error.TIMEOUT:
+            description = "Location request timed out";
+            break;
+        }
+        
+        toast({
+          title: "Location error",
+          description,
+          variant: "destructive",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   // Initialize map
