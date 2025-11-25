@@ -26,8 +26,11 @@ interface MeasurementBottomSheetProps {
   measurements: {
     area: number;
     pitchedArea: number;
+    totalWithWaste: number;
     squares: number;
     perimeter: number;
+    pitchMultiplier: number;
+    wasteFactor: number;
   };
   polygonData: any;
 }
@@ -89,8 +92,10 @@ export function MeasurementBottomSheet({
     try {
       const { error } = await supabase.from("measurements").insert({
         customer_id: selectedCustomerId,
-        total_square_feet: measurements.pitchedArea,
+        total_square_feet: measurements.totalWithWaste,
         total_squares: measurements.squares,
+        pitch_multiplier: measurements.pitchMultiplier,
+        waste_factor_percent: measurements.wasteFactor,
         notes,
         polygon_data: polygonData,
       });
@@ -132,6 +137,14 @@ export function MeasurementBottomSheet({
               <span className="font-medium">{measurements.pitchedArea.toFixed(2)} sq ft</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Waste Factor:</span>
+              <span className="font-medium">{measurements.wasteFactor}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Total with Waste:</span>
+              <span className="font-medium">{measurements.totalWithWaste.toFixed(2)} sq ft</span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
               <span className="text-sm font-semibold">Total Squares:</span>
               <span className="text-lg font-bold text-primary">{measurements.squares.toFixed(2)}</span>
             </div>

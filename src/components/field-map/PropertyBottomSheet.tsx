@@ -4,8 +4,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, ThumbsDown, ThumbsUp, AlertCircle, Clock, Home, Pencil } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { X, ThumbsDown, ThumbsUp, AlertCircle, Clock, Home, Pencil, Save, UserPlus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PropertyBottomSheetProps {
   property: any;
@@ -37,12 +39,15 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
   const [address, setAddress] = useState(property.address || "");
   const [notes, setNotes] = useState(property.notes || "");
   const [selectedDisposition, setSelectedDisposition] = useState(property.disposition || "");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [insuranceCompany, setInsuranceCompany] = useState("");
+  const [leadSource, setLeadSource] = useState("FieldMap");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const handleDispositionClick = async (disposition: string) => {
+  const handleDispositionClick = (disposition: string) => {
     setSelectedDisposition(disposition);
-    await saveProperty(disposition);
   };
 
   const saveProperty = async (disposition?: string) => {
@@ -97,8 +102,88 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
     }
   };
 
-  const handleSaveNotes = async () => {
-    await saveProperty();
+  const handleSaveAsCustomer = async () => {
+    if (!phone) {
+      toast({
+        title: "Phone required",
+        description: "Please enter a phone number to save as customer",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // First save/update property
+      const propertyData = {
+        address: address || "Unknown Address",
+        latitude: property.latitude,
+        longitude: property.longitude,
+        disposition: selectedDisposition || null,
+        notes,
+        last_contacted_at: new Date().toISOString(),
+        last_contacted_by: user.id,
+        created_by: user.id,
+      };
+
+      let propertyId = property.id;
+
+      if (property.id && property.id !== "new" && property.id !== "temp") {
+        const { error } = await supabase
+          .from("field_properties")
+          .update({
+            ...propertyData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", property.id);
+
+        if (error) throw error;
+      } else {
+        const { data: newProperty, error } = await supabase
+          .from("field_properties")
+          .insert([propertyData])
+          .select()
+          .single();
+
+        if (error) throw error;
+        propertyId = newProperty.id;
+      }
+
+      // Create customer
+      const { error: customerError } = await supabase
+        .from("customers")
+        .insert({
+          name: address || "Unknown Customer",
+          address: address,
+          phone,
+          email: email || null,
+          insurance_company: insuranceCompany || null,
+          lead_source: leadSource,
+          notes,
+          assigned_rep_id: user.id,
+        });
+
+      if (customerError) throw customerError;
+
+      toast({
+        title: "Success",
+        description: "Property saved and customer created",
+      });
+
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Error saving customer",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -121,6 +206,52 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">CONTACT INFORMATION</h3>
+            <div className="space-y-2">
+              <Label>Phone *</Label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(123) 456-7890"
+                type="tel"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="customer@example.com"
+                type="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Insurance Company</Label>
+              <Input
+                value={insuranceCompany}
+                onChange={(e) => setInsuranceCompany(e.target.value)}
+                placeholder="Insurance company name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lead Source</Label>
+              <Select value={leadSource} onValueChange={setLeadSource}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FieldMap">Field Map</SelectItem>
+                  <SelectItem value="DoorKnock">Door Knock</SelectItem>
+                  <SelectItem value="InboundCall">Inbound Call</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Disposition Buttons */}
           <div>
             <h3 className="text-sm font-semibold mb-3">DISPOSITION</h3>
@@ -151,12 +282,26 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
               placeholder="Enter notes about this property..."
               className="min-h-[120px]"
             />
+          </div>
+
+          {/* Save Actions */}
+          <div className="flex gap-2">
             <Button
-              onClick={handleSaveNotes}
+              onClick={async () => await saveProperty()}
               disabled={saving}
-              className="mt-3 w-full bg-red-500 hover:bg-red-600"
+              variant="outline"
+              className="flex-1"
             >
-              Save Note
+              <Save className="h-4 w-4 mr-2" />
+              Save Property
+            </Button>
+            <Button
+              onClick={handleSaveAsCustomer}
+              disabled={saving || !phone}
+              className="flex-1"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Save as Customer
             </Button>
           </div>
 
@@ -164,20 +309,17 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
           {onAddMeasurement && (
             <div>
               <Button
-                onClick={() => {
-                  if (property.id && property.id !== "new" && property.id !== "temp") {
-                    onAddMeasurement();
-                    onClose();
-                  } else {
-                    toast({
-                      title: "Save property first",
-                      description: "Please save the property before adding measurements",
-                      variant: "destructive",
-                    });
+                onClick={async () => {
+                  // Auto-save property if not already saved
+                  if (property.id === "temp" || property.id === "new") {
+                    await saveProperty();
                   }
+                  onAddMeasurement();
+                  onClose();
                 }}
                 className="w-full"
                 size="lg"
+                variant="secondary"
               >
                 <Pencil className="h-4 w-4 mr-2" />
                 Add Roof Measurement

@@ -13,6 +13,8 @@ interface MeasurementPanelProps {
   perimeter: number; // linear ft
   pitchMultiplier: number;
   onPitchChange: (multiplier: number) => void;
+  wasteFactor: number;
+  onWasteFactorChange: (factor: number) => void;
 }
 
 const PITCH_OPTIONS = [
@@ -28,14 +30,24 @@ const PITCH_OPTIONS = [
   { pitch: "12/12", multiplier: 1.414 },
 ];
 
+const WASTE_FACTOR_OPTIONS = [
+  { label: "5%", value: 5 },
+  { label: "10%", value: 10 },
+  { label: "15%", value: 15 },
+  { label: "20%", value: 20 },
+];
+
 export function MeasurementPanel({
   area,
   perimeter,
   pitchMultiplier,
   onPitchChange,
+  wasteFactor,
+  onWasteFactorChange,
 }: MeasurementPanelProps) {
   const pitchedArea = area * pitchMultiplier;
-  const squares = pitchedArea / 100;
+  const totalWithWaste = pitchedArea * (1 + wasteFactor / 100);
+  const squares = totalWithWaste / 100;
 
   return (
     <Card className="w-80 shadow-lg">
@@ -66,6 +78,28 @@ export function MeasurementPanel({
         </div>
 
         <div className="space-y-2">
+          <Label>Waste Factor</Label>
+          <Select
+            value={wasteFactor.toString()}
+            onValueChange={(value) => onWasteFactorChange(parseFloat(value))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WASTE_FACTOR_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value.toString()}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Flat Area:</span>
             <span className="text-sm font-medium">{area.toFixed(2)} sq ft</span>
@@ -74,6 +108,11 @@ export function MeasurementPanel({
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Pitched Area:</span>
             <span className="text-sm font-medium">{pitchedArea.toFixed(2)} sq ft</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Total with Waste:</span>
+            <span className="text-sm font-medium">{totalWithWaste.toFixed(2)} sq ft</span>
           </div>
           
           <div className="flex justify-between border-t pt-2">
