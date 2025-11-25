@@ -42,6 +42,7 @@ export default function FieldMap() {
     area: 0,
     perimeter: 0,
     pitchMultiplier: 1.118, // Default 6/12 pitch
+    wasteFactor: 10, // Default 10% waste
   });
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [currentPolygonData, setCurrentPolygonData] = useState<any>(null);
@@ -197,7 +198,12 @@ export default function FieldMap() {
 
     const data = draw.current.getAll();
     if (data.features.length === 0) {
-      setMeasurements({ area: 0, perimeter: 0, pitchMultiplier: measurements.pitchMultiplier });
+      setMeasurements({ 
+        area: 0, 
+        perimeter: 0, 
+        pitchMultiplier: measurements.pitchMultiplier,
+        wasteFactor: measurements.wasteFactor 
+      });
       setCurrentPolygonData(null);
       return;
     }
@@ -224,6 +230,7 @@ export default function FieldMap() {
       area: totalArea,
       perimeter: totalPerimeter,
       pitchMultiplier: measurements.pitchMultiplier,
+      wasteFactor: measurements.wasteFactor,
     });
     
     setCurrentPolygonData(data);
@@ -246,7 +253,12 @@ export default function FieldMap() {
   const handleClearAll = () => {
     if (draw.current) {
       draw.current.deleteAll();
-      setMeasurements({ area: 0, perimeter: 0, pitchMultiplier: measurements.pitchMultiplier });
+      setMeasurements({ 
+        area: 0, 
+        perimeter: 0, 
+        pitchMultiplier: measurements.pitchMultiplier,
+        wasteFactor: measurements.wasteFactor 
+      });
       setCurrentPolygonData(null);
     }
   };
@@ -476,6 +488,10 @@ export default function FieldMap() {
             onPitchChange={(multiplier) =>
               setMeasurements({ ...measurements, pitchMultiplier: multiplier })
             }
+            wasteFactor={measurements.wasteFactor}
+            onWasteFactorChange={(factor) =>
+              setMeasurements({ ...measurements, wasteFactor: factor })
+            }
           />
         </div>
       )}
@@ -505,8 +521,11 @@ export default function FieldMap() {
         measurements={{
           area: measurements.area,
           pitchedArea: measurements.area * measurements.pitchMultiplier,
-          squares: (measurements.area * measurements.pitchMultiplier) / 100,
+          totalWithWaste: measurements.area * measurements.pitchMultiplier * (1 + measurements.wasteFactor / 100),
+          squares: (measurements.area * measurements.pitchMultiplier * (1 + measurements.wasteFactor / 100)) / 100,
           perimeter: measurements.perimeter,
+          pitchMultiplier: measurements.pitchMultiplier,
+          wasteFactor: measurements.wasteFactor,
         }}
         polygonData={currentPolygonData}
       />

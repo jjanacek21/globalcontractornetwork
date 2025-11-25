@@ -326,6 +326,7 @@ export type Database = {
           total_square_feet: number | null
           total_squares: number | null
           updated_at: string | null
+          waste_factor_percent: number | null
         }
         Insert: {
           created_at?: string | null
@@ -343,6 +344,7 @@ export type Database = {
           total_square_feet?: number | null
           total_squares?: number | null
           updated_at?: string | null
+          waste_factor_percent?: number | null
         }
         Update: {
           created_at?: string | null
@@ -360,6 +362,7 @@ export type Database = {
           total_square_feet?: number | null
           total_squares?: number | null
           updated_at?: string | null
+          waste_factor_percent?: number | null
         }
         Relationships: [
           {
