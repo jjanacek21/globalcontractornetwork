@@ -321,6 +321,7 @@ export type Database = {
           linear_feet_valley: number | null
           notes: string | null
           pitch_multiplier: number | null
+          polygon_data: Json | null
           property_image_url: string | null
           total_square_feet: number | null
           total_squares: number | null
@@ -337,6 +338,7 @@ export type Database = {
           linear_feet_valley?: number | null
           notes?: string | null
           pitch_multiplier?: number | null
+          polygon_data?: Json | null
           property_image_url?: string | null
           total_square_feet?: number | null
           total_squares?: number | null
@@ -353,6 +355,7 @@ export type Database = {
           linear_feet_valley?: number | null
           notes?: string | null
           pitch_multiplier?: number | null
+          polygon_data?: Json | null
           property_image_url?: string | null
           total_square_feet?: number | null
           total_squares?: number | null

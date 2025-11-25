@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import * as turf from "@turf/turf";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PropertyBottomSheet } from "@/components/field-map/PropertyBottomSheet";
+import { MeasurementToolbar } from "@/components/field-map/MeasurementToolbar";
+import { MeasurementPanel } from "@/components/field-map/MeasurementPanel";
+import { MeasurementBottomSheet } from "@/components/field-map/MeasurementBottomSheet";
 import { Button } from "@/components/ui/button";
 import { MapPin, Locate } from "lucide-react";
 
@@ -26,9 +32,18 @@ interface FieldProperty {
 export default function FieldMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const draw = useRef<MapboxDraw | null>(null);
   const [properties, setProperties] = useState<FieldProperty[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<FieldProperty | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [measurements, setMeasurements] = useState({
+    area: 0,
+    perimeter: 0,
+    pitchMultiplier: 1.118, // Default 6/12 pitch
+  });
+  const [showSaveSheet, setShowSaveSheet] = useState(false);
+  const [currentPolygonData, setCurrentPolygonData] = useState<any>(null);
   const { toast } = useToast();
 
   // Load properties from database
@@ -118,6 +133,46 @@ export default function FieldMap() {
     
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
+    // Initialize MapboxDraw
+    draw.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {},
+      styles: [
+        // Custom styles for drawing
+        {
+          id: "gl-draw-polygon-fill",
+          type: "fill",
+          paint: {
+            "fill-color": "#3B82F6",
+            "fill-opacity": 0.3,
+          },
+        },
+        {
+          id: "gl-draw-polygon-stroke",
+          type: "line",
+          paint: {
+            "line-color": "#3B82F6",
+            "line-width": 3,
+          },
+        },
+        {
+          id: "gl-draw-polygon-and-line-vertex-active",
+          type: "circle",
+          paint: {
+            "circle-radius": 6,
+            "circle-color": "#3B82F6",
+          },
+        },
+      ],
+    });
+    
+    map.current.addControl(draw.current);
+
+    // Listen for drawing updates
+    map.current.on("draw.create", updateMeasurements);
+    map.current.on("draw.update", updateMeasurements);
+    map.current.on("draw.delete", updateMeasurements);
+
     // Try to get user location on load
     getCurrentLocation();
 
@@ -127,6 +182,79 @@ export default function FieldMap() {
       map.current?.remove();
     };
   }, []);
+
+  const updateMeasurements = () => {
+    if (!draw.current) return;
+
+    const data = draw.current.getAll();
+    if (data.features.length === 0) {
+      setMeasurements({ area: 0, perimeter: 0, pitchMultiplier: measurements.pitchMultiplier });
+      setCurrentPolygonData(null);
+      return;
+    }
+
+    // Calculate total area and perimeter
+    let totalArea = 0;
+    let totalPerimeter = 0;
+
+    data.features.forEach((feature) => {
+      if (feature.geometry.type === "Polygon") {
+        const polygon = turf.polygon(feature.geometry.coordinates);
+        
+        // Area in square meters, convert to square feet
+        const areaMeters = turf.area(polygon);
+        totalArea += areaMeters * 10.7639; // sq meters to sq feet
+        
+        // Perimeter in meters, convert to feet
+        const perimeterMeters = turf.length(polygon, { units: "meters" });
+        totalPerimeter += perimeterMeters * 3.28084;
+      }
+    });
+
+    setMeasurements({
+      area: totalArea,
+      perimeter: totalPerimeter,
+      pitchMultiplier: measurements.pitchMultiplier,
+    });
+    
+    setCurrentPolygonData(data);
+  };
+
+  const handleStartDrawing = () => {
+    if (draw.current) {
+      draw.current.changeMode("draw_polygon");
+      setIsDrawing(true);
+    }
+  };
+
+  const handleStopDrawing = () => {
+    if (draw.current) {
+      draw.current.changeMode("simple_select");
+      setIsDrawing(false);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (draw.current) {
+      draw.current.deleteAll();
+      setMeasurements({ area: 0, perimeter: 0, pitchMultiplier: measurements.pitchMultiplier });
+      setCurrentPolygonData(null);
+    }
+  };
+
+  const handleSaveMeasurement = () => {
+    if (measurements.area > 0) {
+      setShowSaveSheet(true);
+    }
+  };
+
+  const handleMeasurementSaved = () => {
+    handleClearAll();
+    toast({
+      title: "Success",
+      description: "Measurement saved and cleared from map",
+    });
+  };
 
   // Add markers to map
   useEffect(() => {
@@ -254,6 +382,32 @@ export default function FieldMap() {
         </Button>
       </div>
 
+      {/* Measurement toolbar */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <MeasurementToolbar
+          isDrawing={isDrawing}
+          onStartDrawing={handleStartDrawing}
+          onStopDrawing={handleStopDrawing}
+          onClearAll={handleClearAll}
+          onSave={handleSaveMeasurement}
+          hasPolygons={measurements.area > 0}
+        />
+      </div>
+
+      {/* Measurement panel */}
+      {measurements.area > 0 && (
+        <div className="absolute bottom-4 left-4">
+          <MeasurementPanel
+            area={measurements.area}
+            perimeter={measurements.perimeter}
+            pitchMultiplier={measurements.pitchMultiplier}
+            onPitchChange={(multiplier) =>
+              setMeasurements({ ...measurements, pitchMultiplier: multiplier })
+            }
+          />
+        </div>
+      )}
+
       {/* Property bottom sheet */}
       {selectedProperty && (
         <PropertyBottomSheet
@@ -262,6 +416,20 @@ export default function FieldMap() {
           onUpdate={handlePropertyUpdate}
         />
       )}
+
+      {/* Save measurement bottom sheet */}
+      <MeasurementBottomSheet
+        open={showSaveSheet}
+        onClose={() => setShowSaveSheet(false)}
+        onSave={handleMeasurementSaved}
+        measurements={{
+          area: measurements.area,
+          pitchedArea: measurements.area * measurements.pitchMultiplier,
+          squares: (measurements.area * measurements.pitchMultiplier) / 100,
+          perimeter: measurements.perimeter,
+        }}
+        polygonData={currentPolygonData}
+      />
     </div>
   );
 }
