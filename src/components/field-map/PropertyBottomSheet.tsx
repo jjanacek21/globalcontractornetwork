@@ -4,13 +4,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X, ThumbsDown, ThumbsUp, AlertCircle, Clock, Home } from "lucide-react";
+import { X, ThumbsDown, ThumbsUp, AlertCircle, Clock, Home, Pencil } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface PropertyBottomSheetProps {
   property: any;
   onClose: () => void;
   onUpdate: () => void;
+  onAddMeasurement?: () => void;
 }
 
 interface DispositionButton {
@@ -32,7 +33,7 @@ const dispositions: DispositionButton[] = [
   { value: "contracted", label: "Contracted", icon: <ThumbsUp className="h-5 w-5" />, color: "bg-green-700" },
 ];
 
-export function PropertyBottomSheet({ property, onClose, onUpdate }: PropertyBottomSheetProps) {
+export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurement }: PropertyBottomSheetProps) {
   const [address, setAddress] = useState(property.address || "");
   const [notes, setNotes] = useState(property.notes || "");
   const [selectedDisposition, setSelectedDisposition] = useState(property.disposition || "");
@@ -158,6 +159,31 @@ export function PropertyBottomSheet({ property, onClose, onUpdate }: PropertyBot
               Save Note
             </Button>
           </div>
+
+          {/* Add Measurement Button */}
+          {onAddMeasurement && (
+            <div>
+              <Button
+                onClick={() => {
+                  if (property.id && property.id !== "new" && property.id !== "temp") {
+                    onAddMeasurement();
+                    onClose();
+                  } else {
+                    toast({
+                      title: "Save property first",
+                      description: "Please save the property before adding measurements",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="w-full"
+                size="lg"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Add Roof Measurement
+              </Button>
+            </div>
+          )}
 
           {/* Customer Link Section */}
           {property.customer_id && (
