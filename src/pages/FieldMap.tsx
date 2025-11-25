@@ -10,6 +10,7 @@ import { PropertyBottomSheet } from "@/components/field-map/PropertyBottomSheet"
 import { MeasurementToolbar } from "@/components/field-map/MeasurementToolbar";
 import { MeasurementPanel } from "@/components/field-map/MeasurementPanel";
 import { MeasurementBottomSheet } from "@/components/field-map/MeasurementBottomSheet";
+import { AddressSearchBar } from "@/components/field-map/AddressSearchBar";
 import { Button } from "@/components/ui/button";
 import { MapPin, Locate } from "lucide-react";
 
@@ -44,6 +45,11 @@ export default function FieldMap() {
   });
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [currentPolygonData, setCurrentPolygonData] = useState<any>(null);
+  const [pendingPropertyLocation, setPendingPropertyLocation] = useState<{
+    coordinates: [number, number];
+    address: string;
+  } | null>(null);
+  const tempMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const { toast } = useToast();
 
   // Load properties from database
@@ -132,6 +138,9 @@ export default function FieldMap() {
     });
     
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    // Add click handler for dropping pins
+    map.current.on("click", handleMapClick);
 
     // Initialize MapboxDraw
     draw.current = new MapboxDraw({
@@ -240,6 +249,84 @@ export default function FieldMap() {
       setMeasurements({ area: 0, perimeter: 0, pitchMultiplier: measurements.pitchMultiplier });
       setCurrentPolygonData(null);
     }
+  };
+
+  const reverseGeocode = async (coordinates: [number, number]): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${mapboxgl.accessToken}&types=address`
+      );
+      const data = await response.json();
+      return data.features?.[0]?.place_name || "Unknown Address";
+    } catch (error) {
+      console.error("Error reverse geocoding:", error);
+      return "Unknown Address";
+    }
+  };
+
+  const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
+    if (isDrawing) return;
+
+    const coordinates: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+    const address = await reverseGeocode(coordinates);
+
+    if (tempMarkerRef.current) {
+      tempMarkerRef.current.remove();
+    }
+
+    const marker = new mapboxgl.Marker({ color: "#3b82f6", draggable: true })
+      .setLngLat(coordinates)
+      .addTo(map.current!);
+
+    tempMarkerRef.current = marker;
+
+    marker.on("dragend", async () => {
+      const newCoords = marker.getLngLat();
+      const newAddress = await reverseGeocode([newCoords.lng, newCoords.lat]);
+      setPendingPropertyLocation({
+        coordinates: [newCoords.lng, newCoords.lat],
+        address: newAddress,
+      });
+      setSelectedProperty((prev) => prev ? { ...prev, address: newAddress, latitude: newCoords.lat, longitude: newCoords.lng } : null);
+    });
+
+    setPendingPropertyLocation({ coordinates, address });
+    setSelectedProperty({
+      id: "temp",
+      address,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    } as FieldProperty);
+  };
+
+  const handleSearchSelect = async (coordinates: [number, number], address: string) => {
+    if (tempMarkerRef.current) {
+      tempMarkerRef.current.remove();
+    }
+
+    const marker = new mapboxgl.Marker({ color: "#3b82f6", draggable: true })
+      .setLngLat(coordinates)
+      .addTo(map.current!);
+
+    tempMarkerRef.current = marker;
+
+    marker.on("dragend", async () => {
+      const newCoords = marker.getLngLat();
+      const newAddress = await reverseGeocode([newCoords.lng, newCoords.lat]);
+      setPendingPropertyLocation({
+        coordinates: [newCoords.lng, newCoords.lat],
+        address: newAddress,
+      });
+      setSelectedProperty((prev) => prev ? { ...prev, address: newAddress, latitude: newCoords.lat, longitude: newCoords.lng } : null);
+    });
+
+    setPendingPropertyLocation({ coordinates, address });
+    setSelectedProperty({
+      id: "temp",
+      address,
+      latitude: coordinates[1],
+      longitude: coordinates[0],
+    } as FieldProperty);
   };
 
   const handleSaveMeasurement = () => {
@@ -353,32 +440,17 @@ export default function FieldMap() {
     <div className="relative h-[calc(100vh-4rem)] w-full">
       <div ref={mapContainer} className="absolute inset-0" />
       
+      {/* Address Search Bar */}
+      <AddressSearchBar map={map.current} onSelectLocation={handleSearchSelect} />
+      
       {/* Floating action buttons */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2">
+      <div className="absolute bottom-24 left-4 flex flex-col gap-2">
         <Button
           size="icon"
           className="bg-background/90 hover:bg-background shadow-lg"
           onClick={getCurrentLocation}
         >
           <Locate className="h-5 w-5" />
-        </Button>
-        <Button
-          size="icon"
-          className="bg-background/90 hover:bg-background shadow-lg"
-          onClick={() => {
-            // Add new property at map center
-            if (map.current) {
-              const center = map.current.getCenter();
-              setSelectedProperty({
-                id: "new",
-                address: "",
-                latitude: center.lat,
-                longitude: center.lng,
-              } as FieldProperty);
-            }
-          }}
-        >
-          <MapPin className="h-5 w-5" />
         </Button>
       </div>
 
@@ -412,8 +484,16 @@ export default function FieldMap() {
       {selectedProperty && (
         <PropertyBottomSheet
           property={selectedProperty}
-          onClose={() => setSelectedProperty(null)}
+          onClose={() => {
+            setSelectedProperty(null);
+            setPendingPropertyLocation(null);
+            if (tempMarkerRef.current) {
+              tempMarkerRef.current.remove();
+              tempMarkerRef.current = null;
+            }
+          }}
           onUpdate={handlePropertyUpdate}
+          onAddMeasurement={handleStartDrawing}
         />
       )}
 
