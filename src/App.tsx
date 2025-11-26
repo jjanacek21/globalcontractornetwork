@@ -15,6 +15,8 @@ import NotFound from "./pages/NotFound";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
 import MerchandiseStore from "./pages/MerchandiseStore";
+import StoreAuth from "./pages/StoreAuth";
+import StoreDashboard from "./pages/StoreDashboard";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import MarketingConsulting from "./pages/MarketingConsulting";
@@ -41,6 +43,12 @@ const App = () => (
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/store" element={<MerchandiseStore />} />
+          <Route path="/store/auth" element={<StoreAuth />} />
+          <Route path="/store/dashboard" element={
+            <ProtectedRoute redirectTo="/store/auth">
+              <StoreDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/consulting" element={<MarketingConsulting />} />

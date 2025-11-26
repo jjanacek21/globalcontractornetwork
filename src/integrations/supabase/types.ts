@@ -750,6 +750,41 @@ export type Database = {
           },
         ]
       }
+      points_transactions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          member_id: string
+          points: number
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          member_id: string
+          points: number
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          member_id?: string
+          points?: number
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_transactions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "store_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presentation_slides: {
         Row: {
           content: Json | null
@@ -1087,6 +1122,33 @@ export type Database = {
           },
         ]
       }
+      store_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          points_balance: number
+          total_points_earned: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          points_balance?: number
+          total_points_earned?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          points_balance?: number
+          total_points_earned?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       teacher_profiles: {
         Row: {
           avatar_url: string | null
@@ -1171,6 +1233,12 @@ export type Database = {
         | "sold"
         | "in_production"
         | "complete"
+      transaction_type:
+        | "purchase"
+        | "reward"
+        | "referral"
+        | "redemption"
+        | "welcome_bonus"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1306,6 +1374,13 @@ export const Constants = {
         "sold",
         "in_production",
         "complete",
+      ],
+      transaction_type: [
+        "purchase",
+        "reward",
+        "referral",
+        "redemption",
+        "welcome_bonus",
       ],
     },
   },
