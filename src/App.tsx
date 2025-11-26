@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import FieldMap from "./pages/FieldMap";
 import Measurements from "./pages/Measurements";
@@ -47,6 +48,13 @@ const App = () => (
           
           {/* CRM Routes */}
           <Route path="/crm/auth" element={<Auth />} />
+          <Route path="/crm/dashboard" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
           <Route path="/crm/customers" element={
             <ProtectedRoute>
               <AppLayout>
