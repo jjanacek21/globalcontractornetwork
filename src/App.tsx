@@ -14,6 +14,7 @@ import Presentations from "./pages/Presentations";
 import NotFound from "./pages/NotFound";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
+import Roofing from "./pages/Roofing";
 import MerchandiseStore from "./pages/MerchandiseStore";
 import StoreAuth from "./pages/StoreAuth";
 import StoreDashboard from "./pages/StoreDashboard";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
+          <Route path="/roofing" element={<Roofing />} />
           <Route path="/store" element={<MerchandiseStore />} />
           <Route path="/store/auth" element={<StoreAuth />} />
           <Route path="/store/dashboard" element={
