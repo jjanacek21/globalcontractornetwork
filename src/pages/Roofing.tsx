@@ -51,7 +51,7 @@ const roofingPackages = [
   },
   {
     name: "The Blue Collar Special",
-    pricePerSquare: "$86/sq",
+    pricePerSquare: "$860/sq",
     features: [
       "5V crimp metal roof in mill finish",
       "Polyglass synthetic underlayment",
