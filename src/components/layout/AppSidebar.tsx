@@ -21,12 +21,12 @@ import {
 } from "@/components/ui/sidebar";
 
 const navigation = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Field Map", url: "/field-map", icon: Map },
-  { title: "Measurements", url: "/measurements", icon: Ruler },
-  { title: "Estimates", url: "/estimates", icon: FileText },
-  { title: "Presentations", url: "/presentations", icon: Presentation },
+  { title: "Dashboard", url: "/crm/dashboard", icon: LayoutDashboard },
+  { title: "Customers", url: "/crm/customers", icon: Users },
+  { title: "Field Map", url: "/crm/field-map", icon: Map },
+  { title: "Measurements", url: "/crm/measurements", icon: Ruler },
+  { title: "Estimates", url: "/crm/estimates", icon: FileText },
+  { title: "Presentations", url: "/crm/presentations", icon: Presentation },
 ];
 
 export function AppSidebar() {
@@ -53,7 +53,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/crm/dashboard"}
                       className={({ isActive }) =>
                         isActive
                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
