@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Users, TrendingUp, Award } from "lucide-react";
@@ -7,7 +7,7 @@ import { GraduationCap, Users, TrendingUp, Award } from "lucide-react";
 export default function MarketingConsulting() {
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       
       <section className="relative bg-gradient-to-br from-primary to-primary/60 text-primary-foreground py-24">
         <div className="container mx-auto px-4">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ArrowLeft } from "lucide-react";
@@ -40,7 +40,7 @@ export default function BlogPost() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        <PublicHeader />
         <div className="container mx-auto px-4 py-12 text-center">Loading...</div>
       </div>
     );
@@ -49,7 +49,7 @@ export default function BlogPost() {
   if (!post) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        <PublicHeader />
         <div className="container mx-auto px-4 py-12 text-center">
           <h1 className="text-2xl font-bold mb-4">Post not found</h1>
           <Link to="/blog">
@@ -62,7 +62,7 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       <main className="container mx-auto px-4 py-12">
         <article className="max-w-4xl mx-auto">
           <Link to="/blog">

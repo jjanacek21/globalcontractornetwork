@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,7 @@ export default function Franchise() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-3xl mx-auto text-center">
