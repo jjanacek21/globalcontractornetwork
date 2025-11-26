@@ -87,11 +87,29 @@ const Index = () => {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
-              <Link to="/crm/auth">CRM Login</Link>
-            </Button>
+            <div className="relative group">
+              <Button variant="ghost">
+                Login Portals
+              </Button>
+              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="py-2">
+                  <Link to="/crm/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
+                    CRM Portal
+                  </Link>
+                  <Link to="/learning" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
+                    Learning Platform
+                  </Link>
+                  <Link to="/contractor" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
+                    Contractor Network
+                  </Link>
+                  <Link to="/store/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
+                    Store Rewards
+                  </Link>
+                </div>
+              </div>
+            </div>
             <Button asChild>
-              <Link to="/learning">Get Started</Link>
+              <Link to="/contractor">Join Network</Link>
             </Button>
           </div>
         </div>
@@ -228,7 +246,8 @@ const Index = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/crm/auth" className="hover:text-foreground transition-colors">CRM Portal</Link></li>
                 <li><Link to="/learning" className="hover:text-foreground transition-colors">Learning Platform</Link></li>
-                <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Portal</Link></li>
+                <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Network</Link></li>
+                <li><Link to="/store/auth" className="hover:text-foreground transition-colors">Store Rewards</Link></li>
               </ul>
             </div>
           </div>
