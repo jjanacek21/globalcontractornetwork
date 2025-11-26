@@ -57,7 +57,7 @@ export default function StudentDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/learning");
+    navigate("/");
   };
 
   return (
