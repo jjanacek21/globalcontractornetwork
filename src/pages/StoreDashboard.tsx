@@ -78,7 +78,7 @@ export default function StoreDashboard() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate("/store/auth");
+    navigate("/");
   };
 
   const getTransactionIcon = (type: string) => {
