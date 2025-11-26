@@ -277,7 +277,14 @@ export default function FieldMap() {
   };
 
   const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
+    // Don't handle clicks when drawing or if MapboxDraw is in drawing mode
     if (isDrawing) return;
+    if (draw.current) {
+      const mode = draw.current.getMode();
+      if (mode === 'draw_polygon' || mode === 'draw_line_string' || mode === 'draw_point') {
+        return;
+      }
+    }
 
     const coordinates: [number, number] = [e.lngLat.lng, e.lngLat.lat];
     const address = await reverseGeocode(coordinates);
