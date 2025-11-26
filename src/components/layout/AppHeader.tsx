@@ -32,7 +32,7 @@ export function AppHeader() {
       toast.error("Failed to logout");
     } else {
       toast.success("Logged out successfully");
-      navigate("/auth");
+      navigate("/");
     }
   };
 
