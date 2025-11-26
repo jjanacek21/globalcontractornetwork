@@ -120,7 +120,8 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
       map.current.flyTo({
         center: result.center,
         zoom: 19,
-        pitch: 45,
+        pitch: 0,
+        bearing: 0,
         essential: true,
       });
     }
