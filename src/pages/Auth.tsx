@@ -119,8 +119,8 @@ const Auth = () => {
               <Building2 className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Peak Presenter</CardTitle>
-          <CardDescription>Roofing & Restoration Sales CRM</CardDescription>
+          <CardTitle className="text-2xl font-bold">Global Contractor Network</CardTitle>
+          <CardDescription>CRM Portal</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">

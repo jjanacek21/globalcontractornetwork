@@ -38,8 +38,8 @@ export function AppSidebar() {
             <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-foreground">Peak Presenter</span>
-            <span className="text-xs text-sidebar-foreground/60">Sales CRM</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">GCN</span>
+            <span className="text-xs text-sidebar-foreground/60">CRM Portal</span>
           </div>
         </div>
       </SidebarHeader>
