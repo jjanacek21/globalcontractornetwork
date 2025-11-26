@@ -39,7 +39,7 @@ const Index = () => {
       icon: BookOpen,
       title: "Learning Platform",
       description: "Courses on sales, marketing, and business growth for contractors.",
-      link: "/learning/auth",
+      link: "/learning",
       color: "bg-accent/10 text-accent-foreground"
     },
     {
@@ -91,7 +91,7 @@ const Index = () => {
               <Link to="/crm/auth">CRM Login</Link>
             </Button>
             <Button asChild>
-              <Link to="/learning/auth">Get Started</Link>
+              <Link to="/learning">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -227,8 +227,8 @@ const Index = () => {
               <h4 className="font-semibold mb-4">Login Portals</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/crm/auth" className="hover:text-foreground transition-colors">CRM Portal</Link></li>
-                <li><Link to="/learning/auth" className="hover:text-foreground transition-colors">Learning Platform</Link></li>
-                <li><Link to="/contractor/auth" className="hover:text-foreground transition-colors">Contractor Portal</Link></li>
+                <li><Link to="/learning" className="hover:text-foreground transition-colors">Learning Platform</Link></li>
+                <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Portal</Link></li>
               </ul>
             </div>
           </div>
