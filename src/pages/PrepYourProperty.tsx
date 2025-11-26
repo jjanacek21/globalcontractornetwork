@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
@@ -57,7 +57,7 @@ export default function PrepYourProperty() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold mb-4 text-center">Prep Your Property</h1>

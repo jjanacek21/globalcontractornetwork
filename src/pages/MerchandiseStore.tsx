@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ export default function MerchandiseStore() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       
       <div className="relative h-[400px] bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
         <div className="text-center text-primary-foreground">

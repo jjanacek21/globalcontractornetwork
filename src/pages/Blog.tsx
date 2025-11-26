@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
@@ -38,7 +38,7 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <PublicHeader />
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold mb-4">Construction Industry News</h1>
