@@ -7,14 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Home } from "lucide-react";
+import { CheckCircle2, Home, Ruler } from "lucide-react";
 import { Link } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
+import { RoofMeasurementTool } from "@/components/roofing/RoofMeasurementTool";
+import { MeasurementReport } from "@/components/roofing/MeasurementReport";
+import { PackageSelector } from "@/components/roofing/PackageSelector";
 
 const roofingPackages = [
   {
     name: "Bronze Roof Package",
-    price: "$575-$650",
+    pricePerSquare: "$575-$650",
     features: [
       "Architectural shingles",
       "Synthetic underlayment for enhanced water resistance",
@@ -25,7 +28,7 @@ const roofingPackages = [
   },
   {
     name: "Silver Roof Package",
-    price: "$700-$725",
+    pricePerSquare: "$700-$725",
     features: [
       "Architectural shingles",
       "Standard peel-and-stick underlayment",
@@ -36,7 +39,7 @@ const roofingPackages = [
   },
   {
     name: "Gold Roof Package",
-    price: "$800-$850",
+    pricePerSquare: "$800-$850",
     features: [
       "Architectural shingles",
       "High-temperature peel-and-stick underlayment for superior protection",
@@ -48,7 +51,7 @@ const roofingPackages = [
   },
   {
     name: "The Blue Collar Special",
-    price: "$86/sq",
+    pricePerSquare: "$86/sq",
     features: [
       "5V crimp metal roof in mill finish",
       "Polyglass synthetic underlayment",
@@ -59,7 +62,7 @@ const roofingPackages = [
   },
   {
     name: "Blue Collar+",
-    price: "$930",
+    pricePerSquare: "$930",
     features: [
       "5V crimp metal roof with Kynar-coated finish",
       "High-temperature Polyglass underlayment",
@@ -70,7 +73,7 @@ const roofingPackages = [
   },
   {
     name: "Platinum Roof Package",
-    price: "$1,000-$1,200",
+    pricePerSquare: "$1,000-$1,200",
     features: [
       "1\" Snap-lock standing seam metal roof (24-gauge, Kynar-coated)",
       "Polyglass MTS high-temp underlayment",
@@ -81,7 +84,7 @@ const roofingPackages = [
   },
   {
     name: "Tile Roof Package",
-    price: "$900-$1,000",
+    pricePerSquare: "$900-$1,000",
     features: [
       "Complete removal and replacement of existing tile roof",
       "Standard tile underlayment with screw-down fastening",
@@ -92,7 +95,7 @@ const roofingPackages = [
   },
   {
     name: "Tile+ Roof Package",
-    price: "$1,000-$1,100",
+    pricePerSquare: "$1,000-$1,100",
     features: [
       "Tile removal and replacement with premium materials",
       "Polyglass TU MAX underlayment",
@@ -103,7 +106,7 @@ const roofingPackages = [
   },
   {
     name: "Roof Refresh",
-    price: "TBD",
+    pricePerSquare: "TBD",
     features: [
       "Repair broken or damaged tiles and apply matching stain",
       "Recoat metal roofs with acrylic, elastomeric, or Kynar finishes",
@@ -114,7 +117,7 @@ const roofingPackages = [
   },
   {
     name: "Ultimate Roof Package",
-    price: "$1,360-$1,850",
+    pricePerSquare: "$1,360-$1,850",
     features: [
       "Premium standing seam metal roof (1.5\" with clips) or stone-coated steel (Tefute/Novatik)",
       "Polyglass XFR high-temp and fire-rated underlayment",
@@ -129,7 +132,10 @@ const roofingPackages = [
 const Roofing = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState("");
+  const [estimatedPrice, setEstimatedPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showMeasurement, setShowMeasurement] = useState(false);
+  const [measurements, setMeasurements] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -138,8 +144,21 @@ const Roofing = () => {
     message: ""
   });
 
-  const handleRequestService = (packageName: string) => {
+  const handleMeasurementComplete = (measurementData: any) => {
+    setMeasurements(measurementData);
+    setShowMeasurement(false);
+  };
+
+  const handleRequestService = (packageName: string, price: string) => {
     setSelectedPackage(packageName);
+    setEstimatedPrice(price);
+    setFormData({
+      ...formData,
+      property_address: measurements?.address || "",
+      message: measurements 
+        ? `Roof Measurements:\n- Total Squares: ${measurements.totalSquares.toFixed(2)}\n- Flat Area: ${measurements.flatArea.toFixed(0)} sq ft\n- Pitched Area: ${measurements.pitchedArea.toFixed(0)} sq ft\n- Pitch Multiplier: ${measurements.pitchMultiplier}\n- Waste Factor: ${measurements.wasteFactor}%\n\nEstimated Price: ${price}`
+        : ""
+    });
     setDialogOpen(true);
   };
 
@@ -224,62 +243,111 @@ const Roofing = () => {
               Professional <span className="text-primary">Roofing Services</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Choose from our comprehensive range of roofing packages designed to protect your home with quality materials and expert workmanship
+              Get your free roof measurement and choose from our comprehensive range of roofing packages
             </p>
+            <Button 
+              size="lg" 
+              onClick={() => setShowMeasurement(true)}
+              className="text-lg px-8"
+            >
+              <Ruler className="mr-2 h-5 w-5" />
+              Get Your Free Roof Measurement
+            </Button>
           </div>
         </div>
       </section>
 
+      {/* Measurement Tool Section */}
+      {showMeasurement && !measurements && (
+        <section className="py-20 bg-muted/30">
+          <div className="container max-w-5xl">
+            <RoofMeasurementTool onMeasurementComplete={handleMeasurementComplete} />
+          </div>
+        </section>
+      )}
+
+      {/* Measurement Report Section */}
+      {measurements && (
+        <section className="py-20 bg-muted/30">
+          <div className="container max-w-4xl space-y-8">
+            <MeasurementReport measurements={measurements} />
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setMeasurements(null);
+                setShowMeasurement(true);
+              }}
+              className="w-full"
+            >
+              Take New Measurement
+            </Button>
+          </div>
+        </section>
+      )}
+
       {/* Roofing Packages */}
       <section className="py-20">
         <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Roofing Packages</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From budget-friendly solutions to premium installations, we have a package for every need and budget
-            </p>
-          </div>
+          {measurements ? (
+            <PackageSelector 
+              packages={roofingPackages}
+              totalSquares={measurements.totalSquares}
+              onSelectPackage={handleRequestService}
+            />
+          ) : (
+            <>
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold mb-4">Roofing Packages</h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  From budget-friendly solutions to premium installations, we have a package for every need and budget
+                </p>
+              </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roofingPackages.map((pkg) => (
-              <Card key={pkg.name} className="shadow-card hover:shadow-elevated transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{pkg.name}</span>
-                  </CardTitle>
-                  <CardDescription className="text-2xl font-bold text-primary">
-                    {pkg.price}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-2">
-                    {pkg.features.map((feature, idx) => (
-                      <li key={idx} className="flex gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    onClick={() => handleRequestService(pkg.name)}
-                    className="w-full"
-                  >
-                    Request Quote
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {roofingPackages.map((pkg) => (
+                  <Card key={pkg.name} className="shadow-card hover:shadow-elevated transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{pkg.name}</span>
+                      </CardTitle>
+                      <CardDescription className="text-2xl font-bold text-primary">
+                        {pkg.pricePerSquare}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="space-y-2">
+                        {pkg.features.map((feature, idx) => (
+                          <li key={idx} className="flex gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button 
+                        onClick={() => handleRequestService(pkg.name, pkg.pricePerSquare)}
+                        className="w-full"
+                      >
+                        Request Quote
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </section>
 
       {/* Request Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request Service</DialogTitle>
-            <DialogDescription>
-              Fill out the form below to request a quote for {selectedPackage}
+            <DialogTitle>Request Quote</DialogTitle>
+            <DialogDescription className="space-y-1">
+              <div>Package: <span className="font-semibold">{selectedPackage}</span></div>
+              {estimatedPrice && (
+                <div>Estimated Price: <span className="font-semibold text-primary">{estimatedPrice}</span></div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
