@@ -23,10 +23,17 @@ const Index = () => {
     },
     {
       icon: Home,
-      title: "Prep Your Property",
+      title: "Roofing Services",
+      description: "Professional roofing packages from budget-friendly to premium installations.",
+      link: "/roofing",
+      color: "bg-accent/10 text-accent-foreground"
+    },
+    {
+      icon: Home,
+      title: "Property Prep & Maintenance",
       description: "Professional inspections and maintenance packages. Starting at $299.",
       link: "/prep-property",
-      color: "bg-accent/10 text-accent-foreground"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: ShoppingBag,
