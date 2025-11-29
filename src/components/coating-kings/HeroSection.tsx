@@ -55,7 +55,7 @@ export const HeroSection = ({ onGetQuote, onLearnMore }: HeroSectionProps) => {
             onClick={onLearnMore}
             className="px-8 py-6 text-lg border-2"
           >
-            Learn About Coatings
+            Schedule Consultation
           </Button>
         </div>
 
