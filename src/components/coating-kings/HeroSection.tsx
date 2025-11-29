@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import coatingKingsLogo from "@/assets/coating-kings-logo.png";
 
 interface HeroSectionProps {
   onGetQuote: () => void;
@@ -17,6 +18,12 @@ export const HeroSection = ({ onGetQuote, onLearnMore }: HeroSectionProps) => {
 
       {/* Content */}
       <div className="container relative z-10 px-4 mx-auto text-center">
+        <img 
+          src={coatingKingsLogo} 
+          alt="Coating Kings Logo" 
+          className="h-36 mx-auto mb-6 animate-fade-in"
+        />
+        
         <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-primary/10 border border-primary/20 animate-fade-in">
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-primary">South Florida's Premier Roof Coating Specialists</span>
