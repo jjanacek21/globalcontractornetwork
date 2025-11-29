@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, Download, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Calculator, MapPin, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -177,19 +177,6 @@ export const InstantQuoteTool = () => {
     }
   };
 
-  const handleEmailQuote = () => {
-    toast({
-      title: "Quote Sent!",
-      description: "We'll email your detailed quote shortly.",
-    });
-  };
-
-  const handleDownloadPDF = () => {
-    toast({
-      title: "PDF Generated",
-      description: "Your estimate PDF is being downloaded.",
-    });
-  };
 
   return (
     <section id="quote-tool" className="py-20 bg-muted/30">
@@ -304,17 +291,6 @@ export const InstantQuoteTool = () => {
                     <p className="text-sm text-muted-foreground">
                       Based on {sqft.toLocaleString()} square feet
                     </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button onClick={handleEmailQuote} className="flex-1">
-                      <Mail className="w-4 h-4 mr-2" />
-                      Email Quote
-                    </Button>
-                    <Button onClick={handleDownloadPDF} variant="outline" className="flex-1">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </Button>
                   </div>
                 </div>
               )}
