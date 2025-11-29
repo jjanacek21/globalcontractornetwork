@@ -24,6 +24,11 @@ const CoatingKings = () => {
     element?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollToContact = () => {
+    const element = document.getElementById("contact");
+    element?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <>
       <Helmet>
@@ -40,7 +45,7 @@ const CoatingKings = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        <HeroSection onGetQuote={scrollToQuote} onLearnMore={scrollToProducts} />
+        <HeroSection onGetQuote={scrollToQuote} onLearnMore={scrollToContact} />
         <InstantQuoteTool />
         <CoatingProductGuide />
         <WhyChooseUs />
