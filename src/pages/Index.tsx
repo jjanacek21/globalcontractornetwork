@@ -23,10 +23,17 @@ const Index = () => {
     },
     {
       icon: Home,
+      title: "Coating Kings",
+      description: "South Florida's premier roof coating specialists. Get instant quotes and extend your roof's life.",
+      link: "/coating-kings",
+      color: "bg-accent/10 text-accent-foreground"
+    },
+    {
+      icon: Home,
       title: "Roofing Services",
       description: "Professional roofing packages from budget-friendly to premium installations.",
       link: "/roofing",
-      color: "bg-accent/10 text-accent-foreground"
+      color: "bg-primary/10 text-primary"
     },
     {
       icon: Home,
@@ -81,6 +88,9 @@ const Index = () => {
           <nav className="hidden md:flex gap-6">
             <Link to="/directory" className="text-sm font-medium hover:text-primary transition-colors">
               Directory
+            </Link>
+            <Link to="/coating-kings" className="text-sm font-medium hover:text-primary transition-colors">
+              Coating Kings
             </Link>
             <Link to="/prep-property" className="text-sm font-medium hover:text-primary transition-colors">
               Services

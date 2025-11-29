@@ -27,6 +27,7 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import ContractorAuth from "./pages/ContractorAuth";
 import ContractorDashboard from "./pages/ContractorDashboard";
+import CoatingKings from "./pages/CoatingKings";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -44,6 +45,7 @@ const App = () => (
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/directory" element={<ContractorDirectory />} />
+          <Route path="/coating-kings" element={<CoatingKings />} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing" element={<Roofing />} />
           <Route path="/store" element={<MerchandiseStore />} />

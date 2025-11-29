@@ -62,6 +62,63 @@ export type Database = {
         }
         Relationships: []
       }
+      coating_leads: {
+        Row: {
+          coating_type: string
+          created_at: string | null
+          email: string
+          estimate_high: number | null
+          estimate_low: number | null
+          estimated_sqft: number | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          property_address: string
+          property_type: string | null
+          roof_type: string
+          status: string | null
+          updated_at: string | null
+          urgency: string | null
+        }
+        Insert: {
+          coating_type: string
+          created_at?: string | null
+          email: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimated_sqft?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          property_address: string
+          property_type?: string | null
+          roof_type: string
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Update: {
+          coating_type?: string
+          created_at?: string | null
+          email?: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimated_sqft?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          property_address?: string
+          property_type?: string | null
+          roof_type?: string
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Relationships: []
+      }
       contact_requests: {
         Row: {
           created_at: string | null
