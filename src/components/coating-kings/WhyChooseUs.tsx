@@ -19,7 +19,7 @@ const benefits = [
   },
   {
     icon: Clock,
-    title: "Extend Roof Life 10-20+ Years",
+    title: "Extend Roof Life Up to 50 Years",
     description: "Transform an aging roof into a durable, weatherproof system without expensive tear-off and replacement costs."
   },
   {
