@@ -1,8 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Droplets, Shield, Zap, Sun, Cloud, Building2, Home } from "lucide-react";
+
+interface CoatingProductGuideProps {
+  onCoatingSelect?: (coatingKey: string) => void;
+}
+
 const coatings = [{
   name: "Acrylic",
+  coatingKey: "acrylic",
   icon: Droplets,
   description: "UV-resistant, breathable coating ideal for moderate climates",
   idealFor: ["Flat roofs", "Low-slope commercial"],
@@ -12,6 +19,7 @@ const coatings = [{
   color: "text-blue-500"
 }, {
   name: "Acrylic + Base",
+  coatingKey: "acrylic-base",
   icon: Droplets,
   description: "Enhanced acrylic system with primer for better adhesion",
   idealFor: ["Aged flat roofs", "Previously coated surfaces"],
@@ -21,6 +29,7 @@ const coatings = [{
   color: "text-blue-600"
 }, {
   name: "Elastomeric",
+  coatingKey: "elastomeric",
   icon: Shield,
   description: "Flexible coating that expands and contracts with temperature",
   idealFor: ["Metal roofs", "Concrete surfaces"],
@@ -30,6 +39,7 @@ const coatings = [{
   color: "text-purple-500"
 }, {
   name: "Silicone",
+  coatingKey: "silicone",
   icon: Cloud,
   description: "Premium ponding water resistance and UV protection",
   idealFor: ["Flat roofs", "Low-slope with ponding"],
@@ -39,6 +49,7 @@ const coatings = [{
   color: "text-cyan-500"
 }, {
   name: "Silicone + Base",
+  coatingKey: "silicone-base",
   icon: Cloud,
   description: "Ultimate protection with primer for maximum performance",
   idealFor: ["High-performance commercial", "Critical structures"],
@@ -48,6 +59,7 @@ const coatings = [{
   color: "text-cyan-600"
 }, {
   name: "Polyurethane",
+  coatingKey: "polyurethane",
   icon: Zap,
   description: "Impact-resistant coating for high-traffic and hail-prone areas",
   idealFor: ["Commercial roofs", "Hail-prone areas"],
@@ -57,6 +69,7 @@ const coatings = [{
   color: "text-orange-500"
 }, {
   name: "Rubber (EPDM)",
+  coatingKey: "rubber",
   icon: Shield,
   description: "Heavy-duty membrane system for extreme durability",
   idealFor: ["Commercial buildings", "Industrial facilities"],
@@ -65,7 +78,7 @@ const coatings = [{
   benefits: ["Extreme durability", "Seamless application", "Weather proof"],
   color: "text-gray-600"
 }];
-export const CoatingProductGuide = () => {
+export const CoatingProductGuide = ({ onCoatingSelect }: CoatingProductGuideProps) => {
   return <section id="products" className="py-20 bg-background">
       <div className="container px-4 mx-auto">
         <div className="text-center mb-12">
@@ -77,10 +90,14 @@ export const CoatingProductGuide = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto justify-items-center">
+        <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto">
           {coatings.map((coating, index) => {
           const Icon = coating.icon;
-          return <Card key={index} className="hover:shadow-lg transition-shadow">
+          return <Card 
+                key={index} 
+                className="hover:shadow-xl transition-all cursor-pointer group relative w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] hover:scale-105"
+                onClick={() => onCoatingSelect?.(coating.coatingKey)}
+              >
                 <CardHeader className="px-0">
                   <div className="flex items-start justify-between mb-4">
                     <div className={`p-3 rounded-lg bg-muted ${coating.color}`}>
@@ -115,6 +132,10 @@ export const CoatingProductGuide = () => {
                         </li>)}
                     </ul>
                   </div>
+
+                  <Button className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Select {coating.name}
+                  </Button>
                 </CardContent>
               </Card>;
         })}
