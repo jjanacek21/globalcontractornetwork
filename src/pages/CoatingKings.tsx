@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import { HeroSection } from "@/components/coating-kings/HeroSection";
 import { InstantQuoteTool } from "@/components/coating-kings/InstantQuoteTool";
@@ -13,6 +13,7 @@ import { CoatingKingsFooter } from "@/components/coating-kings/CoatingKingsFoote
 const CoatingKings = () => {
   const quoteToolRef = useRef<HTMLElement>(null);
   const productsRef = useRef<HTMLElement>(null);
+  const [selectedCoating, setSelectedCoating] = useState<string>("");
 
   const scrollToQuote = () => {
     const element = document.getElementById("quote-tool");
@@ -27,6 +28,11 @@ const CoatingKings = () => {
   const scrollToContact = () => {
     const element = document.getElementById("contact");
     element?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleCoatingSelect = (coatingKey: string) => {
+    setSelectedCoating(coatingKey);
+    scrollToQuote();
   };
 
   return (
@@ -46,8 +52,8 @@ const CoatingKings = () => {
 
       <div className="min-h-screen bg-background">
         <HeroSection onGetQuote={scrollToQuote} onLearnMore={scrollToContact} />
-        <InstantQuoteTool />
-        <CoatingProductGuide />
+        <CoatingProductGuide onCoatingSelect={handleCoatingSelect} />
+        <InstantQuoteTool selectedCoatingType={selectedCoating} />
         <WhyChooseUs />
         <ContractorResources />
         <BeforeAfterSlider />

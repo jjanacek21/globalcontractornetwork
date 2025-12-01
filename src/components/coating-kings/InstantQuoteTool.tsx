@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Calculator, MapPin, Pencil, Trash2, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
@@ -24,7 +24,11 @@ const COATING_PRICES = {
   rubber: { low: 6.0, high: 8.0, name: "Rubber" },
 };
 
-export const InstantQuoteTool = () => {
+interface InstantQuoteToolProps {
+  selectedCoatingType?: string;
+}
+
+export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps) => {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -36,11 +40,19 @@ export const InstantQuoteTool = () => {
   const [estimateLow, setEstimateLow] = useState<number>(0);
   const [estimateHigh, setEstimateHigh] = useState<number>(0);
   const [showEstimate, setShowEstimate] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<MapboxDraw | null>(null);
   const { toast } = useToast();
+
+  // Update coating type when selectedCoatingType prop changes
+  useEffect(() => {
+    if (selectedCoatingType) {
+      setCoatingType(selectedCoatingType);
+    }
+  }, [selectedCoatingType]);
 
   // Initialize map
   useEffect(() => {
@@ -177,6 +189,80 @@ export const InstantQuoteTool = () => {
     }
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser doesn't support geolocation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Reverse geocode to get address
+          const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+          );
+          const data = await response.json();
+          
+          if (data.features && data.features.length > 0) {
+            const address = data.features[0];
+            setQuery(address.place_name);
+            setSelectedAddress(address.place_name);
+            
+            if (map.current) {
+              map.current.flyTo({
+                center: [longitude, latitude],
+                zoom: 19,
+                pitch: 0,
+                bearing: 0,
+                essential: true,
+              });
+            }
+
+            toast({
+              title: "Location found",
+              description: "Map centered on your current location",
+            });
+          }
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          toast({
+            title: "Error",
+            description: "Could not get address for your location",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        let message = "Could not get your location";
+        
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "Location permission denied. Please enable location access.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "Location information unavailable";
+        } else if (error.code === error.TIMEOUT) {
+          message = "Location request timed out";
+        }
+
+        toast({
+          title: "Location Error",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    );
+  };
 
   return (
     <section id="quote-tool" className="py-20 bg-muted/30">
@@ -203,7 +289,20 @@ export const InstantQuoteTool = () => {
             <CardContent className="space-y-6">
               {/* Address Search */}
               <div className="space-y-2">
-                <Label htmlFor="address">Property Address</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="address">Property Address</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isLocating}
+                    className="h-7 text-xs"
+                  >
+                    <Navigation className="h-3 w-3 mr-1" />
+                    {isLocating ? "Locating..." : "Use Current Location"}
+                  </Button>
+                </div>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                   <Input
