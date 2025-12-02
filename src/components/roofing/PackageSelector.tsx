@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
+import { InstantQuoteDialog } from "./InstantQuoteDialog";
 
 interface Package {
   name: string;
@@ -15,6 +17,9 @@ interface PackageSelectorProps {
 }
 
 export function PackageSelector({ packages, totalSquares, onSelectPackage }: PackageSelectorProps) {
+  const [selectedPkg, setSelectedPkg] = useState<Package | null>(null);
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+
   const calculatePriceRange = (pricePerSquare: string): string => {
     if (pricePerSquare === "TBD") {
       return "Contact for Pricing";
@@ -44,6 +49,19 @@ export function PackageSelector({ packages, totalSquares, onSelectPackage }: Pac
     return pricePerSquare.includes("/sq") ? pricePerSquare : `${pricePerSquare}/sq`;
   };
 
+  const handlePackageClick = (pkg: Package) => {
+    setSelectedPkg(pkg);
+    setShowQuoteDialog(true);
+  };
+
+  const handleRequestQuote = () => {
+    if (selectedPkg) {
+      const estimatedPrice = calculatePriceRange(selectedPkg.pricePerSquare);
+      onSelectPackage(selectedPkg.name, estimatedPrice);
+      setShowQuoteDialog(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -59,7 +77,11 @@ export function PackageSelector({ packages, totalSquares, onSelectPackage }: Pac
           const isContactPricing = estimatedPrice === "Contact for Pricing";
 
           return (
-            <Card key={pkg.name} className="shadow-card hover:shadow-elevated transition-all hover:border-primary/50">
+            <Card 
+              key={pkg.name} 
+              className="shadow-card hover:shadow-elevated transition-all hover:border-primary/50 cursor-pointer"
+              onClick={() => handlePackageClick(pkg)}
+            >
               <CardHeader>
                 <CardTitle className="text-lg">{pkg.name}</CardTitle>
                 <CardDescription className="space-y-1">
@@ -86,17 +108,33 @@ export function PackageSelector({ packages, totalSquares, onSelectPackage }: Pac
                   ))}
                 </ul>
                 <Button 
-                  onClick={() => onSelectPackage(pkg.name, estimatedPrice)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePackageClick(pkg);
+                  }}
                   className="w-full"
-                  variant={estimatedPrice === "Contact for Pricing" ? "outline" : "default"}
+                  variant={isContactPricing ? "outline" : "default"}
                 >
-                  Request Quote with Measurements
+                  Get Instant Quote
                 </Button>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Instant Quote Dialog */}
+      {selectedPkg && (
+        <InstantQuoteDialog
+          open={showQuoteDialog}
+          onOpenChange={setShowQuoteDialog}
+          packageName={selectedPkg.name}
+          pricePerSquare={selectedPkg.pricePerSquare}
+          totalSquares={totalSquares}
+          estimatedPrice={calculatePriceRange(selectedPkg.pricePerSquare)}
+          onRequestQuote={handleRequestQuote}
+        />
+      )}
     </div>
   );
 }
