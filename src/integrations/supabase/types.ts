@@ -893,6 +893,98 @@ export type Database = {
           },
         ]
       }
+      permit_project_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_projects: {
+        Row: {
+          city: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          has_hurricane_straps: boolean | null
+          id: string
+          notes: string | null
+          property_address: string
+          service_type: string
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          has_hurricane_straps?: boolean | null
+          id?: string
+          notes?: string | null
+          property_address: string
+          service_type: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          has_hurricane_straps?: boolean | null
+          id?: string
+          notes?: string | null
+          property_address?: string
+          service_type?: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       permit_required_documents: {
         Row: {
           building_dept_id: string | null
