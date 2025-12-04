@@ -933,52 +933,85 @@ export type Database = {
       }
       permit_projects: {
         Row: {
+          architectural_approval: boolean | null
+          architectural_approval_required: boolean | null
           city: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
           has_hurricane_straps: boolean | null
+          hoa_approval: boolean | null
           id: string
+          inspection_requested: string | null
+          inspection_requested_at: string | null
           notes: string | null
           property_address: string
+          revision_notes: string | null
+          revision_requested: boolean | null
+          roof_accessories: string | null
+          roof_color: string | null
+          roof_type: string | null
           service_type: string
           state: string | null
           status: string
+          underlayment_type: string | null
           updated_at: string
           user_id: string
           zip_code: string | null
         }
         Insert: {
+          architectural_approval?: boolean | null
+          architectural_approval_required?: boolean | null
           city?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
           has_hurricane_straps?: boolean | null
+          hoa_approval?: boolean | null
           id?: string
+          inspection_requested?: string | null
+          inspection_requested_at?: string | null
           notes?: string | null
           property_address: string
+          revision_notes?: string | null
+          revision_requested?: boolean | null
+          roof_accessories?: string | null
+          roof_color?: string | null
+          roof_type?: string | null
           service_type: string
           state?: string | null
           status?: string
+          underlayment_type?: string | null
           updated_at?: string
           user_id: string
           zip_code?: string | null
         }
         Update: {
+          architectural_approval?: boolean | null
+          architectural_approval_required?: boolean | null
           city?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
           has_hurricane_straps?: boolean | null
+          hoa_approval?: boolean | null
           id?: string
+          inspection_requested?: string | null
+          inspection_requested_at?: string | null
           notes?: string | null
           property_address?: string
+          revision_notes?: string | null
+          revision_requested?: boolean | null
+          roof_accessories?: string | null
+          roof_color?: string | null
+          roof_type?: string | null
           service_type?: string
           state?: string | null
           status?: string
+          underlayment_type?: string | null
           updated_at?: string
           user_id?: string
           zip_code?: string | null

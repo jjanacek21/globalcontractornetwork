@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, Trash2, ChevronDown, ChevronUp, Upload, ClipboardCheck, RefreshCw, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PermitProject {
   id: string;
@@ -37,6 +44,7 @@ interface ProjectsTableProps {
   projects: PermitProject[];
   onRefresh: () => void;
   onViewProject: (project: PermitProject) => void;
+  onAction: (projectId: string, action: 'upload' | 'inspection' | 'revision') => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,7 +67,7 @@ const STATUS_LABELS: Record<string, string> = {
   complete: "Complete"
 };
 
-export function ProjectsTable({ projects, onRefresh, onViewProject }: ProjectsTableProps) {
+export function ProjectsTable({ projects, onRefresh, onViewProject, onAction }: ProjectsTableProps) {
   const { toast } = useToast();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'created_at' | 'customer_name'>('created_at');
@@ -182,23 +190,59 @@ export function ProjectsTable({ projects, onRefresh, onViewProject }: ProjectsTa
                   {format(new Date(project.created_at), 'MMM d, yyyy')}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewProject(project)}
                       className="text-zinc-400 hover:text-white"
+                      title="View Details"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteId(project.id)}
-                      className="text-zinc-400 hover:text-red-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-zinc-400 hover:text-white"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-zinc-800 border-zinc-700">
+                        <DropdownMenuItem 
+                          onClick={() => onAction(project.id, 'upload')}
+                          className="text-zinc-300 hover:bg-zinc-700 hover:text-white cursor-pointer"
+                        >
+                          <Upload className="h-4 w-4 mr-2 text-amber-500" />
+                          Upload Documents
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onAction(project.id, 'inspection')}
+                          className="text-zinc-300 hover:bg-zinc-700 hover:text-white cursor-pointer"
+                        >
+                          <ClipboardCheck className="h-4 w-4 mr-2 text-cyan-500" />
+                          Request Inspection
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onAction(project.id, 'revision')}
+                          className="text-zinc-300 hover:bg-zinc-700 hover:text-white cursor-pointer"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2 text-purple-500" />
+                          Request Revision
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-zinc-700" />
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteId(project.id)}
+                          className="text-red-400 hover:bg-zinc-700 hover:text-red-300 cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Project
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </TableCell>
               </TableRow>

@@ -35,6 +35,40 @@ const SERVICE_TYPES = [
   "Other"
 ];
 
+const ROOF_TYPES = [
+  "Asphalt Shingle",
+  "Metal Standing Seam",
+  "Metal Screw Down",
+  "Tile - Concrete",
+  "Tile - Clay",
+  "Flat/TPO",
+  "Flat/Modified Bitumen",
+  "Slate",
+  "Wood Shake",
+  "Other"
+];
+
+const UNDERLAYMENT_TYPES = [
+  "Synthetic Underlayment",
+  "Felt (15 lb)",
+  "Felt (30 lb)",
+  "Self-Adhering (Peel & Stick)",
+  "High-Temp Underlayment",
+  "Other"
+];
+
+const ROOF_ACCESSORIES = [
+  "Ridge Vent",
+  "Box Vents",
+  "Turbine Vents",
+  "Solar Powered Vents",
+  "Skylights",
+  "Solar Tubes",
+  "Chimney",
+  "Satellite Dish Mount",
+  "None"
+];
+
 export function AddProjectDialog({ open, onOpenChange, onSuccess, userId }: AddProjectDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -48,7 +82,15 @@ export function AddProjectDialog({ open, onOpenChange, onSuccess, userId }: AddP
     zip_code: "",
     service_type: "",
     has_hurricane_straps: false,
-    notes: ""
+    notes: "",
+    // Roofing specific fields
+    roof_type: "",
+    roof_color: "",
+    underlayment_type: "",
+    roof_accessories: "",
+    hoa_approval: false,
+    architectural_approval: false,
+    architectural_approval_required: false
   });
   const [files, setFiles] = useState<FileUpload[]>([]);
   
@@ -158,7 +200,14 @@ export function AddProjectDialog({ open, onOpenChange, onSuccess, userId }: AddP
         zip_code: "",
         service_type: "",
         has_hurricane_straps: false,
-        notes: ""
+        notes: "",
+        roof_type: "",
+        roof_color: "",
+        underlayment_type: "",
+        roof_accessories: "",
+        hoa_approval: false,
+        architectural_approval: false,
+        architectural_approval_required: false
       });
       setFiles([]);
       onSuccess();
@@ -313,6 +362,126 @@ export function AddProjectDialog({ open, onOpenChange, onSuccess, userId }: AddP
               </Label>
             </div>
           </div>
+
+          {/* Roofing Specific Fields */}
+          {formData.service_type === "Roofing Permit" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-amber-500 uppercase tracking-wide">Roofing Details</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="roof_type" className="text-zinc-300">Roof Type *</Label>
+                  <Select
+                    value={formData.roof_type}
+                    onValueChange={(value) => handleInputChange("roof_type", value)}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Select roof type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      {ROOF_TYPES.map(type => (
+                        <SelectItem key={type} value={type} className="text-white hover:bg-zinc-700">
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="roof_color" className="text-zinc-300">Roof Color</Label>
+                  <Input
+                    id="roof_color"
+                    value={formData.roof_color}
+                    onChange={(e) => handleInputChange("roof_color", e.target.value)}
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="e.g., Charcoal, Desert Tan, etc."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="underlayment_type" className="text-zinc-300">Underlayment Type</Label>
+                  <Select
+                    value={formData.underlayment_type}
+                    onValueChange={(value) => handleInputChange("underlayment_type", value)}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Select underlayment" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      {UNDERLAYMENT_TYPES.map(type => (
+                        <SelectItem key={type} value={type} className="text-white hover:bg-zinc-700">
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="roof_accessories" className="text-zinc-300">Roof Accessories</Label>
+                  <Select
+                    value={formData.roof_accessories}
+                    onValueChange={(value) => handleInputChange("roof_accessories", value)}
+                  >
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                      <SelectValue placeholder="Select accessories" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      {ROOF_ACCESSORIES.map(type => (
+                        <SelectItem key={type} value={type} className="text-white hover:bg-zinc-700">
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Approvals Section */}
+              <div className="space-y-3 p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
+                <p className="text-zinc-300 text-sm font-medium">Required Approvals</p>
+                
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="hoa_approval"
+                    checked={formData.hoa_approval}
+                    onCheckedChange={(checked) => handleInputChange("hoa_approval", checked as boolean)}
+                    className="border-amber-500 data-[state=checked]:bg-amber-500"
+                  />
+                  <Label htmlFor="hoa_approval" className="text-zinc-300 cursor-pointer">
+                    HOA Approval Obtained
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="architectural_approval_required"
+                    checked={formData.architectural_approval_required}
+                    onCheckedChange={(checked) => handleInputChange("architectural_approval_required", checked as boolean)}
+                    className="border-amber-500 data-[state=checked]:bg-amber-500"
+                  />
+                  <Label htmlFor="architectural_approval_required" className="text-zinc-300 cursor-pointer">
+                    Architectural Approval Required by City
+                  </Label>
+                </div>
+
+                {formData.architectural_approval_required && (
+                  <div className="flex items-center space-x-3 ml-6">
+                    <Checkbox
+                      id="architectural_approval"
+                      checked={formData.architectural_approval}
+                      onCheckedChange={(checked) => handleInputChange("architectural_approval", checked as boolean)}
+                      className="border-amber-500 data-[state=checked]:bg-amber-500"
+                    />
+                    <Label htmlFor="architectural_approval" className="text-zinc-300 cursor-pointer">
+                      Architectural Approval Obtained
+                    </Label>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Document Uploads */}
           <div className="space-y-4">
