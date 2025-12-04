@@ -253,6 +253,7 @@ const Index = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/directory" className="hover:text-foreground transition-colors">Contractor Directory</Link></li>
                 <li><Link to="/prep-property" className="hover:text-foreground transition-colors">Property Services</Link></li>
+                <li><Link to="/permit-pros" className="hover:text-foreground transition-colors">Permit Pros</Link></li>
                 <li><Link to="/consulting" className="hover:text-foreground transition-colors">Consulting</Link></li>
               </ul>
             </div>
