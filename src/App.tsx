@@ -29,6 +29,8 @@ import ContractorAuth from "./pages/ContractorAuth";
 import ContractorDashboard from "./pages/ContractorDashboard";
 import CoatingKings from "./pages/CoatingKings";
 import PermitPros from "./pages/PermitPros";
+import PermitProsAuth from "./pages/PermitProsAuth";
+import PermitProsDashboard from "./pages/PermitProsDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -48,6 +50,12 @@ const App = () => (
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/coating-kings" element={<CoatingKings />} />
           <Route path="/permit-pros" element={<PermitPros />} />
+          <Route path="/permit-pros/auth" element={<PermitProsAuth />} />
+          <Route path="/permit-pros/dashboard" element={
+            <ProtectedRoute redirectTo="/permit-pros/auth">
+              <PermitProsDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing" element={<Roofing />} />
           <Route path="/store" element={<MerchandiseStore />} />
