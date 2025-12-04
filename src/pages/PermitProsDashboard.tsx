@@ -18,6 +18,7 @@ import { User } from "@supabase/supabase-js";
 import { AddProjectDialog } from "@/components/permit-pros/AddProjectDialog";
 import { ProjectsTable } from "@/components/permit-pros/ProjectsTable";
 import { ProjectDetailsDialog } from "@/components/permit-pros/ProjectDetailsDialog";
+import { ProjectActionsDialog } from "@/components/permit-pros/ProjectActionsDialog";
 
 interface PermitProject {
   id: string;
@@ -41,6 +42,8 @@ export default function PermitProsDashboard() {
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<PermitProject | null>(null);
+  const [actionProjectId, setActionProjectId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'upload' | 'inspection' | 'revision' | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -225,6 +228,10 @@ export default function PermitProsDashboard() {
                 projects={projects} 
                 onRefresh={fetchProjects}
                 onViewProject={setSelectedProject}
+                onAction={(projectId, action) => {
+                  setActionProjectId(projectId);
+                  setActionType(action);
+                }}
               />
             )}
           </CardContent>
@@ -269,6 +276,25 @@ export default function PermitProsDashboard() {
         project={selectedProject}
         open={!!selectedProject}
         onOpenChange={(open) => !open && setSelectedProject(null)}
+        onAction={(projectId, action) => {
+          setActionProjectId(projectId);
+          setActionType(action);
+        }}
+      />
+
+      {/* Project Actions Dialog */}
+      <ProjectActionsDialog
+        projectId={actionProjectId || ''}
+        userId={user.id}
+        action={actionType}
+        open={!!actionProjectId && !!actionType}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActionProjectId(null);
+            setActionType(null);
+          }
+        }}
+        onSuccess={fetchProjects}
       />
     </div>
   );

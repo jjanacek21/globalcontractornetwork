@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { User, MapPin, Phone, Mail, FileText, Image, CheckCircle2, XCircle } from "lucide-react";
+import { User, MapPin, Phone, Mail, FileText, Image, CheckCircle2, XCircle, Upload, ClipboardCheck, RefreshCw, Home } from "lucide-react";
 import { format } from "date-fns";
 
 interface PermitProject {
@@ -19,6 +20,17 @@ interface PermitProject {
   notes: string | null;
   status: string;
   created_at: string;
+  roof_type?: string | null;
+  roof_color?: string | null;
+  underlayment_type?: string | null;
+  roof_accessories?: string | null;
+  hoa_approval?: boolean | null;
+  architectural_approval?: boolean | null;
+  architectural_approval_required?: boolean | null;
+  inspection_requested?: string | null;
+  inspection_requested_at?: string | null;
+  revision_requested?: boolean | null;
+  revision_notes?: string | null;
 }
 
 interface ProjectDocument {
@@ -34,6 +46,7 @@ interface ProjectDetailsDialogProps {
   project: PermitProject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAction?: (projectId: string, action: 'upload' | 'inspection' | 'revision') => void;
 }
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
@@ -63,7 +76,7 @@ const STATUS_LABELS: Record<string, string> = {
   complete: "Complete"
 };
 
-export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDetailsDialogProps) {
+export function ProjectDetailsDialog({ project, open, onOpenChange, onAction }: ProjectDetailsDialogProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -196,6 +209,140 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
               )}
             </div>
           </div>
+
+          {/* Roofing Details (if applicable) */}
+          {project.service_type === "Roofing Permit" && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-amber-500 uppercase tracking-wide flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Roofing Details
+              </h3>
+              <div className="bg-zinc-800/50 rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {project.roof_type && (
+                    <div>
+                      <p className="text-zinc-500">Roof Type</p>
+                      <p className="text-white">{project.roof_type}</p>
+                    </div>
+                  )}
+                  {project.roof_color && (
+                    <div>
+                      <p className="text-zinc-500">Roof Color</p>
+                      <p className="text-white">{project.roof_color}</p>
+                    </div>
+                  )}
+                  {project.underlayment_type && (
+                    <div>
+                      <p className="text-zinc-500">Underlayment</p>
+                      <p className="text-white">{project.underlayment_type}</p>
+                    </div>
+                  )}
+                  {project.roof_accessories && (
+                    <div>
+                      <p className="text-zinc-500">Accessories</p>
+                      <p className="text-white">{project.roof_accessories}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-700">
+                  {project.hoa_approval && (
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      HOA Approved
+                    </Badge>
+                  )}
+                  {project.architectural_approval_required && (
+                    project.architectural_approval ? (
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        Architectural Approved
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                        Architectural Approval Pending
+                      </Badge>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Inspection/Revision Status */}
+          {(project.inspection_requested || project.revision_requested) && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-amber-500 uppercase tracking-wide flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                Requests
+              </h3>
+              <div className="bg-zinc-800/50 rounded-lg p-4 space-y-2">
+                {project.inspection_requested && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Inspection Requested</span>
+                    <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                      {project.inspection_requested.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </Badge>
+                  </div>
+                )}
+                {project.revision_requested && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-zinc-400">Revision Requested</span>
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                        Pending
+                      </Badge>
+                    </div>
+                    {project.revision_notes && (
+                      <p className="text-sm text-zinc-500 mt-1">{project.revision_notes}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          {onAction && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-amber-500 uppercase tracking-wide">Quick Actions</h3>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onAction(project.id, 'upload');
+                  }}
+                  className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                >
+                  <Upload className="h-4 w-4 mr-2 text-amber-500" />
+                  Upload Documents
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onAction(project.id, 'inspection');
+                  }}
+                  className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                >
+                  <ClipboardCheck className="h-4 w-4 mr-2 text-cyan-500" />
+                  Request Inspection
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onAction(project.id, 'revision');
+                  }}
+                  className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2 text-purple-500" />
+                  Request Revision
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Documents */}
           <div className="space-y-3">
