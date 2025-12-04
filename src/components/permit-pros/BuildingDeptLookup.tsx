@@ -56,7 +56,7 @@ interface RequiredDocument {
   notes: string | null;
 }
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiZ2NuZXR3b3JrIiwiYSI6ImNtYjkzZWZkYjBhcjgybHNkcDl1dTIwb2gifQ.lV5hVvpdDS_OxNUDm4WJFA";
+const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1NXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
 export function BuildingDeptLookup() {
   const [query, setQuery] = useState("");
