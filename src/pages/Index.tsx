@@ -8,7 +8,8 @@ import {
   TrendingUp, 
   Handshake,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  FileText
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -69,6 +70,13 @@ const Index = () => {
       description: "Join our growing network. Opportunities coming soon.",
       link: "/franchise",
       color: "bg-accent/10 text-accent-foreground"
+    },
+    {
+      icon: FileText,
+      title: "Permit Pros",
+      description: "Florida permit expediting service. Building department lookup, document prep, and permit tracking.",
+      link: "/permit-pros",
+      color: "bg-amber-500/10 text-amber-600"
     }
   ];
 
