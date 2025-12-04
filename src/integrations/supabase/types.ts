@@ -807,6 +807,136 @@ export type Database = {
           },
         ]
       }
+      permit_building_departments: {
+        Row: {
+          address: string | null
+          city: string | null
+          county: string
+          created_at: string | null
+          hours: string | null
+          id: string
+          jurisdiction_type: string
+          name: string
+          phone: string | null
+          portal_url: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          county: string
+          created_at?: string | null
+          hours?: string | null
+          id?: string
+          jurisdiction_type?: string
+          name: string
+          phone?: string | null
+          portal_url?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          county?: string
+          created_at?: string | null
+          hours?: string | null
+          id?: string
+          jurisdiction_type?: string
+          name?: string
+          phone?: string | null
+          portal_url?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      permit_local_codes: {
+        Row: {
+          building_dept_id: string | null
+          code_reference: string | null
+          created_at: string | null
+          id: string
+          is_mandatory: boolean | null
+          requirement_description: string | null
+          requirement_title: string
+          trade_type: string
+        }
+        Insert: {
+          building_dept_id?: string | null
+          code_reference?: string | null
+          created_at?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_description?: string | null
+          requirement_title: string
+          trade_type: string
+        }
+        Update: {
+          building_dept_id?: string | null
+          code_reference?: string | null
+          created_at?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_description?: string | null
+          requirement_title?: string
+          trade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_local_codes_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_required_documents: {
+        Row: {
+          building_dept_id: string | null
+          created_at: string | null
+          document_name: string
+          document_url: string | null
+          id: string
+          is_required: boolean | null
+          notes: string | null
+          sort_order: number | null
+          trade_type: string
+        }
+        Insert: {
+          building_dept_id?: string | null
+          created_at?: string | null
+          document_name: string
+          document_url?: string | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          sort_order?: number | null
+          trade_type: string
+        }
+        Update: {
+          building_dept_id?: string | null
+          created_at?: string | null
+          document_name?: string
+          document_url?: string | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          sort_order?: number | null
+          trade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_required_documents_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points_transactions: {
         Row: {
           created_at: string | null
