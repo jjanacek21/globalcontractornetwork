@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, Menu, X } from "lucide-react";
+import { FileText, Menu, X, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
 interface PermitProsHeaderProps {
@@ -31,15 +31,26 @@ export function PermitProsHeader({ activeSection }: PermitProsHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/permit-pros" className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <FileText className="h-6 w-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-white">Permit Pros</span>
-            <span className="text-xs text-slate-400">Florida Permit Expediting</span>
-          </div>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            onClick={() => navigate("/contractor-directory")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            GCN
+          </Button>
+          <Link to="/permit-pros" className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-white">Permit Pros</span>
+              <span className="text-xs text-slate-400">Florida Permit Expediting</span>
+            </div>
+          </Link>
+        </div>
         
         {/* Desktop Nav */}
         <nav className="hidden lg:flex gap-6">
