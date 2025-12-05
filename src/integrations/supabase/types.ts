@@ -1556,6 +1556,83 @@ export type Database = {
           },
         ]
       }
+      supplement_lead_notes: {
+        Row: {
+          contractor_id: string
+          created_at: string | null
+          id: string
+          lead_id: string
+          note_text: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          note_text: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          note_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplement_lead_notes_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "supplement_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplement_lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "supplement_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplement_lead_requests: {
+        Row: {
+          completed_at: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          request_type: string
+          requested_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          request_type: string
+          requested_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplement_lead_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "supplement_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplement_leads: {
         Row: {
           assigned_amount: number | null
