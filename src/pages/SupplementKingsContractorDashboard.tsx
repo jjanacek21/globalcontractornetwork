@@ -17,16 +17,25 @@ import {
 import { User } from "@supabase/supabase-js";
 import { AddLeadDialog } from "@/components/supplement-kings/AddLeadDialog";
 import { LeadsTable } from "@/components/supplement-kings/LeadsTable";
+import { LeadDetailsDialog } from "@/components/supplement-kings/LeadDetailsDialog";
+import { LeadActionsDialog } from "@/components/supplement-kings/LeadActionsDialog";
 
 interface Lead {
   id: string;
   customer_name: string;
+  customer_phone?: string | null;
+  customer_email?: string | null;
   property_address: string;
   property_city: string;
+  property_state?: string | null;
+  property_zip?: string | null;
   claim_type: string;
+  claim_number?: string | null;
   insurance_company: string | null;
+  date_of_loss?: string | null;
   status: string;
   urgency: string;
+  notes?: string | null;
   created_at: string;
   assigned_amount: number | null;
   settled_amount: number | null;
@@ -44,6 +53,10 @@ export default function SupplementKingsContractorDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<string | null>(null);
+  const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -134,6 +147,25 @@ export default function SupplementKingsContractorDashboard() {
       description: "You have been signed out successfully.",
     });
     navigate("/");
+  };
+
+  const handleViewLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleAction = (action: string) => {
+    setActionType(action);
+    setActionsDialogOpen(true);
+  };
+
+  const handleActionSuccess = () => {
+    fetchLeads();
+    // Refresh the details dialog data by briefly closing and reopening
+    if (selectedLead) {
+      setDetailsDialogOpen(false);
+      setTimeout(() => setDetailsDialogOpen(true), 100);
+    }
   };
 
   if (!user || !contractor) {
@@ -270,7 +302,7 @@ export default function SupplementKingsContractorDashboard() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
               </div>
             ) : (
-              <LeadsTable leads={leads} />
+              <LeadsTable leads={leads} onViewLead={handleViewLead} />
             )}
           </CardContent>
         </Card>
@@ -308,6 +340,26 @@ export default function SupplementKingsContractorDashboard() {
           onOpenChange={setAddDialogOpen}
           onSuccess={fetchLeads}
           contractorId={contractor.id}
+        />
+      )}
+
+      {/* Lead Details Dialog */}
+      <LeadDetailsDialog
+        lead={selectedLead}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        onAction={handleAction}
+      />
+
+      {/* Lead Actions Dialog */}
+      {contractor && selectedLead && (
+        <LeadActionsDialog
+          leadId={selectedLead.id}
+          contractorId={contractor.id}
+          actionType={actionType}
+          open={actionsDialogOpen}
+          onOpenChange={setActionsDialogOpen}
+          onSuccess={handleActionSuccess}
         />
       )}
     </div>
