@@ -28,9 +28,14 @@ import StudentDashboard from "./pages/StudentDashboard";
 import ContractorAuth from "./pages/ContractorAuth";
 import ContractorDashboard from "./pages/ContractorDashboard";
 import CoatingKings from "./pages/CoatingKings";
-import PermitPros from "./pages/PermitPros";
-import PermitProsAuth from "./pages/PermitProsAuth";
-import PermitProsDashboard from "./pages/PermitProsDashboard";
+import PermitQueens from "./pages/PermitQueens";
+import PermitQueensAuth from "./pages/PermitQueensAuth";
+import PermitQueensDashboard from "./pages/PermitQueensDashboard";
+import SupplementKings from "./pages/SupplementKings";
+import SupplementKingsContractorAuth from "./pages/SupplementKingsContractorAuth";
+import SupplementKingsContractorDashboard from "./pages/SupplementKingsContractorDashboard";
+import SupplementKingsAdminAuth from "./pages/SupplementKingsAdminAuth";
+import SupplementKingsAdminDashboard from "./pages/SupplementKingsAdminDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -48,14 +53,33 @@ const App = () => (
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/directory" element={<ContractorDirectory />} />
+          <Route path="/contractor-directory" element={<ContractorDirectory />} />
           <Route path="/coating-kings" element={<CoatingKings />} />
-          <Route path="/permit-pros" element={<PermitPros />} />
-          <Route path="/permit-pros/auth" element={<PermitProsAuth />} />
-          <Route path="/permit-pros/dashboard" element={
-            <ProtectedRoute redirectTo="/permit-pros/auth">
-              <PermitProsDashboard />
+          
+          {/* Permit Queens Routes (rebranded from Permit Pros) */}
+          <Route path="/permit-queens" element={<PermitQueens />} />
+          <Route path="/permit-queens/auth" element={<PermitQueensAuth />} />
+          <Route path="/permit-queens/dashboard" element={
+            <ProtectedRoute redirectTo="/permit-queens/auth">
+              <PermitQueensDashboard />
             </ProtectedRoute>
           } />
+          
+          {/* Supplement Kings Routes */}
+          <Route path="/supplement-kings" element={<SupplementKings />} />
+          <Route path="/supplement-kings/contractor/auth" element={<SupplementKingsContractorAuth />} />
+          <Route path="/supplement-kings/contractor/dashboard" element={
+            <ProtectedRoute redirectTo="/supplement-kings/contractor/auth">
+              <SupplementKingsContractorDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/supplement-kings/admin/auth" element={<SupplementKingsAdminAuth />} />
+          <Route path="/supplement-kings/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/supplement-kings/admin/auth">
+              <SupplementKingsAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing" element={<Roofing />} />
           <Route path="/store" element={<MerchandiseStore />} />
@@ -136,7 +160,7 @@ const App = () => (
             </ProtectedRoute>
           } />
           
-          {/* Legacy routes - redirect to new paths */}
+          {/* Legacy routes */}
           <Route path="/auth" element={<Auth />} />
           <Route path="/customers" element={
             <ProtectedRoute>
