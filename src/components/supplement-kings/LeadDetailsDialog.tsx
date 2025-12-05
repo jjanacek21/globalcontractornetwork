@@ -179,7 +179,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onAction }: LeadDe
                 size="sm"
                 variant="outline"
                 onClick={() => onAction('add_note')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="bg-white text-black border-gray-200 hover:bg-gray-100"
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Add Notes
@@ -188,7 +188,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onAction }: LeadDe
                 size="sm"
                 variant="outline"
                 onClick={() => onAction('add_photo')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="bg-white text-black border-gray-200 hover:bg-gray-100"
               >
                 <Camera className="h-4 w-4 mr-2" />
                 Add Photos
@@ -197,7 +197,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onAction }: LeadDe
                 size="sm"
                 variant="outline"
                 onClick={() => onAction('request_inspection')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="bg-white text-black border-gray-200 hover:bg-gray-100"
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Request Inspection
@@ -206,7 +206,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onAction }: LeadDe
                 size="sm"
                 variant="outline"
                 onClick={() => onAction('request_engineer')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="bg-white text-black border-gray-200 hover:bg-gray-100"
               >
                 <ClipboardList className="h-4 w-4 mr-2" />
                 Request Engineer Letter
@@ -215,7 +215,7 @@ export function LeadDetailsDialog({ lead, open, onOpenChange, onAction }: LeadDe
                 size="sm"
                 variant="outline"
                 onClick={() => onAction('request_attorney')}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="bg-white text-black border-gray-200 hover:bg-gray-100"
               >
                 <Scale className="h-4 w-4 mr-2" />
                 Request Attorney
