@@ -1461,6 +1461,178 @@ export type Database = {
         }
         Relationships: []
       }
+      supplement_admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      supplement_contractors: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          license_number: string | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      supplement_lead_documents: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          lead_id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          lead_id: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          lead_id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplement_lead_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "supplement_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplement_leads: {
+        Row: {
+          assigned_amount: number | null
+          claim_number: string | null
+          claim_type: string
+          contractor_id: string
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          date_of_loss: string | null
+          id: string
+          insurance_company: string | null
+          notes: string | null
+          property_address: string
+          property_city: string
+          property_state: string | null
+          property_zip: string | null
+          settled_amount: number | null
+          status: string | null
+          updated_at: string | null
+          urgency: string | null
+        }
+        Insert: {
+          assigned_amount?: number | null
+          claim_number?: string | null
+          claim_type: string
+          contractor_id: string
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          date_of_loss?: string | null
+          id?: string
+          insurance_company?: string | null
+          notes?: string | null
+          property_address: string
+          property_city: string
+          property_state?: string | null
+          property_zip?: string | null
+          settled_amount?: number | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Update: {
+          assigned_amount?: number | null
+          claim_number?: string | null
+          claim_type?: string
+          contractor_id?: string
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          date_of_loss?: string | null
+          id?: string
+          insurance_company?: string | null
+          notes?: string | null
+          property_address?: string
+          property_city?: string
+          property_state?: string | null
+          property_zip?: string | null
+          settled_amount?: number | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplement_leads_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "supplement_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_profiles: {
         Row: {
           avatar_url: string | null
