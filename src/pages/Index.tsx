@@ -9,7 +9,9 @@ import {
   Handshake,
   ArrowRight,
   CheckCircle2,
-  FileText
+  FileText,
+  Crown,
+  DollarSign
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -72,11 +74,18 @@ const Index = () => {
       color: "bg-accent/10 text-accent-foreground"
     },
     {
-      icon: FileText,
-      title: "Permit Pros",
+      icon: Crown,
+      title: "Permit Queens",
       description: "Florida permit expediting service. Building department lookup, document prep, and permit tracking.",
-      link: "/permit-pros",
+      link: "/permit-queens",
       color: "bg-amber-500/10 text-amber-600"
+    },
+    {
+      icon: DollarSign,
+      title: "Supplement Kings",
+      description: "Insurance claim supplementing and Xactimate estimating. Maximize your claims with expert negotiation.",
+      link: "/supplement-kings",
+      color: "bg-blue-600/10 text-blue-600"
     }
   ];
 
@@ -253,7 +262,8 @@ const Index = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link to="/directory" className="hover:text-foreground transition-colors">Contractor Directory</Link></li>
                 <li><Link to="/prep-property" className="hover:text-foreground transition-colors">Property Services</Link></li>
-                <li><Link to="/permit-pros" className="hover:text-foreground transition-colors">Permit Pros</Link></li>
+                <li><Link to="/permit-queens" className="hover:text-foreground transition-colors">Permit Queens</Link></li>
+                <li><Link to="/supplement-kings" className="hover:text-foreground transition-colors">Supplement Kings</Link></li>
                 <li><Link to="/consulting" className="hover:text-foreground transition-colors">Consulting</Link></li>
               </ul>
             </div>
