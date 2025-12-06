@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Helmet } from "react-helmet";
+import { CoatingKingsHeader } from "@/components/coating-kings/CoatingKingsHeader";
 import { HeroSection } from "@/components/coating-kings/HeroSection";
 import { InstantQuoteTool } from "@/components/coating-kings/InstantQuoteTool";
 import { CoatingProductGuide } from "@/components/coating-kings/CoatingProductGuide";
@@ -51,6 +52,7 @@ const CoatingKings = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background">
+        <CoatingKingsHeader />
         <HeroSection onGetQuote={scrollToQuote} onLearnMore={scrollToContact} />
         <CoatingProductGuide onCoatingSelect={handleCoatingSelect} />
         <InstantQuoteTool selectedCoatingType={selectedCoating} />
