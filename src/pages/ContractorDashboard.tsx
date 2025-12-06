@@ -158,6 +158,12 @@ export default function ContractorDashboard() {
                   <option value="hvac">HVAC</option>
                   <option value="general">General Contractor</option>
                   <option value="landscaping">Landscaping</option>
+                  <option value="windows">Windows & Doors</option>
+                  <option value="handyman">Handyman</option>
+                  <option value="solar">Solar</option>
+                  <option value="painting">Painting</option>
+                  <option value="fencing">Fencing</option>
+                  <option value="flooring">Flooring</option>
                 </select>
               </div>
               <div>
