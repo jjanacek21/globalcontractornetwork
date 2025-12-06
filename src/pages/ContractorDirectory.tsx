@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wrench, Wind, Hammer, TreePine, Award } from "lucide-react";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wrench, Wind, Hammer, TreePine, Award, MessageSquare } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { ReviewSubmissionDialog } from "@/components/contractor-directory/ReviewSubmissionDialog";
 
 interface ContractorProfile {
   id: string;
@@ -48,6 +49,8 @@ export default function ContractorDirectory() {
   const [sortBy, setSortBy] = useState<string>("rating");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [selectedContractor, setSelectedContractor] = useState<ContractorProfile | null>(null);
 
   const categories = [
     { id: "all", name: "All", icon: null },
@@ -292,12 +295,25 @@ export default function ContractorDirectory() {
                         )}
                       </div>
 
-                      <Button 
-                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white" 
-                        onClick={() => window.location.href = `mailto:${contractor.email}`}
-                      >
-                        Contact Contractor
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white" 
+                          onClick={() => window.location.href = `mailto:${contractor.email}`}
+                        >
+                          Contact
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                          onClick={() => {
+                            setSelectedContractor(contractor);
+                            setReviewDialogOpen(true);
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Review
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -306,6 +322,16 @@ export default function ContractorDirectory() {
           )}
         </div>
       </main>
+
+      {/* Review Dialog */}
+      {selectedContractor && (
+        <ReviewSubmissionDialog
+          open={reviewDialogOpen}
+          onOpenChange={setReviewDialogOpen}
+          contractorId={selectedContractor.id}
+          contractorName={selectedContractor.company_name}
+        />
+      )}
     </div>
   );
 }
