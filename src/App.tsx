@@ -36,6 +36,8 @@ import SupplementKingsContractorAuth from "./pages/SupplementKingsContractorAuth
 import SupplementKingsContractorDashboard from "./pages/SupplementKingsContractorDashboard";
 import SupplementKingsAdminAuth from "./pages/SupplementKingsAdminAuth";
 import SupplementKingsAdminDashboard from "./pages/SupplementKingsAdminDashboard";
+import PermitQueensAdminAuth from "./pages/PermitQueensAdminAuth";
+import PermitQueensAdminDashboard from "./pages/PermitQueensAdminDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -62,6 +64,12 @@ const App = () => (
           <Route path="/permit-queens/dashboard" element={
             <ProtectedRoute redirectTo="/permit-queens/auth">
               <PermitQueensDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/admin/auth" element={<PermitQueensAdminAuth />} />
+          <Route path="/permit-queens/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/permit-queens/admin/auth">
+              <PermitQueensAdminDashboard />
             </ProtectedRoute>
           } />
           

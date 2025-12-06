@@ -162,6 +162,7 @@ export type Database = {
       }
       contractor_profiles: {
         Row: {
+          average_rating: number | null
           category: string
           company_name: string
           created_at: string | null
@@ -171,6 +172,7 @@ export type Database = {
           is_verified: boolean | null
           logo_url: string | null
           phone: string | null
+          review_count: number | null
           service_area: string[] | null
           subscription_expires_at: string | null
           subscription_status: string | null
@@ -179,6 +181,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          average_rating?: number | null
           category: string
           company_name: string
           created_at?: string | null
@@ -188,6 +191,7 @@ export type Database = {
           is_verified?: boolean | null
           logo_url?: string | null
           phone?: string | null
+          review_count?: number | null
           service_area?: string[] | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
@@ -196,6 +200,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          average_rating?: number | null
           category?: string
           company_name?: string
           created_at?: string | null
@@ -205,6 +210,7 @@ export type Database = {
           is_verified?: boolean | null
           logo_url?: string | null
           phone?: string | null
+          review_count?: number | null
           service_area?: string[] | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
@@ -213,6 +219,47 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      contractor_reviews: {
+        Row: {
+          contractor_id: string
+          created_at: string | null
+          id: string
+          is_approved: boolean | null
+          rating: number
+          review_text: string | null
+          reviewer_email: string | null
+          reviewer_name: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          rating: number
+          review_text?: string | null
+          reviewer_email?: string | null
+          reviewer_name: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          rating?: number
+          review_text?: string | null
+          reviewer_email?: string | null
+          reviewer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_reviews_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_enrollments: {
         Row: {
@@ -807,6 +854,27 @@ export type Database = {
           },
         ]
       }
+      permit_admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       permit_building_departments: {
         Row: {
           address: string | null
@@ -849,6 +917,45 @@ export type Database = {
           portal_url?: string | null
           updated_at?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      permit_contractors: {
+        Row: {
+          address: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          license_number: string | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          license_number?: string | null
+          phone?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -936,6 +1043,7 @@ export type Database = {
           architectural_approval: boolean | null
           architectural_approval_required: boolean | null
           city: string | null
+          contractor_id: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -964,6 +1072,7 @@ export type Database = {
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           city?: string | null
+          contractor_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -992,6 +1101,7 @@ export type Database = {
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           city?: string | null
+          contractor_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -1016,7 +1126,15 @@ export type Database = {
           user_id?: string
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "permit_projects_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "permit_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permit_required_documents: {
         Row: {
