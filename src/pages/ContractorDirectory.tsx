@@ -58,11 +58,19 @@ export default function ContractorDirectory() {
   const [contractors, setContractors] = useState<ContractorProfile[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("rating");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<ContractorProfile | null>(null);
+
+  const locations = [
+    { id: "all", name: "All Locations" },
+    { id: "Miami-Dade", name: "Miami-Dade County" },
+    { id: "Broward", name: "Broward County" },
+    { id: "Palm Beach", name: "Palm Beach County" },
+  ];
 
   const categories = [
     { id: "all", name: "All", icon: null },
@@ -102,7 +110,9 @@ export default function ContractorDirectory() {
       const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
       const matchesVerified = !verifiedOnly || c.is_verified;
-      return matchesSearch && matchesVerified;
+      const matchesLocation = selectedLocation === "all" || 
+        (c.service_area && c.service_area.some(area => area.toLowerCase().includes(selectedLocation.toLowerCase())));
+      return matchesSearch && matchesVerified && matchesLocation;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -181,7 +191,18 @@ export default function ContractorDirectory() {
                 className="pl-10 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger className="w-[180px] bg-slate-900 border-slate-700 text-white">
+                  <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  {locations.map(loc => (
+                    <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-white">
                   <SelectValue placeholder="Sort by" />
@@ -210,6 +231,7 @@ export default function ContractorDirectory() {
           <p className="text-slate-400 mb-6">
             Showing {filteredContractors.length} contractor{filteredContractors.length !== 1 ? "s" : ""}
             {selectedCategory !== "all" && ` in ${selectedCategory}`}
+            {selectedLocation !== "all" && ` serving ${selectedLocation}`}
           </p>
 
           {loading ? (
@@ -220,7 +242,7 @@ export default function ContractorDirectory() {
               <Button 
                 variant="outline" 
                 className="mt-4 border-slate-700 text-slate-300"
-                onClick={() => { setSearch(""); setSelectedCategory("all"); setVerifiedOnly(false); }}
+                onClick={() => { setSearch(""); setSelectedCategory("all"); setSelectedLocation("all"); setVerifiedOnly(false); }}
               >
                 Clear Filters
               </Button>
