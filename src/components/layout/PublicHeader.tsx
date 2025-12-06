@@ -1,18 +1,27 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 export const PublicHeader = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
-          <div className="flex flex-col">
-            <span className="text-lg font-bold">Global Contractor Network</span>
-            <span className="text-xs text-muted-foreground">Building Better Together</span>
-          </div>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+            <Link to="/">
+              <Home className="h-4 w-4 mr-1" />
+              Home
+            </Link>
+          </Button>
+          <Link to="/" className="flex items-center gap-3">
+            <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
+            <div className="hidden sm:flex flex-col">
+              <span className="text-lg font-bold">Global Contractor Network</span>
+              <span className="text-xs text-muted-foreground">Building Better Together</span>
+            </div>
+          </Link>
+        </div>
         
         <nav className="hidden md:flex gap-6">
           <Link to="/directory" className="text-sm font-medium hover:text-primary transition-colors">

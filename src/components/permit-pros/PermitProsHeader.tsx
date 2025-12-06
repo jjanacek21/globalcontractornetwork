@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileText, Menu, X, ArrowLeft } from "lucide-react";
+import { FileText, Menu, X, Home } from "lucide-react";
 import { useState } from "react";
 
 interface PermitProsHeaderProps {
@@ -36,10 +36,10 @@ export function PermitProsHeader({ activeSection }: PermitProsHeaderProps) {
             variant="ghost"
             size="sm"
             className="text-slate-400 hover:text-white hover:bg-slate-800"
-            onClick={() => navigate("/contractor-directory")}
+            onClick={() => navigate("/")}
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            GCN
+            <Home className="h-4 w-4 mr-1" />
+            Home
           </Button>
           <Link to="/permit-pros" className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
