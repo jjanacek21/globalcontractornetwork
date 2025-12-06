@@ -68,8 +68,24 @@ export default function ContractorDirectory() {
   const locations = [
     { id: "all", name: "All Locations" },
     { id: "Miami-Dade", name: "Miami-Dade County" },
+    { id: "Miami", name: "Miami" },
+    { id: "Miami Beach", name: "Miami Beach" },
+    { id: "Hialeah", name: "Hialeah" },
+    { id: "Coral Gables", name: "Coral Gables" },
+    { id: "Homestead", name: "Homestead" },
     { id: "Broward", name: "Broward County" },
+    { id: "Fort Lauderdale", name: "Fort Lauderdale" },
+    { id: "Hollywood", name: "Hollywood" },
+    { id: "Pompano Beach", name: "Pompano Beach" },
+    { id: "Coral Springs", name: "Coral Springs" },
+    { id: "Pembroke Pines", name: "Pembroke Pines" },
+    { id: "Weston", name: "Weston" },
     { id: "Palm Beach", name: "Palm Beach County" },
+    { id: "West Palm Beach", name: "West Palm Beach" },
+    { id: "Boca Raton", name: "Boca Raton" },
+    { id: "Delray Beach", name: "Delray Beach" },
+    { id: "Boynton Beach", name: "Boynton Beach" },
+    { id: "Jupiter", name: "Jupiter" },
   ];
 
   const categories = [
