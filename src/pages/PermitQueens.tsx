@@ -390,6 +390,7 @@ const PermitQueens = () => {
               <Button 
                 size="lg" 
                 className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                onClick={() => window.location.href = "/permit-queens/auth"}
               >
                 Start Your First Permit
               </Button>
@@ -397,8 +398,9 @@ const PermitQueens = () => {
                 size="lg" 
                 variant="outline" 
                 className="border-slate-600 text-slate-300 hover:border-amber-500 hover:text-amber-500"
+                onClick={() => window.location.href = "/permit-queens/admin/auth"}
               >
-                Schedule a Demo
+                Admin Login
               </Button>
             </div>
           </div>

@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wrench, Wind, Hammer, TreePine, Award } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 
 interface ContractorProfile {
@@ -18,15 +19,45 @@ interface ContractorProfile {
   website: string;
   logo_url: string;
   is_verified: boolean;
+  average_rating: number;
+  review_count: number;
 }
+
+const categoryIcons: Record<string, any> = {
+  roofing: Home,
+  electrical: Zap,
+  plumbing: Droplets,
+  hvac: Wind,
+  general: Hammer,
+  landscaping: TreePine
+};
+
+const categoryColors: Record<string, string> = {
+  roofing: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20",
+  electrical: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20",
+  plumbing: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20",
+  hvac: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20",
+  general: "bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20",
+  landscaping: "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
+};
 
 export default function ContractorDirectory() {
   const [contractors, setContractors] = useState<ContractorProfile[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("rating");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const categories = ["all", "roofing", "plumbing", "electrical", "hvac", "general", "landscaping"];
+  const categories = [
+    { id: "all", name: "All", icon: null },
+    { id: "roofing", name: "Roofing", icon: Home },
+    { id: "electrical", name: "Electrical", icon: Zap },
+    { id: "plumbing", name: "Plumbing", icon: Droplets },
+    { id: "hvac", name: "HVAC", icon: Wind },
+    { id: "general", name: "General", icon: Hammer },
+    { id: "landscaping", name: "Landscaping", icon: TreePine }
+  ];
 
   useEffect(() => {
     loadContractors();
@@ -41,105 +72,236 @@ export default function ContractorDirectory() {
     }
 
     const { data } = await query;
-    setContractors(data || []);
+    setContractors((data as ContractorProfile[]) || []);
     setLoading(false);
   };
 
-  const filteredContractors = contractors.filter(c =>
-    c.company_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredContractors = contractors
+    .filter(c => {
+      const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
+      const matchesVerified = !verifiedOnly || c.is_verified;
+      return matchesSearch && matchesVerified;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return (b.average_rating || 0) - (a.average_rating || 0);
+        case "reviews":
+          return (b.review_count || 0) - (a.review_count || 0);
+        case "name":
+          return a.company_name.localeCompare(b.company_name);
+        default:
+          return 0;
+      }
+    });
+
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalf = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push(<Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />);
+      } else if (i === fullStars && hasHalf) {
+        stars.push(<Star key={i} className="h-4 w-4 fill-amber-400/50 text-amber-400" />);
+      } else {
+        stars.push(<Star key={i} className="h-4 w-4 text-slate-600" />);
+      }
+    }
+    return stars;
+  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-950">
       <PublicHeader />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2">Find a Contractor</h1>
-          <p className="text-muted-foreground mb-8">Connect with verified professionals in your area</p>
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Find a Contractor</h1>
+            <p className="text-xl text-slate-400 mb-8">Connect with the best reviewed professionals in your area</p>
+          </div>
 
+          {/* Category Buttons - Prominent */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
+            {categories.map((cat) => {
+              const IconComponent = cat.icon;
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <Button
+                  key={cat.id}
+                  variant="outline"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex flex-col items-center gap-2 h-auto py-4 transition-all ${
+                    isSelected 
+                      ? "bg-amber-500/20 border-amber-500 text-amber-400" 
+                      : cat.id !== "all" 
+                        ? categoryColors[cat.id] 
+                        : "border-slate-700 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  {IconComponent && <IconComponent className="h-6 w-6" />}
+                  <span className="text-sm font-medium">{cat.name}</span>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Search and Sort Controls */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search by name or location..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((cat) => (
-                <Button
-                  key={cat}
-                  variant={selectedCategory === cat ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(cat)}
-                  className="capitalize"
-                >
-                  {cat}
-                </Button>
-              ))}
+            <div className="flex gap-3">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-white">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="rating">Best Reviewed</SelectItem>
+                  <SelectItem value="reviews">Most Reviews</SelectItem>
+                  <SelectItem value="name">Alphabetical</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant={verifiedOnly ? "default" : "outline"}
+                onClick={() => setVerifiedOnly(!verifiedOnly)}
+                className={verifiedOnly 
+                  ? "bg-green-500/20 border-green-500 text-green-400" 
+                  : "border-slate-700 text-slate-300"
+                }
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Verified Only
+              </Button>
             </div>
           </div>
 
+          {/* Results Count */}
+          <p className="text-slate-400 mb-6">
+            Showing {filteredContractors.length} contractor{filteredContractors.length !== 1 ? "s" : ""}
+            {selectedCategory !== "all" && ` in ${selectedCategory}`}
+          </p>
+
           {loading ? (
-            <div className="text-center py-12">Loading contractors...</div>
+            <div className="text-center py-12 text-slate-400">Loading contractors...</div>
+          ) : filteredContractors.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-slate-400 text-lg">No contractors found matching your criteria.</p>
+              <Button 
+                variant="outline" 
+                className="mt-4 border-slate-700 text-slate-300"
+                onClick={() => { setSearch(""); setSelectedCategory("all"); setVerifiedOnly(false); }}
+              >
+                Clear Filters
+              </Button>
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredContractors.map((contractor) => (
-                <Card key={contractor.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        {contractor.logo_url && (
-                          <img src={contractor.logo_url} alt={contractor.company_name} className="w-12 h-12 rounded-full object-cover" />
+              {filteredContractors.map((contractor, index) => {
+                const isTopRated = index < 3 && sortBy === "rating" && (contractor.average_rating || 0) >= 4.5;
+                const CategoryIcon = categoryIcons[contractor.category];
+                
+                return (
+                  <Card 
+                    key={contractor.id} 
+                    className={`bg-slate-900 border-slate-800 hover:border-slate-700 transition-all relative ${
+                      isTopRated ? "ring-2 ring-amber-500/50" : ""
+                    }`}
+                  >
+                    {isTopRated && (
+                      <div className="absolute -top-3 left-4 bg-amber-500 text-black px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <Award className="h-3 w-3" />
+                        Top Rated
+                      </div>
+                    )}
+                    <CardHeader className="pt-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          {contractor.logo_url ? (
+                            <img src={contractor.logo_url} alt={contractor.company_name} className="w-12 h-12 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+                              {CategoryIcon && <CategoryIcon className="h-6 w-6 text-slate-400" />}
+                            </div>
+                          )}
+                          <div>
+                            <CardTitle className="text-lg text-white">{contractor.company_name}</CardTitle>
+                            <Badge className={`mt-1 capitalize ${categoryColors[contractor.category] || "bg-slate-700"}`}>
+                              {contractor.category}
+                            </Badge>
+                          </div>
+                        </div>
+                        {contractor.is_verified && (
+                          <div className="flex items-center gap-1 text-green-400">
+                            <CheckCircle className="h-5 w-5" />
+                          </div>
                         )}
-                        <div>
-                          <CardTitle className="text-lg">{contractor.company_name}</CardTitle>
-                          <Badge variant="secondary" className="mt-1 capitalize">{contractor.category}</Badge>
-                        </div>
                       </div>
-                      {contractor.is_verified && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{contractor.description}</p>
-                    
-                    <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{contractor.service_area.join(", ")}</span>
+                      
+                      {/* Rating Display */}
+                      <div className="flex items-center gap-2 mt-3">
+                        <div className="flex">
+                          {renderStars(contractor.average_rating || 0)}
+                        </div>
+                        <span className="text-amber-400 font-semibold">
+                          {(contractor.average_rating || 0).toFixed(1)}
+                        </span>
+                        <span className="text-slate-500 text-sm">
+                          ({contractor.review_count || 0} reviews)
+                        </span>
                       </div>
-                      {contractor.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{contractor.phone}</span>
-                        </div>
-                      )}
-                      {contractor.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="truncate">{contractor.email}</span>
-                        </div>
-                      )}
-                      {contractor.website && (
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                          <a href={contractor.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
-                            Visit Website
-                          </a>
-                        </div>
-                      )}
-                    </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-slate-400 mb-4 line-clamp-2">{contractor.description}</p>
+                      
+                      <div className="space-y-2 text-sm mb-4">
+                        {contractor.service_area && contractor.service_area.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-slate-500" />
+                            <span className="text-slate-300">{contractor.service_area.join(", ")}</span>
+                          </div>
+                        )}
+                        {contractor.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-slate-500" />
+                            <span className="text-slate-300">{contractor.phone}</span>
+                          </div>
+                        )}
+                        {contractor.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-slate-500" />
+                            <span className="truncate text-slate-300">{contractor.email}</span>
+                          </div>
+                        )}
+                        {contractor.website && (
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-slate-500" />
+                            <a href={contractor.website} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline truncate">
+                              Visit Website
+                            </a>
+                          </div>
+                        )}
+                      </div>
 
-                    <Button className="w-full" onClick={() => window.location.href = `mailto:${contractor.email}`}>
-                      Contact Contractor
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      <Button 
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white" 
+                        onClick={() => window.location.href = `mailto:${contractor.email}`}
+                      >
+                        Contact Contractor
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
