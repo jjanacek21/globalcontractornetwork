@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wrench, Wind, Hammer, TreePine, Award, MessageSquare } from "lucide-react";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3 } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { ReviewSubmissionDialog } from "@/components/contractor-directory/ReviewSubmissionDialog";
 
@@ -30,7 +30,13 @@ const categoryIcons: Record<string, any> = {
   plumbing: Droplets,
   hvac: Wind,
   general: Hammer,
-  landscaping: TreePine
+  landscaping: TreePine,
+  windows: DoorOpen,
+  handyman: Wrench,
+  solar: Sun,
+  painting: Paintbrush,
+  fencing: Fence,
+  flooring: Grid3X3
 };
 
 const categoryColors: Record<string, string> = {
@@ -39,7 +45,13 @@ const categoryColors: Record<string, string> = {
   plumbing: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20",
   hvac: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20",
   general: "bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20",
-  landscaping: "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
+  landscaping: "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20",
+  windows: "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20",
+  handyman: "bg-slate-500/10 text-slate-400 border-slate-500/30 hover:bg-slate-500/20",
+  solar: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
+  painting: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
+  fencing: "bg-stone-500/10 text-stone-400 border-stone-500/30 hover:bg-stone-500/20",
+  flooring: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20"
 };
 
 export default function ContractorDirectory() {
@@ -59,7 +71,13 @@ export default function ContractorDirectory() {
     { id: "plumbing", name: "Plumbing", icon: Droplets },
     { id: "hvac", name: "HVAC", icon: Wind },
     { id: "general", name: "General", icon: Hammer },
-    { id: "landscaping", name: "Landscaping", icon: TreePine }
+    { id: "landscaping", name: "Landscaping", icon: TreePine },
+    { id: "windows", name: "Windows", icon: DoorOpen },
+    { id: "handyman", name: "Handyman", icon: Wrench },
+    { id: "solar", name: "Solar", icon: Sun },
+    { id: "painting", name: "Painting", icon: Paintbrush },
+    { id: "fencing", name: "Fencing", icon: Fence },
+    { id: "flooring", name: "Flooring", icon: Grid3X3 }
   ];
 
   useEffect(() => {
@@ -68,7 +86,7 @@ export default function ContractorDirectory() {
 
   const loadContractors = async () => {
     setLoading(true);
-    let query = supabase.from("contractor_profiles").select("*").eq("subscription_status", "active");
+    let query = supabase.from("contractor_profiles").select("*").in("subscription_status", ["active", "pending"]);
     
     if (selectedCategory !== "all") {
       query = query.eq("category", selectedCategory);
@@ -128,7 +146,7 @@ export default function ContractorDirectory() {
           </div>
 
           {/* Category Buttons - Prominent */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 mb-8">
             {categories.map((cat) => {
               const IconComponent = cat.icon;
               const isSelected = selectedCategory === cat.id;
