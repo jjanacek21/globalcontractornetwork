@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Home, Ruler } from "lucide-react";
+import { CheckCircle2, Home, Ruler, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { RoofMeasurementTool } from "@/components/roofing/RoofMeasurementTool";
 import { MeasurementReport } from "@/components/roofing/MeasurementReport";
 import { PackageSelector } from "@/components/roofing/PackageSelector";
+import { InteractiveSalesAssistant } from "@/components/roofing/InteractiveSalesAssistant";
 
 const roofingPackages = [
   {
@@ -135,6 +136,7 @@ const Roofing = () => {
   const [estimatedPrice, setEstimatedPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showMeasurement, setShowMeasurement] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
   const [measurements, setMeasurements] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -257,17 +259,48 @@ const Roofing = () => {
               />
             </div>
             
-            <Button 
-              size="lg" 
-              onClick={() => setShowMeasurement(true)}
-              className="text-lg px-8"
-            >
-              <Ruler className="mr-2 h-5 w-5" />
-              Get Your Free Roof Measurement
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg" 
+                onClick={() => {
+                  setShowAssistant(true);
+                  setShowMeasurement(false);
+                }}
+                className="text-lg px-8"
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Start Interactive Consultation
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => {
+                  setShowMeasurement(true);
+                  setShowAssistant(false);
+                }}
+                className="text-lg px-8"
+              >
+                <Ruler className="mr-2 h-5 w-5" />
+                Get Free Measurement
+              </Button>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Interactive Sales Assistant */}
+      {showAssistant && !showMeasurement && !measurements && (
+        <section className="py-20 bg-muted/30">
+          <div className="container">
+            <InteractiveSalesAssistant 
+              onComplete={() => {
+                setShowAssistant(false);
+                setShowMeasurement(true);
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Measurement Tool Section */}
       {showMeasurement && !measurements && (
