@@ -1443,6 +1443,69 @@ export type Database = {
           },
         ]
       }
+      roofing_consultations: {
+        Row: {
+          appointment_date: string | null
+          appointment_time: string | null
+          appointment_type: string | null
+          budget: string | null
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          estimated_price: number | null
+          id: string
+          priority: string | null
+          recommended_package: string | null
+          roof_type: string | null
+          sqft: number | null
+          status: string | null
+          timeline: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          appointment_type?: string | null
+          budget?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          estimated_price?: number | null
+          id?: string
+          priority?: string | null
+          recommended_package?: string | null
+          roof_type?: string | null
+          sqft?: number | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          appointment_type?: string | null
+          budget?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          estimated_price?: number | null
+          id?: string
+          priority?: string | null
+          recommended_package?: string | null
+          roof_type?: string | null
+          sqft?: number | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       service_categories: {
         Row: {
           created_at: string | null
