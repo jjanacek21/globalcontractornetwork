@@ -151,11 +151,9 @@ export const DiscountClaimForm = ({
         status: "new",
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("coating_leads")
-        .insert([leadData])
-        .select()
-        .single();
+        .insert([leadData]);
 
       if (error) throw error;
 
@@ -164,7 +162,7 @@ export const DiscountClaimForm = ({
         description: `Your ${discountPercent}% discount has been reserved. We'll see you soon!`,
       });
 
-      onSuccess({ ...leadData, id: data.id });
+      onSuccess(leadData);
     } catch (error) {
       console.error("Error submitting lead:", error);
       toast({
