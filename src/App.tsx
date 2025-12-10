@@ -28,6 +28,8 @@ import StudentDashboard from "./pages/StudentDashboard";
 import ContractorAuth from "./pages/ContractorAuth";
 import ContractorDashboard from "./pages/ContractorDashboard";
 import CoatingKings from "./pages/CoatingKings";
+import CoatingKingsAdminAuth from "./pages/CoatingKingsAdminAuth";
+import CoatingKingsAdminDashboard from "./pages/CoatingKingsAdminDashboard";
 import PermitQueens from "./pages/PermitQueens";
 import PermitQueensAuth from "./pages/PermitQueensAuth";
 import PermitQueensDashboard from "./pages/PermitQueensDashboard";
@@ -38,6 +40,8 @@ import SupplementKingsAdminAuth from "./pages/SupplementKingsAdminAuth";
 import SupplementKingsAdminDashboard from "./pages/SupplementKingsAdminDashboard";
 import PermitQueensAdminAuth from "./pages/PermitQueensAdminAuth";
 import PermitQueensAdminDashboard from "./pages/PermitQueensAdminDashboard";
+import RoofingAdminAuth from "./pages/RoofingAdminAuth";
+import RoofingAdminDashboard from "./pages/RoofingAdminDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -57,6 +61,20 @@ const App = () => (
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/contractor-directory" element={<ContractorDirectory />} />
           <Route path="/coating-kings" element={<CoatingKings />} />
+          <Route path="/coating-kings/admin/auth" element={<CoatingKingsAdminAuth />} />
+          <Route path="/coating-kings/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/coating-kings/admin/auth">
+              <CoatingKingsAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Roofing Admin Routes */}
+          <Route path="/roofing/admin/auth" element={<RoofingAdminAuth />} />
+          <Route path="/roofing/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/roofing/admin/auth">
+              <RoofingAdminDashboard />
+            </ProtectedRoute>
+          } />
           
           {/* Permit Queens Routes (rebranded from Permit Pros) */}
           <Route path="/permit-queens" element={<PermitQueens />} />
