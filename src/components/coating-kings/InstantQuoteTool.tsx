@@ -4,13 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, MapPin, Pencil, Trash2, Navigation } from "lucide-react";
+import { Calculator, MapPin, Pencil, Trash2, Navigation, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import { SpinWheel } from "./SpinWheel";
+import { DiscountClaimForm } from "./DiscountClaimForm";
+import { ThankYouScreen } from "./ThankYouScreen";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -41,6 +44,11 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [estimateHigh, setEstimateHigh] = useState<number>(0);
   const [showEstimate, setShowEstimate] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [submittedLead, setSubmittedLead] = useState<any>(null);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -391,6 +399,16 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                       Based on {sqft.toLocaleString()} square feet
                     </p>
                   </div>
+                  
+                  {/* Spin to Win CTA */}
+                  <Button
+                    size="lg"
+                    className="w-full text-lg py-6 bg-gradient-to-r from-primary via-yellow-500 to-primary animate-pulse"
+                    onClick={() => setShowSpinWheel(true)}
+                  >
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    🎰 TODAY ONLY! Spin to Win Up to 90% OFF!
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -454,6 +472,43 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
           </Card>
         </div>
       </div>
+
+      {/* Spin Wheel Modal */}
+      <SpinWheel
+        open={showSpinWheel}
+        onClose={() => setShowSpinWheel(false)}
+        onResult={(percent) => {
+          setDiscountPercent(percent);
+          setShowSpinWheel(false);
+          setShowClaimForm(true);
+        }}
+      />
+
+      {/* Discount Claim Form Modal */}
+      <DiscountClaimForm
+        open={showClaimForm}
+        onClose={() => setShowClaimForm(false)}
+        onSuccess={(leadData) => {
+          setSubmittedLead(leadData);
+          setShowClaimForm(false);
+          setShowThankYou(true);
+        }}
+        discountPercent={discountPercent}
+        estimateLow={estimateLow}
+        estimateHigh={estimateHigh}
+        sqft={sqft}
+        coatingType={coatingType}
+        propertyAddress={selectedAddress}
+      />
+
+      {/* Thank You Screen Modal */}
+      {submittedLead && (
+        <ThankYouScreen
+          open={showThankYou}
+          onClose={() => setShowThankYou(false)}
+          leadData={submittedLead}
+        />
+      )}
     </section>
   );
 };

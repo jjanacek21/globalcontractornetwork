@@ -62,10 +62,32 @@ export type Database = {
         }
         Relationships: []
       }
+      coating_admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coating_leads: {
         Row: {
+          appointment_date: string | null
+          appointment_time: string | null
           coating_type: string
           created_at: string | null
+          discount_percent: number | null
+          discounted_price: number | null
           email: string
           estimate_high: number | null
           estimate_low: number | null
@@ -76,14 +98,22 @@ export type Database = {
           phone: string | null
           property_address: string
           property_type: string | null
+          roof_age: string | null
+          roof_condition: string | null
           roof_type: string
+          show_as_winner: boolean | null
           status: string | null
+          testimonial_text: string | null
           updated_at: string | null
           urgency: string | null
         }
         Insert: {
+          appointment_date?: string | null
+          appointment_time?: string | null
           coating_type: string
           created_at?: string | null
+          discount_percent?: number | null
+          discounted_price?: number | null
           email: string
           estimate_high?: number | null
           estimate_low?: number | null
@@ -94,14 +124,22 @@ export type Database = {
           phone?: string | null
           property_address: string
           property_type?: string | null
+          roof_age?: string | null
+          roof_condition?: string | null
           roof_type: string
+          show_as_winner?: boolean | null
           status?: string | null
+          testimonial_text?: string | null
           updated_at?: string | null
           urgency?: string | null
         }
         Update: {
+          appointment_date?: string | null
+          appointment_time?: string | null
           coating_type?: string
           created_at?: string | null
+          discount_percent?: number | null
+          discounted_price?: number | null
           email?: string
           estimate_high?: number | null
           estimate_low?: number | null
@@ -112,8 +150,12 @@ export type Database = {
           phone?: string | null
           property_address?: string
           property_type?: string | null
+          roof_age?: string | null
+          roof_condition?: string | null
           roof_type?: string
+          show_as_winner?: boolean | null
           status?: string | null
+          testimonial_text?: string | null
           updated_at?: string | null
           urgency?: string | null
         }
@@ -1442,6 +1484,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      roofing_admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       roofing_consultations: {
         Row: {
