@@ -91,6 +91,34 @@ export const DiscountClaimForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.address.trim()) {
+      toast({
+        title: "Property address required",
+        description: "Please enter the property address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.roofType) {
+      toast({
+        title: "Roof type required",
+        description: "Please select your roof type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!coatingType) {
+      toast({
+        title: "Coating type required",
+        description: "Please go back and select a coating type",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!appointmentDate || !appointmentTime) {
       toast({
         title: "Please select appointment",
