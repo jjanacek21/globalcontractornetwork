@@ -206,10 +206,14 @@ export const SpinWheel = ({ open, onClose, onResult }: SpinWheelProps) => {
     const winningIndex = getWeightedRandomSegment();
     const segmentAngle = 360 / SEGMENTS.length;
     
-    // Calculate rotation to land on winning segment
+    // Calculate rotation to land pointer on the winning segment
+    // Pointer is at top (12 o'clock position)
+    // Segment 0 starts at top and goes clockwise
+    // To land on segment i, rotate so segment i's center is at top
     const extraRotations = (5 + Math.floor(Math.random() * 3)) * 360;
-    const segmentMiddle = (winningIndex * segmentAngle) + (segmentAngle / 2);
-    const finalRotation = extraRotations + (360 - segmentMiddle) + 90;
+    const segmentCenter = winningIndex * segmentAngle + segmentAngle / 2;
+    // Rotate clockwise so the segment center ends up at top (under the pointer)
+    const finalRotation = extraRotations + (360 - segmentCenter);
     
     setRotation(prev => prev + finalRotation);
 
