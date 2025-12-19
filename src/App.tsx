@@ -42,6 +42,8 @@ import PermitQueensAdminAuth from "./pages/PermitQueensAdminAuth";
 import PermitQueensAdminDashboard from "./pages/PermitQueensAdminDashboard";
 import RoofingAdminAuth from "./pages/RoofingAdminAuth";
 import RoofingAdminDashboard from "./pages/RoofingAdminDashboard";
+import SuperAdminAuth from "./pages/SuperAdminAuth";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -60,6 +62,16 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/contractor-directory" element={<ContractorDirectory />} />
+          
+          {/* Master Admin Hub Routes */}
+          <Route path="/admin/auth" element={<SuperAdminAuth />} />
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/admin/auth">
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Coating Kings Routes */}
           <Route path="/coating-kings" element={<CoatingKings />} />
           <Route path="/coating-kings/admin/auth" element={<CoatingKingsAdminAuth />} />
           <Route path="/coating-kings/admin/dashboard" element={
