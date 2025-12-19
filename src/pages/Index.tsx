@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   FileText,
   Crown,
-  DollarSign
+  DollarSign,
+  Shield
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -280,6 +281,7 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-4">Login Portals</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/admin/auth" className="hover:text-foreground transition-colors flex items-center gap-1"><Shield className="h-3 w-3" /> Master Admin Hub</Link></li>
                 <li><Link to="/crm/auth" className="hover:text-foreground transition-colors">CRM Portal</Link></li>
                 <li><Link to="/learning" className="hover:text-foreground transition-colors">Learning Platform</Link></li>
                 <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Network</Link></li>
