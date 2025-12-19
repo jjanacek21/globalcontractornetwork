@@ -126,8 +126,12 @@ const Index = () => {
               <Button variant="ghost">
                 Login Portals
               </Button>
-              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 <div className="py-2">
+                  <Link to="/admin/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Master Admin Hub
+                  </Link>
                   <Link to="/crm/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
                     CRM Portal
                   </Link>
