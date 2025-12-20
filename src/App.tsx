@@ -44,6 +44,9 @@ import RoofingAdminAuth from "./pages/RoofingAdminAuth";
 import RoofingAdminDashboard from "./pages/RoofingAdminDashboard";
 import SuperAdminAuth from "./pages/SuperAdminAuth";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import GreenHomeSolutions from "./pages/GreenHomeSolutions";
+import GreenHomeSolutionsAdminAuth from "./pages/GreenHomeSolutionsAdminAuth";
+import GreenHomeSolutionsAdminDashboard from "./pages/GreenHomeSolutionsAdminDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -77,6 +80,15 @@ const App = () => (
           <Route path="/coating-kings/admin/dashboard" element={
             <ProtectedRoute redirectTo="/coating-kings/admin/auth">
               <CoatingKingsAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Green Home Solutions Routes */}
+          <Route path="/green-home-solutions" element={<GreenHomeSolutions />} />
+          <Route path="/green-home-solutions/admin/auth" element={<GreenHomeSolutionsAdminAuth />} />
+          <Route path="/green-home-solutions/admin/dashboard" element={
+            <ProtectedRoute redirectTo="/green-home-solutions/admin/auth">
+              <GreenHomeSolutionsAdminDashboard />
             </ProtectedRoute>
           } />
           
