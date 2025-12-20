@@ -2031,6 +2031,126 @@ export type Database = {
           },
         ]
       }
+      window_admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      window_leads: {
+        Row: {
+          appointment_date: string | null
+          appointment_time: string | null
+          city: string | null
+          created_at: string | null
+          discount_percent: number | null
+          discount_type: string | null
+          discounted_price: number | null
+          email: string
+          estimate_high: number | null
+          estimate_low: number | null
+          existing_window_type: string | null
+          exterior_color: string | null
+          financing_option: string | null
+          glass_type: string | null
+          grid_style: string | null
+          id: string
+          interior_color: string | null
+          name: string
+          notes: string | null
+          performance_level: string | null
+          phone: string | null
+          property_address: string
+          show_as_winner: boolean | null
+          spin_result: string | null
+          state: string | null
+          status: string | null
+          testimonial_text: string | null
+          total_windows: number | null
+          updated_at: string | null
+          window_selections: Json | null
+          zip_code: string | null
+        }
+        Insert: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          city?: string | null
+          created_at?: string | null
+          discount_percent?: number | null
+          discount_type?: string | null
+          discounted_price?: number | null
+          email: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          existing_window_type?: string | null
+          exterior_color?: string | null
+          financing_option?: string | null
+          glass_type?: string | null
+          grid_style?: string | null
+          id?: string
+          interior_color?: string | null
+          name: string
+          notes?: string | null
+          performance_level?: string | null
+          phone?: string | null
+          property_address: string
+          show_as_winner?: boolean | null
+          spin_result?: string | null
+          state?: string | null
+          status?: string | null
+          testimonial_text?: string | null
+          total_windows?: number | null
+          updated_at?: string | null
+          window_selections?: Json | null
+          zip_code?: string | null
+        }
+        Update: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          city?: string | null
+          created_at?: string | null
+          discount_percent?: number | null
+          discount_type?: string | null
+          discounted_price?: number | null
+          email?: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          existing_window_type?: string | null
+          exterior_color?: string | null
+          financing_option?: string | null
+          glass_type?: string | null
+          grid_style?: string | null
+          id?: string
+          interior_color?: string | null
+          name?: string
+          notes?: string | null
+          performance_level?: string | null
+          phone?: string | null
+          property_address?: string
+          show_as_winner?: boolean | null
+          spin_result?: string | null
+          state?: string | null
+          status?: string | null
+          testimonial_text?: string | null
+          total_windows?: number | null
+          updated_at?: string | null
+          window_selections?: Json | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
