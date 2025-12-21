@@ -39,12 +39,12 @@ export const ES_MULTIMAX_PRICES: Record<string, Record<string, number>> = {
 };
 
 export const WINDOW_TYPES = [
-  { id: "singleHung", name: "Single Hung", description: "Classic vertical sliding window" },
-  { id: "roller", name: "Horizontal Roller", description: "Slides horizontally for easy operation" },
-  { id: "liteRoller3", name: "3 Lite Roller", description: "Three-panel horizontal slider" },
-  { id: "pictureWindow", name: "Picture Window", description: "Fixed window for maximum views" },
-  { id: "slidingGlassDoor", name: "Sliding Glass Door", description: "Smooth sliding patio access" },
-  { id: "frenchDoor", name: "French Door", description: "Elegant hinged double doors" }
+  { id: "singleHung", name: "Single Hung", description: "Classic vertical sliding window", image: "single-hung" },
+  { id: "roller", name: "Horizontal Roller", description: "Slides horizontally for easy operation", image: "horizontal-roller" },
+  { id: "liteRoller3", name: "3 Lite Roller", description: "Three-panel horizontal slider", image: "3-lite-roller" },
+  { id: "pictureWindow", name: "Picture Window", description: "Fixed window for maximum views", image: "picture-window" },
+  { id: "slidingGlassDoor", name: "Sliding Glass Door", description: "Smooth sliding patio access", image: "sliding-glass-door" },
+  { id: "frenchDoor", name: "French Door", description: "Elegant hinged double doors", image: "french-door" }
 ];
 
 export const DISCOUNTS: Record<string, { label: string; value: number }> = {
