@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ArrowRight, Calculator, Check } from "lucide-react";
-import { SpinWheel } from "@/components/coating-kings/SpinWheel";
+import { WindowSpinWheel } from "./WindowSpinWheel";
 import { WindowThankYouScreen } from "./WindowThankYouScreen";
 import {
   WINDOW_TYPES,
@@ -26,6 +26,23 @@ import {
   getSizeOptions,
   calculateWindowPrice
 } from "./windowPricing";
+
+// Import window images
+import singleHungImg from "@/assets/windows/single-hung.png";
+import horizontalRollerImg from "@/assets/windows/horizontal-roller.png";
+import threeLineRollerImg from "@/assets/windows/3-lite-roller.png";
+import pictureWindowImg from "@/assets/windows/picture-window.png";
+import slidingGlassDoorImg from "@/assets/windows/sliding-glass-door.png";
+import frenchDoorImg from "@/assets/windows/french-door.png";
+
+const WINDOW_IMAGES: Record<string, string> = {
+  "single-hung": singleHungImg,
+  "horizontal-roller": horizontalRollerImg,
+  "3-lite-roller": threeLineRollerImg,
+  "picture-window": pictureWindowImg,
+  "sliding-glass-door": slidingGlassDoorImg,
+  "french-door": frenchDoorImg,
+};
 
 interface WindowSelection {
   type: string;
@@ -55,7 +72,6 @@ export const WindowQuoteCalculator = () => {
   const [zipCode, setZipCode] = useState("");
   
   // Quote & UI State
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [spinDiscount, setSpinDiscount] = useState<number | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,12 +157,8 @@ export const WindowQuoteCalculator = () => {
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
 
-  const handleSpinResult = async (discount: number) => {
+  const handleSpinResult = (discount: number) => {
     setSpinDiscount(discount);
-    setShowSpinWheel(false);
-    
-    // Submit lead with spin result
-    await submitLead(discount);
   };
 
   const submitLead = async (discount: number) => {
@@ -214,18 +226,32 @@ export const WindowQuoteCalculator = () => {
               {WINDOW_TYPES.map(type => (
                 <Card 
                   key={type.id}
-                  className={`cursor-pointer transition-all ${
+                  className={`cursor-pointer transition-all overflow-hidden ${
                     selectedTypes.includes(type.id) 
-                      ? "border-emerald-500 bg-emerald-50 shadow-md" 
-                      : "hover:border-emerald-300"
+                      ? "border-emerald-500 bg-emerald-50 shadow-md ring-2 ring-emerald-500" 
+                      : "hover:border-emerald-300 hover:shadow-md"
                   }`}
                   onClick={() => handleTypeToggle(type.id)}
                 >
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <Checkbox checked={selectedTypes.includes(type.id)} />
-                    <div>
-                      <div className="font-medium">{type.name}</div>
-                      <div className="text-sm text-muted-foreground">{type.description}</div>
+                  <div className="aspect-square relative bg-gradient-to-br from-gray-50 to-gray-100">
+                    <img 
+                      src={WINDOW_IMAGES[type.image]} 
+                      alt={type.name}
+                      className="w-full h-full object-contain p-4"
+                    />
+                    {selectedTypes.includes(type.id) && (
+                      <div className="absolute top-2 right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox checked={selectedTypes.includes(type.id)} className="hidden" />
+                      <div>
+                        <div className="font-semibold text-lg">{type.name}</div>
+                        <div className="text-sm text-muted-foreground">{type.description}</div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -249,7 +275,12 @@ export const WindowQuoteCalculator = () => {
                   <Card key={selection.type}>
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
-                        <div className="flex-1">
+                        <div className="flex items-center gap-3 flex-1">
+                          <img 
+                            src={WINDOW_IMAGES[typeInfo?.image || ""]} 
+                            alt={typeInfo?.name}
+                            className="w-16 h-16 object-contain bg-gray-50 rounded-lg p-1"
+                          />
                           <Label className="font-semibold">{typeInfo?.name}</Label>
                         </div>
                         <div className="flex-1">
@@ -277,14 +308,6 @@ export const WindowQuoteCalculator = () => {
                             onChange={(e) => updateWindowSelection(selection.type, "quantity", parseInt(e.target.value) || 1)}
                           />
                         </div>
-                        {selection.size && (
-                          <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Unit Price</div>
-                            <div className="font-semibold text-emerald-600">
-                              ${ES_MULTIMAX_PRICES[selection.type]?.[selection.size]?.toLocaleString()}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -495,38 +518,70 @@ export const WindowQuoteCalculator = () => {
         );
 
       case 9:
+        // If they haven't spun yet, show the spin wheel
+        if (!spinDiscount) {
+          return (
+            <div className="space-y-6">
+              <div className="text-center">
+                <Badge className="bg-emerald-100 text-emerald-700 mb-4">Almost There!</Badge>
+                <h3 className="text-2xl font-bold mb-2">Spin to Reveal Your Quote</h3>
+                <p className="text-muted-foreground">
+                  Spin the wheel to unlock your exclusive discount and see your final estimate!
+                </p>
+              </div>
+              
+              <WindowSpinWheel onResult={handleSpinResult} />
+            </div>
+          );
+        }
+
+        // After spinning, show the discounted quote
+        const discountedLow = Math.round(estimateLow * (1 - spinDiscount / 100));
+        const discountedHigh = Math.round(estimateHigh * (1 - spinDiscount / 100));
+        
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <Badge className="bg-emerald-100 text-emerald-700 mb-4">Your Estimate</Badge>
-              <h3 className="text-2xl font-bold mb-2">Your Window Quote</h3>
-              <p className="text-muted-foreground">Based on your selections</p>
+              <Badge className="bg-emerald-100 text-emerald-700 mb-4">🎉 Congratulations!</Badge>
+              <h3 className="text-2xl font-bold mb-2">Your Exclusive Quote</h3>
+              <p className="text-muted-foreground">You won {spinDiscount}% OFF your window installation!</p>
             </div>
             
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-              <CardContent className="p-8 text-center">
-                <div className="text-sm text-emerald-700 mb-2">Estimated Total</div>
-                <div className="text-4xl md:text-5xl font-bold text-emerald-700">
-                  ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
+              <CardContent className="p-8 text-center space-y-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Original Estimate</div>
+                  <div className="text-xl text-muted-foreground line-through">
+                    ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
+                  </div>
                 </div>
-                <div className="text-sm text-emerald-600 mt-2">
-                  {windowSelections.reduce((sum, w) => sum + w.quantity, 0)} windows • Installed
+                <div>
+                  <div className="text-sm text-emerald-700 mb-1">With {spinDiscount}% Discount</div>
+                  <div className="text-4xl md:text-5xl font-bold text-emerald-700">
+                    ${discountedLow.toLocaleString()} - ${discountedHigh.toLocaleString()}
+                  </div>
                 </div>
+                <div className="text-sm text-emerald-600">
+                  {windowSelections.reduce((sum, w) => sum + w.quantity, 0)} windows • Fully Installed
+                </div>
+                <Badge className="bg-amber-100 text-amber-800 text-lg px-4 py-2">
+                  You Save: ${(estimateLow - discountedLow).toLocaleString()} - ${(estimateHigh - discountedHigh).toLocaleString()}
+                </Badge>
               </CardContent>
             </Card>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
-              <h4 className="text-xl font-bold text-yellow-800 mb-2">🎉 Spin to Win an Extra Discount!</h4>
-              <p className="text-yellow-700 mb-4">
-                Get an exclusive discount of up to 25% off your quote!
-              </p>
+            <div className="text-center">
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold"
-                onClick={() => setShowSpinWheel(true)}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-8"
+                onClick={() => submitLead(spinDiscount)}
+                disabled={isSubmitting}
               >
-                🎰 Spin the Wheel!
+                {isSubmitting ? "Submitting..." : "Claim My Discount & Schedule Consultation"}
               </Button>
+              <p className="text-sm text-muted-foreground mt-3">
+                A window specialist will contact you within 24 hours
+              </p>
             </div>
           </div>
         );
@@ -556,7 +611,7 @@ export const WindowQuoteCalculator = () => {
           <CardContent className="p-8">
             {renderStep()}
             
-            {step <= totalSteps && (
+            {step <= totalSteps && !spinDiscount && (
               <div className="flex justify-between mt-8 pt-6 border-t">
                 <Button
                   variant="outline"
@@ -579,12 +634,6 @@ export const WindowQuoteCalculator = () => {
           </CardContent>
         </Card>
       </div>
-
-      <SpinWheel
-        open={showSpinWheel}
-        onClose={() => setShowSpinWheel(false)}
-        onResult={handleSpinResult}
-      />
     </section>
   );
 };

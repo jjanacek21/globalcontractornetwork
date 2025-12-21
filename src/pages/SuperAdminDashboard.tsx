@@ -94,7 +94,8 @@ const SuperAdminDashboard = () => {
         storeMembers,
         contractorProfiles,
         supplementContractors,
-        permitContractors
+        permitContractors,
+        windowLeads
       ] = await Promise.all([
         supabase.from("coating_leads").select("*").order("created_at", { ascending: false }),
         supabase.from("roofing_consultations").select("*").order("created_at", { ascending: false }),
@@ -107,6 +108,7 @@ const SuperAdminDashboard = () => {
         supabase.from("contractor_profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("supplement_contractors").select("*").order("created_at", { ascending: false }),
         supabase.from("permit_contractors").select("*").order("created_at", { ascending: false }),
+        supabase.from("window_leads").select("*").order("created_at", { ascending: false }),
       ]);
 
       // Transform leads into unified format
@@ -221,6 +223,20 @@ const SuperAdminDashboard = () => {
           status: "active",
           createdAt: member.created_at || "",
           details: `${member.points_balance} points balance`,
+        });
+      });
+
+      // Green Home Improvements (Window) leads
+      (windowLeads.data || []).forEach(lead => {
+        unifiedLeads.push({
+          id: lead.id,
+          source: "Green Home Improvements",
+          customerName: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          status: lead.status,
+          createdAt: lead.created_at || "",
+          details: `${lead.total_windows || 0} windows - ${lead.property_address}`,
         });
       });
 
