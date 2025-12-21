@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Menu } from "lucide-react";
+import { Phone, Menu, Home } from "lucide-react";
 import { useState } from "react";
 import ghiLogo from "@/assets/ghi-logo.png";
 
@@ -15,6 +15,10 @@ export const GreenHomeHeader = () => {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
+          <Link to="/" className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors">
+            <Home className="h-4 w-4" />
+            Home
+          </Link>
           <a href="#quote" className="text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors">
             Get Quote
           </a>
@@ -54,6 +58,10 @@ export const GreenHomeHeader = () => {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t px-4 py-4 space-y-4">
+          <Link to="/" className="flex items-center gap-2 text-sm font-medium text-gray-700 py-2">
+            <Home className="h-4 w-4" />
+            Home
+          </Link>
           <a href="#quote" className="block text-sm font-medium text-gray-700 py-2">Get Quote</a>
           <a href="#windows" className="block text-sm font-medium text-gray-700 py-2">Window Types</a>
           <a href="#resources" className="block text-sm font-medium text-gray-700 py-2">Resources</a>
