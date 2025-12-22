@@ -11,12 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound
 } from "lucide-react";
 import { format } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
 import { ContractorDialog } from "@/components/admin/ContractorDialog";
 import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
+import { CompaniesTable } from "@/components/admin/CompaniesTable";
+import { UsersTable } from "@/components/admin/UsersTable";
+import { TeamsTable } from "@/components/admin/TeamsTable";
 
 interface UnifiedLead {
   id: string;
@@ -307,9 +310,12 @@ const SuperAdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="leads" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />All Leads ({filteredLeads.length})</TabsTrigger>
-                <TabsTrigger value="contractors" className="gap-2"><Building2 className="h-4 w-4" />Contractors ({filteredContractors.length})</TabsTrigger>
+              <TabsList className="flex-wrap h-auto gap-1">
+                <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads ({filteredLeads.length})</TabsTrigger>
+                <TabsTrigger value="contractors" className="gap-2"><Building2 className="h-4 w-4" />Contractors</TabsTrigger>
+                <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>
+                <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />CRM Users</TabsTrigger>
+                <TabsTrigger value="teams" className="gap-2"><UsersRound className="h-4 w-4" />Teams</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
               </TabsList>
 
@@ -407,6 +413,18 @@ const SuperAdminDashboard = () => {
                     </TableBody>
                   </Table>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="companies">
+                <CompaniesTable />
+              </TabsContent>
+
+              <TabsContent value="users">
+                <UsersTable />
+              </TabsContent>
+
+              <TabsContent value="teams">
+                <TeamsTable />
               </TabsContent>
 
               <TabsContent value="analytics">
