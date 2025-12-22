@@ -161,6 +161,121 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+          website: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          hire_date: string | null
+          id: string
+          is_active: boolean | null
+          job_title: string | null
+          manager_id: string | null
+          role: Database["public"]["Enums"]["company_role"]
+          team_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_title?: string | null
+          manager_id?: string | null
+          role?: Database["public"]["Enums"]["company_role"]
+          team_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_title?: string | null
+          manager_id?: string | null
+          role?: Database["public"]["Enums"]["company_role"]
+          team_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_members_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_requests: {
         Row: {
           created_at: string | null
@@ -543,6 +658,7 @@ export type Database = {
           address: string | null
           assigned_rep_id: string | null
           city: string | null
+          company_id: string | null
           created_at: string | null
           email: string | null
           id: string
@@ -561,6 +677,7 @@ export type Database = {
           address?: string | null
           assigned_rep_id?: string | null
           city?: string | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -579,6 +696,7 @@ export type Database = {
           address?: string | null
           assigned_rep_id?: string | null
           city?: string | null
+          company_id?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -599,6 +717,13 @@ export type Database = {
             columns: ["assigned_rep_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -820,6 +945,70 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_requests: {
+        Row: {
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          materials: string
+          notes: string | null
+          quantity: string | null
+          requested_by: string | null
+          status: string | null
+          updated_at: string | null
+          urgency: string | null
+          work_order_id: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          materials: string
+          notes?: string | null
+          quantity?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+          work_order_id: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          materials?: string
+          notes?: string | null
+          quantity?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_requests_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -2002,6 +2191,51 @@ export type Database = {
         }
         Relationships: []
       }
+      teams: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_id: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2151,11 +2385,152 @@ export type Database = {
         }
         Relationships: []
       }
+      work_order_photos: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_path: string
+          id: string
+          notes: string | null
+          photo_type: string | null
+          uploaded_by: string | null
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_path: string
+          id?: string
+          notes?: string | null
+          photo_type?: string | null
+          uploaded_by?: string | null
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_path?: string
+          id?: string
+          notes?: string | null
+          photo_type?: string | null
+          uploaded_by?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_photos_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          address: string | null
+          assigned_crew_id: string | null
+          assigned_rep_id: string | null
+          city: string | null
+          company_id: string
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          job_details: Json | null
+          job_type: string | null
+          notes: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          state: string | null
+          status: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_crew_id?: string | null
+          assigned_rep_id?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          job_details?: Json | null
+          job_type?: string | null
+          notes?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_crew_id?: string | null
+          assigned_rep_id?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          job_details?: Json | null
+          job_type?: string | null
+          notes?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_assigned_crew_id_fkey"
+            columns: ["assigned_crew_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_company_role: {
+        Args: { _company_id: string }
+        Returns: Database["public"]["Enums"]["company_role"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2163,9 +2538,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_company_or_super_admin: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "sales_rep" | "teacher" | "student" | "contractor"
+      company_role:
+        | "company_admin"
+        | "manager"
+        | "project_manager"
+        | "sales_rep"
+        | "crew"
       pipeline_stage:
         | "lead"
         | "inspection"
@@ -2307,6 +2694,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "sales_rep", "teacher", "student", "contractor"],
+      company_role: [
+        "company_admin",
+        "manager",
+        "project_manager",
+        "sales_rep",
+        "crew",
+      ],
       pipeline_stage: [
         "lead",
         "inspection",
