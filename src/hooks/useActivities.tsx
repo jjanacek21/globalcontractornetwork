@@ -63,15 +63,17 @@ export function useActivities(entityType?: string, entityId?: string) {
     try {
       const { data: userData } = await supabase.auth.getUser();
       
-      const { error } = await supabase.from("activities").insert({
+      const insertData: Database["public"]["Tables"]["activities"]["Insert"] = {
         entity_type: activity.entity_type,
         entity_id: activity.entity_id,
         action: activity.action,
-        description: activity.description,
-        meta: activity.meta,
-        company_id: activity.company_id,
-        user_id: userData.user?.id,
-      });
+        description: activity.description ?? null,
+        meta: activity.meta as Database["public"]["Tables"]["activities"]["Insert"]["meta"],
+        company_id: activity.company_id ?? null,
+        user_id: userData.user?.id ?? null,
+      };
+
+      const { error } = await supabase.from("activities").insert(insertData);
 
       if (error) throw error;
       await fetchActivities();
