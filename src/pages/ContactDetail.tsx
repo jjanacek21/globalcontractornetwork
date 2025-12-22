@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useContact, useContacts } from "@/hooks/useContacts";
 import { useProperties } from "@/hooks/useProperties";
 import { useLeads } from "@/hooks/useLeads";
-import { useActivities } from "@/hooks/useActivities";
 import { useNotes } from "@/hooks/useNotes";
+import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type LeadStatus = Database["public"]["Enums"]["lead_status"];
+
 const ContactDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,7 +38,6 @@ const ContactDetail = () => {
   const { deleteContact } = useContacts();
   const { properties, createProperty } = useProperties(id || undefined);
   const { leads, createLead, updateLeadStatus, deleteLead } = useLeads();
-  const { activities } = useActivities("contact", id || "");
   const { notes, createNote, deleteNote } = useNotes("contact", id || "");
   
   const [showAddProperty, setShowAddProperty] = useState(false);
@@ -250,7 +251,7 @@ const ContactDetail = () => {
                 <LeadCard
                   key={lead.id}
                   lead={lead}
-                  onStatusChange={(status) => updateLeadStatus(lead.id, status)}
+                  onStatusChange={(status: LeadStatus) => updateLeadStatus(lead.id, status)}
                   onDelete={() => deleteLead(lead.id)}
                 />
               ))}
@@ -264,7 +265,7 @@ const ContactDetail = () => {
               <CardTitle>Activity Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <ActivityTimeline activities={activities} />
+              <ActivityTimeline entityType="contact" entityId={id || ""} />
             </CardContent>
           </Card>
         </TabsContent>
