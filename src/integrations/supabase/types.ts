@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string | null
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          meta: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          meta?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          meta?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           category: string | null
@@ -61,6 +112,75 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      catalog_items: {
+        Row: {
+          category: string | null
+          code: string | null
+          company_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_taxable: boolean | null
+          markup_percent: number | null
+          name: string
+          trade_id: string
+          unit_cost: number | null
+          unit_of_measure: string
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          code?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_taxable?: boolean | null
+          markup_percent?: number | null
+          name: string
+          trade_id: string
+          unit_cost?: number | null
+          unit_of_measure: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_taxable?: boolean | null
+          markup_percent?: number | null
+          name?: string
+          trade_id?: string
+          unit_cost?: number | null
+          unit_of_measure?: string
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_items_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coating_admins: {
         Row: {
@@ -313,6 +433,132 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          created_by_user_id: string | null
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          preferred_contact_method:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_phone: string | null
+          secondary_phone: string | null
+          source: Database["public"]["Enums"]["contact_source"] | null
+          source_details: string | null
+          spouse_first_name: string | null
+          spouse_last_name: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_phone?: string | null
+          secondary_phone?: string | null
+          source?: Database["public"]["Enums"]["contact_source"] | null
+          source_details?: string | null
+          spouse_first_name?: string | null
+          spouse_last_name?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_phone?: string | null
+          secondary_phone?: string | null
+          source?: Database["public"]["Enums"]["contact_source"] | null
+          source_details?: string | null
+          spouse_first_name?: string | null
+          spouse_last_name?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contingencies: {
+        Row: {
+          created_at: string | null
+          file_path: string | null
+          id: string
+          is_required: boolean | null
+          lead_id: string
+          signed_at: string | null
+          terms_summary: string | null
+          verified_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_path?: string | null
+          id?: string
+          is_required?: boolean | null
+          lead_id: string
+          signed_at?: string | null
+          terms_summary?: string | null
+          verified_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string | null
+          id?: string
+          is_required?: boolean | null
+          lead_id?: string
+          signed_at?: string | null
+          terms_summary?: string | null
+          verified_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contingencies_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contingencies_verified_by_user_id_fkey"
+            columns: ["verified_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -772,6 +1018,47 @@ export type Database = {
           },
         ]
       }
+      estimate_packages: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          estimate_id: string
+          id: string
+          is_recommended: boolean | null
+          items: Json | null
+          name: string
+          total: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          estimate_id: string
+          id?: string
+          is_recommended?: boolean | null
+          items?: Json | null
+          name: string
+          total?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          estimate_id?: string
+          id?: string
+          is_recommended?: boolean | null
+          items?: Json | null
+          name?: string
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_packages_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimates: {
         Row: {
           created_at: string | null
@@ -906,6 +1193,293 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      files: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          document_category: string | null
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          document_category?: string | null
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          document_category?: string | null
+          entity_id?: string
+          entity_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          damage_types: Json | null
+          id: string
+          inspector_id: string | null
+          lead_id: string
+          property_id: string | null
+          recommendation:
+            | Database["public"]["Enums"]["inspection_recommendation"]
+            | null
+          roof_type: Database["public"]["Enums"]["roof_type"] | null
+          scheduled_at: string | null
+          summary: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          damage_types?: Json | null
+          id?: string
+          inspector_id?: string | null
+          lead_id: string
+          property_id?: string | null
+          recommendation?:
+            | Database["public"]["Enums"]["inspection_recommendation"]
+            | null
+          roof_type?: Database["public"]["Enums"]["roof_type"] | null
+          scheduled_at?: string | null
+          summary?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          damage_types?: Json | null
+          id?: string
+          inspector_id?: string | null
+          lead_id?: string
+          property_id?: string | null
+          recommendation?:
+            | Database["public"]["Enums"]["inspection_recommendation"]
+            | null
+          roof_type?: Database["public"]["Enums"]["roof_type"] | null
+          scheduled_at?: string | null
+          summary?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insurance_profiles: {
+        Row: {
+          acv_amount: number | null
+          adjuster_email: string | null
+          adjuster_name: string | null
+          adjuster_phone: string | null
+          agent_email: string | null
+          agent_name: string | null
+          agent_phone: string | null
+          claim_number: string | null
+          coverage_type: string | null
+          created_at: string | null
+          date_of_loss: string | null
+          deductible_amount: number | null
+          id: string
+          insurance_carrier: string | null
+          notes: string | null
+          policy_number: string | null
+          property_id: string
+          rcv_amount: number | null
+          recoverable_depreciation: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          acv_amount?: number | null
+          adjuster_email?: string | null
+          adjuster_name?: string | null
+          adjuster_phone?: string | null
+          agent_email?: string | null
+          agent_name?: string | null
+          agent_phone?: string | null
+          claim_number?: string | null
+          coverage_type?: string | null
+          created_at?: string | null
+          date_of_loss?: string | null
+          deductible_amount?: number | null
+          id?: string
+          insurance_carrier?: string | null
+          notes?: string | null
+          policy_number?: string | null
+          property_id: string
+          rcv_amount?: number | null
+          recoverable_depreciation?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          acv_amount?: number | null
+          adjuster_email?: string | null
+          adjuster_name?: string | null
+          adjuster_phone?: string | null
+          agent_email?: string | null
+          agent_name?: string | null
+          agent_phone?: string | null
+          claim_number?: string | null
+          coverage_type?: string | null
+          created_at?: string | null
+          date_of_loss?: string | null
+          deductible_amount?: number | null
+          id?: string
+          insurance_carrier?: string | null
+          notes?: string | null
+          policy_number?: string | null
+          property_id?: string
+          rcv_amount?: number | null
+          recoverable_depreciation?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_profiles_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_rep_id: string | null
+          closed_at: string | null
+          closed_reason: string | null
+          company_id: string | null
+          contact_id: string
+          created_at: string | null
+          expected_value: number | null
+          id: string
+          lead_type: Database["public"]["Enums"]["lead_type"]
+          property_id: string
+          qualification_notes: string | null
+          source: Database["public"]["Enums"]["contact_source"] | null
+          status: Database["public"]["Enums"]["lead_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_rep_id?: string | null
+          closed_at?: string | null
+          closed_reason?: string | null
+          company_id?: string | null
+          contact_id: string
+          created_at?: string | null
+          expected_value?: number | null
+          id?: string
+          lead_type?: Database["public"]["Enums"]["lead_type"]
+          property_id: string
+          qualification_notes?: string | null
+          source?: Database["public"]["Enums"]["contact_source"] | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_rep_id?: string | null
+          closed_at?: string | null
+          closed_reason?: string | null
+          company_id?: string | null
+          contact_id?: string
+          created_at?: string | null
+          expected_value?: number | null
+          id?: string
+          lead_type?: Database["public"]["Enums"]["lead_type"]
+          property_id?: string
+          qualification_notes?: string | null
+          source?: Database["public"]["Enums"]["contact_source"] | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -1081,6 +1655,47 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          author_user_id: string | null
+          content: string
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_pinned: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_user_id?: string | null
+          content: string
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_pinned?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_user_id?: string | null
+          content?: string
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_pinned?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1628,6 +2243,78 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      properties: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          city: string | null
+          company_id: string | null
+          contact_id: string
+          created_at: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          mapbox_place_id: string | null
+          notes: string | null
+          property_type: Database["public"]["Enums"]["property_type"] | null
+          state: string | null
+          updated_at: string | null
+          year_built: number | null
+          zip: string | null
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          city?: string | null
+          company_id?: string | null
+          contact_id: string
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          mapbox_place_id?: string | null
+          notes?: string | null
+          property_type?: Database["public"]["Enums"]["property_type"] | null
+          state?: string | null
+          updated_at?: string | null
+          year_built?: number | null
+          zip?: string | null
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          city?: string | null
+          company_id?: string | null
+          contact_id?: string
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          mapbox_place_id?: string | null
+          notes?: string | null
+          property_type?: Database["public"]["Enums"]["property_type"] | null
+          state?: string | null
+          updated_at?: string | null
+          year_built?: number | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quiz_attempts: {
         Row: {
@@ -2236,6 +2923,47 @@ export type Database = {
           },
         ]
       }
+      trades: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trades_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2553,6 +3281,33 @@ export type Database = {
         | "project_manager"
         | "sales_rep"
         | "crew"
+      contact_method: "call" | "text" | "email"
+      contact_source:
+        | "canvass"
+        | "web_form"
+        | "referral"
+        | "inbound_call"
+        | "door_hanger"
+        | "social_media"
+        | "advertisement"
+        | "other"
+      inspection_recommendation:
+        | "repair"
+        | "partial_replacement"
+        | "full_replacement"
+        | "coating"
+        | "no_action"
+      lead_status:
+        | "new"
+        | "contact_made"
+        | "inspection_scheduled"
+        | "inspected"
+        | "estimate_sent"
+        | "negotiating"
+        | "closed_won"
+        | "closed_lost"
+        | "no_deal"
+      lead_type: "retail" | "insurance"
       pipeline_stage:
         | "lead"
         | "inspection"
@@ -2560,6 +3315,14 @@ export type Database = {
         | "sold"
         | "in_production"
         | "complete"
+      property_type: "residential" | "commercial" | "multifamily" | "hoa"
+      roof_type:
+        | "shingle"
+        | "tile"
+        | "metal"
+        | "flat"
+        | "coating_candidate"
+        | "other"
       transaction_type:
         | "purchase"
         | "reward"
@@ -2701,6 +3464,36 @@ export const Constants = {
         "sales_rep",
         "crew",
       ],
+      contact_method: ["call", "text", "email"],
+      contact_source: [
+        "canvass",
+        "web_form",
+        "referral",
+        "inbound_call",
+        "door_hanger",
+        "social_media",
+        "advertisement",
+        "other",
+      ],
+      inspection_recommendation: [
+        "repair",
+        "partial_replacement",
+        "full_replacement",
+        "coating",
+        "no_action",
+      ],
+      lead_status: [
+        "new",
+        "contact_made",
+        "inspection_scheduled",
+        "inspected",
+        "estimate_sent",
+        "negotiating",
+        "closed_won",
+        "closed_lost",
+        "no_deal",
+      ],
+      lead_type: ["retail", "insurance"],
       pipeline_stage: [
         "lead",
         "inspection",
@@ -2708,6 +3501,15 @@ export const Constants = {
         "sold",
         "in_production",
         "complete",
+      ],
+      property_type: ["residential", "commercial", "multifamily", "hoa"],
+      roof_type: [
+        "shingle",
+        "tile",
+        "metal",
+        "flat",
+        "coating_candidate",
+        "other",
       ],
       transaction_type: [
         "purchase",
