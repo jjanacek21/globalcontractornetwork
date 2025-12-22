@@ -1,39 +1,48 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import beforeAfterComposite from "@/assets/coating-kings/before-after-composite.png";
 
 const projects = [
   {
-    title: "Commercial Flat Roof - Miami",
-    before: "Severely weathered with ponding water damage",
-    after: "Restored with Silicone coating system",
-    beforeImg: "/placeholder.svg",
-    afterImg: "/placeholder.svg",
-    sqft: "25,000 SF",
-    coating: "Silicone + Base"
+    title: "Metal Storage Roof - Rusty to White",
+    before: "Severe rust and corrosion damage",
+    after: "Restored with white coating system",
+    sqft: "8,000 SF",
+    coating: "Silicone + Primer",
+    // First row: top 0-33%
+    imagePosition: "0% 0%",
   },
   {
-    title: "Metal Roof Restoration - Fort Lauderdale",
-    before: "Rust and corrosion throughout",
-    after: "Protected with Elastomeric coating",
-    beforeImg: "/placeholder.svg",
-    afterImg: "/placeholder.svg",
+    title: "Commercial Flat Roof - Damaged to Sealed",
+    before: "UV damage and surface deterioration",
+    after: "Protected with elastomeric coating",
+    sqft: "15,000 SF",
+    coating: "Elastomeric",
+    // Second row: middle 33-66%
+    imagePosition: "0% 50%",
+  },
+  {
+    title: "Metal Roof - Rusty to Blue Coating",
+    before: "Extensive rust throughout",
+    after: "Sealed with premium blue coating",
     sqft: "12,000 SF",
-    coating: "Elastomeric"
-  },
-  {
-    title: "Residential Flat Roof - Boca Raton",
-    before: "UV damage and minor leaks",
-    after: "Sealed with Acrylic coating",
-    beforeImg: "/placeholder.svg",
-    afterImg: "/placeholder.svg",
-    sqft: "3,500 SF",
-    coating: "Acrylic + Base"
+    coating: "Acrylic + Base",
+    // Third row: bottom 66-100%
+    imagePosition: "0% 100%",
   }
 ];
 
 export const BeforeAfterSlider = () => {
-  const [sliderValue, setSliderValue] = useState([50]);
+  const [sliderValues, setSliderValues] = useState<{ [key: number]: number[] }>({
+    0: [50],
+    1: [50],
+    2: [50],
+  });
+
+  const handleSliderChange = (index: number, value: number[]) => {
+    setSliderValues((prev) => ({ ...prev, [index]: value }));
+  };
 
   return (
     <section className="py-20 bg-muted/30">
@@ -48,78 +57,94 @@ export const BeforeAfterSlider = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {projects.map((project, index) => (
-            <Card key={index} className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-lg">{project.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Image Comparison Container */}
-                <div className="relative h-64 bg-muted rounded-lg overflow-hidden">
-                  {/* Before Image */}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-br from-gray-400 to-gray-600"
-                    style={{
-                      clipPath: `inset(0 ${100 - sliderValue[0]}% 0 0)`
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-white text-center p-4 bg-black/50 rounded">
-                        <p className="font-semibold mb-2">BEFORE</p>
-                        <p className="text-sm">{project.before}</p>
+          {projects.map((project, index) => {
+            const sliderValue = sliderValues[index] || [50];
+            
+            return (
+              <Card key={index} className="overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-lg">{project.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Image Comparison Container */}
+                  <div className="relative h-64 bg-muted rounded-lg overflow-hidden">
+                    {/* Before Image (Left side) */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        clipPath: `inset(0 ${100 - sliderValue[0]}% 0 0)`,
+                      }}
+                    >
+                      <div 
+                        className="absolute inset-0 bg-cover"
+                        style={{
+                          backgroundImage: `url(${beforeAfterComposite})`,
+                          backgroundPosition: project.imagePosition,
+                          backgroundSize: "200% 300%",
+                        }}
+                      />
+                      <span className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded text-sm font-semibold">
+                        BEFORE
+                      </span>
+                    </div>
+
+                    {/* After Image (Right side) */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        clipPath: `inset(0 0 0 ${sliderValue[0]}%)`,
+                      }}
+                    >
+                      <div 
+                        className="absolute inset-0 bg-cover"
+                        style={{
+                          backgroundImage: `url(${beforeAfterComposite})`,
+                          backgroundPosition: `100% ${project.imagePosition.split(' ')[1]}`,
+                          backgroundSize: "200% 300%",
+                        }}
+                      />
+                      <span className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-semibold">
+                        AFTER
+                      </span>
+                    </div>
+
+                    {/* Slider Handle */}
+                    <div
+                      className="absolute top-0 bottom-0 w-1 bg-white shadow-lg z-10"
+                      style={{ left: `${sliderValue[0]}%` }}
+                    >
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-primary">
+                        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                        </svg>
                       </div>
                     </div>
                   </div>
 
-                  {/* After Image */}
-                  <div
-                    className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600"
-                    style={{
-                      clipPath: `inset(0 0 0 ${sliderValue[0]}%)`
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-white text-center p-4 bg-black/50 rounded">
-                        <p className="font-semibold mb-2">AFTER</p>
-                        <p className="text-sm">{project.after}</p>
-                      </div>
+                  {/* Slider Control */}
+                  <Slider
+                    value={sliderValue}
+                    onValueChange={(value) => handleSliderChange(index, value)}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+
+                  {/* Project Details */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Size</p>
+                      <p className="font-semibold">{project.sqft}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">System</p>
+                      <p className="font-semibold">{project.coating}</p>
                     </div>
                   </div>
-
-                  {/* Slider Handle */}
-                  <div
-                    className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
-                    style={{ left: `${sliderValue[0]}%` }}
-                  >
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
-                      <div className="w-1 h-4 bg-gray-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Slider Control */}
-                <Slider
-                  value={sliderValue}
-                  onValueChange={setSliderValue}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-
-                {/* Project Details */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Size</p>
-                    <p className="font-semibold">{project.sqft}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">System</p>
-                    <p className="font-semibold">{project.coating}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Stats Section */}
