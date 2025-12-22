@@ -44,20 +44,20 @@ export const CoatingKingsFooter = () => {
             <h3 className="font-semibold text-lg">Contact Us</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="tel:+13055551234" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                <a href="tel:+12149982879" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                   <Phone className="w-4 h-4" />
-                  (305) 555-1234
+                  (214) 998-2879
                 </a>
               </li>
               <li>
-                <a href="mailto:info@coatingkings.com" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                <a href="mailto:jared@globalcontractor.network" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                   <Mail className="w-4 h-4" />
-                  info@coatingkings.com
+                  jared@globalcontractor.network
                 </a>
               </li>
               <li className="flex items-start gap-2 text-muted-foreground">
                 <MapPin className="w-4 h-4 mt-1 flex-shrink-0" />
-                <span>123 Coating Way<br />Miami, FL 33101</span>
+                <span>Boca Raton, FL 33432</span>
               </li>
             </ul>
           </div>

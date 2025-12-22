@@ -5,7 +5,6 @@ import { HeroSection } from "@/components/coating-kings/HeroSection";
 import { InstantQuoteTool } from "@/components/coating-kings/InstantQuoteTool";
 import { CoatingProductGuide } from "@/components/coating-kings/CoatingProductGuide";
 import { WhyChooseUs } from "@/components/coating-kings/WhyChooseUs";
-import { ContractorResources } from "@/components/coating-kings/ContractorResources";
 import { BeforeAfterSlider } from "@/components/coating-kings/BeforeAfterSlider";
 import { LeadCaptureForm } from "@/components/coating-kings/LeadCaptureForm";
 import { FAQSection } from "@/components/coating-kings/FAQSection";
@@ -57,7 +56,6 @@ const CoatingKings = () => {
         <CoatingProductGuide onCoatingSelect={handleCoatingSelect} />
         <InstantQuoteTool selectedCoatingType={selectedCoating} />
         <WhyChooseUs />
-        <ContractorResources />
         <BeforeAfterSlider />
         <LeadCaptureForm />
         <FAQSection />
