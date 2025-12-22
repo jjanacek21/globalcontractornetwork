@@ -33,14 +33,13 @@ interface CreateLeadDialogProps {
 }
 
 const LEAD_SOURCES: { value: ContactSource; label: string }[] = [
-  { value: "door_knock", label: "Door Knock" },
+  { value: "canvass", label: "Canvass / Door Knock" },
   { value: "referral", label: "Referral" },
-  { value: "website", label: "Website" },
-  { value: "phone", label: "Phone" },
+  { value: "web_form", label: "Website Form" },
+  { value: "inbound_call", label: "Inbound Call" },
   { value: "social_media", label: "Social Media" },
   { value: "advertisement", label: "Advertisement" },
-  { value: "storm_chaser", label: "Storm Chaser" },
-  { value: "home_show", label: "Home Show" },
+  { value: "door_hanger", label: "Door Hanger" },
   { value: "other", label: "Other" },
 ];
 
