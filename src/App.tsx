@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
+import Contacts from "./pages/Contacts";
+import LeadPipeline from "./pages/LeadPipeline";
 import FieldMap from "./pages/FieldMap";
 import Measurements from "./pages/Measurements";
 import Estimates from "./pages/Estimates";
@@ -157,6 +159,20 @@ const App = () => (
             <ProtectedRoute>
               <AppLayout>
                 <Customers />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/crm/contacts" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Contacts />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/crm/pipeline" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <LeadPipeline />
               </AppLayout>
             </ProtectedRoute>
           } />

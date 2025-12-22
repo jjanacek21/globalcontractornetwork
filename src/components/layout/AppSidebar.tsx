@@ -7,6 +7,7 @@ import {
   Presentation,
   Building2,
   Map,
+  Kanban,
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,7 +23,8 @@ import {
 
 const navigation = [
   { title: "Dashboard", url: "/crm/dashboard", icon: LayoutDashboard },
-  { title: "Customers", url: "/crm/customers", icon: Users },
+  { title: "Contacts", url: "/crm/contacts", icon: Users },
+  { title: "Pipeline", url: "/crm/pipeline", icon: Kanban },
   { title: "Field Map", url: "/crm/field-map", icon: Map },
   { title: "Measurements", url: "/crm/measurements", icon: Ruler },
   { title: "Estimates", url: "/crm/estimates", icon: FileText },
