@@ -12,7 +12,8 @@ import {
   FileText,
   Crown,
   DollarSign,
-  Shield
+  Shield,
+  AlertTriangle
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -94,6 +95,13 @@ const Index = () => {
       description: "Impact windows for South Florida. Get instant quotes with ES MULTIMAX pricing. Spin to win discounts!",
       link: "/green-home-solutions",
       color: "bg-green-600/10 text-green-600"
+    },
+    {
+      icon: AlertTriangle,
+      title: "Emergency Mitigation",
+      description: "24/7 mold remediation, water damage, storm cleanup & roof tarping. Fast response for South Florida emergencies.",
+      link: "/emergency-mitigation",
+      color: "bg-red-600/10 text-red-600"
     }
   ];
 
