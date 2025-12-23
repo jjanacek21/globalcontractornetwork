@@ -49,6 +49,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import GreenHomeSolutions from "./pages/GreenHomeSolutions";
 import GreenHomeSolutionsAdminAuth from "./pages/GreenHomeSolutionsAdminAuth";
 import GreenHomeSolutionsAdminDashboard from "./pages/GreenHomeSolutionsAdminDashboard";
+import EmergencyMitigation from "./pages/EmergencyMitigation";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -93,6 +94,9 @@ const App = () => (
               <GreenHomeSolutionsAdminDashboard />
             </ProtectedRoute>
           } />
+          
+          {/* Emergency Mitigation Routes */}
+          <Route path="/emergency-mitigation" element={<EmergencyMitigation />} />
           
           {/* Roofing Admin Routes */}
           <Route path="/roofing/admin/auth" element={<RoofingAdminAuth />} />
