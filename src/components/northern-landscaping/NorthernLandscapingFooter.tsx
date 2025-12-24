@@ -63,7 +63,6 @@ const NorthernLandscapingFooter = () => {
               <li>Miami-Dade County</li>
               <li>Broward County</li>
               <li>Palm Beach County</li>
-              <li>Naples / Collier County</li>
               <li>Boca Raton</li>
               <li>Fort Lauderdale</li>
               <li>West Palm Beach</li>
