@@ -120,10 +120,17 @@ export function LeadActionsDialog({
 
     setLoading(true);
     try {
+      // Get current user for storage path (RLS policy expects userId as folder)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("You must be logged in to upload files");
+      }
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name.split('.').pop();
-        const filePath = `${leadId}/${Date.now()}_${i}.${fileExt}`;
+        // Use userId as folder to match storage RLS policy, include leadId in filename
+        const filePath = `${user.id}/${leadId}_${Date.now()}_${i}.${fileExt}`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage

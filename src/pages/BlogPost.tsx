@@ -28,11 +28,37 @@ export default function BlogPost() {
   }, [slug]);
 
   const loadPost = async () => {
-    const { data } = await supabase
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
+
+    // Validate slug format - only allow alphanumeric, hyphens, underscores, and UUIDs
+    const isValidSlug = /^[a-zA-Z0-9_-]+$/.test(slug);
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+    
+    if (!isValidSlug && !isUUID) {
+      console.error('Invalid slug format');
+      setLoading(false);
+      return;
+    }
+
+    // Try to find by slug first using parameterized query
+    let { data, error } = await supabase
       .from("blog_posts")
       .select("*")
-      .or(`slug.eq.${slug},id.eq.${slug}`)
+      .eq("slug", slug)
       .single();
+    
+    // If not found by slug and it looks like a UUID, try by ID
+    if (error && isUUID) {
+      const result = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("id", slug)
+        .single();
+      data = result.data;
+    }
     
     setPost(data);
     setLoading(false);
