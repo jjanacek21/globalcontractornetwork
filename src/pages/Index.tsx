@@ -13,7 +13,8 @@ import {
   Crown,
   DollarSign,
   Shield,
-  AlertTriangle
+  AlertTriangle,
+  Trees
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -102,6 +103,13 @@ const Index = () => {
       description: "24/7 mold remediation, water damage, storm cleanup & roof tarping. Fast response for South Florida emergencies.",
       link: "/emergency-mitigation",
       color: "bg-red-600/10 text-red-600"
+    },
+    {
+      icon: Trees,
+      title: "Northern Landscaping INC",
+      description: "Luxury tree & landscaping services. Tree trimming, removal, stump grinding, irrigation & more. Get instant estimates.",
+      link: "/northern-landscaping",
+      color: "bg-green-700/10 text-green-700"
     }
   ];
 
