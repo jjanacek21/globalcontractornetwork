@@ -5,3 +5,27 @@ verify_jwt = false
 
 [functions.roofing-chat]
 verify_jwt = false
+
+[functions.general-assistant]
+verify_jwt = false
+
+[functions.coating-quote-ai]
+verify_jwt = false
+
+[functions.window-advisor-ai]
+verify_jwt = false
+
+[functions.emergency-triage-ai]
+verify_jwt = false
+
+[functions.landscaping-estimate-ai]
+verify_jwt = false
+
+[functions.permit-advisor-ai]
+verify_jwt = false
+
+[functions.claim-analyzer-ai]
+verify_jwt = false
+
+[functions.lead-scorer-ai]
+verify_jwt = false
