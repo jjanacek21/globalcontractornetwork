@@ -49,7 +49,7 @@ const NorthernLandscapingHero = () => {
               size="lg"
               variant="outline"
               onClick={() => scrollToSection("gallery")}
-              className="border-white text-white hover:bg-white/10 text-lg px-8"
+              className="bg-transparent border-white text-white hover:bg-white/10 text-lg px-8"
             >
               View Our Work
             </Button>
