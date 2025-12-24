@@ -54,6 +54,7 @@ import NorthernLandscaping from "./pages/NorthernLandscaping";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <GlobalAIChat />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
