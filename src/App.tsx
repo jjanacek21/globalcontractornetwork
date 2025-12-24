@@ -50,6 +50,7 @@ import GreenHomeSolutions from "./pages/GreenHomeSolutions";
 import GreenHomeSolutionsAdminAuth from "./pages/GreenHomeSolutionsAdminAuth";
 import GreenHomeSolutionsAdminDashboard from "./pages/GreenHomeSolutionsAdminDashboard";
 import EmergencyMitigation from "./pages/EmergencyMitigation";
+import NorthernLandscaping from "./pages/NorthernLandscaping";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -97,6 +98,9 @@ const App = () => (
           
           {/* Emergency Mitigation Routes */}
           <Route path="/emergency-mitigation" element={<EmergencyMitigation />} />
+          
+          {/* Northern Landscaping Routes */}
+          <Route path="/northern-landscaping" element={<NorthernLandscaping />} />
           
           {/* Roofing Admin Routes */}
           <Route path="/roofing/admin/auth" element={<RoofingAdminAuth />} />
