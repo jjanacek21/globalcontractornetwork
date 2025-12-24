@@ -1,1 +1,7 @@
 project_id = "ujalvgknnbsxqpujxvwk"
+
+[functions.ai-quote-generator]
+verify_jwt = false
+
+[functions.roofing-chat]
+verify_jwt = false

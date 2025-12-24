@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Home, Ruler, MessageCircle } from "lucide-react";
+import { CheckCircle2, Home, Ruler, MessageCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { RoofMeasurementTool } from "@/components/roofing/RoofMeasurementTool";
 import { MeasurementReport } from "@/components/roofing/MeasurementReport";
 import { PackageSelector } from "@/components/roofing/PackageSelector";
 import { InteractiveSalesAssistant } from "@/components/roofing/InteractiveSalesAssistant";
+import { AIQuoteGenerator } from "@/components/roofing/AIQuoteGenerator";
+import { AIRoofingChat } from "@/components/roofing/AIRoofingChat";
 
 const roofingPackages = [
   {
@@ -316,6 +318,14 @@ const Roofing = () => {
         <section className="py-20 bg-muted/30">
           <div className="container max-w-4xl space-y-8">
             <MeasurementReport measurements={measurements} />
+            
+            {/* AI Quote Generator */}
+            <AIQuoteGenerator 
+              measurements={measurements}
+              packages={roofingPackages}
+              onSelectPackage={handleRequestService}
+            />
+            
             <Button 
               variant="outline" 
               onClick={() => {
@@ -462,6 +472,9 @@ const Roofing = () => {
           </p>
         </div>
       </footer>
+
+      {/* AI Chat Assistant */}
+      <AIRoofingChat />
     </div>
   );
 };
