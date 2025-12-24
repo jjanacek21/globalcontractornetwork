@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
+import DOMPurify from "dompurify";
 
 interface BlogPost {
   id: string;
@@ -94,7 +95,7 @@ export default function BlogPost() {
 
           <div 
             className="prose prose-lg dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
           />
 
           {post.tags && post.tags.length > 0 && (

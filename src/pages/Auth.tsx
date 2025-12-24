@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Building2, Home } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -24,7 +23,6 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<"admin" | "sales_rep">("sales_rep");
 
   useEffect(() => {
     // Check if user is already logged in
@@ -83,10 +81,10 @@ const Auth = () => {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
-        // Create user role
+        // Create user role - always default to sales_rep for security
         const { error: roleError } = await supabase
           .from("user_roles")
-          .insert({ user_id: authData.user.id, role });
+          .insert({ user_id: authData.user.id, role: "sales_rep" });
 
         if (roleError) {
           console.error("Role creation error:", roleError);
@@ -212,19 +210,6 @@ const Auth = () => {
                     onChange={(e) => setSignupPassword(e.target.value)}
                     required
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <RadioGroup value={role} onValueChange={(value: "admin" | "sales_rep") => setRole(value)}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="sales_rep" id="sales_rep" />
-                      <Label htmlFor="sales_rep" className="font-normal cursor-pointer">Sales Rep</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="admin" id="admin" />
-                      <Label htmlFor="admin" className="font-normal cursor-pointer">Admin</Label>
-                    </div>
-                  </RadioGroup>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? (
