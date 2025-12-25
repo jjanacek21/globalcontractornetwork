@@ -171,7 +171,7 @@ const Index = () => {
               </div>
             </div>
             <Button asChild>
-              <Link to="/contractor">Join Network</Link>
+              <Link to="/join">Join Network</Link>
             </Button>
           </div>
         </div>
@@ -267,7 +267,7 @@ const Index = () => {
                 <Link to="/directory">Find Contractors</Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
-                <Link to="/contractor/auth">Join as Contractor</Link>
+                <Link to="/join">Join as Contractor</Link>
               </Button>
             </div>
           </div>

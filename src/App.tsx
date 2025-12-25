@@ -52,6 +52,8 @@ import GreenHomeSolutionsAdminAuth from "./pages/GreenHomeSolutionsAdminAuth";
 import GreenHomeSolutionsAdminDashboard from "./pages/GreenHomeSolutionsAdminDashboard";
 import EmergencyMitigation from "./pages/EmergencyMitigation";
 import NorthernLandscaping from "./pages/NorthernLandscaping";
+import JoinNetwork from "./pages/JoinNetwork";
+import MemberDashboard from "./pages/MemberDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -70,6 +72,8 @@ const App = () => (
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
+          <Route path="/join" element={<JoinNetwork />} />
+          <Route path="/member/dashboard" element={<MemberDashboard />} />
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/contractor-directory" element={<ContractorDirectory />} />
           
