@@ -5,9 +5,12 @@ import * as turf from "@turf/turf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Pencil, Trash2, Calculator } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Pencil, Trash2, Calculator, Zap, Map, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
@@ -24,6 +27,13 @@ interface RoofMeasurementToolProps {
   onMeasurementComplete: (measurements: RoofMeasurements) => void;
 }
 
+interface AIEstimation {
+  estimatedSqftLow: number;
+  estimatedSqftHigh: number;
+  confidence: 'high' | 'medium' | 'low';
+  methodology: string;
+}
+
 const PITCH_MULTIPLIERS: { [key: string]: number } = {
   "3/12": 1.031,
   "4/12": 1.054,
@@ -37,25 +47,59 @@ const PITCH_MULTIPLIERS: { [key: string]: number } = {
   "12/12": 1.414,
 };
 
+const PROPERTY_TYPES = [
+  { value: 'single-family', label: 'Single Family Home' },
+  { value: 'townhouse', label: 'Townhouse' },
+  { value: 'duplex', label: 'Duplex' },
+  { value: 'commercial', label: 'Commercial Building' },
+];
+
+const LIVING_AREA_RANGES = [
+  { value: '1000', label: 'Under 1,000 sq ft', min: 800, max: 1000 },
+  { value: '1500', label: '1,000 - 1,500 sq ft', min: 1000, max: 1500 },
+  { value: '2000', label: '1,500 - 2,000 sq ft', min: 1500, max: 2000 },
+  { value: '2500', label: '2,000 - 2,500 sq ft', min: 2000, max: 2500 },
+  { value: '3000', label: '2,500 - 3,000 sq ft', min: 2500, max: 3000 },
+  { value: '3500', label: '3,000 - 3,500 sq ft', min: 3000, max: 3500 },
+  { value: '4000', label: '3,500 - 4,000 sq ft', min: 3500, max: 4000 },
+  { value: '5000', label: '4,000+ sq ft', min: 4000, max: 5000 },
+];
+
 export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementToolProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<MapboxDraw | null>(null);
+  const { toast } = useToast();
   
+  // Common state
+  const [activeTab, setActiveTab] = useState("quick");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [isDrawing, setIsDrawing] = useState(false);
   const [pitch, setPitch] = useState("6/12");
   const [wasteFactor, setWasteFactor] = useState(10);
+  
+  // Quick estimate state
+  const [propertyType, setPropertyType] = useState("");
+  const [stories, setStories] = useState("");
+  const [livingAreaRange, setLivingAreaRange] = useState("");
+  const [customLivingArea, setCustomLivingArea] = useState("");
+  const [roofComplexity, setRoofComplexity] = useState("");
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [aiEstimation, setAiEstimation] = useState<AIEstimation | null>(null);
+  const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
+  
+  // Map drawing state
+  const [isDrawing, setIsDrawing] = useState(false);
   const [flatArea, setFlatArea] = useState(0);
   const [pitchedArea, setPitchedArea] = useState(0);
   const [totalSquares, setTotalSquares] = useState(0);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
-  // Initialize map
+  // Initialize map only when Draw on Map tab is active
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (activeTab !== "draw" || !mapContainer.current || map.current) return;
 
     mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
     
@@ -79,11 +123,18 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
     map.current.on("draw.create", updateMeasurements);
     map.current.on("draw.update", updateMeasurements);
     map.current.on("draw.delete", updateMeasurements);
+    
+    map.current.on("load", () => {
+      setMapInitialized(true);
+    });
 
     return () => {
       map.current?.remove();
+      map.current = null;
+      draw.current = null;
+      setMapInitialized(false);
     };
-  }, []);
+  }, [activeTab]);
 
   // Search for addresses
   useEffect(() => {
@@ -97,7 +148,7 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
             query
-          )}.json?access_token=${mapboxgl.accessToken}&limit=5&types=address`
+          )}.json?access_token=pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g&limit=5&types=address`
         );
         const data = await response.json();
         setResults(data.features || []);
@@ -116,7 +167,7 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
     setShowResults(false);
     setResults([]);
     
-    if (map.current) {
+    if (map.current && activeTab === "draw") {
       map.current.flyTo({
         center: result.center,
         zoom: 19,
@@ -159,8 +210,18 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
   };
 
   useEffect(() => {
-    updateMeasurements();
+    if (activeTab === "draw") {
+      updateMeasurements();
+    }
   }, [pitch, wasteFactor]);
+
+  // Calculate squares for quick estimate
+  const calculateQuickEstimateSquares = (sqft: number) => {
+    const pitchMult = PITCH_MULTIPLIERS[pitch];
+    const pitched = sqft * pitchMult;
+    const withWaste = pitched * (1 + wasteFactor / 100);
+    return withWaste / 100;
+  };
 
   const handleStartDrawing = () => {
     if (draw.current) {
@@ -178,24 +239,115 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
     }
   };
 
-  const handleGenerateReport = () => {
-    if (totalSquares === 0 || !selectedAddress) {
+  const handleGetAIEstimate = async () => {
+    const livingArea = customLivingArea 
+      ? parseInt(customLivingArea) 
+      : parseInt(livingAreaRange);
+    
+    if (!propertyType || !stories || !livingArea || !roofComplexity) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all property details to get an estimate.",
+        variant: "destructive",
+      });
       return;
     }
 
+    setIsEstimating(true);
+    setAiEstimation(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('property-estimator-ai', {
+        body: {
+          propertyDetails: {
+            propertyType,
+            stories: parseInt(stories),
+            livingArea,
+            roofComplexity,
+            state: 'Florida'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.estimation) {
+        setAiEstimation(data.estimation);
+      } else {
+        throw new Error('No estimation received');
+      }
+    } catch (error) {
+      console.error('Error getting AI estimate:', error);
+      toast({
+        title: "Estimation Error",
+        description: "Could not get AI estimate. Please try again or use manual drawing.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEstimating(false);
+    }
+  };
+
+  const handleAcceptEstimate = () => {
+    if (!aiEstimation) return;
+    const avgSqft = Math.round((aiEstimation.estimatedSqftLow + aiEstimation.estimatedSqftHigh) / 2);
+    setAcceptedSqft(avgSqft);
+    toast({
+      title: "Estimate Accepted",
+      description: `Using ${avgSqft.toLocaleString()} sq ft for your quote.`,
+    });
+  };
+
+  const handleGenerateReport = () => {
+    let finalSqft = 0;
+    let finalAddress = selectedAddress;
+
+    if (activeTab === "quick" && acceptedSqft) {
+      finalSqft = acceptedSqft;
+    } else if (activeTab === "draw" && flatArea > 0) {
+      finalSqft = flatArea;
+    }
+
+    if (finalSqft === 0 || !finalAddress) {
+      toast({
+        title: "Missing Information",
+        description: "Please complete the estimation or draw your roof first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pitchMult = PITCH_MULTIPLIERS[pitch];
+    const pitched = finalSqft * pitchMult;
+    const withWaste = pitched * (1 + wasteFactor / 100);
+    const squares = withWaste / 100;
+
     onMeasurementComplete({
-      flatArea,
-      pitchedArea,
-      totalSquares,
-      address: selectedAddress,
-      pitchMultiplier: PITCH_MULTIPLIERS[pitch],
+      flatArea: finalSqft,
+      pitchedArea: pitched,
+      totalSquares: squares,
+      address: finalAddress,
+      pitchMultiplier: pitchMult,
       wasteFactor,
     });
   };
 
+  const getConfidenceColor = (confidence: string) => {
+    switch (confidence) {
+      case 'high': return 'text-green-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-red-600';
+      default: return 'text-muted-foreground';
+    }
+  };
+
+  const canGenerateReport = 
+    (activeTab === "quick" && acceptedSqft && selectedAddress) ||
+    (activeTab === "draw" && totalSquares > 0 && selectedAddress);
+
   return (
     <div className="space-y-4">
-      {/* Address Search */}
+      {/* Address Search - Common for both tabs */}
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -229,7 +381,8 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
             </div>
 
             {selectedAddress && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
                 Selected: {selectedAddress}
               </div>
             )}
@@ -237,62 +390,235 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
         </CardContent>
       </Card>
 
-      {/* Map Container */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative">
-            <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
-            
-            {/* Drawing Controls */}
-            <div className="absolute top-4 left-4 flex gap-2">
-              <Button
-                onClick={handleStartDrawing}
-                disabled={!selectedAddress}
-                size="sm"
-                variant={isDrawing ? "default" : "secondary"}
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                {isDrawing ? "Drawing..." : "Draw Roof"}
-              </Button>
-              <Button
-                onClick={handleClear}
-                size="sm"
-                variant="destructive"
-                disabled={flatArea === 0}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-            </div>
+      {/* Measurement Method Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="quick" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Quick Estimate
+          </TabsTrigger>
+          <TabsTrigger value="draw" className="flex items-center gap-2">
+            <Map className="h-4 w-4" />
+            Draw on Map
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Measurement Display */}
-            {flatArea > 0 && (
-              <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Flat Area</Label>
-                      <div className="text-lg font-bold">{flatArea.toFixed(0)} sq ft</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Pitched Area</Label>
-                      <div className="text-lg font-bold">{pitchedArea.toFixed(0)} sq ft</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">With {wasteFactor}% Waste</Label>
-                      <div className="text-lg font-bold">{(pitchedArea * (1 + wasteFactor / 100)).toFixed(0)} sq ft</div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Total Squares</Label>
-                      <div className="text-lg font-bold text-primary">{totalSquares.toFixed(2)}</div>
-                    </div>
+        {/* Quick Estimate Tab */}
+        <TabsContent value="quick" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                AI-Powered Quick Estimate
+              </CardTitle>
+              <CardDescription>
+                Answer a few questions and get an instant roof size estimate
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Property Type</Label>
+                  <Select value={propertyType} onValueChange={setPropertyType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select property type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROPERTY_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Number of Stories</Label>
+                  <Select value={stories} onValueChange={setStories}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Story</SelectItem>
+                      <SelectItem value="2">2 Stories</SelectItem>
+                      <SelectItem value="3">3+ Stories</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Living Area (sq ft)</Label>
+                  <Select value={livingAreaRange} onValueChange={(v) => { setLivingAreaRange(v); setCustomLivingArea(""); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LIVING_AREA_RANGES.map((range) => (
+                        <SelectItem key={range.value} value={range.value}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="mt-2">
+                    <Input
+                      type="number"
+                      placeholder="Or enter exact sq ft"
+                      value={customLivingArea}
+                      onChange={(e) => { setCustomLivingArea(e.target.value); setLivingAreaRange(""); }}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                </div>
+                <div>
+                  <Label>Roof Complexity</Label>
+                  <Select value={roofComplexity} onValueChange={setRoofComplexity}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select complexity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="simple">Simple (Hip or Gable)</SelectItem>
+                      <SelectItem value="moderate">Moderate (Some Valleys)</SelectItem>
+                      <SelectItem value="complex">Complex (Multiple Levels/Dormers)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleGetAIEstimate}
+                disabled={isEstimating || !propertyType || !stories || (!livingAreaRange && !customLivingArea) || !roofComplexity}
+                className="w-full"
+                size="lg"
+              >
+                {isEstimating ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5 mr-2" />
+                    Get AI Estimate
+                  </>
+                )}
+              </Button>
+
+              {/* AI Estimation Result */}
+              {aiEstimation && (
+                <Card className="border-primary/50 bg-primary/5">
+                  <CardContent className="pt-6">
+                    <div className="text-center space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estimated Roof Size</p>
+                        <p className="text-3xl font-bold text-primary">
+                          {aiEstimation.estimatedSqftLow.toLocaleString()} - {aiEstimation.estimatedSqftHigh.toLocaleString()} sq ft
+                        </p>
+                      </div>
+                      <div className={`flex items-center justify-center gap-2 ${getConfidenceColor(aiEstimation.confidence)}`}>
+                        {aiEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
+                        {aiEstimation.confidence === 'medium' && <AlertCircle className="h-4 w-4" />}
+                        {aiEstimation.confidence === 'low' && <AlertCircle className="h-4 w-4" />}
+                        <span className="text-sm font-medium capitalize">{aiEstimation.confidence} Confidence</span>
+                      </div>
+                      {aiEstimation.methodology && (
+                        <p className="text-xs text-muted-foreground">{aiEstimation.methodology}</p>
+                      )}
+
+                      {acceptedSqft ? (
+                        <div className="flex items-center justify-center gap-2 text-green-600">
+                          <CheckCircle2 className="h-5 w-5" />
+                          <span>Using {acceptedSqft.toLocaleString()} sq ft</span>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button onClick={handleAcceptEstimate} className="flex-1">
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Looks Good!
+                          </Button>
+                          <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
+                            <Map className="h-4 w-4 mr-2" />
+                            Need More Accuracy?
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Draw on Map Tab */}
+        <TabsContent value="draw" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-primary" />
+                Draw Your Roof
+              </CardTitle>
+              <CardDescription>
+                Draw the outline of your roof on the satellite map for precise measurements
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="relative">
+                <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
+                
+                {/* Drawing Controls */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <Button
+                    onClick={handleStartDrawing}
+                    disabled={!selectedAddress || !mapInitialized}
+                    size="sm"
+                    variant={isDrawing ? "default" : "secondary"}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    {isDrawing ? "Drawing..." : "Draw Roof"}
+                  </Button>
+                  <Button
+                    onClick={handleClear}
+                    size="sm"
+                    variant="destructive"
+                    disabled={flatArea === 0}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                </div>
+
+                {/* Measurement Display */}
+                {flatArea > 0 && (
+                  <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Flat Area</Label>
+                          <div className="text-lg font-bold">{flatArea.toFixed(0)} sq ft</div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Pitched Area</Label>
+                          <div className="text-lg font-bold">{pitchedArea.toFixed(0)} sq ft</div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">With {wasteFactor}% Waste</Label>
+                          <div className="text-lg font-bold">{(pitchedArea * (1 + wasteFactor / 100)).toFixed(0)} sq ft</div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Total Squares</Label>
+                          <div className="text-lg font-bold text-primary">{totalSquares.toFixed(2)}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Calculation Options */}
       <Card>
@@ -334,7 +660,7 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
       {/* Generate Report Button */}
       <Button
         onClick={handleGenerateReport}
-        disabled={totalSquares === 0 || !selectedAddress}
+        disabled={!canGenerateReport}
         size="lg"
         className="w-full"
       >
