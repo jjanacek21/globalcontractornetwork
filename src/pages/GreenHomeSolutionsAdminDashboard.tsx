@@ -22,7 +22,7 @@ import {
   MapPin,
   Eye
 } from "lucide-react";
-import ghiLogo from "@/assets/ghi-logo.png";
+import { DoorOpen } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -183,10 +183,13 @@ const GreenHomeSolutionsAdminDashboard = () => {
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/green-home-solutions">
-              <img src={ghiLogo} alt="GHI" className="h-12 w-auto" />
+            <Link to="/green-home-solutions" className="flex items-center gap-3">
+              <div className="bg-emerald-600 p-2 rounded-lg">
+                <DoorOpen className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-lg font-bold text-emerald-700">Windows & Doors</span>
             </Link>
-            <div>
+            <div className="border-l pl-4 ml-2">
               <h1 className="font-semibold">Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">Window Leads Management</p>
             </div>

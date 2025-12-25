@@ -92,8 +92,8 @@ const Index = () => {
     },
     {
       icon: Home,
-      title: "Green Home Improvements",
-      description: "Impact windows for South Florida. Get instant quotes with ES MULTIMAX pricing. Spin to win discounts!",
+      title: "Windows & Doors",
+      description: "Impact windows and doors for South Florida. Get instant quotes with our calculator. Spin to win discounts!",
       link: "/green-home-solutions",
       color: "bg-green-600/10 text-green-600"
     },
@@ -106,8 +106,8 @@ const Index = () => {
     },
     {
       icon: Trees,
-      title: "Northern Landscaping INC",
-      description: "Luxury tree & landscaping services. Tree trimming, removal, stump grinding, irrigation & more. Get instant estimates.",
+      title: "Tree & Landscaping Services",
+      description: "Premium tree & landscaping services. Tree trimming, removal, stump grinding, irrigation & more. Get instant estimates.",
       link: "/northern-landscaping",
       color: "bg-green-700/10 text-green-700"
     }
@@ -292,7 +292,7 @@ const Index = () => {
                 <li><Link to="/prep-property" className="hover:text-foreground transition-colors">Property Services</Link></li>
                 <li><Link to="/permit-queens" className="hover:text-foreground transition-colors">Permit Queens</Link></li>
                 <li><Link to="/supplement-kings" className="hover:text-foreground transition-colors">Supplement Kings</Link></li>
-                <li><Link to="/green-home-solutions" className="hover:text-foreground transition-colors">Green Home Improvements</Link></li>
+                <li><Link to="/green-home-solutions" className="hover:text-foreground transition-colors">Windows & Doors</Link></li>
                 <li><Link to="/consulting" className="hover:text-foreground transition-colors">Consulting</Link></li>
               </ul>
             </div>

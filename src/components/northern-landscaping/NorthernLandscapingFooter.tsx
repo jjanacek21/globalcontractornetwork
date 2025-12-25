@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin } from "lucide-react";
-import logo from "@/assets/northern-landscaping/logo.png";
+import { Phone, Mail, MapPin, Trees } from "lucide-react";
 
 const NorthernLandscapingFooter = () => {
   const currentYear = new Date().getFullYear();
@@ -22,18 +21,16 @@ const NorthernLandscapingFooter = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Logo & About */}
           <div className="space-y-4">
-            <img
-              src={logo}
-              alt="Northern Landscaping INC"
-              className="h-16 w-auto brightness-0 invert"
-            />
+            <div className="flex items-center gap-3">
+              <div className="bg-green-700 p-2 rounded-lg">
+                <Trees className="h-8 w-8 text-white" />
+              </div>
+              <span className="text-xl font-bold">Tree & Landscaping</span>
+            </div>
             <p className="text-green-300 text-sm leading-relaxed">
               South Florida's premier tree and landscaping service. Licensed,
               insured, and committed to excellence.
             </p>
-            <div className="flex gap-4">
-              {/* Add social icons here if needed */}
-            </div>
           </div>
 
           {/* Services */}
@@ -44,7 +41,7 @@ const NorthernLandscapingFooter = () => {
                 <li key={service}>
                   <button
                     onClick={() => {
-                      const el = document.getElementById("services");
+                      const el = document.getElementById("estimate");
                       el?.scrollIntoView({ behavior: "smooth" });
                     }}
                     className="hover:text-white transition-colors"
@@ -82,11 +79,11 @@ const NorthernLandscapingFooter = () => {
                 (214) 998-2879
               </a>
               <a
-                href="mailto:jared@globalcontractor.network"
+                href="mailto:info@treelandscaping.com"
                 className="flex items-center gap-3 text-green-300 hover:text-white transition-colors"
               >
                 <Mail className="h-5 w-5" />
-                jared@globalcontractor.network
+                info@treelandscaping.com
               </a>
               <div className="flex items-start gap-3 text-green-300">
                 <MapPin className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -102,7 +99,7 @@ const NorthernLandscapingFooter = () => {
 
         <div className="border-t border-green-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-green-400">
-            © {currentYear} Northern Landscaping INC. All rights reserved.
+            © {currentYear} Tree & Landscaping Services. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-green-400">
             <span>Licensed & Insured</span>

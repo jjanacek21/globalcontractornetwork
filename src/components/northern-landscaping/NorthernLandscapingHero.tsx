@@ -25,7 +25,7 @@ const NorthernLandscapingHero = () => {
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
-            Luxury Tree &{" "}
+            Premium Tree &{" "}
             <span className="text-green-400">Landscaping Services</span>{" "}
             for South Florida
           </h1>
