@@ -456,71 +456,146 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
               {/* AI Vision Result */}
               {visionEstimation && (
                 <Card className="border-primary/50 bg-primary/5">
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">AI-Detected Roof Size</p>
-                        <p className="text-3xl font-bold text-primary">
-                          {visionEstimation.estimatedSqft.toLocaleString()} sq ft
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Range: {visionEstimation.estimatedSqftLow.toLocaleString()} - {visionEstimation.estimatedSqftHigh.toLocaleString()} sq ft
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center justify-center gap-4 flex-wrap">
-                        <div className={`flex items-center gap-2 ${getConfidenceColor(visionEstimation.confidence)}`}>
-                          {visionEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
-                          {visionEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
-                          <span className="text-sm font-medium capitalize">{visionEstimation.confidence} Confidence</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Roof Type: <span className="font-medium capitalize">{visionEstimation.roofShape}</span>
-                        </div>
-                      </div>
-
-                      {/* Calculated Squares Preview */}
-                      {acceptedSqft && (
-                        <div className="grid grid-cols-3 gap-2 text-sm bg-muted/50 p-3 rounded">
-                          <div>
-                            <p className="text-muted-foreground">Flat Area</p>
-                            <p className="font-medium">{acceptedSqft.toLocaleString()} sqft</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">With Pitch ({pitch})</p>
-                            <p className="font-medium">{Math.round(acceptedSqft * PITCH_MULTIPLIERS[pitch]).toLocaleString()} sqft</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Total Squares</p>
-                            <p className="font-medium text-primary">{calculateVisionSquares(acceptedSqft).toFixed(2)}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {visionEstimation.methodology && (
-                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                          {visionEstimation.methodology}
-                        </p>
-                      )}
-
-                      {acceptedSqft ? (
-                        <div className="flex items-center justify-center gap-2 text-green-600">
-                          <CheckCircle2 className="h-5 w-5" />
-                          <span>Using {acceptedSqft.toLocaleString()} sq ft</span>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button onClick={handleAcceptEstimate} className="flex-1">
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Looks Good!
-                          </Button>
-                          <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
-                            <Map className="h-4 w-4 mr-2" />
-                            Draw Manually
-                          </Button>
-                        </div>
-                      )}
+                  <CardContent className="pt-6 space-y-4">
+                    {/* Detected Footprint */}
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">AI-Detected Footprint (Flat Area)</p>
+                      <p className="text-3xl font-bold text-primary">
+                        {visionEstimation.estimatedSqft.toLocaleString()} sq ft
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Range: {visionEstimation.estimatedSqftLow.toLocaleString()} - {visionEstimation.estimatedSqftHigh.toLocaleString()} sq ft
+                      </p>
                     </div>
+                    
+                    {/* Confidence & Roof Type */}
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                      <div className={`flex items-center gap-2 ${getConfidenceColor(visionEstimation.confidence)}`}>
+                        {visionEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
+                        {visionEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
+                        <span className="text-sm font-medium capitalize">{visionEstimation.confidence} Confidence</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Roof Type: <span className="font-medium capitalize">{visionEstimation.roofShape}</span>
+                      </div>
+                    </div>
+
+                    {/* Inline Pitch & Waste Selection */}
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Roof Pitch</Label>
+                          <Select value={pitch} onValueChange={setPitch}>
+                            <SelectTrigger className="mt-1 h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.keys(PITCH_MULTIPLIERS).map((p) => (
+                                <SelectItem key={p} value={p}>
+                                  {p}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Waste Factor</Label>
+                          <Select value={String(wasteFactor)} onValueChange={(v) => setWasteFactor(Number(v))}>
+                            <SelectTrigger className="mt-1 h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5%</SelectItem>
+                              <SelectItem value="10">10%</SelectItem>
+                              <SelectItem value="15">15%</SelectItem>
+                              <SelectItem value="20">20%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Visual Pitch Guide */}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-end gap-1">
+                          <div className="w-8 h-2 bg-muted-foreground/30 rounded-sm" />
+                          <span>Low</span>
+                        </div>
+                        <div className="flex-1 h-px bg-muted-foreground/20" />
+                        <div className="flex items-end gap-1">
+                          <div 
+                            className="w-8 bg-muted-foreground/30 rounded-sm origin-bottom-left"
+                            style={{ 
+                              height: '12px',
+                              transform: `skewY(-${Math.min(45, (Object.keys(PITCH_MULTIPLIERS).indexOf(pitch) + 1) * 4.5)}deg)`
+                            }}
+                          />
+                          <span className="font-medium text-foreground">{pitch}</span>
+                        </div>
+                        <div className="flex-1 h-px bg-muted-foreground/20" />
+                        <div className="flex items-end gap-1">
+                          <div 
+                            className="w-8 h-6 bg-muted-foreground/30 rounded-sm origin-bottom-left"
+                            style={{ transform: 'skewY(-45deg)' }}
+                          />
+                          <span>Steep</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Real-Time Calculation Breakdown */}
+                    <div className="border rounded-lg p-4 space-y-2 bg-background">
+                      <p className="text-sm font-medium text-center mb-3">Calculation Breakdown</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Flat Area (AI Detected)</span>
+                          <span className="font-medium">{visionEstimation.estimatedSqft.toLocaleString()} sq ft</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">× Pitch Multiplier ({pitch})</span>
+                          <span className="font-medium">×{PITCH_MULTIPLIERS[pitch].toFixed(3)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">= Pitched Area</span>
+                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch]).toLocaleString()} sq ft</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">+ Waste ({wasteFactor}%)</span>
+                          <span className="font-medium">+{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch] * (wasteFactor / 100)).toLocaleString()} sq ft</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t">
+                          <span className="text-muted-foreground">= Total Area</span>
+                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch] * (1 + wasteFactor / 100)).toLocaleString()} sq ft</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t bg-primary/10 -mx-4 px-4 py-2 rounded-b">
+                          <span className="font-semibold">TOTAL SQUARES</span>
+                          <span className="text-xl font-bold text-primary">{calculateVisionSquares(visionEstimation.estimatedSqft).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {visionEstimation.methodology && (
+                      <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
+                        {visionEstimation.methodology}
+                      </p>
+                    )}
+
+                    {acceptedSqft ? (
+                      <div className="flex items-center justify-center gap-2 text-green-600">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span>Estimate accepted - {calculateVisionSquares(acceptedSqft).toFixed(2)} squares</span>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button onClick={handleAcceptEstimate} className="flex-1">
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Accept Estimate
+                        </Button>
+                        <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
+                          <Map className="h-4 w-4 mr-2" />
+                          Draw Manually
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
