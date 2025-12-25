@@ -36,10 +36,16 @@ export const GreenHomeHeader = () => {
         </nav>
 
         <div className="flex items-center gap-4">
-          <a href="tel:561-815-0008" className="hidden md:flex items-center gap-2 text-emerald-600 font-bold">
-            <Phone className="h-5 w-5" />
-            561-815-0008
-          </a>
+          <Button 
+            variant="outline" 
+            asChild
+            className="hidden md:flex items-center gap-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+          >
+            <a href="tel:561-815-0008">
+              <Phone className="h-5 w-5" />
+              561-815-0008
+            </a>
+          </Button>
           <Button 
             asChild
             className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
