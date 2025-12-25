@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus
 } from "lucide-react";
 import { format } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -20,6 +20,7 @@ import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
 import { CompaniesTable } from "@/components/admin/CompaniesTable";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { TeamsTable } from "@/components/admin/TeamsTable";
+import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
 
 interface UnifiedLead {
   id: string;
@@ -311,6 +312,7 @@ const SuperAdminDashboard = () => {
           <CardContent>
             <Tabs defaultValue="leads" className="space-y-4">
               <TabsList className="flex-wrap h-auto gap-1">
+                <TabsTrigger value="pending" className="gap-2"><UserPlus className="h-4 w-4" />Pending Signups</TabsTrigger>
                 <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads ({filteredLeads.length})</TabsTrigger>
                 <TabsTrigger value="contractors" className="gap-2"><Building2 className="h-4 w-4" />Contractors</TabsTrigger>
                 <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>
@@ -318,6 +320,10 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="teams" className="gap-2"><UsersRound className="h-4 w-4" />Teams</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="pending">
+                <PendingSignupsTable />
+              </TabsContent>
 
               <TabsContent value="leads" className="space-y-4">
                 <div className="flex items-center gap-2">

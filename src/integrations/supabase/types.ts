@@ -1659,6 +1659,48 @@ export type Database = {
           },
         ]
       }
+      network_members: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string | null
+          id: string
+          member_type: string
+          phone: string | null
+          state: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          member_type?: string
+          phone?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          member_type?: string
+          phone?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          zip?: string | null
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           author_user_id: string | null
