@@ -282,13 +282,18 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
   const handleAcceptEstimate = () => {
     if (!visionEstimation) return;
     setAcceptedSqft(visionEstimation.estimatedSqft);
+    
+    // Calculate total with pitch and waste for the quiz
+    const totalSquares = calculateVisionSquares(visionEstimation.estimatedSqft);
+    const totalSqft = Math.round(totalSquares * 100); // Convert squares to sqft
+    
     toast({
       title: "Estimate Accepted",
-      description: `Using ${visionEstimation.estimatedSqft.toLocaleString()} sq ft for your quote.`,
+      description: `Using ${totalSqft.toLocaleString()} sq ft (${totalSquares.toFixed(1)} squares) for your quote.`,
     });
-    // Trigger callback to open quiz dialog
+    // Trigger callback to open quiz dialog with calculated total
     if (onEstimateAccepted && selectedAddress) {
-      onEstimateAccepted(visionEstimation.estimatedSqft, selectedAddress);
+      onEstimateAccepted(totalSqft, selectedAddress);
     }
   };
 

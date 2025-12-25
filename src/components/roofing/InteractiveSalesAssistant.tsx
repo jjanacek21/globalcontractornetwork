@@ -302,7 +302,7 @@ export const InteractiveSalesAssistant = ({ onComplete, initialSqft, initialAddr
             {initialSqft && (
               <div className="mt-2 text-xs text-primary flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                Using AI measurement: {initialSqft.toLocaleString()} sq ft
+                Using AI measurement: {initialSqft.toLocaleString()} sq ft ({(initialSqft / 100).toFixed(1)} squares) — includes pitch & waste
               </div>
             )}
           </div>
