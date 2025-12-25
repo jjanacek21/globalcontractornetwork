@@ -102,10 +102,27 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
   const fetchTeamsAndManagers = async (companyId: string) => {
     const [teamsResult, managersResult] = await Promise.all([
       supabase.from('teams').select('id, name, company_id').eq('company_id', companyId),
-      supabase.from('company_members').select('id, job_title').eq('company_id', companyId).in('role', ['company_admin', 'manager', 'project_manager']),
+      supabase.from('company_members')
+        .select(`
+          id, 
+          job_title,
+          user_id,
+          profiles!company_members_user_id_fkey(first_name, last_name)
+        `)
+        .eq('company_id', companyId)
+        .in('role', ['company_admin', 'manager', 'project_manager']),
     ]);
     setTeams(teamsResult.data || []);
-    setManagers(managersResult.data || []);
+    // Map the nested profiles data to the Manager interface
+    const managersData = (managersResult.data || []).map((m: any) => ({
+      id: m.id,
+      job_title: m.job_title,
+      profile: m.profiles ? {
+        first_name: m.profiles.first_name,
+        last_name: m.profiles.last_name,
+      } : undefined,
+    }));
+    setManagers(managersData);
   };
 
   const handleCompanyChange = (companyId: string) => {
@@ -329,11 +346,18 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Manager</SelectItem>
-                {managers.filter(m => m.id !== member?.id).map((manager) => (
-                  <SelectItem key={manager.id} value={manager.id}>
-                    {manager.job_title || 'Manager'} (ID: {manager.id.slice(0, 8)})
-                  </SelectItem>
-                ))}
+                {managers.filter(m => m.id !== member?.id).map((manager) => {
+                  const firstName = manager.profile?.first_name || '';
+                  const lastName = manager.profile?.last_name || '';
+                  const fullName = `${firstName} ${lastName}`.trim();
+                  const displayName = fullName || 'Unknown';
+                  const jobTitle = manager.job_title ? ` - ${manager.job_title}` : '';
+                  return (
+                    <SelectItem key={manager.id} value={manager.id}>
+                      {displayName}{jobTitle}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
