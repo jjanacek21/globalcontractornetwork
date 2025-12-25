@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Menu, X } from "lucide-react";
-import logo from "@/assets/northern-landscaping/logo.png";
+import { Phone, Menu, X, Trees } from "lucide-react";
 
 const NorthernLandscapingHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -19,17 +18,14 @@ const NorthernLandscapingHeader = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-20 items-center justify-between">
         <Link to="/northern-landscaping" className="flex items-center gap-3">
-          <img src={logo} alt="Northern Landscaping INC" className="h-16 w-auto" />
+          <div className="bg-green-700 p-2 rounded-lg">
+            <Trees className="h-8 w-8 text-white" />
+          </div>
+          <span className="text-xl font-bold text-green-800">Tree & Landscaping</span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          <button
-            onClick={() => scrollToSection("services")}
-            className="text-sm font-medium text-green-900 hover:text-green-600 transition-colors"
-          >
-            Services
-          </button>
           <button
             onClick={() => scrollToSection("estimate")}
             className="text-sm font-medium text-green-900 hover:text-green-600 transition-colors"
@@ -83,12 +79,6 @@ const NorthernLandscapingHeader = () => {
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t">
           <div className="container py-4 space-y-4">
-            <button
-              onClick={() => scrollToSection("services")}
-              className="block w-full text-left py-2 text-green-900 font-medium"
-            >
-              Services
-            </button>
             <button
               onClick={() => scrollToSection("estimate")}
               className="block w-full text-left py-2 text-green-900 font-medium"

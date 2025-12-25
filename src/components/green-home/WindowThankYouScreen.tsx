@@ -103,7 +103,7 @@ export const WindowThankYouScreen = ({ name, discount, estimateLow, estimateHigh
                 Your {discount}% discount is locked in for the next 7 days
               </p>
               <Link to="/green-home-solutions" className="text-emerald-600 hover:underline text-sm">
-                ← Back to Green Home Improvements
+                ← Back to Windows & Doors
               </Link>
             </div>
           </CardContent>

@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Menu, Home } from "lucide-react";
+import { Phone, Menu, Home, DoorOpen } from "lucide-react";
 import { useState } from "react";
-import ghiLogo from "@/assets/ghi-logo.png";
 
 export const GreenHomeHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -11,7 +10,10 @@ export const GreenHomeHeader = () => {
     <header className="sticky top-0 z-50 w-full bg-white border-b shadow-sm">
       <div className="container flex h-20 items-center justify-between">
         <Link to="/green-home-solutions" className="flex items-center gap-3">
-          <img src={ghiLogo} alt="Green Home Improvements" className="h-16 w-auto" />
+          <div className="bg-emerald-600 p-2 rounded-lg">
+            <DoorOpen className="h-8 w-8 text-white" />
+          </div>
+          <span className="text-xl font-bold text-emerald-700">Windows & Doors</span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">

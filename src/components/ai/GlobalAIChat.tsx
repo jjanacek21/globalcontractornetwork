@@ -17,7 +17,7 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
   }
   if (pathname.includes('green-home')) {
     return {
-      name: 'Green Home Solutions',
+      name: 'Windows & Doors',
       description: 'Impact windows & doors',
       questions: ['What windows are hurricane rated?', 'How much can I save on insurance?', 'Compare window types']
     };
@@ -31,7 +31,7 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
   }
   if (pathname.includes('northern-landscaping')) {
     return {
-      name: 'Northern Landscaping',
+      name: 'Tree & Landscaping',
       description: 'Tree & landscaping services',
       questions: ['How much does tree removal cost?', 'Do you offer stump grinding?', 'Get a landscaping estimate']
     };

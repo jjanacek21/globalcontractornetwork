@@ -16,7 +16,7 @@ export const GreenHomeHero = () => {
           <div className="text-white space-y-8">
             <div className="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-400 px-4 py-2 rounded-full text-sm font-medium">
               <Award className="h-4 w-4" />
-              Florida's #1 All in One Contractor Since 2014
+              Premium Impact Windows & Doors
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">

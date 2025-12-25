@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
-import ghiLogo from "@/assets/ghi-logo.png";
+import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, DoorOpen } from "lucide-react";
 
 export const GreenHomeFooter = () => {
   return (
@@ -8,9 +7,14 @@ export const GreenHomeFooter = () => {
       <div className="container py-16">
         <div className="grid md:grid-cols-4 gap-12">
           <div>
-            <img src={ghiLogo} alt="Green Home Improvements" className="h-20 w-auto mb-4 bg-white rounded-lg p-2" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-emerald-600 p-2 rounded-lg">
+                <DoorOpen className="h-8 w-8 text-white" />
+              </div>
+              <span className="text-xl font-bold">Windows & Doors</span>
+            </div>
             <p className="text-gray-400 text-sm mb-4">
-              Florida's #1 All in One Contractor Since 2014. Windows, Roofing, Impact Protection, and more.
+              Premium impact windows and doors for South Florida homes. Hurricane protection, energy efficiency, and style.
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
@@ -31,7 +35,7 @@ export const GreenHomeFooter = () => {
               <li><a href="#" className="hover:text-white transition-colors">Impact Windows</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Sliding Glass Doors</a></li>
               <li><a href="#" className="hover:text-white transition-colors">French Doors</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Roofing</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Entry Doors</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Hurricane Shutters</a></li>
             </ul>
           </div>
@@ -39,7 +43,7 @@ export const GreenHomeFooter = () => {
           <div>
             <h4 className="font-semibold mb-4 text-emerald-400">Company</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><a href="https://greenhomeimprovements.com" target="_blank" rel="noopener" className="hover:text-white transition-colors">About Us</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Reviews</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Gallery</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Financing</a></li>
@@ -56,7 +60,7 @@ export const GreenHomeFooter = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-emerald-400" />
-                <a href="mailto:info@greenhomeimprovements.com" className="hover:text-white transition-colors">info@greenhomeimprovements.com</a>
+                <a href="mailto:info@windowsanddoors.com" className="hover:text-white transition-colors">info@windowsanddoors.com</a>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-emerald-400 mt-0.5" />
@@ -69,7 +73,7 @@ export const GreenHomeFooter = () => {
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              © {new Date().getFullYear()} Green Home Improvements. All rights reserved.
+              © {new Date().getFullYear()} Windows & Doors. All rights reserved.
             </p>
             <div className="flex gap-4 text-sm text-gray-400">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>

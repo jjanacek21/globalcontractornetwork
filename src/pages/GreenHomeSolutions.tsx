@@ -11,10 +11,10 @@ const GreenHomeSolutions = () => {
   return (
     <>
       <Helmet>
-        <title>Impact Windows South Florida | Green Home Improvements | Free Quote</title>
+        <title>Impact Windows & Doors South Florida | Free Quote</title>
         <meta 
           name="description" 
-          content="Florida's #1 impact window installer since 2014. Get an instant quote for hurricane-rated windows. Save up to 25% with our exclusive discounts. Call 561-815-0008." 
+          content="Premium impact windows and doors for South Florida. Get an instant quote for hurricane-rated windows. Save up to 25% with our exclusive discounts. Call 561-815-0008."
         />
         <meta name="keywords" content="impact windows, hurricane windows, South Florida windows, window replacement, energy efficient windows, Palm Beach windows" />
       </Helmet>
