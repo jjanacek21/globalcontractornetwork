@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import * as turf from "@turf/turf";
@@ -66,7 +66,13 @@ const LIVING_AREA_RANGES = [
 ];
 
 export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementToolProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
+  // Use callback ref to detect when container is ready
+  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
+  const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setMapContainerNode(node);
+    }
+  }, []);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<MapboxDraw | null>(null);
   const { toast } = useToast();
@@ -97,14 +103,14 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
   const [totalSquares, setTotalSquares] = useState(0);
   const [mapInitialized, setMapInitialized] = useState(false);
 
-  // Initialize map only when Draw on Map tab is active
+  // Initialize map only when Draw on Map tab is active AND container is ready
   useEffect(() => {
-    if (activeTab !== "draw" || !mapContainer.current || map.current) return;
+    if (activeTab !== "draw" || !mapContainerNode || map.current) return;
 
     mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
     
     map.current = new mapboxgl.Map({
-      container: mapContainer.current,
+      container: mapContainerNode,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [-98.5795, 39.8283],
       zoom: 4,
@@ -132,9 +138,10 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
       map.current?.remove();
       map.current = null;
       draw.current = null;
+      setMapContainerNode(null);
       setMapInitialized(false);
     };
-  }, [activeTab]);
+  }, [activeTab, mapContainerNode]);
 
   // Search for addresses
   useEffect(() => {
@@ -565,7 +572,7 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
             </CardHeader>
             <CardContent className="p-0">
               <div className="relative">
-                <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
+                <div ref={mapContainerRef} className="w-full h-[500px] rounded-lg" />
                 
                 {/* Drawing Controls */}
                 <div className="absolute top-4 left-4 flex gap-2">
