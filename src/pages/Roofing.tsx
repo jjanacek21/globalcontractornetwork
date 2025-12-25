@@ -140,6 +140,8 @@ const Roofing = () => {
   const [showMeasurement, setShowMeasurement] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
   const [measurements, setMeasurements] = useState<any>(null);
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
+  const [pendingEstimate, setPendingEstimate] = useState<{ sqft: number; address: string } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -147,6 +149,19 @@ const Roofing = () => {
     property_address: "",
     message: ""
   });
+
+  const handleEstimateAccepted = (sqft: number, address: string) => {
+    setPendingEstimate({ sqft, address });
+    setQuizDialogOpen(true);
+  };
+
+  const handleQuizComplete = () => {
+    setQuizDialogOpen(false);
+    // Continue to measurement completion flow
+    if (pendingEstimate) {
+      // The user will still be on the measurement tool, they can click Generate Report
+    }
+  };
 
   const handleMeasurementComplete = (measurementData: any) => {
     setMeasurements(measurementData);
@@ -308,10 +323,33 @@ const Roofing = () => {
       {showMeasurement && !measurements && (
         <section className="py-20 bg-muted/30">
           <div className="container max-w-5xl">
-            <RoofMeasurementTool onMeasurementComplete={handleMeasurementComplete} />
+            <RoofMeasurementTool 
+              onMeasurementComplete={handleMeasurementComplete}
+              onEstimateAccepted={handleEstimateAccepted}
+            />
           </div>
         </section>
       )}
+
+      {/* Quiz Dialog - Auto-opens after accepting AI estimate */}
+      <Dialog open={quizDialogOpen} onOpenChange={setQuizDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Find Your Perfect Roofing Package
+            </DialogTitle>
+            <DialogDescription>
+              Answer a few quick questions to get a personalized recommendation
+            </DialogDescription>
+          </DialogHeader>
+          <InteractiveSalesAssistant 
+            onComplete={handleQuizComplete}
+            initialSqft={pendingEstimate?.sqft}
+            initialAddress={pendingEstimate?.address}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Measurement Report Section */}
       {measurements && (
