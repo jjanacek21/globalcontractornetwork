@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, MapPin, Pencil, Trash2, Navigation, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calculator, MapPin, Pencil, Trash2, Navigation, Sparkles, Zap, Map, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import * as turf from "@turf/turf";
@@ -27,16 +29,44 @@ const COATING_PRICES = {
   rubber: { low: 6.0, high: 8.0, name: "Rubber" },
 };
 
+const PROPERTY_TYPES = [
+  { value: 'single-family', label: 'Single Family Home' },
+  { value: 'townhouse', label: 'Townhouse' },
+  { value: 'duplex', label: 'Duplex' },
+  { value: 'commercial', label: 'Commercial Building' },
+];
+
+const LIVING_AREA_RANGES = [
+  { value: '1000', label: 'Under 1,000 sq ft', min: 800, max: 1000 },
+  { value: '1500', label: '1,000 - 1,500 sq ft', min: 1000, max: 1500 },
+  { value: '2000', label: '1,500 - 2,000 sq ft', min: 1500, max: 2000 },
+  { value: '2500', label: '2,000 - 2,500 sq ft', min: 2000, max: 2500 },
+  { value: '3000', label: '2,500 - 3,000 sq ft', min: 2500, max: 3000 },
+  { value: '3500', label: '3,000 - 3,500 sq ft', min: 3000, max: 3500 },
+  { value: '4000', label: '3,500 - 4,000 sq ft', min: 3500, max: 4000 },
+  { value: '5000', label: '4,000+ sq ft', min: 4000, max: 5000 },
+];
+
 interface InstantQuoteToolProps {
   selectedCoatingType?: string;
 }
 
+interface AIEstimation {
+  estimatedSqftLow: number;
+  estimatedSqftHigh: number;
+  confidence: 'high' | 'medium' | 'low';
+  methodology: string;
+}
+
 export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps) => {
+  const { toast } = useToast();
+  
+  // Common state
+  const [activeTab, setActiveTab] = useState("quick");
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [isDrawing, setIsDrawing] = useState(false);
   const [roofType, setRoofType] = useState<string>("");
   const [coatingType, setCoatingType] = useState<string>("");
   const [sqft, setSqft] = useState<number>(0);
@@ -44,16 +74,30 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [estimateHigh, setEstimateHigh] = useState<number>(0);
   const [showEstimate, setShowEstimate] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  
+  // SpinWheel and discount state
   const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [submittedLead, setSubmittedLead] = useState<any>(null);
 
+  // Quick estimate state
+  const [propertyType, setPropertyType] = useState("");
+  const [stories, setStories] = useState("");
+  const [livingAreaRange, setLivingAreaRange] = useState("");
+  const [customLivingArea, setCustomLivingArea] = useState("");
+  const [roofComplexity, setRoofComplexity] = useState("");
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [aiEstimation, setAiEstimation] = useState<AIEstimation | null>(null);
+  const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
+
+  // Map drawing state
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<MapboxDraw | null>(null);
-  const { toast } = useToast();
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
   // Update coating type when selectedCoatingType prop changes
   useEffect(() => {
@@ -62,9 +106,9 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     }
   }, [selectedCoatingType]);
 
-  // Initialize map
+  // Initialize map only when Draw on Map tab is active
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (activeTab !== "draw" || !mapContainer.current || map.current) return;
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
     map.current = new mapboxgl.Map({
@@ -92,10 +136,17 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
       setShowEstimate(false);
     });
 
+    map.current.on("load", () => {
+      setMapInitialized(true);
+    });
+
     return () => {
       map.current?.remove();
+      map.current = null;
+      draw.current = null;
+      setMapInitialized(false);
     };
-  }, []);
+  }, [activeTab]);
 
   // Debounced address search
   useEffect(() => {
@@ -128,7 +179,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     setShowSearchResults(false);
     setSearchResults([]);
     
-    if (map.current) {
+    if (map.current && activeTab === "draw") {
       map.current.flyTo({
         center: feature.center,
         zoom: 19,
@@ -180,6 +231,14 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     }
   }, [sqft, coatingType]);
 
+  // Quick estimate also calculates pricing
+  useEffect(() => {
+    if (acceptedSqft && coatingType) {
+      calculateEstimate(acceptedSqft);
+      setSqft(acceptedSqft);
+    }
+  }, [acceptedSqft, coatingType]);
+
   const handleStartDrawing = () => {
     if (draw.current) {
       draw.current.changeMode("draw_polygon");
@@ -214,7 +273,6 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
         const { latitude, longitude } = position.coords;
         
         try {
-          // Reverse geocode to get address
           const response = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
           );
@@ -225,7 +283,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
             setQuery(address.place_name);
             setSelectedAddress(address.place_name);
             
-            if (map.current) {
+            if (map.current && activeTab === "draw") {
               map.current.flyTo({
                 center: [longitude, latitude],
                 zoom: 19,
@@ -272,6 +330,75 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     );
   };
 
+  const handleGetAIEstimate = async () => {
+    const livingArea = customLivingArea 
+      ? parseInt(customLivingArea) 
+      : parseInt(livingAreaRange);
+    
+    if (!propertyType || !stories || !livingArea || !roofComplexity) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all property details to get an estimate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsEstimating(true);
+    setAiEstimation(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('property-estimator-ai', {
+        body: {
+          propertyDetails: {
+            propertyType,
+            stories: parseInt(stories),
+            livingArea,
+            roofComplexity,
+            state: 'Florida'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.estimation) {
+        setAiEstimation(data.estimation);
+      } else {
+        throw new Error('No estimation received');
+      }
+    } catch (error) {
+      console.error('Error getting AI estimate:', error);
+      toast({
+        title: "Estimation Error",
+        description: "Could not get AI estimate. Please try again or use manual drawing.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEstimating(false);
+    }
+  };
+
+  const handleAcceptEstimate = () => {
+    if (!aiEstimation) return;
+    const avgSqft = Math.round((aiEstimation.estimatedSqftLow + aiEstimation.estimatedSqftHigh) / 2);
+    setAcceptedSqft(avgSqft);
+    setSqft(avgSqft);
+    toast({
+      title: "Estimate Accepted",
+      description: `Using ${avgSqft.toLocaleString()} sq ft for your quote.`,
+    });
+  };
+
+  const getConfidenceColor = (confidence: string) => {
+    switch (confidence) {
+      case 'high': return 'text-green-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-red-600';
+      default: return 'text-muted-foreground';
+    }
+  };
+
   return (
     <section id="quote-tool" className="py-20 bg-muted/30">
       <div className="container px-4 mx-auto">
@@ -280,104 +407,337 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
             Get Your <span className="text-primary">Instant Quote</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Draw your roof on the map and get an instant estimate for your coating project
+            Answer a few questions or draw your roof on the map to get an instant estimate
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {/* Input Section */}
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Address Search Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                Property Location
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="address">Property Address</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUseCurrentLocation}
+                  disabled={isLocating}
+                  className="h-7 text-xs"
+                >
+                  <Navigation className="h-3 w-3 mr-1" />
+                  {isLocating ? "Locating..." : "Use Current Location"}
+                </Button>
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="address"
+                  placeholder="Enter property address..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                  className="pl-10"
+                />
+                {showSearchResults && searchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        className="w-full px-4 py-2 text-left hover:bg-muted transition-colors"
+                        onClick={() => selectAddress(result)}
+                      >
+                        {result.place_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedAddress && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  Selected: {selectedAddress}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Measurement Method Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="quick" className="flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Quick Estimate
+              </TabsTrigger>
+              <TabsTrigger value="draw" className="flex items-center gap-2">
+                <Map className="h-4 w-4" />
+                Draw on Map
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Quick Estimate Tab */}
+            <TabsContent value="quick" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                    AI-Powered Quick Estimate
+                  </CardTitle>
+                  <CardDescription>
+                    Answer a few questions and get an instant roof size estimate
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Property Type</Label>
+                      <Select value={propertyType} onValueChange={setPropertyType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select property type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROPERTY_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Number of Stories</Label>
+                      <Select value={stories} onValueChange={setStories}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select stories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 Story</SelectItem>
+                          <SelectItem value="2">2 Stories</SelectItem>
+                          <SelectItem value="3">3+ Stories</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Living Area (sq ft)</Label>
+                      <Select value={livingAreaRange} onValueChange={(v) => { setLivingAreaRange(v); setCustomLivingArea(""); }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LIVING_AREA_RANGES.map((range) => (
+                            <SelectItem key={range.value} value={range.value}>
+                              {range.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="mt-2">
+                        <Input
+                          type="number"
+                          placeholder="Or enter exact sq ft"
+                          value={customLivingArea}
+                          onChange={(e) => { setCustomLivingArea(e.target.value); setLivingAreaRange(""); }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Roof Complexity</Label>
+                      <Select value={roofComplexity} onValueChange={setRoofComplexity}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select complexity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="simple">Simple (Flat or Low Slope)</SelectItem>
+                          <SelectItem value="moderate">Moderate (Some Angles)</SelectItem>
+                          <SelectItem value="complex">Complex (Multiple Levels)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleGetAIEstimate}
+                    disabled={isEstimating || !propertyType || !stories || (!livingAreaRange && !customLivingArea) || !roofComplexity}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isEstimating ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-5 w-5 mr-2" />
+                        Get AI Estimate
+                      </>
+                    )}
+                  </Button>
+
+                  {/* AI Estimation Result */}
+                  {aiEstimation && (
+                    <Card className="border-primary/50 bg-primary/5">
+                      <CardContent className="pt-6">
+                        <div className="text-center space-y-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Estimated Roof Size</p>
+                            <p className="text-3xl font-bold text-primary">
+                              {aiEstimation.estimatedSqftLow.toLocaleString()} - {aiEstimation.estimatedSqftHigh.toLocaleString()} sq ft
+                            </p>
+                          </div>
+                          <div className={`flex items-center justify-center gap-2 ${getConfidenceColor(aiEstimation.confidence)}`}>
+                            {aiEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
+                            {aiEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
+                            <span className="text-sm font-medium capitalize">{aiEstimation.confidence} Confidence</span>
+                          </div>
+                          {aiEstimation.methodology && (
+                            <p className="text-xs text-muted-foreground">{aiEstimation.methodology}</p>
+                          )}
+
+                          {acceptedSqft ? (
+                            <div className="flex items-center justify-center gap-2 text-green-600">
+                              <CheckCircle2 className="h-5 w-5" />
+                              <span>Using {acceptedSqft.toLocaleString()} sq ft</span>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button onClick={handleAcceptEstimate} className="flex-1">
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Looks Good!
+                              </Button>
+                              <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
+                                <Map className="h-4 w-4 mr-2" />
+                                Need More Accuracy?
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Draw on Map Tab */}
+            <TabsContent value="draw" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Map className="h-5 w-5 text-primary" />
+                    Draw Your Roof
+                  </CardTitle>
+                  <CardDescription>
+                    Draw the outline of your roof on the satellite map for precise measurements
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="relative">
+                    <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
+                    
+                    {/* Drawing Controls */}
+                    <div className="absolute top-4 left-4 flex gap-2">
+                      <Button
+                        onClick={handleStartDrawing}
+                        disabled={!selectedAddress || !mapInitialized}
+                        size="sm"
+                        variant={isDrawing ? "default" : "secondary"}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        {isDrawing ? "Drawing..." : "Draw Roof"}
+                      </Button>
+                      <Button
+                        onClick={handleClear}
+                        size="sm"
+                        variant="destructive"
+                        disabled={sqft === 0}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear
+                      </Button>
+                    </div>
+
+                    {/* Measurement Display */}
+                    {sqft > 0 && (
+                      <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
+                        <CardContent className="pt-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Roof Area</Label>
+                              <div className="text-lg font-bold">{sqft.toLocaleString()} sq ft</div>
+                            </div>
+                            {showEstimate && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Estimated Cost</Label>
+                                <div className="text-lg font-bold text-primary">
+                                  ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Property Details Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-primary" />
-                Property Details
+                Coating Details
               </CardTitle>
-              <CardDescription>Enter your property information to get started</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Address Search */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="address">Property Address</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUseCurrentLocation}
-                    disabled={isLocating}
-                    className="h-7 text-xs"
-                  >
-                    <Navigation className="h-3 w-3 mr-1" />
-                    {isLocating ? "Locating..." : "Use Current Location"}
-                  </Button>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Roof Type</Label>
+                  <Select value={roofType} onValueChange={setRoofType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select roof type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flat">Flat Roof</SelectItem>
+                      <SelectItem value="metal">Metal Roof</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="address"
-                    placeholder="Enter property address..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-                    className="pl-10"
-                  />
-                  {showSearchResults && searchResults.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
-                      {searchResults.map((result) => (
-                        <button
-                          key={result.id}
-                          className="w-full px-4 py-2 text-left hover:bg-muted transition-colors"
-                          onClick={() => selectAddress(result)}
-                        >
-                          {result.place_name}
-                        </button>
+                <div>
+                  <Label>Coating Type</Label>
+                  <Select value={coatingType} onValueChange={setCoatingType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coating type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(COATING_PRICES).map(([key, value]) => (
+                        <SelectItem key={key} value={key}>
+                          {value.name} (${value.low} - ${value.high}/SF)
+                        </SelectItem>
                       ))}
-                    </div>
-                  )}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {selectedAddress && (
-                  <p className="text-sm text-muted-foreground">Selected: {selectedAddress}</p>
-                )}
               </div>
 
-              {/* Roof Type */}
-              <div className="space-y-2">
-                <Label>Roof Type</Label>
-                <Select value={roofType} onValueChange={setRoofType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select roof type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="flat">Flat Roof</SelectItem>
-                    <SelectItem value="metal">Metal Roof</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Coating Type */}
-              <div className="space-y-2">
-                <Label>Coating Type</Label>
-                <Select value={coatingType} onValueChange={setCoatingType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select coating type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(COATING_PRICES).map(([key, value]) => (
-                      <SelectItem key={key} value={key}>
-                        {value.name} (${value.low} - ${value.high}/SF)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Square Footage */}
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="sqft">Square Footage</Label>
                 <Input
                   id="sqft"
                   type="number"
-                  placeholder="Draw on map or enter manually"
+                  placeholder="Use AI estimate, draw on map, or enter manually"
                   value={sqft || ""}
                   onChange={(e) => {
                     const value = parseInt(e.target.value) || 0;
@@ -411,63 +771,6 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Map Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Draw Your Roof</CardTitle>
-              <CardDescription>Search for your address, then draw your roof outline</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative">
-                <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
-                
-                {/* Drawing Controls */}
-                <div className="absolute top-4 left-4 flex gap-2">
-                  <Button
-                    onClick={handleStartDrawing}
-                    disabled={!selectedAddress}
-                    size="sm"
-                    variant={isDrawing ? "default" : "secondary"}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    {isDrawing ? "Drawing..." : "Draw Roof"}
-                  </Button>
-                  <Button
-                    onClick={handleClear}
-                    size="sm"
-                    variant="destructive"
-                    disabled={sqft === 0}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear
-                  </Button>
-                </div>
-
-                {/* Measurement Display */}
-                {sqft > 0 && (
-                  <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
-                    <CardContent className="pt-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Roof Area</Label>
-                          <div className="text-lg font-bold">{sqft.toLocaleString()} sq ft</div>
-                        </div>
-                        {showEstimate && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Estimated Cost</Label>
-                            <div className="text-lg font-bold text-primary">
-                              ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>

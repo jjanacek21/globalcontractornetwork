@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.lead-scorer-ai]
 verify_jwt = false
+
+[functions.property-estimator-ai]
+verify_jwt = false
