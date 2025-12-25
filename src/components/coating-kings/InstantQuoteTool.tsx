@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,8 +92,13 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [aiEstimation, setAiEstimation] = useState<AIEstimation | null>(null);
   const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
 
-  // Map drawing state
-  const mapContainer = useRef<HTMLDivElement>(null);
+  // Map drawing state - use callback ref to detect when container is ready
+  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
+  const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setMapContainerNode(node);
+    }
+  }, []);
   const map = useRef<mapboxgl.Map | null>(null);
   const draw = useRef<MapboxDraw | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -106,13 +111,13 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     }
   }, [selectedCoatingType]);
 
-  // Initialize map only when Draw on Map tab is active
+  // Initialize map only when Draw on Map tab is active AND container is ready
   useEffect(() => {
-    if (activeTab !== "draw" || !mapContainer.current || map.current) return;
+    if (activeTab !== "draw" || !mapContainerNode || map.current) return;
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
     map.current = new mapboxgl.Map({
-      container: mapContainer.current,
+      container: mapContainerNode,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [-80.1918, 25.7617], // Miami
       zoom: 18,
@@ -144,9 +149,10 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
       map.current?.remove();
       map.current = null;
       draw.current = null;
+      setMapContainerNode(null);
       setMapInitialized(false);
     };
-  }, [activeTab]);
+  }, [activeTab, mapContainerNode]);
 
   // Debounced address search
   useEffect(() => {
@@ -642,7 +648,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative">
-                    <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
+                    <div ref={mapContainerRef} className="w-full h-[500px] rounded-lg" />
                     
                     {/* Drawing Controls */}
                     <div className="absolute top-4 left-4 flex gap-2">
