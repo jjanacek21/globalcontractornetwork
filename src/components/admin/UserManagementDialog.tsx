@@ -68,7 +68,7 @@ const COMPANY_ROLES = [
 ];
 
 export function UserManagementDialog({ open, onOpenChange, member, mode, onModeChange, onRefresh }: UserManagementDialogProps) {
-  const [formData, setFormData] = useState<Partial<CompanyMember> & { email?: string }>({});
+  const [formData, setFormData] = useState<Partial<CompanyMember> & { email?: string; first_name?: string; last_name?: string }>({});
   const [companies, setCompanies] = useState<Company[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -132,8 +132,8 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
 
   const handleSave = async () => {
     if (mode === 'add') {
-      if (!formData.email || !formData.company_id) {
-        toast({ title: "Error", description: "Email and company are required", variant: "destructive" });
+      if (!formData.email || !formData.company_id || !formData.first_name || !formData.last_name) {
+        toast({ title: "Error", description: "Email, first name, last name, and company are required", variant: "destructive" });
         return;
       }
     }
@@ -141,51 +141,30 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
     setSaving(true);
     try {
       if (mode === 'add') {
-        // First, create the auth user with a temporary password
-        const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email!,
-          password: tempPassword,
-          email_confirm: true,
+        // Call the edge function to create user with admin privileges
+        const { data, error } = await supabase.functions.invoke('admin-create-user', {
+          body: {
+            email: formData.email,
+            firstName: formData.first_name,
+            lastName: formData.last_name,
+            companyId: formData.company_id,
+            role: formData.role || 'sales_rep',
+            teamId: formData.team_id || null,
+            managerId: formData.manager_id || null,
+            jobTitle: formData.job_title || null,
+            isActive: formData.is_active ?? true,
+          }
         });
 
-        if (authError) {
-          // If admin API fails, try regular signup (will need email confirmation)
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: formData.email!,
-            password: tempPassword,
-          });
-          
-          if (signUpError) throw signUpError;
-          
-          if (signUpData.user) {
-            const { error: memberError } = await supabase.from('company_members').insert({
-              user_id: signUpData.user.id,
-              company_id: formData.company_id!,
-              role: (formData.role || 'sales_rep') as 'company_admin' | 'manager' | 'project_manager' | 'sales_rep' | 'crew',
-              manager_id: formData.manager_id || null,
-              team_id: formData.team_id || null,
-              is_active: formData.is_active ?? true,
-              job_title: formData.job_title || null,
-            });
-            if (memberError) throw memberError;
-          }
-        } else if (authData.user) {
-          const { error: memberError } = await supabase.from('company_members').insert({
-            user_id: authData.user.id,
-            company_id: formData.company_id!,
-            role: (formData.role || 'sales_rep') as 'company_admin' | 'manager' | 'project_manager' | 'sales_rep' | 'crew',
-            manager_id: formData.manager_id || null,
-            team_id: formData.team_id || null,
-            is_active: formData.is_active ?? true,
-            job_title: formData.job_title || null,
-          });
-          if (memberError) throw memberError;
+        if (error) throw error;
+        
+        if (!data?.success) {
+          throw new Error(data?.error || 'Failed to create user');
         }
 
         toast({ 
           title: "Success", 
-          description: "User created. They will receive an email to set their password." 
+          description: data.message || "User created successfully!" 
         });
       } else {
         const { error } = await supabase.from('company_members').update({
@@ -239,15 +218,35 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
 
         <div className="grid gap-4 py-4">
           {mode === 'add' && (
-            <div className="space-y-2">
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="user@example.com"
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>First Name *</Label>
+                  <Input
+                    value={formData.first_name || ''}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    placeholder="John"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name *</Label>
+                  <Input
+                    value={formData.last_name || ''}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="user@example.com"
+                />
+              </div>
+            </>
           )}
 
           {mode !== 'add' && member?.profile && (
