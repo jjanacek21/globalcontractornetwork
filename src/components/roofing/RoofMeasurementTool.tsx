@@ -27,6 +27,7 @@ interface RoofMeasurements {
 
 interface RoofMeasurementToolProps {
   onMeasurementComplete: (measurements: RoofMeasurements) => void;
+  onEstimateAccepted?: (sqft: number, address: string) => void;
 }
 
 interface VisionEstimation {
@@ -52,7 +53,7 @@ const PITCH_MULTIPLIERS: { [key: string]: number } = {
   "12/12": 1.414,
 };
 
-export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementToolProps) {
+export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted }: RoofMeasurementToolProps) {
   // Use callback ref to detect when container is ready
   const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
@@ -285,6 +286,10 @@ export function RoofMeasurementTool({ onMeasurementComplete }: RoofMeasurementTo
       title: "Estimate Accepted",
       description: `Using ${visionEstimation.estimatedSqft.toLocaleString()} sq ft for your quote.`,
     });
+    // Trigger callback to open quiz dialog
+    if (onEstimateAccepted && selectedAddress) {
+      onEstimateAccepted(visionEstimation.estimatedSqft, selectedAddress);
+    }
   };
 
   const handleGenerateReport = () => {

@@ -112,11 +112,20 @@ const getRecommendedPackage = (answers: Record<string, string>) => {
 
 interface InteractiveSalesAssistantProps {
   onComplete: () => void;
+  initialSqft?: number;
+  initialAddress?: string;
 }
 
-export const InteractiveSalesAssistant = ({ onComplete }: InteractiveSalesAssistantProps) => {
+export const InteractiveSalesAssistant = ({ onComplete, initialSqft, initialAddress }: InteractiveSalesAssistantProps) => {
+  // Filter out sqft question if we already have the measurement
+  const filteredQuestions = initialSqft 
+    ? questions.filter(q => q.id !== "sqft")
+    : questions;
+  
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(
+    initialSqft ? { sqft: initialSqft.toString() } : {}
+  );
   const [inputValue, setInputValue] = useState("");
   const [showResult, setShowResult] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(true);
@@ -124,8 +133,8 @@ export const InteractiveSalesAssistant = ({ onComplete }: InteractiveSalesAssist
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const [appointmentScheduled, setAppointmentScheduled] = useState(false);
 
-  const currentQuestion = questions[currentStep];
-  const progress = ((currentStep) / questions.length) * 100;
+  const currentQuestion = filteredQuestions[currentStep];
+  const progress = ((currentStep) / filteredQuestions.length) * 100;
 
   useEffect(() => {
     // Simulate speaking animation
@@ -137,7 +146,7 @@ export const InteractiveSalesAssistant = ({ onComplete }: InteractiveSalesAssist
   const handleOptionClick = (value: string) => {
     setAnswers({ ...answers, [currentQuestion.id]: value });
     
-    if (currentStep < questions.length - 1) {
+    if (currentStep < filteredQuestions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setShowResult(true);
@@ -150,7 +159,7 @@ export const InteractiveSalesAssistant = ({ onComplete }: InteractiveSalesAssist
     setAnswers({ ...answers, [currentQuestion.id]: inputValue });
     setInputValue("");
     
-    if (currentStep < questions.length - 1) {
+    if (currentStep < filteredQuestions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
       setShowResult(true);
@@ -286,10 +295,16 @@ export const InteractiveSalesAssistant = ({ onComplete }: InteractiveSalesAssist
           {/* Progress */}
           <div className="mb-6">
             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-              <span>Step {currentStep + 1} of {questions.length}</span>
+              <span>Step {currentStep + 1} of {filteredQuestions.length}</span>
               <span>{Math.round(progress)}% complete</span>
             </div>
             <Progress value={progress} className="h-2" />
+            {initialSqft && (
+              <div className="mt-2 text-xs text-primary flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Using AI measurement: {initialSqft.toLocaleString()} sq ft
+              </div>
+            )}
           </div>
 
           {/* Avatar and Question */}
