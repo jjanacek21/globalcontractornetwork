@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, MapPin, Pencil, Trash2, Navigation, Sparkles, Zap, Map, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Calculator, MapPin, Pencil, Trash2, Navigation, Sparkles, Zap, Map, Loader2, CheckCircle2, AlertCircle, Satellite } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import mapboxgl from "mapbox-gl";
@@ -29,33 +29,18 @@ const COATING_PRICES = {
   rubber: { low: 6.0, high: 8.0, name: "Rubber" },
 };
 
-const PROPERTY_TYPES = [
-  { value: 'single-family', label: 'Single Family Home' },
-  { value: 'townhouse', label: 'Townhouse' },
-  { value: 'duplex', label: 'Duplex' },
-  { value: 'commercial', label: 'Commercial Building' },
-];
-
-const LIVING_AREA_RANGES = [
-  { value: '1000', label: 'Under 1,000 sq ft', min: 800, max: 1000 },
-  { value: '1500', label: '1,000 - 1,500 sq ft', min: 1000, max: 1500 },
-  { value: '2000', label: '1,500 - 2,000 sq ft', min: 1500, max: 2000 },
-  { value: '2500', label: '2,000 - 2,500 sq ft', min: 2000, max: 2500 },
-  { value: '3000', label: '2,500 - 3,000 sq ft', min: 2500, max: 3000 },
-  { value: '3500', label: '3,000 - 3,500 sq ft', min: 3000, max: 3500 },
-  { value: '4000', label: '3,500 - 4,000 sq ft', min: 3500, max: 4000 },
-  { value: '5000', label: '4,000+ sq ft', min: 4000, max: 5000 },
-];
-
 interface InstantQuoteToolProps {
   selectedCoatingType?: string;
 }
 
-interface AIEstimation {
+interface VisionEstimation {
+  estimatedSqft: number;
   estimatedSqftLow: number;
   estimatedSqftHigh: number;
   confidence: 'high' | 'medium' | 'low';
   methodology: string;
+  roofShape: string;
+  satelliteImageUrl: string;
 }
 
 export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps) => {
@@ -67,6 +52,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [roofType, setRoofType] = useState<string>("");
   const [coatingType, setCoatingType] = useState<string>("");
   const [sqft, setSqft] = useState<number>(0);
@@ -82,14 +68,9 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [discountPercent, setDiscountPercent] = useState(0);
   const [submittedLead, setSubmittedLead] = useState<any>(null);
 
-  // Quick estimate state
-  const [propertyType, setPropertyType] = useState("");
-  const [stories, setStories] = useState("");
-  const [livingAreaRange, setLivingAreaRange] = useState("");
-  const [customLivingArea, setCustomLivingArea] = useState("");
-  const [roofComplexity, setRoofComplexity] = useState("");
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [aiEstimation, setAiEstimation] = useState<AIEstimation | null>(null);
+  // AI Vision state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [visionEstimation, setVisionEstimation] = useState<VisionEstimation | null>(null);
   const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
 
   // Map drawing state - use callback ref to detect when container is ready
@@ -182,8 +163,12 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const selectAddress = (feature: any) => {
     setQuery(feature.place_name);
     setSelectedAddress(feature.place_name);
+    setSelectedCoords({ lat: feature.center[1], lng: feature.center[0] });
     setShowSearchResults(false);
     setSearchResults([]);
+    // Reset previous analysis
+    setVisionEstimation(null);
+    setAcceptedSqft(null);
     
     if (map.current && activeTab === "draw") {
       map.current.flyTo({
@@ -237,7 +222,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     }
   }, [sqft, coatingType]);
 
-  // Quick estimate also calculates pricing
+  // Vision estimate also calculates pricing
   useEffect(() => {
     if (acceptedSqft && coatingType) {
       calculateEstimate(acceptedSqft);
@@ -288,6 +273,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
             const address = data.features[0];
             setQuery(address.place_name);
             setSelectedAddress(address.place_name);
+            setSelectedCoords({ lat: latitude, lng: longitude });
             
             if (map.current && activeTab === "draw") {
               map.current.flyTo({
@@ -336,63 +322,58 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     );
   };
 
-  const handleGetAIEstimate = async () => {
-    const livingArea = customLivingArea 
-      ? parseInt(customLivingArea) 
-      : parseInt(livingAreaRange);
-    
-    if (!propertyType || !stories || !livingArea || !roofComplexity) {
+  const handleAnalyzeRoof = async () => {
+    if (!selectedCoords || !selectedAddress) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all property details to get an estimate.",
+        title: "Address Required",
+        description: "Please select an address first to analyze the roof.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsEstimating(true);
-    setAiEstimation(null);
+    setIsAnalyzing(true);
+    setVisionEstimation(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('property-estimator-ai', {
+      const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
         body: {
-          propertyDetails: {
-            propertyType,
-            stories: parseInt(stories),
-            livingArea,
-            roofComplexity,
-            state: 'Florida'
-          }
+          latitude: selectedCoords.lat,
+          longitude: selectedCoords.lng,
+          address: selectedAddress
         }
       });
 
       if (error) throw error;
 
       if (data?.estimation) {
-        setAiEstimation(data.estimation);
+        setVisionEstimation(data.estimation);
+        toast({
+          title: "Analysis Complete",
+          description: `AI detected a ${data.estimation.roofShape} roof with ${data.estimation.confidence} confidence.`,
+        });
       } else {
         throw new Error('No estimation received');
       }
     } catch (error) {
-      console.error('Error getting AI estimate:', error);
+      console.error('Error analyzing roof:', error);
       toast({
-        title: "Estimation Error",
-        description: "Could not get AI estimate. Please try again or use manual drawing.",
+        title: "Analysis Error",
+        description: "Could not analyze satellite image. Please try again or use manual drawing.",
         variant: "destructive",
       });
     } finally {
-      setIsEstimating(false);
+      setIsAnalyzing(false);
     }
   };
 
   const handleAcceptEstimate = () => {
-    if (!aiEstimation) return;
-    const avgSqft = Math.round((aiEstimation.estimatedSqftLow + aiEstimation.estimatedSqftHigh) / 2);
-    setAcceptedSqft(avgSqft);
-    setSqft(avgSqft);
+    if (!visionEstimation) return;
+    setAcceptedSqft(visionEstimation.estimatedSqft);
+    setSqft(visionEstimation.estimatedSqft);
     toast({
       title: "Estimate Accepted",
-      description: `Using ${avgSqft.toLocaleString()} sq ft for your quote.`,
+      description: `Using ${visionEstimation.estimatedSqft.toLocaleString()} sq ft for your quote.`,
     });
   };
 
@@ -413,7 +394,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
             Get Your <span className="text-primary">Instant Quote</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Answer a few questions or draw your roof on the map to get an instant estimate
+            Enter your address and our AI will analyze satellite imagery to measure your roof
           </p>
         </div>
 
@@ -478,8 +459,8 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="quick" className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Quick Estimate
+                <Satellite className="h-4 w-4" />
+                AI Satellite Analysis
               </TabsTrigger>
               <TabsTrigger value="draw" className="flex items-center gap-2">
                 <Map className="h-4 w-4" />
@@ -487,126 +468,97 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
               </TabsTrigger>
             </TabsList>
 
-            {/* Quick Estimate Tab */}
+            {/* AI Satellite Analysis Tab */}
             <TabsContent value="quick" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    AI-Powered Quick Estimate
+                    <Satellite className="h-5 w-5 text-primary" />
+                    AI-Powered Roof Analysis
                   </CardTitle>
                   <CardDescription>
-                    Answer a few questions and get an instant roof size estimate
+                    Our AI analyzes satellite imagery to measure your roof automatically
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Property Type</Label>
-                      <Select value={propertyType} onValueChange={setPropertyType}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select property type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROPERTY_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Number of Stories</Label>
-                      <Select value={stories} onValueChange={setStories}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select stories" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 Story</SelectItem>
-                          <SelectItem value="2">2 Stories</SelectItem>
-                          <SelectItem value="3">3+ Stories</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Living Area (sq ft)</Label>
-                      <Select value={livingAreaRange} onValueChange={(v) => { setLivingAreaRange(v); setCustomLivingArea(""); }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LIVING_AREA_RANGES.map((range) => (
-                            <SelectItem key={range.value} value={range.value}>
-                              {range.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="mt-2">
-                        <Input
-                          type="number"
-                          placeholder="Or enter exact sq ft"
-                          value={customLivingArea}
-                          onChange={(e) => { setCustomLivingArea(e.target.value); setLivingAreaRange(""); }}
-                        />
+                  {/* Satellite Preview */}
+                  {selectedCoords && (
+                    <div className="relative rounded-lg overflow-hidden border">
+                      <img
+                        src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                        alt="Satellite view of property"
+                        className="w-full h-[300px] object-cover"
+                      />
+                      <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-medium">
+                        🛰️ Satellite Preview
+                      </div>
+                      {/* Center crosshair */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-8 h-8 border-2 border-primary rounded-full opacity-70" />
+                        <div className="absolute w-0.5 h-4 bg-primary opacity-70" />
+                        <div className="absolute w-4 h-0.5 bg-primary opacity-70" />
                       </div>
                     </div>
-                    <div>
-                      <Label>Roof Complexity</Label>
-                      <Select value={roofComplexity} onValueChange={setRoofComplexity}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select complexity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="simple">Simple (Flat or Low Slope)</SelectItem>
-                          <SelectItem value="moderate">Moderate (Some Angles)</SelectItem>
-                          <SelectItem value="complex">Complex (Multiple Levels)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  )}
+
+                  {!selectedCoords && (
+                    <div className="flex flex-col items-center justify-center h-[200px] bg-muted/50 rounded-lg border-2 border-dashed">
+                      <Satellite className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground text-center">
+                        Enter an address above to see satellite imagery
+                      </p>
                     </div>
-                  </div>
+                  )}
 
                   <Button
-                    onClick={handleGetAIEstimate}
-                    disabled={isEstimating || !propertyType || !stories || (!livingAreaRange && !customLivingArea) || !roofComplexity}
+                    onClick={handleAnalyzeRoof}
+                    disabled={isAnalyzing || !selectedCoords}
                     className="w-full"
                     size="lg"
                   >
-                    {isEstimating ? (
+                    {isAnalyzing ? (
                       <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Calculating...
+                        Analyzing Satellite Image...
                       </>
                     ) : (
                       <>
                         <Zap className="h-5 w-5 mr-2" />
-                        Get AI Estimate
+                        Analyze My Roof with AI
                       </>
                     )}
                   </Button>
 
-                  {/* AI Estimation Result */}
-                  {aiEstimation && (
+                  {/* AI Vision Result */}
+                  {visionEstimation && (
                     <Card className="border-primary/50 bg-primary/5">
                       <CardContent className="pt-6">
                         <div className="text-center space-y-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Estimated Roof Size</p>
+                            <p className="text-sm text-muted-foreground">AI-Detected Roof Size</p>
                             <p className="text-3xl font-bold text-primary">
-                              {aiEstimation.estimatedSqftLow.toLocaleString()} - {aiEstimation.estimatedSqftHigh.toLocaleString()} sq ft
+                              {visionEstimation.estimatedSqft.toLocaleString()} sq ft
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Range: {visionEstimation.estimatedSqftLow.toLocaleString()} - {visionEstimation.estimatedSqftHigh.toLocaleString()} sq ft
                             </p>
                           </div>
-                          <div className={`flex items-center justify-center gap-2 ${getConfidenceColor(aiEstimation.confidence)}`}>
-                            {aiEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
-                            {aiEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
-                            <span className="text-sm font-medium capitalize">{aiEstimation.confidence} Confidence</span>
+                          
+                          <div className="flex items-center justify-center gap-4 flex-wrap">
+                            <div className={`flex items-center gap-2 ${getConfidenceColor(visionEstimation.confidence)}`}>
+                              {visionEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
+                              {visionEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
+                              <span className="text-sm font-medium capitalize">{visionEstimation.confidence} Confidence</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Roof Type: <span className="font-medium capitalize">{visionEstimation.roofShape}</span>
+                            </div>
                           </div>
-                          {aiEstimation.methodology && (
-                            <p className="text-xs text-muted-foreground">{aiEstimation.methodology}</p>
+
+                          {visionEstimation.methodology && (
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                              {visionEstimation.methodology}
+                            </p>
                           )}
 
                           {acceptedSqft ? (
@@ -622,7 +574,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                               </Button>
                               <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
                                 <Map className="h-4 w-4 mr-2" />
-                                Need More Accuracy?
+                                Draw Manually
                               </Button>
                             </div>
                           )}
@@ -743,7 +695,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                 <Input
                   id="sqft"
                   type="number"
-                  placeholder="Use AI estimate, draw on map, or enter manually"
+                  placeholder="Use AI analysis, draw on map, or enter manually"
                   value={sqft || ""}
                   onChange={(e) => {
                     const value = parseInt(e.target.value) || 0;
