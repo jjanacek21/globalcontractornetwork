@@ -2,19 +2,26 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Menu, X, ChevronDown, ChevronRight, LogIn, UserPlus } from "lucide-react";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, ChevronDown, LogIn, UserPlus } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 const MarketingHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginExpanded, setIsLoginExpanded] = useState(false);
   const navigate = useNavigate();
 
+  // Handle scroll for header background
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -22,6 +29,23 @@ const MarketingHeader = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+    setIsLoginExpanded(false);
+  };
 
   const navLinks = [
     { label: "Services", href: "#services" },
@@ -134,62 +158,96 @@ const MarketingHeader = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-gcn-black/98 backdrop-blur-md border-t border-gcn-charcoal-light">
-          <nav className="container mx-auto px-4 py-6 flex flex-col gap-4">
+      {/* Mobile Menu Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${
+          isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={closeMobileMenu}
+        aria-hidden={!isMobileMenuOpen}
+      />
+
+      {/* Mobile Menu Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-[85%] max-w-sm bg-gcn-black z-50 lg:hidden transform transition-transform duration-300 ease-out ${
+          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-expanded={isMobileMenuOpen}
+      >
+        {/* Menu Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gcn-charcoal-light">
+          <span className="text-gcn-white font-bold text-lg">Menu</span>
+          <button
+            onClick={closeMobileMenu}
+            className="text-gcn-white/80 hover:text-gcn-gold p-2 -mr-2 transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Menu Content */}
+        <nav className="flex flex-col h-[calc(100%-80px)] overflow-y-auto">
+          <div className="flex-1 py-4">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="text-gcn-white/80 hover:text-gcn-gold transition-colors font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between px-6 py-4 text-gcn-white/90 hover:text-gcn-gold hover:bg-gcn-charcoal/50 transition-colors font-medium text-lg"
+                onClick={closeMobileMenu}
               >
                 {link.label}
+                <ChevronRight className="w-5 h-5 opacity-50" />
               </a>
             ))}
-            <hr className="border-gcn-charcoal-light" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="text-gcn-white/80 hover:text-gcn-gold justify-start px-0"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
+
+            <hr className="my-4 border-gcn-charcoal-light mx-6" />
+
+            {/* Login Portals Collapsible */}
+            <Collapsible open={isLoginExpanded} onOpenChange={setIsLoginExpanded}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-6 py-4 text-gcn-white/90 hover:text-gcn-gold hover:bg-gcn-charcoal/50 transition-colors font-medium text-lg">
+                <span className="flex items-center gap-3">
+                  <LogIn className="w-5 h-5" />
                   Login Portals
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-64 bg-gcn-charcoal border-gcn-charcoal-light max-h-[300px] overflow-y-auto"
-              >
+                </span>
+                <ChevronDown
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    isLoginExpanded ? "rotate-180" : ""
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="bg-gcn-charcoal/30">
                 {loginPortals.map((portal) => (
-                  <DropdownMenuItem
+                  <button
                     key={portal.path}
                     onClick={() => {
                       navigate(portal.path);
-                      setIsMobileMenuOpen(false);
+                      closeMobileMenu();
                     }}
-                    className="text-gcn-white/80 hover:text-gcn-gold hover:bg-gcn-charcoal-light cursor-pointer"
+                    className="w-full text-left px-10 py-3 text-gcn-white/70 hover:text-gcn-gold hover:bg-gcn-charcoal/50 transition-colors text-sm"
                   >
                     {portal.name}
-                  </DropdownMenuItem>
+                  </button>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+
+          {/* Bottom CTA */}
+          <div className="p-6 border-t border-gcn-charcoal-light">
             <Button
               onClick={() => {
                 navigate("/join");
-                setIsMobileMenuOpen(false);
+                closeMobileMenu();
               }}
-              className="bg-gcn-gold hover:bg-gcn-gold-dark text-gcn-black font-semibold w-full mt-2"
+              className="w-full bg-gcn-gold hover:bg-gcn-gold-dark text-gcn-black font-bold py-6 text-lg"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
+              <UserPlus className="w-5 h-5 mr-2" />
               Sign Up Free
             </Button>
-          </nav>
-        </div>
-      )}
+          </div>
+        </nav>
+      </div>
     </header>
   );
 };
