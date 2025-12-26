@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
-  AlertTriangle, Trees, Shield
+  AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
+  Paintbrush, HardHat, DoorOpen, GraduationCap, X
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -38,11 +40,15 @@ interface ContractorProfile {
   is_verified: boolean | null;
 }
 
+type ServiceCategory = "all" | "home" | "business" | "emergency" | "shopping" | "learning";
+
 const MemberDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [networkMember, setNetworkMember] = useState<NetworkMember | null>(null);
   const [contractorProfile, setContractorProfile] = useState<ContractorProfile | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -108,83 +114,111 @@ const MemberDashboard = () => {
 
   const services = [
     {
-      icon: Building2,
+      icon: Search,
       title: "Contractor Directory",
-      description: "Find verified contractors in your area",
+      description: "Browse 500+ verified local contractors",
       link: "/directory",
-      color: "bg-primary/10 text-primary"
+      color: "bg-primary/10 text-primary",
+      category: "business" as ServiceCategory
     },
     {
-      icon: Home,
-      title: "Coating Kings",
-      description: "Roof coating specialists - Get instant quotes",
+      icon: Paintbrush,
+      title: "Roof Coatings",
+      description: "Silicone & acrylic roof coating services",
       link: "/coating-kings",
-      color: "bg-accent/10 text-accent-foreground"
+      color: "bg-orange-500/10 text-orange-600",
+      category: "home" as ServiceCategory
     },
     {
-      icon: Home,
+      icon: HardHat,
       title: "Roofing Services",
-      description: "Professional roofing packages",
+      description: "Full roof replacements & repairs",
       link: "/roofing",
-      color: "bg-primary/10 text-primary"
+      color: "bg-slate-600/10 text-slate-600",
+      category: "home" as ServiceCategory
     },
     {
-      icon: Home,
-      title: "Property Prep",
-      description: "Inspections and maintenance packages",
+      icon: ClipboardCheck,
+      title: "Property Inspections",
+      description: "Pre-sale & maintenance inspections",
       link: "/prep-property",
-      color: "bg-primary/10 text-primary"
+      color: "bg-teal-500/10 text-teal-600",
+      category: "home" as ServiceCategory
     },
     {
       icon: Crown,
-      title: "Permit Queens",
-      description: "Florida permit expediting service",
+      title: "Permit Expediting",
+      description: "Fast-track Florida building permits",
       link: "/permit-queens",
-      color: "bg-amber-500/10 text-amber-600"
+      color: "bg-amber-500/10 text-amber-600",
+      category: "business" as ServiceCategory
     },
     {
       icon: DollarSign,
-      title: "Supplement Kings",
-      description: "Insurance claim supplementing",
+      title: "Insurance Supplements",
+      description: "Maximize your insurance claim payouts",
       link: "/supplement-kings",
-      color: "bg-blue-600/10 text-blue-600"
+      color: "bg-blue-600/10 text-blue-600",
+      category: "business" as ServiceCategory
     },
     {
-      icon: Home,
-      title: "Green Home Improvements",
-      description: "Impact windows for South Florida",
+      icon: DoorOpen,
+      title: "Windows & Doors",
+      description: "Impact-rated windows & doors installation",
       link: "/green-home-solutions",
-      color: "bg-green-600/10 text-green-600"
+      color: "bg-green-600/10 text-green-600",
+      category: "home" as ServiceCategory
     },
     {
       icon: AlertTriangle,
-      title: "Emergency Mitigation",
-      description: "24/7 emergency services",
+      title: "24/7 Emergency Services",
+      description: "Water, fire & storm damage response",
       link: "/emergency-mitigation",
-      color: "bg-red-600/10 text-red-600"
+      color: "bg-red-600/10 text-red-600",
+      category: "emergency" as ServiceCategory
     },
     {
       icon: Trees,
-      title: "Northern Landscaping",
-      description: "Tree & landscaping services",
+      title: "Tree Removal & Landscaping",
+      description: "Professional tree removal, trimming & landscaping",
       link: "/northern-landscaping",
-      color: "bg-green-700/10 text-green-700"
+      color: "bg-green-700/10 text-green-700",
+      category: "home" as ServiceCategory
     },
     {
       icon: ShoppingBag,
-      title: "Merchandise Store",
-      description: "Quality contractor gear",
+      title: "GCN Merch Store",
+      description: "Apparel, gear & tools for contractors",
       link: "/store",
-      color: "bg-primary/10 text-primary"
+      color: "bg-purple-500/10 text-purple-600",
+      category: "shopping" as ServiceCategory
     },
     {
-      icon: BookOpen,
-      title: "Learning Platform",
-      description: "Courses for contractors",
+      icon: GraduationCap,
+      title: "Training Academy",
+      description: "Certifications & business courses for pros",
       link: "/learning",
-      color: "bg-accent/10 text-accent-foreground"
+      color: "bg-indigo-500/10 text-indigo-600",
+      category: "learning" as ServiceCategory
     }
   ];
+
+  const categories: { value: ServiceCategory; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "home", label: "Home" },
+    { value: "business", label: "Business" },
+    { value: "emergency", label: "Emergency" },
+    { value: "shopping", label: "Shopping" },
+    { value: "learning", label: "Learning" }
+  ];
+
+  const filteredServices = services.filter(service => {
+    const matchesSearch = 
+      service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === "all" || service.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -300,36 +334,95 @@ const MemberDashboard = () => {
         )}
 
         {/* Services Grid */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Available Services</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service) => (
-              <Link
-                key={service.title}
-                to={service.link}
-                className="group"
-              >
-                <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${service.color}`}>
-                        <service.icon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold group-hover:text-primary transition-colors">
-                          {service.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {service.description}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Available Services</h2>
+          
+          {/* Search and Filter */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search services..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <Button
+                  key={cat.value}
+                  variant={activeCategory === cat.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveCategory(cat.value)}
+                  className="rounded-full"
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
           </div>
+
+          {/* Services Grid or Empty State */}
+          {filteredServices.length === 0 ? (
+            <Card className="p-8 text-center">
+              <div className="space-y-2">
+                <Search className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                <h3 className="font-semibold">No services found</h3>
+                <p className="text-sm text-muted-foreground">
+                  Try adjusting your search or filter criteria
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredServices.map((service) => (
+                <Link
+                  key={service.title}
+                  to={service.link}
+                  className="group"
+                >
+                  <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${service.color}`}>
+                          <service.icon className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                            {service.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {service.description}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Contractor-Only Section */}
