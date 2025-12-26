@@ -4,12 +4,10 @@ import {
   Building2, 
   Home, 
   ShoppingBag, 
-  BookOpen, 
   TrendingUp, 
   Handshake,
   ArrowRight,
   CheckCircle2,
-  FileText,
   Crown,
   DollarSign,
   Shield,
@@ -21,10 +19,10 @@ import gcnLogo from "@/assets/gcn-logo.jpg";
 const Index = () => {
   const features = [
     {
-      icon: Building2,
-      title: "Contractor Directory",
-      description: "Find verified contractors in your area. Browse by specialty and service area.",
-      link: "/directory",
+      icon: Home,
+      title: "Roofing Services",
+      description: "Professional roofing packages from budget-friendly to premium installations.",
+      link: "/roofing",
       color: "bg-primary/10 text-primary"
     },
     {
@@ -36,9 +34,44 @@ const Index = () => {
     },
     {
       icon: Home,
-      title: "Roofing Services",
-      description: "Professional roofing packages from budget-friendly to premium installations.",
-      link: "/roofing",
+      title: "Windows & Doors",
+      description: "Impact windows and doors for South Florida. Get instant quotes with our calculator. Spin to win discounts!",
+      link: "/green-home-solutions",
+      color: "bg-green-600/10 text-green-600"
+    },
+    {
+      icon: Trees,
+      title: "Tree & Landscaping Services",
+      description: "Premium tree & landscaping services. Tree trimming, removal, stump grinding, irrigation & more. Get instant estimates.",
+      link: "/northern-landscaping",
+      color: "bg-green-700/10 text-green-700"
+    },
+    {
+      icon: AlertTriangle,
+      title: "Emergency Mitigation",
+      description: "24/7 mold remediation, water damage, storm cleanup & roof tarping. Fast response for South Florida emergencies.",
+      link: "/emergency-mitigation",
+      color: "bg-red-600/10 text-red-600"
+    },
+    {
+      icon: DollarSign,
+      title: "Supplement Kings",
+      description: "Insurance claim supplementing and Xactimate estimating. Maximize your claims with expert negotiation.",
+      link: "/supplement-kings",
+      color: "bg-blue-600/10 text-blue-600"
+    },
+    {
+      icon: Crown,
+      title: "Permit Queens",
+      description: "Florida permit expediting service. Building department lookup, document prep, and permit tracking.",
+      link: "/permit-queens",
+      color: "bg-amber-500/10 text-amber-600"
+    },
+    {
+      icon: Building2,
+      title: "Contractor Directory",
+      description: "Find verified contractors in your area. Browse by specialty and service area.",
+      link: "/directory",
       color: "bg-primary/10 text-primary"
     },
     {
@@ -56,13 +89,6 @@ const Index = () => {
       color: "bg-primary/10 text-primary"
     },
     {
-      icon: BookOpen,
-      title: "Learning Platform",
-      description: "Courses on sales, marketing, and business growth for contractors.",
-      link: "/learning",
-      color: "bg-accent/10 text-accent-foreground"
-    },
-    {
       icon: TrendingUp,
       title: "Marketing & Consulting",
       description: "Expert guidance to grow your contracting business.",
@@ -76,41 +102,6 @@ const Index = () => {
       link: "/franchise",
       color: "bg-accent/10 text-accent-foreground"
     },
-    {
-      icon: Crown,
-      title: "Permit Queens",
-      description: "Florida permit expediting service. Building department lookup, document prep, and permit tracking.",
-      link: "/permit-queens",
-      color: "bg-amber-500/10 text-amber-600"
-    },
-    {
-      icon: DollarSign,
-      title: "Supplement Kings",
-      description: "Insurance claim supplementing and Xactimate estimating. Maximize your claims with expert negotiation.",
-      link: "/supplement-kings",
-      color: "bg-blue-600/10 text-blue-600"
-    },
-    {
-      icon: Home,
-      title: "Windows & Doors",
-      description: "Impact windows and doors for South Florida. Get instant quotes with our calculator. Spin to win discounts!",
-      link: "/green-home-solutions",
-      color: "bg-green-600/10 text-green-600"
-    },
-    {
-      icon: AlertTriangle,
-      title: "Emergency Mitigation",
-      description: "24/7 mold remediation, water damage, storm cleanup & roof tarping. Fast response for South Florida emergencies.",
-      link: "/emergency-mitigation",
-      color: "bg-red-600/10 text-red-600"
-    },
-    {
-      icon: Trees,
-      title: "Tree & Landscaping Services",
-      description: "Premium tree & landscaping services. Tree trimming, removal, stump grinding, irrigation & more. Get instant estimates.",
-      link: "/northern-landscaping",
-      color: "bg-green-700/10 text-green-700"
-    }
   ];
 
   return (

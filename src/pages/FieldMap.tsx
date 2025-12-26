@@ -16,6 +16,10 @@ import { MapPin, Locate } from "lucide-react";
 
 mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
+// Fixed multipliers
+const FIXED_PITCH_MULTIPLIER = 1.1;
+const FIXED_WASTE_MULTIPLIER = 1.13;
+
 interface FieldProperty {
   id: string;
   address: string;
@@ -41,8 +45,6 @@ export default function FieldMap() {
   const [measurements, setMeasurements] = useState({
     area: 0,
     perimeter: 0,
-    pitchMultiplier: 1.118, // Default 6/12 pitch
-    wasteFactor: 10, // Default 10% waste
   });
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [currentPolygonData, setCurrentPolygonData] = useState<any>(null);
@@ -201,8 +203,6 @@ export default function FieldMap() {
       setMeasurements({ 
         area: 0, 
         perimeter: 0, 
-        pitchMultiplier: measurements.pitchMultiplier,
-        wasteFactor: measurements.wasteFactor 
       });
       setCurrentPolygonData(null);
       return;
@@ -229,8 +229,6 @@ export default function FieldMap() {
     setMeasurements({
       area: totalArea,
       perimeter: totalPerimeter,
-      pitchMultiplier: measurements.pitchMultiplier,
-      wasteFactor: measurements.wasteFactor,
     });
     
     setCurrentPolygonData(data);
@@ -256,8 +254,6 @@ export default function FieldMap() {
       setMeasurements({ 
         area: 0, 
         perimeter: 0, 
-        pitchMultiplier: measurements.pitchMultiplier,
-        wasteFactor: measurements.wasteFactor 
       });
       setCurrentPolygonData(null);
     }
@@ -455,6 +451,11 @@ export default function FieldMap() {
     setSelectedProperty(null);
   };
 
+  // Calculate values for the bottom sheet using fixed multipliers
+  const pitchedArea = measurements.area * FIXED_PITCH_MULTIPLIER;
+  const totalWithWaste = pitchedArea * FIXED_WASTE_MULTIPLIER;
+  const squares = totalWithWaste / 100;
+
   return (
     <div className="relative h-[calc(100vh-4rem)] w-full">
       <div ref={mapContainer} className="absolute inset-0" />
@@ -491,14 +492,6 @@ export default function FieldMap() {
           <MeasurementPanel
             area={measurements.area}
             perimeter={measurements.perimeter}
-            pitchMultiplier={measurements.pitchMultiplier}
-            onPitchChange={(multiplier) =>
-              setMeasurements({ ...measurements, pitchMultiplier: multiplier })
-            }
-            wasteFactor={measurements.wasteFactor}
-            onWasteFactorChange={(factor) =>
-              setMeasurements({ ...measurements, wasteFactor: factor })
-            }
           />
         </div>
       )}
@@ -509,30 +502,29 @@ export default function FieldMap() {
           property={selectedProperty}
           onClose={() => {
             setSelectedProperty(null);
-            setPendingPropertyLocation(null);
             if (tempMarkerRef.current) {
               tempMarkerRef.current.remove();
               tempMarkerRef.current = null;
             }
+            setPendingPropertyLocation(null);
           }}
           onUpdate={handlePropertyUpdate}
-          onAddMeasurement={handleStartDrawing}
         />
       )}
 
-      {/* Save measurement bottom sheet */}
+      {/* Measurement save bottom sheet */}
       <MeasurementBottomSheet
         open={showSaveSheet}
         onClose={() => setShowSaveSheet(false)}
         onSave={handleMeasurementSaved}
         measurements={{
           area: measurements.area,
-          pitchedArea: measurements.area * measurements.pitchMultiplier,
-          totalWithWaste: measurements.area * measurements.pitchMultiplier * (1 + measurements.wasteFactor / 100),
-          squares: (measurements.area * measurements.pitchMultiplier * (1 + measurements.wasteFactor / 100)) / 100,
+          pitchedArea: pitchedArea,
+          totalWithWaste: totalWithWaste,
+          squares: squares,
           perimeter: measurements.perimeter,
-          pitchMultiplier: measurements.pitchMultiplier,
-          wasteFactor: measurements.wasteFactor,
+          pitchMultiplier: FIXED_PITCH_MULTIPLIER,
+          wasteFactor: 13, // 13% waste
         }}
         polygonData={currentPolygonData}
       />
