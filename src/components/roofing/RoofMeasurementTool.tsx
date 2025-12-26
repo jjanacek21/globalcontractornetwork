@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Pencil, Trash2, Calculator, Zap, Map, Loader2, CheckCircle2, AlertCircle, Satellite } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +14,10 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+
+// Fixed multipliers
+const FIXED_PITCH_MULTIPLIER = 1.1;
+const FIXED_WASTE_MULTIPLIER = 1.13;
 
 interface RoofMeasurements {
   flatArea: number;
@@ -40,19 +43,6 @@ interface VisionEstimation {
   satelliteImageUrl: string;
 }
 
-const PITCH_MULTIPLIERS: { [key: string]: number } = {
-  "3/12": 1.031,
-  "4/12": 1.054,
-  "5/12": 1.083,
-  "6/12": 1.118,
-  "7/12": 1.158,
-  "8/12": 1.202,
-  "9/12": 1.250,
-  "10/12": 1.302,
-  "11/12": 1.357,
-  "12/12": 1.414,
-};
-
 export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted }: RoofMeasurementToolProps) {
   // Use callback ref to detect when container is ready
   const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
@@ -72,8 +62,6 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
   const [showResults, setShowResults] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [pitch, setPitch] = useState("6/12");
-  const [wasteFactor, setWasteFactor] = useState(10);
   
   // AI Vision state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -195,26 +183,19 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
 
     setFlatArea(totalArea);
     
-    const pitchMult = PITCH_MULTIPLIERS[pitch];
-    const pitched = totalArea * pitchMult;
+    // Use fixed multipliers: 1.1 for pitch, 1.13 for waste
+    const pitched = totalArea * FIXED_PITCH_MULTIPLIER;
     setPitchedArea(pitched);
     
-    const withWaste = pitched * (1 + wasteFactor / 100);
+    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
     const squares = withWaste / 100;
     setTotalSquares(squares);
   };
 
-  useEffect(() => {
-    if (activeTab === "draw") {
-      updateMeasurements();
-    }
-  }, [pitch, wasteFactor]);
-
-  // Calculate squares for vision estimate
+  // Calculate squares for vision estimate using fixed multipliers
   const calculateVisionSquares = (sqft: number) => {
-    const pitchMult = PITCH_MULTIPLIERS[pitch];
-    const pitched = sqft * pitchMult;
-    const withWaste = pitched * (1 + wasteFactor / 100);
+    const pitched = sqft * FIXED_PITCH_MULTIPLIER;
+    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
     return withWaste / 100;
   };
 
@@ -283,7 +264,7 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
     if (!visionEstimation) return;
     setAcceptedSqft(visionEstimation.estimatedSqft);
     
-    // Calculate total with pitch and waste for the quiz
+    // Calculate total with fixed pitch (1.1) and waste (1.13) multipliers
     const totalSquares = calculateVisionSquares(visionEstimation.estimatedSqft);
     const totalSqft = Math.round(totalSquares * 100); // Convert squares to sqft
     
@@ -316,9 +297,9 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
       return;
     }
 
-    const pitchMult = PITCH_MULTIPLIERS[pitch];
-    const pitched = finalSqft * pitchMult;
-    const withWaste = pitched * (1 + wasteFactor / 100);
+    // Use fixed multipliers
+    const pitched = finalSqft * FIXED_PITCH_MULTIPLIER;
+    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
     const squares = withWaste / 100;
 
     onMeasurementComplete({
@@ -326,8 +307,8 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
       pitchedArea: pitched,
       totalSquares: squares,
       address: finalAddress,
-      pitchMultiplier: pitchMult,
-      wasteFactor,
+      pitchMultiplier: FIXED_PITCH_MULTIPLIER,
+      wasteFactor: 13, // 13% waste (1.13 multiplier)
     });
   };
 
@@ -490,64 +471,17 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                       </div>
                     </div>
 
-                    {/* Inline Pitch & Waste Selection */}
-                    <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Roof Pitch</Label>
-                          <Select value={pitch} onValueChange={setPitch}>
-                            <SelectTrigger className="mt-1 h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.keys(PITCH_MULTIPLIERS).map((p) => (
-                                <SelectItem key={p} value={p}>
-                                  {p}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    {/* Fixed Multipliers Info */}
+                    <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                      <p className="text-sm font-medium text-center">Standard Calculation Applied</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="text-center">
+                          <p className="text-muted-foreground">Pitch Multiplier</p>
+                          <p className="font-bold text-primary">×1.10</p>
                         </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Waste Factor</Label>
-                          <Select value={String(wasteFactor)} onValueChange={(v) => setWasteFactor(Number(v))}>
-                            <SelectTrigger className="mt-1 h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="5">5%</SelectItem>
-                              <SelectItem value="10">10%</SelectItem>
-                              <SelectItem value="15">15%</SelectItem>
-                              <SelectItem value="20">20%</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Visual Pitch Guide */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-end gap-1">
-                          <div className="w-8 h-2 bg-muted-foreground/30 rounded-sm" />
-                          <span>Low</span>
-                        </div>
-                        <div className="flex-1 h-px bg-muted-foreground/20" />
-                        <div className="flex items-end gap-1">
-                          <div 
-                            className="w-8 bg-muted-foreground/30 rounded-sm origin-bottom-left"
-                            style={{ 
-                              height: '12px',
-                              transform: `skewY(-${Math.min(45, (Object.keys(PITCH_MULTIPLIERS).indexOf(pitch) + 1) * 4.5)}deg)`
-                            }}
-                          />
-                          <span className="font-medium text-foreground">{pitch}</span>
-                        </div>
-                        <div className="flex-1 h-px bg-muted-foreground/20" />
-                        <div className="flex items-end gap-1">
-                          <div 
-                            className="w-8 h-6 bg-muted-foreground/30 rounded-sm origin-bottom-left"
-                            style={{ transform: 'skewY(-45deg)' }}
-                          />
-                          <span>Steep</span>
+                        <div className="text-center">
+                          <p className="text-muted-foreground">Waste Factor</p>
+                          <p className="font-bold text-primary">×1.13 (13%)</p>
                         </div>
                       </div>
                     </div>
@@ -561,20 +495,20 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                           <span className="font-medium">{visionEstimation.estimatedSqft.toLocaleString()} sq ft</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">× Pitch Multiplier ({pitch})</span>
-                          <span className="font-medium">×{PITCH_MULTIPLIERS[pitch].toFixed(3)}</span>
+                          <span className="text-muted-foreground">× Pitch Multiplier (Standard)</span>
+                          <span className="font-medium">×1.10</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">= Pitched Area</span>
-                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch]).toLocaleString()} sq ft</span>
+                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * FIXED_PITCH_MULTIPLIER).toLocaleString()} sq ft</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">+ Waste ({wasteFactor}%)</span>
-                          <span className="font-medium">+{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch] * (wasteFactor / 100)).toLocaleString()} sq ft</span>
+                          <span className="text-muted-foreground">× Waste Factor (13%)</span>
+                          <span className="font-medium">×1.13</span>
                         </div>
                         <div className="flex justify-between pt-2 border-t">
                           <span className="text-muted-foreground">= Total Area</span>
-                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * PITCH_MULTIPLIERS[pitch] * (1 + wasteFactor / 100)).toLocaleString()} sq ft</span>
+                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * FIXED_PITCH_MULTIPLIER * FIXED_WASTE_MULTIPLIER).toLocaleString()} sq ft</span>
                         </div>
                         <div className="flex justify-between pt-2 border-t bg-primary/10 -mx-4 px-4 py-2 rounded-b">
                           <span className="font-semibold">TOTAL SQUARES</span>
@@ -661,12 +595,12 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                           <div className="text-lg font-bold">{flatArea.toFixed(0)} sq ft</div>
                         </div>
                         <div>
-                          <Label className="text-xs text-muted-foreground">Pitched Area</Label>
+                          <Label className="text-xs text-muted-foreground">Pitched Area (×1.10)</Label>
                           <div className="text-lg font-bold">{pitchedArea.toFixed(0)} sq ft</div>
                         </div>
                         <div>
-                          <Label className="text-xs text-muted-foreground">With {wasteFactor}% Waste</Label>
-                          <div className="text-lg font-bold">{(pitchedArea * (1 + wasteFactor / 100)).toFixed(0)} sq ft</div>
+                          <Label className="text-xs text-muted-foreground">With 13% Waste</Label>
+                          <div className="text-lg font-bold">{(pitchedArea * FIXED_WASTE_MULTIPLIER).toFixed(0)} sq ft</div>
                         </div>
                         <div>
                           <Label className="text-xs text-muted-foreground">Total Squares</Label>
@@ -682,38 +616,18 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
         </TabsContent>
       </Tabs>
 
-      {/* Calculation Options */}
+      {/* Fixed Multipliers Info Card */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="pitch">Roof Pitch</Label>
-              <Select value={pitch} onValueChange={setPitch}>
-                <SelectTrigger id="pitch">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(PITCH_MULTIPLIERS).map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p} (×{PITCH_MULTIPLIERS[p].toFixed(3)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-center gap-8 text-sm">
+            <div className="text-center">
+              <p className="text-muted-foreground">Standard Pitch Multiplier</p>
+              <p className="text-2xl font-bold text-primary">×1.10</p>
             </div>
-            <div>
-              <Label htmlFor="waste">Waste Factor (%)</Label>
-              <Select value={String(wasteFactor)} onValueChange={(v) => setWasteFactor(Number(v))}>
-                <SelectTrigger id="waste">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5%</SelectItem>
-                  <SelectItem value="10">10%</SelectItem>
-                  <SelectItem value="15">15%</SelectItem>
-                  <SelectItem value="20">20%</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="h-8 w-px bg-border" />
+            <div className="text-center">
+              <p className="text-muted-foreground">Standard Waste Factor</p>
+              <p className="text-2xl font-bold text-primary">13%</p>
             </div>
           </div>
         </CardContent>
