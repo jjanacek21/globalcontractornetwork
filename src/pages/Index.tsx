@@ -136,31 +136,9 @@ const Index = () => {
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="relative group">
-              <Button variant="ghost">
-                Login Portals
-              </Button>
-              <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                <div className="py-2">
-                  <Link to="/admin/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Master Admin Hub
-                  </Link>
-                  <Link to="/crm/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
-                    CRM Portal
-                  </Link>
-                  <Link to="/learning" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
-                    Learning Platform
-                  </Link>
-                  <Link to="/contractor" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
-                    Contractor Network
-                  </Link>
-                  <Link to="/store/auth" className="block px-4 py-2 text-sm hover:bg-accent transition-colors">
-                    Store Rewards
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <Button variant="ghost" asChild>
+              <Link to="/contractor">Contractor Login</Link>
+            </Button>
             <Button asChild>
               <Link to="/join">Join Network</Link>
             </Button>
@@ -298,13 +276,10 @@ const Index = () => {
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Login Portals</h4>
+              <h4 className="font-semibold mb-4">For Contractors</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/admin/auth" className="hover:text-foreground transition-colors flex items-center gap-1"><Shield className="h-3 w-3" /> Master Admin Hub</Link></li>
-                <li><Link to="/crm/auth" className="hover:text-foreground transition-colors">CRM Portal</Link></li>
-                <li><Link to="/learning" className="hover:text-foreground transition-colors">Learning Platform</Link></li>
-                <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Network</Link></li>
-                <li><Link to="/store/auth" className="hover:text-foreground transition-colors">Store Rewards</Link></li>
+                <li><Link to="/join" className="hover:text-foreground transition-colors">Join Network</Link></li>
+                <li><Link to="/contractor" className="hover:text-foreground transition-colors">Contractor Login</Link></li>
               </ul>
             </div>
           </div>

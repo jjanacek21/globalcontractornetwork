@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CheckCircle2, XCircle, Eye, Loader2, Building2, Home, User } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Building2, Home } from "lucide-react";
+import { AVAILABLE_FEATURES } from "@/hooks/useContractorFeatures";
 
 interface PendingContractor {
   id: string;
@@ -59,11 +61,11 @@ const PendingSignupsTable = () => {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
   
-  // Approval dialog state
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<PendingContractor | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   
   const { toast } = useToast();
 
@@ -133,7 +135,16 @@ const PendingSignupsTable = () => {
     setSelectedContractor(contractor);
     setSelectedCompanyId("");
     setSelectedTeamId("");
+    setSelectedFeatures(["directory_listing"]); // Default to directory listing
     setApprovalDialogOpen(true);
+  };
+
+  const toggleFeatureSelection = (featureKey: string) => {
+    setSelectedFeatures(prev => 
+      prev.includes(featureKey)
+        ? prev.filter(f => f !== featureKey)
+        : [...prev, featureKey]
+    );
   };
 
   const handleApprove = async () => {
@@ -169,9 +180,39 @@ const PendingSignupsTable = () => {
         }
       }
 
+      // Create feature access records
+      if (selectedFeatures.length > 0) {
+        const featureRecords = selectedFeatures.map(featureKey => ({
+          contractor_id: selectedContractor.id,
+          feature_name: featureKey,
+          is_approved: true,
+          approved_at: new Date().toISOString(),
+        }));
+
+        const { error: featureError } = await supabase
+          .from("contractor_feature_access")
+          .insert(featureRecords);
+
+        if (featureError) {
+          console.error("Error creating feature access:", featureError);
+        } else {
+          // Send email notification about approved features
+          try {
+            await supabase.functions.invoke("notify-contractor-access", {
+              body: {
+                contractor_id: selectedContractor.id,
+                approved_features: selectedFeatures,
+              },
+            });
+          } catch (emailError) {
+            console.error("Error sending notification:", emailError);
+          }
+        }
+      }
+
       toast({
         title: "Contractor Approved",
-        description: `${selectedContractor.company_name} has been approved and activated.`
+        description: `${selectedContractor.company_name} has been approved with ${selectedFeatures.length} feature(s) enabled.`
       });
 
       setApprovalDialogOpen(false);
@@ -355,11 +396,11 @@ const PendingSignupsTable = () => {
 
       {/* Approval Dialog */}
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Approve Contractor</DialogTitle>
             <DialogDescription>
-              Approve {selectedContractor?.company_name} and optionally assign them to a company.
+              Approve {selectedContractor?.company_name} and select which features to enable.
             </DialogDescription>
           </DialogHeader>
 
@@ -399,6 +440,36 @@ const PendingSignupsTable = () => {
                 </Select>
               </div>
             )}
+
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                Grant Access To
+              </Label>
+              <div className="border rounded-lg p-3 space-y-3 max-h-[200px] overflow-y-auto">
+                {AVAILABLE_FEATURES.map((feature) => (
+                  <div key={feature.key} className="flex items-start gap-3">
+                    <Checkbox
+                      id={`feature-${feature.key}`}
+                      checked={selectedFeatures.includes(feature.key)}
+                      onCheckedChange={() => toggleFeatureSelection(feature.key)}
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`feature-${feature.key}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {feature.label}
+                      </label>
+                      <p className="text-xs text-muted-foreground">{feature.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Selected: {selectedFeatures.length} feature(s)
+              </p>
+            </div>
           </div>
 
           <DialogFooter>
@@ -414,7 +485,7 @@ const PendingSignupsTable = () => {
               ) : (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Approve
+                  Approve & Grant Access
                 </>
               )}
             </Button>

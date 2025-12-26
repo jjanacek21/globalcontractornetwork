@@ -22,6 +22,7 @@ import { CompaniesTable } from "@/components/admin/CompaniesTable";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { TeamsTable } from "@/components/admin/TeamsTable";
 import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
+import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess";
 
 interface UnifiedLead {
   id: string;
@@ -426,6 +427,7 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>
                 <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />CRM Users</TabsTrigger>
                 <TabsTrigger value="teams" className="gap-2"><UsersRound className="h-4 w-4" />Teams</TabsTrigger>
+                <TabsTrigger value="features" className="gap-2"><Shield className="h-4 w-4" />Feature Access</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
               </TabsList>
 
@@ -539,6 +541,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="teams">
                 <TeamsTable />
+              </TabsContent>
+
+              <TabsContent value="features">
+                <ContractorFeatureAccess />
               </TabsContent>
 
               <TabsContent value="analytics">

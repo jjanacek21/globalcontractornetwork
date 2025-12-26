@@ -110,7 +110,16 @@ export default function ContractorDirectory() {
 
   const loadContractors = async () => {
     setLoading(true);
-    let query = supabase.from("contractor_profiles").select("*").in("subscription_status", ["active", "pending"]);
+    
+    // Get contractors with directory_listing feature approved
+    let query = supabase
+      .from("contractor_profiles")
+      .select(`
+        *,
+        contractor_feature_access!inner(feature_name, is_approved)
+      `)
+      .eq("contractor_feature_access.feature_name", "directory_listing")
+      .eq("contractor_feature_access.is_approved", true);
     
     if (selectedCategory !== "all") {
       query = query.eq("category", selectedCategory);
