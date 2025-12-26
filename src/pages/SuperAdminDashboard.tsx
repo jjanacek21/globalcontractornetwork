@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
 import { ContractorDialog } from "@/components/admin/ContractorDialog";
 import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
@@ -41,6 +42,12 @@ interface Contractor {
   email: string | null;
   phone: string | null;
   createdAt: string;
+}
+
+interface RecentSignup {
+  id: string;
+  company_name: string;
+  created_at: string;
 }
 
 interface Stats {
@@ -73,6 +80,9 @@ const SuperAdminDashboard = () => {
   const [stats, setStats] = useState<Stats>({ totalLeads: 0, totalContractors: 0, thisWeekLeads: 0, totalRevenue: 0 });
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [pendingCount, setPendingCount] = useState(0);
+  const [recentSignups, setRecentSignups] = useState<RecentSignup[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("leads");
   
   // Lead dialog state
   const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
@@ -92,6 +102,35 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     checkAdminAndFetchData();
   }, []);
+
+  // Real-time subscription for new contractor signups
+  useEffect(() => {
+    const channel = supabase
+      .channel('contractor-signups')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'contractor_profiles'
+        },
+        (payload) => {
+          const newSignup = payload.new as RecentSignup;
+          setRecentSignups(prev => [newSignup, ...prev].slice(0, 10));
+          setPendingCount(prev => prev + 1);
+          
+          toast({
+            title: "New Contractor Application",
+            description: `${newSignup.company_name} just applied!`,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
 
   const checkAdminAndFetchData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -118,6 +157,29 @@ const SuperAdminDashboard = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
+      // Fetch pending count and recent signups
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+      const { data: pendingContractors } = await supabase
+        .from("contractor_profiles")
+        .select("id, company_name, created_at")
+        .eq("subscription_status", "pending");
+
+      const { data: recentContractors } = await supabase
+        .from("contractor_profiles")
+        .select("id, company_name, created_at")
+        .gte("created_at", twentyFourHoursAgo.toISOString())
+        .order("created_at", { ascending: false });
+
+      setPendingCount(pendingContractors?.length || 0);
+      setRecentSignups(recentContractors || []);
+
+      // Auto-select pending tab if there are pending contractors
+      if ((pendingContractors?.length || 0) > 0) {
+        setActiveTab("pending");
+      }
+
       const [
         coatingLeads, roofingConsultations, supplementLeads, permitProjects,
         contactRequests, serviceRequests, courseEnrollments, storeMembers,
@@ -282,10 +344,48 @@ const SuperAdminDashboard = () => {
               <p className="text-xs text-muted-foreground">Unified Platform Overview</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {recentSignups.length > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
+                      {recentSignups.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-3">
+                  <h4 className="font-semibold">New Signups (Last 24 Hours)</h4>
+                  {recentSignups.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {recentSignups.map(signup => (
+                        <div key={signup.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                          <UserPlus className="h-4 w-4 text-primary flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{signup.company_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(signup.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No new signups in the last 24 hours</p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -310,9 +410,17 @@ const SuperAdminDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="leads" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="flex-wrap h-auto gap-1">
-                <TabsTrigger value="pending" className="gap-2"><UserPlus className="h-4 w-4" />Pending Signups</TabsTrigger>
+                <TabsTrigger value="pending" className="gap-2 relative">
+                  <UserPlus className="h-4 w-4" />
+                  Pending Signups
+                  {pendingCount > 0 && (
+                    <Badge className="bg-red-500 text-white ml-1 h-5 min-w-[20px] p-0 flex items-center justify-center text-xs rounded-full">
+                      {pendingCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads ({filteredLeads.length})</TabsTrigger>
                 <TabsTrigger value="contractors" className="gap-2"><Building2 className="h-4 w-4" />Contractors</TabsTrigger>
                 <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>

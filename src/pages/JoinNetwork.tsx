@@ -133,6 +133,24 @@ const JoinNetwork = () => {
 
         if (profileError) throw profileError;
 
+        // Notify admins via edge function (non-blocking)
+        try {
+          await supabase.functions.invoke("notify-admin-signup", {
+            body: {
+              companyName: contractorForm.companyName,
+              email: contractorForm.email,
+              phone: contractorForm.phone,
+              category: contractorForm.category || "General Contractor",
+              firstName: contractorForm.firstName,
+              lastName: contractorForm.lastName,
+            },
+          });
+          console.log("Admin notification sent successfully");
+        } catch (notifyError) {
+          console.error("Failed to send admin notification:", notifyError);
+          // Don't fail the signup if notification fails
+        }
+
         setSuccess(true);
       }
     } catch (error: any) {
