@@ -563,6 +563,50 @@ export type Database = {
           },
         ]
       }
+      contractor_feature_access: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          contractor_id: string
+          created_at: string | null
+          feature_name: string
+          id: string
+          is_approved: boolean | null
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id: string
+          created_at?: string | null
+          feature_name: string
+          id?: string
+          is_approved?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id?: string
+          created_at?: string | null
+          feature_name?: string
+          id?: string
+          is_approved?: boolean | null
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_feature_access_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_profiles: {
         Row: {
           average_rating: number | null
