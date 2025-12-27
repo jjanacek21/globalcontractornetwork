@@ -200,6 +200,14 @@ const MemberDashboard = () => {
       link: "/learning",
       color: "bg-indigo-500/10 text-indigo-600",
       category: "learning" as ServiceCategory
+    },
+    {
+      icon: Building2,
+      title: "CRM Portal",
+      description: "Manage leads, contacts, and customer relationships",
+      link: "/crm/auth",
+      color: "bg-cyan-500/10 text-cyan-600",
+      category: "business" as ServiceCategory
     }
   ];
 
