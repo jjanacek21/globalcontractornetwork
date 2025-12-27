@@ -63,8 +63,8 @@ const PendingSignupsTable = () => {
   
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<PendingContractor | null>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("none");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("none");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   
   const { toast } = useToast();
@@ -133,8 +133,8 @@ const PendingSignupsTable = () => {
 
   const handleApproveClick = (contractor: PendingContractor) => {
     setSelectedContractor(contractor);
-    setSelectedCompanyId("");
-    setSelectedTeamId("");
+    setSelectedCompanyId("none");
+    setSelectedTeamId("none");
     setSelectedFeatures(["directory_listing"]); // Default to directory listing
     setApprovalDialogOpen(true);
   };
@@ -164,13 +164,13 @@ const PendingSignupsTable = () => {
       if (updateError) throw updateError;
 
       // If company selected, add to company_members
-      if (selectedContractor.user_id && selectedCompanyId) {
+      if (selectedContractor.user_id && selectedCompanyId && selectedCompanyId !== "none") {
         const { error: memberError } = await supabase
           .from("company_members")
           .insert({
             user_id: selectedContractor.user_id,
             company_id: selectedCompanyId,
-            team_id: selectedTeamId || null,
+            team_id: selectedTeamId !== "none" ? selectedTeamId : null,
             role: "sales_rep",
             is_active: true
           });
@@ -411,8 +411,8 @@ const PendingSignupsTable = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a company" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No company assignment</SelectItem>
+                <SelectContent className="bg-background">
+                  <SelectItem value="none">No company assignment</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
@@ -422,15 +422,15 @@ const PendingSignupsTable = () => {
               </Select>
             </div>
 
-            {selectedCompanyId && (
+            {selectedCompanyId && selectedCompanyId !== "none" && (
               <div className="space-y-2">
                 <Label>Assign to Team (Optional)</Label>
                 <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a team" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No team assignment</SelectItem>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="none">No team assignment</SelectItem>
                     {filteredTeams.map((team) => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
