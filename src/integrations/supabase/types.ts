@@ -1567,6 +1567,83 @@ export type Database = {
           },
         ]
       }
+      login_requests: {
+        Row: {
+          admin_notes: string | null
+          company_name: string | null
+          contractor_id: string | null
+          created_at: string | null
+          email: string
+          escalated_at: string | null
+          escalation_count: number | null
+          first_name: string | null
+          id: string
+          is_auto_approved: boolean | null
+          is_escalated: boolean | null
+          last_name: string | null
+          last_reminder_sent_at: string | null
+          request_notes: string | null
+          requested_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_type: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          company_name?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          email: string
+          escalated_at?: string | null
+          escalation_count?: number | null
+          first_name?: string | null
+          id?: string
+          is_auto_approved?: boolean | null
+          is_escalated?: boolean | null
+          last_name?: string | null
+          last_reminder_sent_at?: string | null
+          request_notes?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          company_name?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          email?: string
+          escalated_at?: string | null
+          escalation_count?: number | null
+          first_name?: string | null
+          id?: string
+          is_auto_approved?: boolean | null
+          is_escalated?: boolean | null
+          last_name?: string | null
+          last_reminder_sent_at?: string | null
+          request_notes?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_type?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "login_requests_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_requests: {
         Row: {
           approved_by: string | null

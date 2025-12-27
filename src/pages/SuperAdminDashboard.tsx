@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -23,6 +23,7 @@ import { UsersTable } from "@/components/admin/UsersTable";
 import { TeamsTable } from "@/components/admin/TeamsTable";
 import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
 import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess";
+import LoginRequestsTable from "@/components/admin/LoginRequestsTable";
 
 interface UnifiedLead {
   id: string;
@@ -82,6 +83,8 @@ const SuperAdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [pendingCount, setPendingCount] = useState(0);
+  const [loginRequestCount, setLoginRequestCount] = useState(0);
+  const [escalatedCount, setEscalatedCount] = useState(0);
   const [recentSignups, setRecentSignups] = useState<RecentSignup[]>([]);
   const [activeTab, setActiveTab] = useState<string>("leads");
   
@@ -124,6 +127,36 @@ const SuperAdminDashboard = () => {
             title: "New Contractor Application",
             description: `${newSignup.company_name} just applied!`,
           });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
+  // Real-time subscription for new login requests
+  useEffect(() => {
+    const channel = supabase
+      .channel('login-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'login_requests'
+        },
+        (payload: any) => {
+          const newRequest = payload.new;
+          if (newRequest.status === 'pending') {
+            setLoginRequestCount(prev => prev + 1);
+            
+            toast({
+              title: "New Login Request",
+              description: `${newRequest.company_name || newRequest.email} requested access to ${newRequest.service_type}`,
+            });
+          }
         }
       )
       .subscribe();
@@ -176,9 +209,20 @@ const SuperAdminDashboard = () => {
       setPendingCount(pendingContractors?.length || 0);
       setRecentSignups(recentContractors || []);
 
-      // Auto-select pending tab if there are pending contractors
+      // Fetch login request counts
+      const { data: pendingLoginRequests } = await supabase
+        .from("login_requests")
+        .select("id, is_escalated")
+        .eq("status", "pending");
+
+      setLoginRequestCount(pendingLoginRequests?.length || 0);
+      setEscalatedCount(pendingLoginRequests?.filter(r => r.is_escalated).length || 0);
+
+      // Auto-select pending tab if there are pending contractors or login requests
       if ((pendingContractors?.length || 0) > 0) {
         setActiveTab("pending");
+      } else if ((pendingLoginRequests?.length || 0) > 0) {
+        setActiveTab("logins");
       }
 
       const [
@@ -351,11 +395,58 @@ const SuperAdminDashboard = () => {
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  {recentSignups.length > 0 && (
+                  {(recentSignups.length + loginRequestCount) > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center font-medium">
-                      {recentSignups.length}
+                      {recentSignups.length + loginRequestCount}
                     </span>
                   )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Notifications</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-2 bg-muted rounded-lg">
+                        <span className="text-sm">Pending Signups</span>
+                        <Badge>{pendingCount}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-muted rounded-lg">
+                        <span className="text-sm">Login Requests</span>
+                        <Badge>{loginRequestCount}</Badge>
+                      </div>
+                      {escalatedCount > 0 && (
+                        <div className="flex justify-between items-center p-2 bg-red-50 rounded-lg border border-red-200">
+                          <span className="text-sm flex items-center gap-1 text-red-700">
+                            <AlertTriangle className="h-4 w-4" />
+                            Escalated (48+ hrs)
+                          </span>
+                          <Badge className="bg-red-500">{escalatedCount}</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {recentSignups.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-2">New Signups (24h)</h4>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {recentSignups.slice(0, 5).map(signup => (
+                          <div key={signup.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                            <UserPlus className="h-4 w-4 text-primary flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{signup.company_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(signup.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80" align="end">
@@ -428,6 +519,15 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />CRM Users</TabsTrigger>
                 <TabsTrigger value="teams" className="gap-2"><UsersRound className="h-4 w-4" />Teams</TabsTrigger>
                 <TabsTrigger value="features" className="gap-2"><Shield className="h-4 w-4" />Feature Access</TabsTrigger>
+                <TabsTrigger value="logins" className="gap-2 relative">
+                  <KeyRound className="h-4 w-4" />
+                  Logins Requested
+                  {loginRequestCount > 0 && (
+                    <Badge className={`ml-1 h-5 min-w-[20px] p-0 flex items-center justify-center text-xs rounded-full ${escalatedCount > 0 ? 'bg-red-500' : 'bg-yellow-500'} text-white`}>
+                      {loginRequestCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
               </TabsList>
 
@@ -545,6 +645,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="features">
                 <ContractorFeatureAccess />
+              </TabsContent>
+
+              <TabsContent value="logins">
+                <LoginRequestsTable />
               </TabsContent>
 
               <TabsContent value="analytics">

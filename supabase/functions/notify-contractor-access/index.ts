@@ -173,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
 
                 <p style="font-size: 14px; color: #6b7280; margin: 24px 0 0 0; line-height: 1.6;">
-                  Questions? Contact us at <a href="mailto:support@gcn.com" style="color: #2563eb;">support@gcn.com</a>
+                  Questions? Contact us at <a href="mailto:jared@globalcontractor.network" style="color: #2563eb;">jared@globalcontractor.network</a>
                 </p>
               </div>
 
