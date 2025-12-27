@@ -19,15 +19,16 @@ const SERVICE_LABELS: Record<string, string> = {
   'permit_queens': 'Permit Queens',
 };
 
+// Login portal paths - direct users to authentication pages
 const SERVICE_PATHS: Record<string, string> = {
-  'store_discounts': '/member/dashboard',
-  'directory_listing': '/contractor-directory',
-  'field_map': '/field-map',
-  'presentations': '/presentations',
-  'learning_platform': '/student/dashboard',
-  'crm_access': '/dashboard',
-  'supplement_kings': '/supplement-kings/contractor/dashboard',
-  'permit_queens': '/permit-queens/dashboard',
+  'store_discounts': '/network/login',
+  'directory_listing': '/contractor/auth',
+  'field_map': '/auth',
+  'presentations': '/auth',
+  'learning_platform': '/learning/auth',
+  'crm_access': '/auth',
+  'supplement_kings': '/supplement-kings/contractor/auth',
+  'permit_queens': '/permit-queens/auth',
 };
 
 interface ApprovalPayload {

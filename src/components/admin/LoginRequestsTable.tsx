@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, Filter, Eye, Check, X, AlertTriangle, Zap, Clock } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -44,11 +45,33 @@ const SERVICE_LABELS: Record<string, string> = {
 
 const PREMIUM_SERVICES = ['crm_access', 'supplement_kings', 'permit_queens', 'learning_platform'];
 
+// Service categories for organizing requests
+const SERVICE_CATEGORIES: Record<string, string[]> = {
+  'all': [],
+  'crm': ['crm_access'],
+  'supplements': ['supplement_kings'],
+  'permits': ['permit_queens'],
+  'directory': ['directory_listing'],
+  'learning': ['learning_platform'],
+  'other': ['store_discounts', 'field_map', 'presentations'],
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'all': 'All Requests',
+  'crm': 'CRM',
+  'supplements': 'Supplements',
+  'permits': 'Permits',
+  'directory': 'Directory',
+  'learning': 'Learning',
+  'other': 'Other',
+};
+
 const LoginRequestsTable = () => {
   const [requests, setRequests] = useState<LoginRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedRequest, setSelectedRequest] = useState<LoginRequest | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
@@ -199,8 +222,21 @@ const LoginRequestsTable = () => {
       (statusFilter === "approved" && (request.status === "approved" || request.status === "auto_approved")) ||
       (statusFilter === "rejected" && request.status === "rejected");
 
-    return matchesSearch && matchesStatus;
+    const matchesCategory =
+      categoryFilter === "all" ||
+      SERVICE_CATEGORIES[categoryFilter]?.includes(request.service_type);
+
+    return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // Count requests per category
+  const getCategoryCount = (category: string) => {
+    if (category === 'all') return requests.filter(r => r.status === 'pending').length;
+    return requests.filter(r => 
+      r.status === 'pending' && 
+      SERVICE_CATEGORIES[category]?.includes(r.service_type)
+    ).length;
+  };
 
   const pendingCount = requests.filter(r => r.status === "pending").length;
   const escalatedCount = requests.filter(r => r.is_escalated && r.status === "pending").length;
@@ -215,6 +251,29 @@ const LoginRequestsTable = () => {
 
   return (
     <div className="space-y-4">
+      {/* Service Category Tabs */}
+      <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          {Object.keys(SERVICE_CATEGORIES).map((category) => {
+            const count = getCategoryCount(category);
+            return (
+              <TabsTrigger 
+                key={category} 
+                value={category}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {CATEGORY_LABELS[category]}
+                {count > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
+
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative">
