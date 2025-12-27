@@ -447,31 +447,6 @@ const SuperAdminDashboard = () => {
                 </div>
               </PopoverContent>
             </Popover>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
-                <div className="space-y-3">
-                  <h4 className="font-semibold">New Signups (Last 24 Hours)</h4>
-                  {recentSignups.length > 0 ? (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {recentSignups.map(signup => (
-                        <div key={signup.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <UserPlus className="h-4 w-4 text-primary flex-shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{signup.company_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(signup.created_at), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No new signups in the last 24 hours</p>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
             
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
