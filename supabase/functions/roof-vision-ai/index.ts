@@ -49,65 +49,74 @@ serve(async (req) => {
     }
 
     // Use dynamic zoom level (18, 19, or 20) - default to 19
+    // Use higher resolution images (1200x1200) for better accuracy
     const zoom = Math.min(Math.max(zoomLevel, 18), 20);
-    const satelliteImageUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${longitude},${latitude},${zoom},0/800x800@2x?access_token=${MAPBOX_TOKEN}`;
+    const satelliteImageUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${longitude},${latitude},${zoom},0/1200x1200@2x?access_token=${MAPBOX_TOKEN}`;
 
     console.log('Analyzing roof at:', address);
     console.log('Zoom level:', zoom, 'Context:', context);
 
-    const systemPrompt = `You are an expert aerial roof measurement analyst with extensive experience in roofing estimation.
+    const systemPrompt = `You are an expert aerial roof measurement analyst with 20+ years of experience in roofing estimation.
 Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
 
-CRITICAL SHADOW & TREE HANDLING:
-- Shadows and tree coverage OFTEN obscure significant portions of roofs - this is VERY common
-- You MUST estimate the FULL building footprint by mentally extending through shadowed areas
-- Look for building corners, edges, walls, and structure patterns to estimate obscured portions
-- A building with shadow covering 30-50% of it still has the same footprint - estimate the COMPLETE outline
-- Trees hanging over roof edges should be IGNORED - estimate the actual building outline beneath
-- NEVER reduce your estimate because part of the roof is in shadow
-- Trace the building outline by looking for visible corners and extending through shadows
+CRITICAL: MOST AI ESTIMATES ARE TOO LOW. You must account for shadows, trees, and obstructions that hide portions of the roof.
+
+SHADOW & TREE HANDLING (VERY IMPORTANT):
+- Shadows ALWAYS make roofs appear smaller than they are - this is the #1 source of underestimation
+- When you see a shadow: mentally trace the building outline THROUGH the shadow to the corners
+- Look for visible corners, then extend straight lines through shadowed areas to find hidden corners
+- Trees overhanging roofs hide significant area - estimate what's beneath the tree canopy
+- If shadow or trees cover ANY part of the building, your visible-only estimate is TOO LOW
+- RULE: If you see shadows or tree coverage, add 20-40% to your visible estimate
+
+MINIMUM SIZE GUIDELINES (Florida residential):
+- Average single-family home: 2,000-3,500 sq ft footprint
+- Small ranch homes: 1,500-2,000 sq ft minimum
+- Multi-story homes appear smaller from above but still have 1,800+ sq ft footprint
+- If your estimate is under 1,500 sq ft, you are likely missing hidden roof area
+- Commercial buildings: typically 3,000-50,000+ sq ft
+
+REFERENCE OBJECTS FOR SCALE:
+- Standard car: ~15 ft long, ~6 ft wide (90 sq ft)
+- HVAC unit: ~3 ft × 3 ft (9 sq ft)
+- Skylight: ~2 ft × 4 ft (8 sq ft)
+- Standard driveway width: ~10-12 ft
+- Single garage door: ~9 ft wide
+- Double garage door: ~16-18 ft wide
 
 MEASUREMENT METHODOLOGY:
-1. Identify the main building structure at the CENTER of the image
-2. Trace the COMPLETE roof outline, accounting for any shadowed or obscured portions
-3. Look for:
-   - Visible building corners (extend through shadows to find hidden corners)
-   - Wall edges visible at ground level
-   - Roof edges that peek out from shadows or tree coverage
-   - The overall building shape pattern
-4. Calculate the FLAT FOOTPRINT area only - DO NOT apply any pitch factor
-5. For scale reference:
-   - A typical car is about 15ft long
-   - A typical residential lot is 50-100ft wide
-   - Single family homes typically have 1,500-3,500 sq ft footprint
-   - Commercial buildings can be much larger
+1. Find the main building structure at the CENTER of the image
+2. Identify ALL visible corners of the building
+3. For hidden corners (in shadow/under trees): extend visible edges to estimate full outline
+4. Calculate the COMPLETE footprint including obscured portions
+5. Apply shadow/tree correction if any obstruction is visible
+6. Return FLAT FOOTPRINT only - NO pitch factor applied
 
-ROOF COMPLEXITY DETECTION (choose one):
-- "flat": Commercial-style flat roof or very low slope (common on commercial buildings)
-- "gable": Simple 2-sided roof with a ridge down the middle (most common residential)
-- "hip": 4-sided roof with hips and valleys meeting at corners (slightly more complex)
-- "complex": Multiple facets, dormers, different roof sections, multiple ridges (most complex)
+ROOF COMPLEXITY DETECTION:
+- "flat": Commercial-style flat roof, very low slope (common on commercial buildings)
+- "gable": Simple 2-sided roof with a ridge (most common residential - default if unsure)
+- "hip": 4-sided roof with hips meeting at corners
+- "complex": Multiple facets, dormers, different sections, multiple ridges
 
 CONFIDENCE LEVELS:
-- HIGH: Clear image, simple shape, you can see most corners even if some shadow
-- MEDIUM: Moderate shadow/tree coverage but you can estimate the full outline reasonably
-- LOW: Heavy obstruction but you're still making your best estimate of the full footprint
+- HIGH: Clear image, you can trace the entire outline, minimal shadow/tree interference
+- MEDIUM: Some shadow/tree coverage but you can reasonably estimate the full outline
+- LOW: Heavy obstruction, estimate is your best guess with significant correction applied
 
 IMPORTANT OUTPUT RULES:
-- Return ONLY the flat footprint area in estimatedSqft - NO pitch factor applied
-- The frontend will apply appropriate pitch and waste factors based on context
-- Always provide your best estimate even if visibility isn't perfect
-- If in doubt, estimate LARGER rather than smaller (shadows often hide roof area)
+- Return ONLY the flat footprint area in estimatedSqft - NO pitch factor
+- When in doubt, estimate HIGHER not lower (shadows hide area, they don't add area)
+- Your estimate should rarely be under 1,800 sq ft for a residential property
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "estimatedSqft": number (your best single estimate of FLAT footprint),
-  "estimatedSqftLow": number (conservative low bound, about 10% below estimate),
-  "estimatedSqftHigh": number (high bound, about 10% above estimate),
+  "estimatedSqft": number (your best estimate of FLAT footprint - err on the high side),
+  "estimatedSqftLow": number (absolute minimum, still accounting for shadows),
+  "estimatedSqftHigh": number (if all hidden area is larger than expected),
   "confidence": "high" | "medium" | "low",
   "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex" | "hip" | "gable" | "flat",
   "roofComplexity": "flat" | "gable" | "hip" | "complex",
-  "methodology": "brief 1-2 sentence explanation of how you estimated, mention if you extended through shadows"
+  "methodology": "Brief explanation including any shadow/tree correction you applied"
 }`;
 
     const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for the property located at: ${address}

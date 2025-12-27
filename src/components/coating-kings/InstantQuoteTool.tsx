@@ -602,6 +602,21 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                     <Card className="border-primary/50 bg-primary/5">
                       <CardContent className="pt-6">
                         <div className="text-center space-y-4">
+                          {/* Low/Medium Confidence Warning */}
+                          {(visionEstimation.confidence === 'low' || visionEstimation.confidence === 'medium') && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2 text-left">
+                              <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm">
+                                <p className="font-medium text-yellow-800">
+                                  {visionEstimation.confidence === 'low' ? 'Low Confidence Estimate' : 'Moderate Confidence'}
+                                </p>
+                                <p className="text-yellow-700">
+                                  Shadows or trees may be affecting accuracy. Consider using "Draw Manually" for a more precise measurement.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
                           {/* Display True Sq Ft and Total with Waste */}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center p-4 bg-muted rounded-lg">
@@ -639,7 +654,11 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Looks Good!
                               </Button>
-                              <Button variant="outline" onClick={() => setActiveTab("draw")} className="flex-1">
+                              <Button 
+                                variant={visionEstimation.confidence === 'low' ? "default" : "outline"} 
+                                onClick={() => setActiveTab("draw")} 
+                                className="flex-1"
+                              >
                                 <Map className="h-4 w-4 mr-2" />
                                 Draw Manually
                               </Button>
