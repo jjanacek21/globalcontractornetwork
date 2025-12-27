@@ -132,20 +132,34 @@ const PendingSignupsTable = () => {
   };
 
   const handleApproveClick = (contractor: PendingContractor) => {
-    setSelectedContractor(contractor);
-    setSelectedCompanyId("none");
-    setSelectedTeamId("none");
-    setSelectedFeatures(["directory_listing"]); // Default to directory listing
-    setApprovalDialogOpen(true);
+    try {
+      setSelectedContractor(contractor);
+      setSelectedCompanyId("none");
+      setSelectedTeamId("none");
+      setSelectedFeatures(["directory_listing"]); // Default to directory listing
+      setApprovalDialogOpen(true);
+    } catch (error) {
+      console.error("Error opening approval dialog:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open approval dialog",
+        variant: "destructive"
+      });
+    }
   };
 
   const toggleFeatureSelection = (featureKey: string) => {
-    setSelectedFeatures(prev => 
-      prev.includes(featureKey)
-        ? prev.filter(f => f !== featureKey)
-        : [...prev, featureKey]
-    );
+    setSelectedFeatures(prev => {
+      const currentFeatures = [...prev];
+      if (currentFeatures.includes(featureKey)) {
+        return currentFeatures.filter(f => f !== featureKey);
+      }
+      return [...currentFeatures, featureKey];
+    });
   };
+
+  // Create a mutable copy of features for safe iteration
+  const featuresList = [...AVAILABLE_FEATURES];
 
   const handleApprove = async () => {
     if (!selectedContractor) return;
@@ -395,103 +409,105 @@ const PendingSignupsTable = () => {
       </div>
 
       {/* Approval Dialog */}
-      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Approve Contractor</DialogTitle>
-            <DialogDescription>
-              Approve {selectedContractor?.company_name} and select which features to enable.
-            </DialogDescription>
-          </DialogHeader>
+      {selectedContractor && (
+        <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-background">
+            <DialogHeader>
+              <DialogTitle>Approve Contractor</DialogTitle>
+              <DialogDescription>
+                Approve {selectedContractor.company_name} and select which features to enable.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Assign to Company (Optional)</Label>
-              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a company" />
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  <SelectItem value="none">No company assignment</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedCompanyId && selectedCompanyId !== "none" && (
+            <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Assign to Team (Optional)</Label>
-                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <Label>Assign to Company (Optional)</Label>
+                <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a team" />
+                    <SelectValue placeholder="Select a company" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    <SelectItem value="none">No team assignment</SelectItem>
-                    {filteredTeams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
+                  <SelectContent className="bg-background z-[100]">
+                    <SelectItem value="none">No company assignment</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            <div className="space-y-3">
-              <Label className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Grant Access To
-              </Label>
-              <div className="border rounded-lg p-3 space-y-3 max-h-[200px] overflow-y-auto">
-                {AVAILABLE_FEATURES.map((feature) => (
-                  <div key={feature.key} className="flex items-start gap-3">
-                    <Checkbox
-                      id={`feature-${feature.key}`}
-                      checked={selectedFeatures.includes(feature.key)}
-                      onCheckedChange={() => toggleFeatureSelection(feature.key)}
-                    />
-                    <div className="flex-1">
-                      <label
-                        htmlFor={`feature-${feature.key}`}
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        {feature.label}
-                      </label>
-                      <p className="text-xs text-muted-foreground">{feature.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Selected: {selectedFeatures.length} feature(s)
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleApprove} disabled={approving}>
-              {approving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Approve & Grant Access
-                </>
+              {selectedCompanyId && selectedCompanyId !== "none" && (
+                <div className="space-y-2">
+                  <Label>Assign to Team (Optional)</Label>
+                  <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a team" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-[100]">
+                      <SelectItem value="none">No team assignment</SelectItem>
+                      {filteredTeams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Grant Access To
+                </Label>
+                <div className="border rounded-lg p-3 space-y-3 max-h-[200px] overflow-y-auto">
+                  {featuresList.map((feature) => (
+                    <div key={feature.key} className="flex items-start gap-3">
+                      <Checkbox
+                        id={`feature-${feature.key}`}
+                        checked={selectedFeatures.includes(feature.key)}
+                        onCheckedChange={() => toggleFeatureSelection(feature.key)}
+                      />
+                      <div className="flex-1">
+                        <label
+                          htmlFor={`feature-${feature.key}`}
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {feature.label}
+                        </label>
+                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selected: {selectedFeatures.length} feature(s)
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApprove} disabled={approving}>
+                {approving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Approve & Grant Access
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
