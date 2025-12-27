@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Pencil, Trash2, Calculator, Zap, Map, Loader2, CheckCircle2, AlertCircle, Satellite } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,9 +16,16 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
-// Fixed multipliers
-const FIXED_PITCH_MULTIPLIER = 1.1;
-const FIXED_WASTE_MULTIPLIER = 1.13;
+// Pitched roof calculation constants
+const PITCH_FACTOR = 1.11;
+
+// Waste factors based on roof complexity
+const WASTE_FACTORS = {
+  flat: 1.05,    // +5% waste
+  gable: 1.10,   // +10% waste (2 sides with ridge)
+  hip: 1.15,     // +15% waste (4 sides with hips/valleys)
+  complex: 1.20  // +20% waste (complex with many facets)
+};
 
 interface RoofMeasurements {
   flatArea: number;
@@ -40,11 +48,11 @@ interface VisionEstimation {
   confidence: 'high' | 'medium' | 'low';
   methodology: string;
   roofShape: string;
+  roofComplexity: 'flat' | 'gable' | 'hip' | 'complex';
   satelliteImageUrl: string;
 }
 
 export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted }: RoofMeasurementToolProps) {
-  // Use callback ref to detect when container is ready
   const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
@@ -63,16 +71,21 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   
+  // Zoom level for satellite imagery
+  const [zoomLevel, setZoomLevel] = useState<number>(19);
+  
   // AI Vision state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [visionEstimation, setVisionEstimation] = useState<VisionEstimation | null>(null);
   const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
   
+  // Calculated display values
+  const [trueSqft, setTrueSqft] = useState<number>(0);
+  const [totalWithWaste, setTotalWithWaste] = useState<number>(0);
+  
   // Map drawing state
   const [isDrawing, setIsDrawing] = useState(false);
   const [flatArea, setFlatArea] = useState(0);
-  const [pitchedArea, setPitchedArea] = useState(0);
-  const [totalSquares, setTotalSquares] = useState(0);
   const [mapInitialized, setMapInitialized] = useState(false);
 
   // Initialize map only when Draw on Map tab is active AND container is ready
@@ -100,7 +113,11 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
 
     map.current.on("draw.create", updateMeasurements);
     map.current.on("draw.update", updateMeasurements);
-    map.current.on("draw.delete", updateMeasurements);
+    map.current.on("draw.delete", () => {
+      setFlatArea(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
+    });
     
     map.current.on("load", () => {
       setMapInitialized(true);
@@ -149,6 +166,8 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
     // Reset previous analysis
     setVisionEstimation(null);
     setAcceptedSqft(null);
+    setTrueSqft(0);
+    setTotalWithWaste(0);
     
     if (map.current && activeTab === "draw") {
       map.current.flyTo({
@@ -167,8 +186,8 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
     const data = draw.current.getAll();
     if (data.features.length === 0) {
       setFlatArea(0);
-      setPitchedArea(0);
-      setTotalSquares(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
       return;
     }
 
@@ -177,26 +196,18 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
       if (feature.geometry.type === "Polygon") {
         const polygon = turf.polygon(feature.geometry.coordinates);
         const areaMeters = turf.area(polygon);
-        totalArea += areaMeters * 10.7639; // Convert sq meters to sq feet
+        totalArea += areaMeters * 10.7639;
       }
     });
 
     setFlatArea(totalArea);
     
-    // Use fixed multipliers: 1.1 for pitch, 1.13 for waste
-    const pitched = totalArea * FIXED_PITCH_MULTIPLIER;
-    setPitchedArea(pitched);
+    // For drawn roofs: True Sq Ft = flat × 1.11, assume gable for manual drawing (+10%)
+    const trueSqftCalc = Math.round(totalArea * PITCH_FACTOR);
+    const totalWithWasteCalc = Math.round(trueSqftCalc * WASTE_FACTORS.gable);
     
-    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
-    const squares = withWaste / 100;
-    setTotalSquares(squares);
-  };
-
-  // Calculate squares for vision estimate using fixed multipliers
-  const calculateVisionSquares = (sqft: number) => {
-    const pitched = sqft * FIXED_PITCH_MULTIPLIER;
-    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
-    return withWaste / 100;
+    setTrueSqft(trueSqftCalc);
+    setTotalWithWaste(totalWithWasteCalc);
   };
 
   const handleStartDrawing = () => {
@@ -210,8 +221,8 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
     if (draw.current) {
       draw.current.deleteAll();
       setFlatArea(0);
-      setPitchedArea(0);
-      setTotalSquares(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
     }
   };
 
@@ -233,7 +244,9 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
         body: {
           latitude: selectedCoords.lat,
           longitude: selectedCoords.lng,
-          address: selectedAddress
+          address: selectedAddress,
+          zoomLevel: zoomLevel,
+          context: 'roofing'
         }
       });
 
@@ -243,7 +256,7 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
         setVisionEstimation(data.estimation);
         toast({
           title: "Analysis Complete",
-          description: `AI detected a ${data.estimation.roofShape} roof with ${data.estimation.confidence} confidence.`,
+          description: `AI detected approximately ${data.estimation.estimatedSqft.toLocaleString()} sq ft with ${data.estimation.confidence} confidence.`,
         });
       } else {
         throw new Error('No estimation received');
@@ -262,33 +275,44 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
 
   const handleAcceptEstimate = () => {
     if (!visionEstimation) return;
-    setAcceptedSqft(visionEstimation.estimatedSqft);
     
-    // Calculate total with fixed pitch (1.1) and waste (1.13) multipliers
-    const totalSquares = calculateVisionSquares(visionEstimation.estimatedSqft);
-    const totalSqft = Math.round(totalSquares * 100); // Convert squares to sqft
+    // For pitched roofs: True Sq Ft = flat × 1.11
+    const trueSqftCalc = Math.round(visionEstimation.estimatedSqft * PITCH_FACTOR);
+    
+    // Get waste factor based on roof complexity
+    const roofComplexity = visionEstimation.roofComplexity || 'gable';
+    const wasteFactor = WASTE_FACTORS[roofComplexity] || WASTE_FACTORS.gable;
+    const totalWithWasteCalc = Math.round(trueSqftCalc * wasteFactor);
+    
+    setAcceptedSqft(visionEstimation.estimatedSqft);
+    setTrueSqft(trueSqftCalc);
+    setTotalWithWaste(totalWithWasteCalc);
     
     toast({
       title: "Estimate Accepted",
-      description: `Using ${totalSqft.toLocaleString()} sq ft (${totalSquares.toFixed(1)} squares) for your quote.`,
+      description: `Using ${totalWithWasteCalc.toLocaleString()} sq ft (with waste) for your quote.`,
     });
-    // Trigger callback to open quiz dialog with calculated total
+    
+    // Trigger callback
     if (onEstimateAccepted && selectedAddress) {
-      onEstimateAccepted(totalSqft, selectedAddress);
+      onEstimateAccepted(totalWithWasteCalc, selectedAddress);
     }
   };
 
   const handleGenerateReport = () => {
-    let finalSqft = 0;
+    let finalFlatSqft = 0;
     let finalAddress = selectedAddress;
+    let wasteFactor = WASTE_FACTORS.gable;
 
-    if (activeTab === "quick" && acceptedSqft) {
-      finalSqft = acceptedSqft;
+    if (activeTab === "quick" && acceptedSqft && visionEstimation) {
+      finalFlatSqft = acceptedSqft;
+      wasteFactor = WASTE_FACTORS[visionEstimation.roofComplexity] || WASTE_FACTORS.gable;
     } else if (activeTab === "draw" && flatArea > 0) {
-      finalSqft = flatArea;
+      finalFlatSqft = flatArea;
+      wasteFactor = WASTE_FACTORS.gable; // Assume gable for manual drawing
     }
 
-    if (finalSqft === 0 || !finalAddress) {
+    if (finalFlatSqft === 0 || !finalAddress) {
       toast({
         title: "Missing Information",
         description: "Please complete the estimation or draw your roof first.",
@@ -297,18 +321,17 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
       return;
     }
 
-    // Use fixed multipliers
-    const pitched = finalSqft * FIXED_PITCH_MULTIPLIER;
-    const withWaste = pitched * FIXED_WASTE_MULTIPLIER;
+    const pitched = finalFlatSqft * PITCH_FACTOR;
+    const withWaste = pitched * wasteFactor;
     const squares = withWaste / 100;
 
     onMeasurementComplete({
-      flatArea: finalSqft,
+      flatArea: finalFlatSqft,
       pitchedArea: pitched,
       totalSquares: squares,
       address: finalAddress,
-      pitchMultiplier: FIXED_PITCH_MULTIPLIER,
-      wasteFactor: 13, // 13% waste (1.13 multiplier)
+      pitchMultiplier: PITCH_FACTOR,
+      wasteFactor: (wasteFactor - 1) * 100,
     });
   };
 
@@ -321,13 +344,25 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
     }
   };
 
+  // Calculate display values for vision estimation
+  const getVisionCalculations = () => {
+    if (!visionEstimation) return null;
+    const trueSqftCalc = Math.round(visionEstimation.estimatedSqft * PITCH_FACTOR);
+    const roofComplexity = visionEstimation.roofComplexity || 'gable';
+    const wasteFactor = WASTE_FACTORS[roofComplexity] || WASTE_FACTORS.gable;
+    const totalWithWasteCalc = Math.round(trueSqftCalc * wasteFactor);
+    return { trueSqft: trueSqftCalc, totalWithWaste: totalWithWasteCalc };
+  };
+
+  const visionCalcs = getVisionCalculations();
+
   const canGenerateReport = 
     (activeTab === "quick" && acceptedSqft && selectedAddress) ||
-    (activeTab === "draw" && totalSquares > 0 && selectedAddress);
+    (activeTab === "draw" && flatArea > 0 && selectedAddress);
 
   return (
     <div className="space-y-4">
-      {/* Address Search - Common for both tabs */}
+      {/* Address Search */}
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -396,16 +431,31 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Zoom Level Selector */}
+              <div className="flex items-center gap-4">
+                <Label className="whitespace-nowrap">Satellite Zoom:</Label>
+                <Select value={zoomLevel.toString()} onValueChange={(v) => setZoomLevel(parseInt(v))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select zoom level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="18">Zoom 18 - Wide View (heavy tree areas)</SelectItem>
+                    <SelectItem value="19">Zoom 19 - Standard</SelectItem>
+                    <SelectItem value="20">Zoom 20 - Close-up (detailed roofs)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Satellite Preview */}
               {selectedCoords && (
                 <div className="relative rounded-lg overflow-hidden border">
                   <img
-                    src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                    src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
                     alt="Satellite view of property"
                     className="w-full h-[300px] object-cover"
                   />
                   <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-medium">
-                    🛰️ Satellite Preview
+                    🛰️ Satellite Preview (Zoom {zoomLevel})
                   </div>
                   {/* Center crosshair */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -445,21 +495,22 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
               </Button>
 
               {/* AI Vision Result */}
-              {visionEstimation && (
+              {visionEstimation && visionCalcs && (
                 <Card className="border-primary/50 bg-primary/5">
                   <CardContent className="pt-6 space-y-4">
-                    {/* Detected Footprint */}
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">AI-Detected Footprint (Flat Area)</p>
-                      <p className="text-3xl font-bold text-primary">
-                        {visionEstimation.estimatedSqft.toLocaleString()} sq ft
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Range: {visionEstimation.estimatedSqftLow.toLocaleString()} - {visionEstimation.estimatedSqftHigh.toLocaleString()} sq ft
-                      </p>
+                    {/* Display True Sq Ft and Total with Waste */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground">True Sq Ft</p>
+                        <p className="text-2xl font-bold">{visionCalcs.trueSqft.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center p-4 bg-primary/10 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Total with Waste</p>
+                        <p className="text-2xl font-bold text-primary">{visionCalcs.totalWithWaste.toLocaleString()}</p>
+                      </div>
                     </div>
                     
-                    {/* Confidence & Roof Type */}
+                    {/* Confidence & Roof Complexity */}
                     <div className="flex items-center justify-center gap-4 flex-wrap">
                       <div className={`flex items-center gap-2 ${getConfidenceColor(visionEstimation.confidence)}`}>
                         {visionEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
@@ -467,53 +518,7 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                         <span className="text-sm font-medium capitalize">{visionEstimation.confidence} Confidence</span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Roof Type: <span className="font-medium capitalize">{visionEstimation.roofShape}</span>
-                      </div>
-                    </div>
-
-                    {/* Fixed Multipliers Info */}
-                    <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                      <p className="text-sm font-medium text-center">Standard Calculation Applied</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="text-center">
-                          <p className="text-muted-foreground">Pitch Multiplier</p>
-                          <p className="font-bold text-primary">×1.10</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-muted-foreground">Waste Factor</p>
-                          <p className="font-bold text-primary">×1.13 (13%)</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Real-Time Calculation Breakdown */}
-                    <div className="border rounded-lg p-4 space-y-2 bg-background">
-                      <p className="text-sm font-medium text-center mb-3">Calculation Breakdown</p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Flat Area (AI Detected)</span>
-                          <span className="font-medium">{visionEstimation.estimatedSqft.toLocaleString()} sq ft</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">× Pitch Multiplier (Standard)</span>
-                          <span className="font-medium">×1.10</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">= Pitched Area</span>
-                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * FIXED_PITCH_MULTIPLIER).toLocaleString()} sq ft</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">× Waste Factor (13%)</span>
-                          <span className="font-medium">×1.13</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t">
-                          <span className="text-muted-foreground">= Total Area</span>
-                          <span className="font-medium">{Math.round(visionEstimation.estimatedSqft * FIXED_PITCH_MULTIPLIER * FIXED_WASTE_MULTIPLIER).toLocaleString()} sq ft</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t bg-primary/10 -mx-4 px-4 py-2 rounded-b">
-                          <span className="font-semibold">TOTAL SQUARES</span>
-                          <span className="text-xl font-bold text-primary">{calculateVisionSquares(visionEstimation.estimatedSqft).toFixed(2)}</span>
-                        </div>
+                        Roof Type: <span className="font-medium capitalize">{visionEstimation.roofComplexity || 'gable'}</span>
                       </div>
                     </div>
 
@@ -526,7 +531,7 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                     {acceptedSqft ? (
                       <div className="flex items-center justify-center gap-2 text-green-600">
                         <CheckCircle2 className="h-5 w-5" />
-                        <span>Estimate accepted - {calculateVisionSquares(acceptedSqft).toFixed(2)} squares</span>
+                        <span>Using {totalWithWaste.toLocaleString()} sq ft (with waste)</span>
                       </div>
                     ) : (
                       <div className="flex gap-2">
@@ -589,22 +594,14 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
                 {flatArea > 0 && (
                   <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
                     <CardContent className="pt-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Flat Area</Label>
-                          <div className="text-lg font-bold">{flatArea.toFixed(0)} sq ft</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <Label className="text-xs text-muted-foreground">True Sq Ft</Label>
+                          <div className="text-lg font-bold">{trueSqft.toLocaleString()}</div>
                         </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Pitched Area (×1.10)</Label>
-                          <div className="text-lg font-bold">{pitchedArea.toFixed(0)} sq ft</div>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">With 13% Waste</Label>
-                          <div className="text-lg font-bold">{(pitchedArea * FIXED_WASTE_MULTIPLIER).toFixed(0)} sq ft</div>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Total Squares</Label>
-                          <div className="text-lg font-bold text-primary">{totalSquares.toFixed(2)}</div>
+                        <div className="text-center">
+                          <Label className="text-xs text-muted-foreground">Total with Waste</Label>
+                          <div className="text-lg font-bold text-primary">{totalWithWaste.toLocaleString()}</div>
                         </div>
                       </div>
                     </CardContent>
@@ -615,23 +612,6 @@ export function RoofMeasurementTool({ onMeasurementComplete, onEstimateAccepted 
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Fixed Multipliers Info Card */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center gap-8 text-sm">
-            <div className="text-center">
-              <p className="text-muted-foreground">Standard Pitch Multiplier</p>
-              <p className="text-2xl font-bold text-primary">×1.10</p>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="text-center">
-              <p className="text-muted-foreground">Standard Waste Factor</p>
-              <p className="text-2xl font-bold text-primary">13%</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Generate Report Button */}
       <Button

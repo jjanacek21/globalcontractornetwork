@@ -11,6 +11,8 @@ interface VisionRequest {
   latitude: number;
   longitude: number;
   address: string;
+  zoomLevel?: number;
+  context?: 'coating' | 'roofing';
 }
 
 interface VisionEstimation {
@@ -20,17 +22,17 @@ interface VisionEstimation {
   confidence: 'high' | 'medium' | 'low';
   methodology: string;
   roofShape: string;
+  roofComplexity: 'flat' | 'gable' | 'hip' | 'complex';
   satelliteImageUrl: string;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { latitude, longitude, address } = await req.json() as VisionRequest;
+    const { latitude, longitude, address, zoomLevel = 19, context = 'roofing' } = await req.json() as VisionRequest;
     
     if (!latitude || !longitude) {
       return new Response(JSON.stringify({ 
@@ -46,61 +48,80 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Get high-resolution satellite image from Mapbox Static API
-    // Using zoom 19 for detailed roof visibility, 800x800 image
-    const satelliteImageUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${longitude},${latitude},19,0/800x800@2x?access_token=${MAPBOX_TOKEN}`;
+    // Use dynamic zoom level (18, 19, or 20) - default to 19
+    const zoom = Math.min(Math.max(zoomLevel, 18), 20);
+    const satelliteImageUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${longitude},${latitude},${zoom},0/800x800@2x?access_token=${MAPBOX_TOKEN}`;
 
-    console.log('Fetching satellite image for:', address);
-    console.log('Image URL:', satelliteImageUrl);
+    console.log('Analyzing roof at:', address);
+    console.log('Zoom level:', zoom, 'Context:', context);
 
-    // Create the vision analysis prompt
-    const systemPrompt = `You are an expert aerial roof measurement analyst with extensive experience in roofing estimation. 
-Your task is to analyze satellite imagery and accurately estimate the roof area of the property at the center of the image.
+    const systemPrompt = `You are an expert aerial roof measurement analyst with extensive experience in roofing estimation.
+Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
 
-ANALYSIS METHODOLOGY:
-1. Identify the main building structure at the center of the image
-2. Trace the roof outline carefully, identifying:
-   - The overall roof shape (rectangular, L-shaped, T-shaped, complex, etc.)
-   - Approximate dimensions in feet (estimate based on typical residential scales)
-   - Any extensions, garages, or attached structures
-3. Calculate the roof footprint area
-4. Account for roof pitch (most residential roofs have 4/12 to 8/12 pitch, add 5-20% for pitch factor)
+CRITICAL SHADOW & TREE HANDLING:
+- Shadows and tree coverage OFTEN obscure significant portions of roofs - this is VERY common
+- You MUST estimate the FULL building footprint by mentally extending through shadowed areas
+- Look for building corners, edges, walls, and structure patterns to estimate obscured portions
+- A building with shadow covering 30-50% of it still has the same footprint - estimate the COMPLETE outline
+- Trees hanging over roof edges should be IGNORED - estimate the actual building outline beneath
+- NEVER reduce your estimate because part of the roof is in shadow
+- Trace the building outline by looking for visible corners and extending through shadows
 
-ESTIMATION GUIDELINES:
-- For rectangular/square roofs: Length × Width
-- For L-shaped roofs: Break into rectangles and sum
-- For complex roofs: Break into component shapes
-- Add 10-15% for typical residential roof pitch
-- A typical car is about 15ft long, use for scale reference if visible
-- A typical residential lot is 50-100ft wide
-- Single family homes typically have 1,500-3,500 sq ft of roof area
+MEASUREMENT METHODOLOGY:
+1. Identify the main building structure at the CENTER of the image
+2. Trace the COMPLETE roof outline, accounting for any shadowed or obscured portions
+3. Look for:
+   - Visible building corners (extend through shadows to find hidden corners)
+   - Wall edges visible at ground level
+   - Roof edges that peek out from shadows or tree coverage
+   - The overall building shape pattern
+4. Calculate the FLAT FOOTPRINT area only - DO NOT apply any pitch factor
+5. For scale reference:
+   - A typical car is about 15ft long
+   - A typical residential lot is 50-100ft wide
+   - Single family homes typically have 1,500-3,500 sq ft footprint
+   - Commercial buildings can be much larger
+
+ROOF COMPLEXITY DETECTION (choose one):
+- "flat": Commercial-style flat roof or very low slope (common on commercial buildings)
+- "gable": Simple 2-sided roof with a ridge down the middle (most common residential)
+- "hip": 4-sided roof with hips and valleys meeting at corners (slightly more complex)
+- "complex": Multiple facets, dormers, different roof sections, multiple ridges (most complex)
 
 CONFIDENCE LEVELS:
-- HIGH: Clear image, simple roof shape, obvious boundaries
-- MEDIUM: Partially obscured, moderate complexity, or some uncertainty
-- LOW: Tree coverage, shadows, complex architecture, or unclear boundaries
+- HIGH: Clear image, simple shape, you can see most corners even if some shadow
+- MEDIUM: Moderate shadow/tree coverage but you can estimate the full outline reasonably
+- LOW: Heavy obstruction but you're still making your best estimate of the full footprint
 
-IMPORTANT: Always provide reasonable estimates even if conditions aren't perfect. Roofs under 1,000 sq ft are rare for homes. Most suburban homes have 1,800-3,000 sq ft roofs.
+IMPORTANT OUTPUT RULES:
+- Return ONLY the flat footprint area in estimatedSqft - NO pitch factor applied
+- The frontend will apply appropriate pitch and waste factors based on context
+- Always provide your best estimate even if visibility isn't perfect
+- If in doubt, estimate LARGER rather than smaller (shadows often hide roof area)
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "estimatedSqft": number (your best single estimate),
+  "estimatedSqft": number (your best single estimate of FLAT footprint),
   "estimatedSqftLow": number (conservative low bound, about 10% below estimate),
   "estimatedSqftHigh": number (high bound, about 10% above estimate),
   "confidence": "high" | "medium" | "low",
   "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex" | "hip" | "gable" | "flat",
-  "methodology": "brief 1-2 sentence explanation of how you estimated"
+  "roofComplexity": "flat" | "gable" | "hip" | "complex",
+  "methodology": "brief 1-2 sentence explanation of how you estimated, mention if you extended through shadows"
 }`;
 
-    const userPrompt = `Analyze this satellite image and estimate the roof area for the property located at: ${address}
+    const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for the property located at: ${address}
 
-The property is centered in the image. Please:
-1. Identify the main roof structure
-2. Estimate its approximate dimensions
-3. Calculate the total roof area in square feet
-4. Provide your confidence level based on image clarity
+The property is centered in the image. Zoom level is ${zoom} (${zoom === 18 ? 'wide view for tree coverage' : zoom === 20 ? 'close-up detail' : 'standard view'}).
 
-Remember to account for roof pitch in your final estimate.`;
+Please:
+1. Identify the main building structure at the center
+2. Trace the COMPLETE building outline, extending through any shadows or tree coverage
+3. Estimate the FLAT FOOTPRINT area in square feet (do NOT apply pitch factor)
+4. Determine the roof complexity (flat, gable, hip, or complex)
+5. Provide your confidence level based on visibility
+
+REMEMBER: If shadows cover parts of the roof, estimate the FULL building footprint anyway by tracing through the shadows.`;
 
     console.log('Calling Gemini Vision for roof analysis...');
     
@@ -155,15 +176,14 @@ Remember to account for roof pitch in your final estimate.`;
 
     console.log('AI Vision Response:', aiResponse);
 
-    // Parse the JSON response
     let estimation: VisionEstimation;
     try {
-      // Extract JSON from the response (handle markdown code blocks)
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         estimation = {
           ...parsed,
+          roofComplexity: parsed.roofComplexity || 'gable',
           satelliteImageUrl
         };
       } else {
@@ -171,21 +191,27 @@ Remember to account for roof pitch in your final estimate.`;
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      // Fallback - return a reasonable default with low confidence
       estimation = {
-        estimatedSqft: 2000,
-        estimatedSqftLow: 1800,
-        estimatedSqftHigh: 2200,
+        estimatedSqft: 2500,
+        estimatedSqftLow: 2250,
+        estimatedSqftHigh: 2750,
         confidence: 'low',
         roofShape: 'unknown',
-        methodology: 'Could not analyze image. Using average residential estimate.',
+        roofComplexity: 'gable',
+        methodology: 'Could not analyze image clearly. Using average residential estimate.',
         satelliteImageUrl
       };
     }
 
-    // Sanity check the values
-    if (estimation.estimatedSqft < 500 || estimation.estimatedSqft > 50000) {
-      console.warn('Unusual estimate detected, adjusting...');
+    // Sanity check - if estimate seems too low, flag it
+    if (estimation.estimatedSqft < 800) {
+      console.warn('Very low estimate detected, may have missed shadowed areas');
+      estimation.confidence = 'low';
+      estimation.methodology += ' (Note: Estimate may be low due to shadow/tree coverage)';
+    }
+
+    if (estimation.estimatedSqft > 50000) {
+      console.warn('Unusually high estimate detected');
       estimation.confidence = 'low';
     }
 

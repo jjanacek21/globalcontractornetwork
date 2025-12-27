@@ -19,6 +19,9 @@ import { ThankYouScreen } from "./ThankYouScreen";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
+// Flat roof waste factor (3-5% for flat/low-slope roofs)
+const FLAT_ROOF_WASTE_FACTOR = 1.05;
+
 const COATING_PRICES = {
   acrylic: { low: 2.0, high: 3.0, name: "Acrylic" },
   "acrylic-base": { low: 3.25, high: 4.0, name: "Acrylic + Base" },
@@ -40,6 +43,7 @@ interface VisionEstimation {
   confidence: 'high' | 'medium' | 'low';
   methodology: string;
   roofShape: string;
+  roofComplexity: 'flat' | 'gable' | 'hip' | 'complex';
   satelliteImageUrl: string;
 }
 
@@ -61,6 +65,9 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [showEstimate, setShowEstimate] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   
+  // Zoom level for satellite imagery
+  const [zoomLevel, setZoomLevel] = useState<number>(19);
+  
   // SpinWheel and discount state
   const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [showClaimForm, setShowClaimForm] = useState(false);
@@ -73,7 +80,11 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   const [visionEstimation, setVisionEstimation] = useState<VisionEstimation | null>(null);
   const [acceptedSqft, setAcceptedSqft] = useState<number | null>(null);
 
-  // Map drawing state - use callback ref to detect when container is ready
+  // Calculated values for display
+  const [trueSqft, setTrueSqft] = useState<number>(0);
+  const [totalWithWaste, setTotalWithWaste] = useState<number>(0);
+
+  // Map drawing state
   const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
@@ -100,7 +111,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     map.current = new mapboxgl.Map({
       container: mapContainerNode,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [-80.1918, 25.7617], // Miami
+      center: [-80.1918, 25.7617],
       zoom: 18,
     });
 
@@ -117,6 +128,8 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     map.current.on("draw.update", updateArea);
     map.current.on("draw.delete", () => {
       setSqft(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
       setEstimateLow(0);
       setEstimateHigh(0);
       setShowEstimate(false);
@@ -169,6 +182,8 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     // Reset previous analysis
     setVisionEstimation(null);
     setAcceptedSqft(null);
+    setTrueSqft(0);
+    setTotalWithWaste(0);
     
     if (map.current && activeTab === "draw") {
       map.current.flyTo({
@@ -187,6 +202,8 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     const data = draw.current.getAll();
     if (data.features.length === 0) {
       setSqft(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
       setEstimateLow(0);
       setEstimateHigh(0);
       setShowEstimate(false);
@@ -196,8 +213,15 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     const polygon = data.features[0];
     const area = turf.area(polygon);
     const sqftCalc = Math.round(area * 10.764);
+    
+    // For coating (flat roofs): True Sq Ft = flat area, Total with Waste = +5%
+    const trueSqftCalc = sqftCalc;
+    const totalWithWasteCalc = Math.round(sqftCalc * FLAT_ROOF_WASTE_FACTOR);
+    
     setSqft(sqftCalc);
-    calculateEstimate(sqftCalc);
+    setTrueSqft(trueSqftCalc);
+    setTotalWithWaste(totalWithWasteCalc);
+    calculateEstimate(totalWithWasteCalc);
   };
 
   const calculateEstimate = (area: number) => {
@@ -217,16 +241,23 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
   };
 
   useEffect(() => {
-    if (sqft && coatingType) {
-      calculateEstimate(sqft);
+    if (totalWithWaste && coatingType) {
+      calculateEstimate(totalWithWaste);
+    } else if (sqft && coatingType) {
+      const total = Math.round(sqft * FLAT_ROOF_WASTE_FACTOR);
+      setTotalWithWaste(total);
+      calculateEstimate(total);
     }
-  }, [sqft, coatingType]);
+  }, [sqft, totalWithWaste, coatingType]);
 
-  // Vision estimate also calculates pricing
+  // Vision estimate calculation
   useEffect(() => {
     if (acceptedSqft && coatingType) {
-      calculateEstimate(acceptedSqft);
+      const total = Math.round(acceptedSqft * FLAT_ROOF_WASTE_FACTOR);
+      setTrueSqft(acceptedSqft);
+      setTotalWithWaste(total);
       setSqft(acceptedSqft);
+      calculateEstimate(total);
     }
   }, [acceptedSqft, coatingType]);
 
@@ -241,6 +272,8 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
     if (draw.current) {
       draw.current.deleteAll();
       setSqft(0);
+      setTrueSqft(0);
+      setTotalWithWaste(0);
       setEstimateLow(0);
       setEstimateHigh(0);
       setShowEstimate(false);
@@ -340,7 +373,9 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
         body: {
           latitude: selectedCoords.lat,
           longitude: selectedCoords.lng,
-          address: selectedAddress
+          address: selectedAddress,
+          zoomLevel: zoomLevel,
+          context: 'coating'
         }
       });
 
@@ -350,7 +385,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
         setVisionEstimation(data.estimation);
         toast({
           title: "Analysis Complete",
-          description: `AI detected a ${data.estimation.roofShape} roof with ${data.estimation.confidence} confidence.`,
+          description: `AI detected approximately ${data.estimation.estimatedSqft.toLocaleString()} sq ft with ${data.estimation.confidence} confidence.`,
         });
       } else {
         throw new Error('No estimation received');
@@ -369,11 +404,19 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
 
   const handleAcceptEstimate = () => {
     if (!visionEstimation) return;
-    setAcceptedSqft(visionEstimation.estimatedSqft);
-    setSqft(visionEstimation.estimatedSqft);
+    
+    // For flat roofs: True Sq Ft = AI detected area, Total with Waste = +5%
+    const trueSqftCalc = visionEstimation.estimatedSqft;
+    const totalWithWasteCalc = Math.round(trueSqftCalc * FLAT_ROOF_WASTE_FACTOR);
+    
+    setAcceptedSqft(trueSqftCalc);
+    setTrueSqft(trueSqftCalc);
+    setTotalWithWaste(totalWithWasteCalc);
+    setSqft(trueSqftCalc);
+    
     toast({
       title: "Estimate Accepted",
-      description: `Using ${visionEstimation.estimatedSqft.toLocaleString()} sq ft for your quote.`,
+      description: `Using ${totalWithWasteCalc.toLocaleString()} sq ft (with waste) for your quote.`,
     });
   };
 
@@ -385,6 +428,16 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
       default: return 'text-muted-foreground';
     }
   };
+
+  // Calculate display values for vision estimation
+  const getVisionCalculations = () => {
+    if (!visionEstimation) return null;
+    const trueSqftCalc = visionEstimation.estimatedSqft;
+    const totalWithWasteCalc = Math.round(trueSqftCalc * FLAT_ROOF_WASTE_FACTOR);
+    return { trueSqft: trueSqftCalc, totalWithWaste: totalWithWasteCalc };
+  };
+
+  const visionCalcs = getVisionCalculations();
 
   return (
     <section id="quote-tool" className="py-20 bg-muted/30">
@@ -481,16 +534,31 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Zoom Level Selector */}
+                  <div className="flex items-center gap-4">
+                    <Label className="whitespace-nowrap">Satellite Zoom:</Label>
+                    <Select value={zoomLevel.toString()} onValueChange={(v) => setZoomLevel(parseInt(v))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select zoom level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="18">Zoom 18 - Wide View (heavy tree areas)</SelectItem>
+                        <SelectItem value="19">Zoom 19 - Standard</SelectItem>
+                        <SelectItem value="20">Zoom 20 - Close-up (detailed roofs)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Satellite Preview */}
                   {selectedCoords && (
                     <div className="relative rounded-lg overflow-hidden border">
                       <img
-                        src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                        src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
                         alt="Satellite view of property"
                         className="w-full h-[300px] object-cover"
                       />
                       <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-medium">
-                        🛰️ Satellite Preview
+                        🛰️ Satellite Preview (Zoom {zoomLevel})
                       </div>
                       {/* Center crosshair */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -530,18 +598,20 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                   </Button>
 
                   {/* AI Vision Result */}
-                  {visionEstimation && (
+                  {visionEstimation && visionCalcs && (
                     <Card className="border-primary/50 bg-primary/5">
                       <CardContent className="pt-6">
                         <div className="text-center space-y-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">AI-Detected Roof Size</p>
-                            <p className="text-3xl font-bold text-primary">
-                              {visionEstimation.estimatedSqft.toLocaleString()} sq ft
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Range: {visionEstimation.estimatedSqftLow.toLocaleString()} - {visionEstimation.estimatedSqftHigh.toLocaleString()} sq ft
-                            </p>
+                          {/* Display True Sq Ft and Total with Waste */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center p-4 bg-muted rounded-lg">
+                              <p className="text-sm text-muted-foreground">True Sq Ft</p>
+                              <p className="text-2xl font-bold">{visionCalcs.trueSqft.toLocaleString()}</p>
+                            </div>
+                            <div className="text-center p-4 bg-primary/10 rounded-lg">
+                              <p className="text-sm text-muted-foreground">Total with Waste</p>
+                              <p className="text-2xl font-bold text-primary">{visionCalcs.totalWithWaste.toLocaleString()}</p>
+                            </div>
                           </div>
                           
                           <div className="flex items-center justify-center gap-4 flex-wrap">
@@ -549,9 +619,6 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                               {visionEstimation.confidence === 'high' && <CheckCircle2 className="h-4 w-4" />}
                               {visionEstimation.confidence !== 'high' && <AlertCircle className="h-4 w-4" />}
                               <span className="text-sm font-medium capitalize">{visionEstimation.confidence} Confidence</span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Roof Type: <span className="font-medium capitalize">{visionEstimation.roofShape}</span>
                             </div>
                           </div>
 
@@ -564,7 +631,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                           {acceptedSqft ? (
                             <div className="flex items-center justify-center gap-2 text-green-600">
                               <CheckCircle2 className="h-5 w-5" />
-                              <span>Using {acceptedSqft.toLocaleString()} sq ft</span>
+                              <span>Using {totalWithWaste.toLocaleString()} sq ft (with waste)</span>
                             </div>
                           ) : (
                             <div className="flex gap-2">
@@ -629,19 +696,23 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                       <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
                         <CardContent className="pt-4">
                           <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">Roof Area</Label>
-                              <div className="text-lg font-bold">{sqft.toLocaleString()} sq ft</div>
+                            <div className="text-center">
+                              <Label className="text-xs text-muted-foreground">True Sq Ft</Label>
+                              <div className="text-lg font-bold">{trueSqft.toLocaleString()}</div>
                             </div>
-                            {showEstimate && (
-                              <div>
-                                <Label className="text-xs text-muted-foreground">Estimated Cost</Label>
-                                <div className="text-lg font-bold text-primary">
-                                  ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
-                                </div>
-                              </div>
-                            )}
+                            <div className="text-center">
+                              <Label className="text-xs text-muted-foreground">Total with Waste</Label>
+                              <div className="text-lg font-bold text-primary">{totalWithWaste.toLocaleString()}</div>
+                            </div>
                           </div>
+                          {showEstimate && (
+                            <div className="mt-3 pt-3 border-t text-center">
+                              <Label className="text-xs text-muted-foreground">Estimated Cost</Label>
+                              <div className="text-lg font-bold text-primary">
+                                ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
+                              </div>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}
@@ -700,7 +771,10 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                   onChange={(e) => {
                     const value = parseInt(e.target.value) || 0;
                     setSqft(value);
-                    calculateEstimate(value);
+                    setTrueSqft(value);
+                    const total = Math.round(value * FLAT_ROOF_WASTE_FACTOR);
+                    setTotalWithWaste(total);
+                    calculateEstimate(total);
                   }}
                 />
               </div>
@@ -708,14 +782,22 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
               {/* Results */}
               {showEstimate && estimateLow > 0 && (
                 <div className="pt-6 space-y-4 border-t">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">True Sq Ft</p>
+                      <p className="text-xl font-bold">{trueSqft.toLocaleString()}</p>
+                    </div>
+                    <div className="text-center p-3 bg-primary/10 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Total with Waste</p>
+                      <p className="text-xl font-bold text-primary">{totalWithWaste.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
                   <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">Estimated Cost Range</p>
                     <div className="text-3xl font-bold text-primary">
                       ${estimateLow.toLocaleString()} - ${estimateHigh.toLocaleString()}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Based on {sqft.toLocaleString()} square feet
-                    </p>
                   </div>
                   
                   {/* Spin to Win CTA */}
@@ -757,7 +839,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
         discountPercent={discountPercent}
         estimateLow={estimateLow}
         estimateHigh={estimateHigh}
-        sqft={sqft}
+        sqft={totalWithWaste}
         coatingType={coatingType}
         propertyAddress={selectedAddress}
       />
