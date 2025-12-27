@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "GCN Notifications <onboarding@resend.dev>",
-        to: adminEmails,
+        to: ["jared@globalcontractor.network"],
         subject: `🚀 New Contractor Application: ${data.companyName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -69,6 +69,9 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Email:</strong> ${data.email}</p>
               <p><strong>Phone:</strong> ${data.phone || "Not provided"}</p>
               <p><strong>Category:</strong> ${data.category}</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="https://globalcontractor.network/admin/dashboard" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Review Application</a>
             </div>
           </div>
         `,
