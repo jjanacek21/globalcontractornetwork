@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Menu, X, ChevronDown, ChevronRight, LogIn, UserPlus } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Menu, X, ChevronRight, LogIn, UserPlus } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 const LandingHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoginExpanded, setIsLoginExpanded] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +30,6 @@ const LandingHeader = () => {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
-    setIsLoginExpanded(false);
   };
 
   const navLinks = [
@@ -50,18 +37,6 @@ const LandingHeader = () => {
     { label: "Pricing", href: "#pricing" },
     { label: "Services", href: "/services" },
     { label: "Directory", href: "/directory" },
-  ];
-
-  const loginPortals = [
-    { name: "Master Admin Hub", path: "/admin/auth" },
-    { name: "CRM Portal", path: "/crm/auth" },
-    { name: "Contractor Network", path: "/contractor" },
-    { name: "Learning Platform", path: "/learning" },
-    { name: "Store Rewards", path: "/store/auth" },
-    { name: "Coating Kings Admin", path: "/coating-kings/admin/auth" },
-    { name: "Green Home Admin", path: "/green-home-solutions/admin/auth" },
-    { name: "Permit Queens", path: "/permit-queens/auth" },
-    { name: "Supplement Kings", path: "/supplement-kings/contractor/auth" },
   ];
 
   return (
@@ -107,26 +82,14 @@ const LandingHeader = () => {
               )
             ))}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="text-foreground/80 hover:text-primary">
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 max-h-[400px] overflow-y-auto">
-                {loginPortals.map((portal) => (
-                  <DropdownMenuItem
-                    key={portal.path}
-                    onClick={() => navigate(portal.path)}
-                    className="cursor-pointer"
-                  >
-                    {portal.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button 
+              variant="ghost" 
+              className="text-foreground/80 hover:text-primary"
+              onClick={() => navigate("/login")}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Login
+            </Button>
 
             <Button
               onClick={() => navigate("/join")}
@@ -203,33 +166,19 @@ const LandingHeader = () => {
 
             <hr className="my-4 border-border mx-6" />
 
-            <Collapsible open={isLoginExpanded} onOpenChange={setIsLoginExpanded}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full px-6 py-4 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium text-lg">
-                <span className="flex items-center gap-3">
-                  <LogIn className="w-5 h-5" />
-                  Login Portals
-                </span>
-                <ChevronDown
-                  className={`w-5 h-5 transition-transform duration-200 ${
-                    isLoginExpanded ? "rotate-180" : ""
-                  }`}
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="bg-muted/30">
-                {loginPortals.map((portal) => (
-                  <button
-                    key={portal.path}
-                    onClick={() => {
-                      navigate(portal.path);
-                      closeMobileMenu();
-                    }}
-                    className="w-full text-left px-10 py-3 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors text-sm"
-                  >
-                    {portal.name}
-                  </button>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
+            <button
+              onClick={() => {
+                navigate("/login");
+                closeMobileMenu();
+              }}
+              className="flex items-center justify-between w-full px-6 py-4 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium text-lg"
+            >
+              <span className="flex items-center gap-3">
+                <LogIn className="w-5 h-5" />
+                Login
+              </span>
+              <ChevronRight className="w-5 h-5 opacity-50" />
+            </button>
           </div>
 
           <div className="p-6 border-t border-border">

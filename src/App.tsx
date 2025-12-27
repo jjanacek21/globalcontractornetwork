@@ -55,6 +55,7 @@ import EmergencyMitigation from "./pages/EmergencyMitigation";
 import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
+import NetworkLogin from "./pages/NetworkLogin";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -75,6 +76,7 @@ const App = () => (
           <Route path="/" element={<LandingPage />} />
           <Route path="/services" element={<Index />} />
           <Route path="/join" element={<JoinNetwork />} />
+          <Route path="/login" element={<NetworkLogin />} />
           <Route path="/member/dashboard" element={<MemberDashboard />} />
           <Route path="/directory" element={<ContractorDirectory />} />
           <Route path="/contractor-directory" element={<ContractorDirectory />} />
