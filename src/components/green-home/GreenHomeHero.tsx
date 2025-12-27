@@ -40,7 +40,7 @@ export const GreenHomeHero = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white hover:bg-white/10 h-14 px-8"
+                className="bg-transparent border-white text-white hover:bg-white/10 h-14 px-8"
                 asChild
               >
                 <a href="tel:561-815-0008">Call 561-815-0008</a>
