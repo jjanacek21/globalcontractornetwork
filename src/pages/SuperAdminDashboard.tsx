@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -24,6 +24,7 @@ import { TeamsTable } from "@/components/admin/TeamsTable";
 import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
 import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess";
 import LoginRequestsTable from "@/components/admin/LoginRequestsTable";
+import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
 
 interface UnifiedLead {
   id: string;
@@ -504,6 +505,7 @@ const SuperAdminDashboard = () => {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
+                <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
 
               <TabsContent value="pending">
@@ -628,6 +630,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="analytics">
                 <LeadAnalytics leads={leads} />
+              </TabsContent>
+
+              <TabsContent value="superadmins">
+                <SuperAdminsTable />
               </TabsContent>
             </Tabs>
           </CardContent>
