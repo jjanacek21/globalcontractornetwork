@@ -34,12 +34,12 @@ export function PackageComparisonTable() {
   const renderValue = (value: boolean | string, isPopular: boolean) => {
     if (typeof value === 'boolean') {
       return value ? (
-        <Check className={`h-5 w-5 ${isPopular ? 'text-amber-400' : 'text-green-400'}`} />
+        <Check className="h-7 w-7 text-green-400 stroke-[3] drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]" />
       ) : (
-        <X className="h-5 w-5 text-slate-600" />
+        <X className="h-7 w-7 text-red-500 stroke-[3] drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]" />
       );
     }
-    return <span className={`text-sm font-medium ${isPopular ? 'text-amber-400' : 'text-slate-300'}`}>{value}</span>;
+    return <span className="text-sm font-medium text-white">{value}</span>;
   };
 
   return (
@@ -85,7 +85,7 @@ export function PackageComparisonTable() {
                   key={index}
                   className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/50' : 'bg-slate-800'}`}
                 >
-                  <td className="p-4 font-medium text-slate-300">{feature.name}</td>
+                  <td className="p-4 font-medium text-white">{feature.name}</td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center">
                       {renderValue(feature.localEssentials, false)}
@@ -106,7 +106,7 @@ export function PackageComparisonTable() {
               <tr className="bg-slate-800">
                 <td className="p-6"></td>
                 <td className="p-6 text-center">
-                  <Button onClick={scrollToForm} variant="outline" className="border-slate-600 text-white hover:bg-slate-700">
+                  <Button onClick={scrollToForm} className="bg-white text-slate-900 hover:bg-slate-900 hover:text-white border border-white transition-colors">
                     Get Started
                   </Button>
                 </td>
@@ -119,7 +119,7 @@ export function PackageComparisonTable() {
                   </Button>
                 </td>
                 <td className="p-6 text-center">
-                  <Button onClick={scrollToForm} variant="outline" className="border-slate-600 text-white hover:bg-slate-700">
+                  <Button onClick={scrollToForm} className="bg-white text-slate-900 hover:bg-slate-900 hover:text-white border border-white transition-colors">
                     Get Started
                   </Button>
                 </td>
