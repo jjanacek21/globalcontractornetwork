@@ -252,7 +252,29 @@ const App = () => (
           <Route path="/contractor/dashboard" element={
             <ProtectedRoute redirectTo="/contractor">
               <ContractorDashboard />
-            </ProtectedRoute>
+          </ProtectedRoute>
+          } />
+          
+          {/* Social Network Routes */}
+          <Route path="/social/feed" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <SocialFeed />
+            </Suspense>
+          } />
+          <Route path="/social/profile/:id" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <SocialProfile />
+            </Suspense>
+          } />
+          <Route path="/social/messages" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <SocialMessages />
+            </Suspense>
+          } />
+          <Route path="/social/pending" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <SocialAccessPending />
+            </Suspense>
           } />
           
           {/* Legacy routes */}
