@@ -90,10 +90,10 @@ const Index = () => {
     },
     {
       icon: TrendingUp,
-      title: "Marketing & Consulting",
-      description: "Expert guidance to grow your contracting business.",
-      link: "/consulting",
-      color: "bg-primary/10 text-primary"
+      title: "Digital Marketing & CRM",
+      description: "Full-service marketing, web design, social media, and CRM automation for contractors.",
+      link: "/digital-marketing",
+      color: "bg-amber-500/10 text-amber-600"
     },
     {
       icon: Handshake,
@@ -262,7 +262,7 @@ const Index = () => {
                 <li><Link to="/permit-queens" className="hover:text-foreground transition-colors">Permit Queens</Link></li>
                 <li><Link to="/supplement-kings" className="hover:text-foreground transition-colors">Supplement Kings</Link></li>
                 <li><Link to="/green-home-solutions" className="hover:text-foreground transition-colors">Windows & Doors</Link></li>
-                <li><Link to="/consulting" className="hover:text-foreground transition-colors">Consulting</Link></li>
+                <li><Link to="/digital-marketing" className="hover:text-foreground transition-colors">Digital Marketing</Link></li>
               </ul>
             </div>
             

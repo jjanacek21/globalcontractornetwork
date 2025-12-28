@@ -6,6 +6,7 @@ import {
   DollarSign,
   SquareAsterisk,
   AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 import ServicePanel from "./ServicePanel";
 
@@ -72,6 +73,13 @@ const CategoryGrid = () => {
       description:
         "24/7 water damage, mold remediation, tarping, tree removal, and storm cleanup response team.",
       link: "/emergency-mitigation",
+    },
+    {
+      icon: TrendingUp,
+      title: "Digital Marketing",
+      description:
+        "Full-service marketing, social media management, CRM setup, website design, and lead generation.",
+      link: "/digital-marketing",
     },
   ];
 

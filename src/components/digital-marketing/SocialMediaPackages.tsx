@@ -17,10 +17,12 @@ const socialPackages: SocialPackage[] = [
     price: "$850",
     platforms: "1 Platform",
     features: [
-      "8 Custom Posts/Month",
+      "8 Custom Posts/Month (branded graphics + captions)",
       "Hashtag Research & Post Scheduling",
       "Profile Optimization",
-      "Monthly Performance Report"
+      "Monthly Performance Report",
+      "Phone/Text Support Included",
+      "Optional: TikTok/Reels Editing +$75/piece"
     ]
   },
   {
@@ -31,9 +33,10 @@ const socialPackages: SocialPackage[] = [
     features: [
       "15 Custom Posts/Month",
       "Community Engagement (3x/Week)",
-      "Full Monthly Analytics",
+      "Full Monthly Analytics + Strategy Call",
       "Profile Optimization",
-      "Monthly Strategy Call"
+      "Phone/Text Support Included",
+      "Optional: Video/Reel Editing +$75/piece"
     ]
   },
   {
@@ -44,9 +47,11 @@ const socialPackages: SocialPackage[] = [
       "20 Custom Posts/Month",
       "Up to 6 Edited Videos/Reels/Month",
       "Custom Story Content (10/month)",
-      "Full Community Engagement",
+      "Advanced Hashtag Strategy",
+      "Full Community Engagement (5x/Week)",
       "Bi-Weekly Strategy Calls",
-      "Priority Support"
+      "Full Performance Reporting",
+      "Priority Phone/Text Support"
     ]
   }
 ];
