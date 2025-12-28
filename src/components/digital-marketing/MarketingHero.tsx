@@ -1,5 +1,6 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Rocket, TrendingUp, Users, BarChart3, Mail, Globe } from "lucide-react";
+import { ArrowRight, Rocket, TrendingUp, Users, BarChart3, Mail, Globe, LayoutDashboard } from "lucide-react";
 
 export function MarketingHero() {
   const scrollToForm = () => {
@@ -8,6 +9,20 @@ export function MarketingHero() {
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Dashboard Button - Fixed position */}
+      <div className="absolute top-4 left-4 z-20">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-slate-400 hover:text-white hover:bg-slate-800"
+        >
+          <Link to="/member/dashboard">
+            <LayoutDashboard className="h-4 w-4 mr-1" />
+            Dashboard
+          </Link>
+        </Button>
+      </div>
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-10 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl animate-pulse" />

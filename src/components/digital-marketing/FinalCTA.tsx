@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Phone, Calculator, Eye } from "lucide-react";
+import { Phone } from "lucide-react";
 
 export function FinalCTA() {
   const scrollToForm = () => {
@@ -47,24 +47,6 @@ export function FinalCTA() {
           >
             <Phone className="mr-2 h-5 w-5" />
             Book a Free Strategy Call
-          </Button>
-          <Button 
-            size="lg" 
-            variant="outline"
-            onClick={scrollToPackages}
-            className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
-          >
-            <Eye className="mr-2 h-5 w-5" />
-            See All Packages
-          </Button>
-          <Button 
-            size="lg" 
-            variant="outline"
-            onClick={scrollToCalculator}
-            className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
-          >
-            <Calculator className="mr-2 h-5 w-5" />
-            Get a Custom Quote
           </Button>
         </div>
 

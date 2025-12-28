@@ -9,12 +9,12 @@ export const PublicHeader = () => {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
-            <Link to="/">
+            <Link to="/member/dashboard">
               <Home className="h-4 w-4 mr-1" />
-              Home
+              Dashboard
             </Link>
           </Button>
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/member/dashboard" className="flex items-center gap-3">
             <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
             <div className="hidden sm:flex flex-col">
               <span className="text-lg font-bold">Global Contractor Network</span>

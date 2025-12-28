@@ -90,7 +90,7 @@ export function MarketingPackages() {
               key={index}
               className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-2 ${
                 pkg.popular 
-                  ? 'bg-gradient-to-b from-amber-500/10 to-orange-500/5 border-amber-500/50 shadow-xl shadow-amber-500/10' 
+                  ? 'bg-white border-2 border-amber-500 shadow-2xl shadow-amber-500/20' 
                   : 'bg-slate-800/50 border-slate-700'
               }`}
             >
@@ -104,26 +104,26 @@ export function MarketingPackages() {
               )}
               
               <CardHeader className="pb-4">
-                <CardTitle className="text-2xl text-white">{pkg.name}</CardTitle>
-                <CardDescription className="text-slate-400">{pkg.description}</CardDescription>
+                <CardTitle className={`text-2xl ${pkg.popular ? 'text-slate-900' : 'text-white'}`}>{pkg.name}</CardTitle>
+                <CardDescription className={pkg.popular ? 'text-slate-600' : 'text-slate-400'}>{pkg.description}</CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-6">
                 <div>
-                  <span className="text-4xl font-bold text-white">{pkg.price}</span>
-                  <span className="text-slate-400">/month</span>
+                  <span className={`text-4xl font-bold ${pkg.popular ? 'text-slate-900' : 'text-white'}`}>{pkg.price}</span>
+                  <span className={pkg.popular ? 'text-slate-600' : 'text-slate-400'}>/month</span>
                 </div>
                 
-                <div className="bg-slate-700/30 rounded-lg p-3">
-                  <p className="text-sm text-amber-400 font-medium">Ideal for:</p>
-                  <p className="text-sm text-slate-300">{pkg.idealFor}</p>
+                <div className={`rounded-lg p-3 ${pkg.popular ? 'bg-amber-50' : 'bg-slate-700/30'}`}>
+                  <p className={`text-sm font-medium ${pkg.popular ? 'text-amber-600' : 'text-amber-400'}`}>Ideal for:</p>
+                  <p className={`text-sm ${pkg.popular ? 'text-amber-900' : 'text-slate-300'}`}>{pkg.idealFor}</p>
                 </div>
                 
                 <ul className="space-y-3">
                   {pkg.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <Check className={`h-5 w-5 mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-amber-400' : 'text-green-400'}`} />
-                      <span className="text-sm text-slate-300">{feature}</span>
+                      <Check className={`h-5 w-5 mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-amber-500' : 'text-green-400'}`} />
+                      <span className={`text-sm ${pkg.popular ? 'text-slate-700' : 'text-slate-300'}`}>{feature}</span>
                     </li>
                   ))}
                 </ul>
