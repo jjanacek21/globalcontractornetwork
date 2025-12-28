@@ -157,6 +157,45 @@ export const DiscountClaimForm = ({
 
       if (error) throw error;
 
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: '🎰 Coating Kings - Spin Wheel',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          address: formData.address,
+          service: `${coatingType} coating`,
+          urgency: 'discount-claimed',
+          estimateLow: discountedLow,
+          estimateHigh: discountedHigh,
+          appointmentDate: format(appointmentDate, "yyyy-MM-dd"),
+          appointmentTime: appointmentTime,
+          notes: `${discountPercent}% discount claimed. Roof: ${formData.roofType}, Age: ${formData.roofAge}, Condition: ${formData.roofCondition}. ${formData.notes}`
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          source: 'Coating Kings',
+          phone: formData.phone,
+          address: formData.address,
+          roofType: formData.roofType,
+          coatingType: coatingType,
+          estimatedSqft: sqft,
+          urgency: 'discount-claimed',
+          estimateLow: discountedLow,
+          estimateHigh: discountedHigh,
+          discountPercent: discountPercent,
+          appointmentDate: format(appointmentDate, "yyyy-MM-dd"),
+          appointmentTime: appointmentTime,
+          notes: formData.notes
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       toast({
         title: "Discount Claimed!",
         description: `Your ${discountPercent}% discount has been reserved. We'll see you soon!`,
