@@ -610,59 +610,110 @@ export type Database = {
       contractor_profiles: {
         Row: {
           average_rating: number | null
+          banner_image_url: string | null
+          bio_long: string | null
+          bio_short: string | null
           category: string
           company_name: string
           created_at: string | null
           description: string | null
           email: string | null
+          first_name: string | null
           id: string
+          insurance_info: Json | null
           is_verified: boolean | null
+          last_name: string | null
+          license_expiration: string | null
+          license_number: string | null
+          license_state: string | null
           logo_url: string | null
           phone: string | null
           review_count: number | null
+          secondary_trades: string[] | null
           service_area: string[] | null
+          service_areas: Json | null
+          social_access_approved: boolean | null
+          social_approved_at: string | null
+          social_approved_by: string | null
+          social_links: Json | null
           subscription_expires_at: string | null
           subscription_status: string | null
+          title: string | null
           updated_at: string | null
           user_id: string | null
+          verification_status: string | null
           website: string | null
         }
         Insert: {
           average_rating?: number | null
+          banner_image_url?: string | null
+          bio_long?: string | null
+          bio_short?: string | null
           category: string
           company_name: string
           created_at?: string | null
           description?: string | null
           email?: string | null
+          first_name?: string | null
           id?: string
+          insurance_info?: Json | null
           is_verified?: boolean | null
+          last_name?: string | null
+          license_expiration?: string | null
+          license_number?: string | null
+          license_state?: string | null
           logo_url?: string | null
           phone?: string | null
           review_count?: number | null
+          secondary_trades?: string[] | null
           service_area?: string[] | null
+          service_areas?: Json | null
+          social_access_approved?: boolean | null
+          social_approved_at?: string | null
+          social_approved_by?: string | null
+          social_links?: Json | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verification_status?: string | null
           website?: string | null
         }
         Update: {
           average_rating?: number | null
+          banner_image_url?: string | null
+          bio_long?: string | null
+          bio_short?: string | null
           category?: string
           company_name?: string
           created_at?: string | null
           description?: string | null
           email?: string | null
+          first_name?: string | null
           id?: string
+          insurance_info?: Json | null
           is_verified?: boolean | null
+          last_name?: string | null
+          license_expiration?: string | null
+          license_number?: string | null
+          license_state?: string | null
           logo_url?: string | null
           phone?: string | null
           review_count?: number | null
+          secondary_trades?: string[] | null
           service_area?: string[] | null
+          service_areas?: Json | null
+          social_access_approved?: boolean | null
+          social_approved_at?: string | null
+          social_approved_by?: string | null
+          social_links?: Json | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
+          title?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verification_status?: string | null
           website?: string | null
         }
         Relationships: []
@@ -2756,6 +2807,519 @@ export type Database = {
           },
         ]
       }
+      social_conversation_members: {
+        Row: {
+          conversation_id: string
+          id: string
+          joined_at: string | null
+          last_read_at: string | null
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "social_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_conversation_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_conversations: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          is_group: boolean | null
+          last_message_at: string | null
+          name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_group?: boolean | null
+          last_message_at?: string | null
+          name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_group?: boolean | null
+          last_message_at?: string | null
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_follows: {
+        Row: {
+          created_at: string | null
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_message_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "social_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_messages: {
+        Row: {
+          content_text: string | null
+          conversation_id: string
+          created_at: string | null
+          edited_at: string | null
+          has_attachments: boolean | null
+          id: string
+          is_deleted: boolean | null
+          sender_id: string
+        }
+        Insert: {
+          content_text?: string | null
+          conversation_id: string
+          created_at?: string | null
+          edited_at?: string | null
+          has_attachments?: boolean | null
+          id?: string
+          is_deleted?: boolean | null
+          sender_id: string
+        }
+        Update: {
+          content_text?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          edited_at?: string | null
+          has_attachments?: boolean | null
+          id?: string
+          is_deleted?: boolean | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "social_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_post_comments: {
+        Row: {
+          author_id: string
+          content_text: string
+          created_at: string | null
+          id: string
+          like_count: number | null
+          post_id: string
+          reply_to_comment_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content_text: string
+          created_at?: string | null
+          id?: string
+          like_count?: number | null
+          post_id: string
+          reply_to_comment_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content_text?: string
+          created_at?: string | null
+          id?: string
+          like_count?: number | null
+          post_id?: string
+          reply_to_comment_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_comments_reply_to_comment_id_fkey"
+            columns: ["reply_to_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_post_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_post_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_post_media: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          media_type: string
+          media_url: string
+          post_id: string
+          sort_order: number | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          media_type: string
+          media_url: string
+          post_id: string
+          sort_order?: number | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          post_id?: string
+          sort_order?: number | null
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          author_id: string
+          comment_count: number | null
+          content_text: string
+          created_at: string | null
+          id: string
+          is_repost: boolean | null
+          like_count: number | null
+          location_tags: string[] | null
+          original_post_id: string | null
+          reply_to_post_id: string | null
+          repost_count: number | null
+          trade_tags: string[] | null
+          updated_at: string | null
+          visibility: string | null
+        }
+        Insert: {
+          author_id: string
+          comment_count?: number | null
+          content_text: string
+          created_at?: string | null
+          id?: string
+          is_repost?: boolean | null
+          like_count?: number | null
+          location_tags?: string[] | null
+          original_post_id?: string | null
+          reply_to_post_id?: string | null
+          repost_count?: number | null
+          trade_tags?: string[] | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          author_id?: string
+          comment_count?: number | null
+          content_text?: string
+          created_at?: string | null
+          id?: string
+          is_repost?: boolean | null
+          like_count?: number | null
+          location_tags?: string[] | null
+          original_post_id?: string | null
+          reply_to_post_id?: string | null
+          repost_count?: number | null
+          trade_tags?: string[] | null
+          updated_at?: string | null
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_original_post_id_fkey"
+            columns: ["original_post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_reply_to_post_id_fkey"
+            columns: ["reply_to_post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          reason: string
+          reported_comment_id: string | null
+          reported_post_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reason: string
+          reported_comment_id?: string | null
+          reported_post_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reason?: string
+          reported_comment_id?: string | null
+          reported_post_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_reports_reported_comment_id_fkey"
+            columns: ["reported_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reports_reported_post_id_fkey"
+            columns: ["reported_post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_members: {
         Row: {
           created_at: string | null
@@ -3464,6 +4028,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: Database["public"]["Enums"]["company_role"]
       }
+      get_contractor_profile_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3471,6 +4036,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_social_access: { Args: never; Returns: boolean }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_company_or_super_admin: {
         Args: { _company_id: string }
