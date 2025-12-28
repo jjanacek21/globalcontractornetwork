@@ -10,7 +10,7 @@ import {
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
-  Paintbrush, HardHat, DoorOpen, GraduationCap, X
+  Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -207,6 +207,14 @@ const MemberDashboard = () => {
       description: "Manage leads, contacts, and customer relationships",
       link: "/crm/auth",
       color: "bg-cyan-500/10 text-cyan-600",
+      category: "business" as ServiceCategory
+    },
+    {
+      icon: Megaphone,
+      title: "Digital Marketing, Management & Design",
+      description: "Social media, ads, SEO, web design & CRM support",
+      link: "/digital-marketing",
+      color: "bg-pink-500/10 text-pink-600",
       category: "business" as ServiceCategory
     }
   ];
