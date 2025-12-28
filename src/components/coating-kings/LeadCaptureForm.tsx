@@ -80,6 +80,25 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          source: 'Coating Kings',
+          phone: formData.phone,
+          address: formData.propertyAddress,
+          propertyType: formData.propertyType,
+          roofType: formData.roofType,
+          coatingType: formData.coatingType,
+          estimatedSqft: formData.estimatedSqft,
+          urgency: formData.urgency,
+          estimateLow: formData.estimateLow,
+          estimateHigh: formData.estimateHigh,
+          notes: formData.notes
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       setIsSuccess(true);
       toast({
         title: "Request Submitted!",

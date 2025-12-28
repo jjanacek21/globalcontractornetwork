@@ -101,6 +101,26 @@ export const SchedulingDialog = ({
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          source: 'Roofing Consultations',
+          phone: formData.phone,
+          address: consultationData.zipCode,
+          roofType: consultationData.roofType,
+          recommendedPackage: consultationData.recommendedPackage,
+          estimatedPrice: consultationData.estimatedPrice,
+          appointmentDate: format(date, "PPP"),
+          appointmentTime: time,
+          appointmentType: appointmentType,
+          timeline: consultationData.timeline,
+          budget: consultationData.budget,
+          sqft: consultationData.sqft
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       toast.success("Appointment scheduled successfully! We'll send you a confirmation email.");
       onComplete();
       onOpenChange(false);

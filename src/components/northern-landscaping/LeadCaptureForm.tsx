@@ -73,6 +73,19 @@ const LeadCaptureForm = () => {
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          source: 'Northern Landscaping',
+          phone: formData.phone,
+          propertyType: formData.propertyType,
+          service: formData.service,
+          message: formData.message
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       setIsSuccess(true);
       toast({
         title: "Request Submitted!",

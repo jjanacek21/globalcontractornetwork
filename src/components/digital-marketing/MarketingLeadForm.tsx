@@ -76,6 +76,32 @@ export function MarketingLeadForm() {
 
       if (error) throw error;
 
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: 'Digital Marketing',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          service: formData.service_interest,
+          notes: `Company: ${formData.company_name || 'N/A'}, Budget: ${formData.budget_range || 'N/A'}\n${formData.message || ''}`
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email: formData.email,
+          name: formData.name,
+          source: 'Digital Marketing',
+          phone: formData.phone,
+          companyName: formData.company_name,
+          serviceInterest: formData.service_interest,
+          budgetRange: formData.budget_range,
+          message: formData.message
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       toast.success("Thank you! We'll be in touch within 24 hours.");
       setFormData({
         name: "",
