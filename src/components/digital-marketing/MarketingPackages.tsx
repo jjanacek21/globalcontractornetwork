@@ -70,16 +70,16 @@ export function MarketingPackages() {
   };
 
   return (
-    <section className="py-20 bg-gradient-to-b from-slate-900 to-slate-800">
+    <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
-          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 mb-4">
+          <Badge className="bg-amber-100 text-amber-700 border-amber-200 mb-4">
             Marketing Packages
           </Badge>
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">
             Choose Your Growth Path
           </h2>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
             All-in-one packages designed to help contractors grow their business at every stage.
           </p>
         </div>
@@ -91,7 +91,7 @@ export function MarketingPackages() {
               className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-2 ${
                 pkg.popular 
                   ? 'bg-white border-2 border-amber-500 shadow-2xl shadow-amber-500/20' 
-                  : 'bg-slate-800/50 border-slate-700'
+                  : 'bg-slate-50 border-slate-200'
               }`}
             >
               {pkg.popular && (
@@ -104,26 +104,26 @@ export function MarketingPackages() {
               )}
               
               <CardHeader className="pb-4">
-                <CardTitle className={`text-2xl ${pkg.popular ? 'text-slate-900' : 'text-white'}`}>{pkg.name}</CardTitle>
-                <CardDescription className={pkg.popular ? 'text-slate-600' : 'text-slate-400'}>{pkg.description}</CardDescription>
+                <CardTitle className="text-2xl text-slate-900">{pkg.name}</CardTitle>
+                <CardDescription className="text-slate-600">{pkg.description}</CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-6">
                 <div>
-                  <span className={`text-4xl font-bold ${pkg.popular ? 'text-slate-900' : 'text-white'}`}>{pkg.price}</span>
-                  <span className={pkg.popular ? 'text-slate-600' : 'text-slate-400'}>/month</span>
+                  <span className="text-4xl font-bold text-slate-900">{pkg.price}</span>
+                  <span className="text-slate-600">/month</span>
                 </div>
                 
-                <div className={`rounded-lg p-3 ${pkg.popular ? 'bg-amber-50' : 'bg-slate-700/30'}`}>
-                  <p className={`text-sm font-medium ${pkg.popular ? 'text-amber-600' : 'text-amber-400'}`}>Ideal for:</p>
-                  <p className={`text-sm ${pkg.popular ? 'text-amber-900' : 'text-slate-300'}`}>{pkg.idealFor}</p>
+                <div className={`rounded-lg p-3 ${pkg.popular ? 'bg-amber-50' : 'bg-slate-100'}`}>
+                  <p className="text-sm font-medium text-amber-600">Ideal for:</p>
+                  <p className="text-sm text-slate-700">{pkg.idealFor}</p>
                 </div>
                 
                 <ul className="space-y-3">
                   {pkg.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <Check className={`h-5 w-5 mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-amber-500' : 'text-green-400'}`} />
-                      <span className={`text-sm ${pkg.popular ? 'text-slate-700' : 'text-slate-300'}`}>{feature}</span>
+                      <Check className={`h-5 w-5 mt-0.5 flex-shrink-0 ${pkg.popular ? 'text-amber-500' : 'text-green-500'}`} />
+                      <span className="text-sm text-slate-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -133,7 +133,7 @@ export function MarketingPackages() {
                   className={`w-full ${
                     pkg.popular 
                       ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white' 
-                      : 'bg-slate-700 hover:bg-slate-600 text-white'
+                      : 'bg-slate-900 hover:bg-slate-800 text-white'
                   }`}
                 >
                   Get Started

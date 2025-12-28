@@ -43,7 +43,7 @@ const reasons = [
 
 export function WhyChooseUs() {
   return (
-    <section className="py-20 bg-gradient-to-b from-slate-800 to-slate-900">
+    <section className="py-20 bg-slate-900">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 mb-4">

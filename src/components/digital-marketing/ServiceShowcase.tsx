@@ -54,7 +54,7 @@ export function ServiceShowcase() {
   };
 
   return (
-    <section className="py-20 bg-slate-50">
+    <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
           <Badge className="bg-blue-100 text-blue-700 border-blue-200 mb-4">

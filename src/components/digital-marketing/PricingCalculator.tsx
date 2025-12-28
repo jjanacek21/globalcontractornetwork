@@ -56,7 +56,7 @@ export function PricingCalculator() {
   const oneTimeServices = serviceOptions.filter(s => s.priceType === "one-time");
 
   return (
-    <section id="pricing-calculator" className="py-20 bg-gradient-to-b from-slate-100 to-white">
+    <section id="pricing-calculator" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-100 rounded-full px-4 py-2 mb-4">

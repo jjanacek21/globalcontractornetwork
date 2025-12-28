@@ -125,13 +125,13 @@ const services: Service[] = [
 
 export function SingleServicesGrid() {
   return (
-    <section className="py-20 bg-slate-50">
+    <section className="py-20 bg-slate-900">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             À La Carte Services
           </h2>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
             Pick and choose exactly what you need. Each service is designed to deliver measurable results.
           </p>
         </div>
@@ -140,31 +140,31 @@ export function SingleServicesGrid() {
           {services.map((service, index) => (
             <Card 
               key={index} 
-              className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-slate-200 bg-white"
+              className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-slate-700 bg-slate-800/50"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="p-3 bg-amber-100 rounded-xl text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <div className="p-3 bg-amber-500/20 rounded-xl text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     {service.icon}
                   </div>
                   <Badge variant={service.priceType === "monthly" ? "default" : "secondary"} className="text-xs">
                     {service.priceType === "monthly" ? "/month" : "One-Time"}
                   </Badge>
                 </div>
-                <CardTitle className="text-lg leading-tight">{service.name}</CardTitle>
-                <CardDescription>{service.description}</CardDescription>
+                <CardTitle className="text-lg leading-tight text-white">{service.name}</CardTitle>
+                <CardDescription className="text-slate-400">{service.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-amber-600 mb-4">{service.price}</div>
+                <div className="text-2xl font-bold text-amber-400 mb-4">{service.price}</div>
                 <ul className="space-y-2">
                   {service.features.slice(0, 4).map((feature, idx) => (
-                    <li key={idx} className="text-sm text-slate-600 flex items-center gap-2">
+                    <li key={idx} className="text-sm text-slate-300 flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
                       {feature}
                     </li>
                   ))}
                   {service.features.length > 4 && (
-                    <li className="text-sm text-amber-600 font-medium">
+                    <li className="text-sm text-amber-400 font-medium">
                       +{service.features.length - 4} more features
                     </li>
                   )}
