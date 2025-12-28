@@ -27,17 +27,17 @@ export default function DigitalMarketingServices() {
 
       <div className="min-h-screen bg-white">
         <MarketingHero />
+        <WhyChooseUs />
+        <div id="packages">
+          <MarketingPackages />
+        </div>
         <SingleServicesGrid />
         <div id="pricing-calculator">
           <PricingCalculator />
         </div>
         <SocialMediaPackages />
         <ServiceShowcase />
-        <div id="packages">
-          <MarketingPackages />
-        </div>
         <PackageComparisonTable />
-        <WhyChooseUs />
         <MarketingFAQ />
         <FinalCTA />
         <MarketingLeadForm />

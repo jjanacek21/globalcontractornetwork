@@ -105,18 +105,17 @@ export function MarketingHero() {
           <Button 
             size="lg" 
             onClick={scrollToForm}
-            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-lg px-8 py-6 shadow-lg shadow-amber-500/25"
+            className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-lg px-8 py-6 shadow-lg shadow-amber-500/25 hover:opacity-75 transition-opacity"
           >
             Book a Free Strategy Call
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <Button 
             size="lg" 
-            variant="outline"
-            onClick={() => document.getElementById('packages')?.scrollIntoView({ behavior: 'smooth' })}
-            className="border-slate-600 text-white hover:bg-slate-800 text-lg px-8 py-6"
+            onClick={() => document.getElementById('pricing-calculator')?.scrollIntoView({ behavior: 'smooth' })}
+            className="bg-white text-slate-700 text-lg px-8 py-6 hover:opacity-75 transition-opacity"
           >
-            Explore Packages
+            Customize your Package
           </Button>
         </div>
 
