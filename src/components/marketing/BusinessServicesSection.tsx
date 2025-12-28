@@ -149,7 +149,7 @@ const BusinessServicesSection = () => {
           }`}
         >
           <Button
-            onClick={() => navigate("/consulting")}
+            onClick={() => navigate("/digital-marketing")}
             size="lg"
             className="bg-gcn-gold hover:bg-gcn-gold-dark text-gcn-black font-bold px-8 group"
           >

@@ -30,6 +30,9 @@ export const PublicHeader = () => {
           <Link to="/prep-property" className="text-sm font-medium hover:text-primary transition-colors">
             Services
           </Link>
+          <Link to="/digital-marketing" className="text-sm font-medium hover:text-primary transition-colors">
+            Marketing
+          </Link>
           <Link to="/store" className="text-sm font-medium hover:text-primary transition-colors">
             Store
           </Link>
