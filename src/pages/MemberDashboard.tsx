@@ -11,8 +11,9 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings
+  Settings, Users
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 interface UserProfile {
@@ -150,8 +151,8 @@ const MemberDashboard = () => {
     },
     {
       icon: ClipboardCheck,
-      title: "Property Inspections",
-      description: "Pre-sale & maintenance inspections",
+      title: "Maintenance Membership",
+      description: "Preventative maintenance & property care plans",
       link: "/prep-property",
       color: "bg-teal-500/10 text-teal-600",
       category: "home" as ServiceCategory
@@ -166,8 +167,8 @@ const MemberDashboard = () => {
     },
     {
       icon: DollarSign,
-      title: "Insurance Supplements",
-      description: "Maximize your insurance claim payouts",
+      title: "Estimating/Supplementing",
+      description: "Professional estimates & insurance claim supplements",
       link: "/supplement-kings",
       color: "bg-blue-600/10 text-blue-600",
       category: "business" as ServiceCategory
@@ -227,6 +228,14 @@ const MemberDashboard = () => {
       link: "/digital-marketing",
       color: "bg-pink-500/10 text-pink-600",
       category: "business" as ServiceCategory
+    },
+    {
+      icon: Users,
+      title: "Contractor Social Hub",
+      description: "Connect with contractors, share updates & network",
+      link: "/social/feed",
+      color: "bg-indigo-600/10 text-indigo-600",
+      category: "business" as ServiceCategory
     }
   ];
 
@@ -280,6 +289,18 @@ const MemberDashboard = () => {
                 <Badge variant="outline">Property Owner</Badge>
               )}
             </div>
+            {isSuperAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/admin/auth">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Master Admin Portal</TooltipContent>
+              </Tooltip>
+            )}
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
@@ -502,37 +523,6 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* Super Admin Only - Master Portal */}
-        {isSuperAdmin && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Shield className="h-5 w-5 text-red-500" />
-              Master Admin Portal
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Link to="/super-admin/auth" className="group">
-                <Card className="h-full transition-all hover:shadow-lg hover:border-red-500/50 border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center">
-                        <Settings className="h-6 w-6 text-red-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-red-900 group-hover:text-red-600 transition-colors">
-                          Master Admin Dashboard
-                        </h3>
-                        <p className="text-sm text-red-700/70">
-                          Full system control & management
-                        </p>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-red-400 group-hover:text-red-600 transition-all group-hover:translate-x-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
