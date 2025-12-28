@@ -22,6 +22,21 @@ export const SocialAccessGuard = ({ children }: SocialAccessGuardProps) => {
           return;
         }
 
+        // Check if user is a super admin - they have access to everything
+        const { data: superAdmin } = await supabase
+          .from("super_admins")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (superAdmin) {
+          // Super admins have full access
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+
+        // For non-super-admins, check contractor profile
         const { data: profile } = await supabase
           .from("contractor_profiles")
           .select("verification_status, social_access_approved")
