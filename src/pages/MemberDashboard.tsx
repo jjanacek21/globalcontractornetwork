@@ -123,6 +123,16 @@ const MemberDashboard = () => {
 
   const isContractor = !!contractorProfile;
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  const canSeeContractorServices = isContractor || isSuperAdmin;
+
+  // Services hidden from homeowners (only visible to contractors and super admins)
+  const contractorOnlyServices = [
+    "Contractor Social Hub",
+    "Training Academy", 
+    "Estimating/Supplementing",
+    "Permit Expediting",
+    "CRM Portal"
+  ];
 
   const services = [
     {
@@ -253,7 +263,12 @@ const MemberDashboard = () => {
       service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "all" || service.category === activeCategory;
-    return matchesSearch && matchesCategory;
+    
+    // Hide contractor-only services from homeowners
+    const isContractorOnly = contractorOnlyServices.includes(service.title);
+    const hasAccess = !isContractorOnly || canSeeContractorServices;
+    
+    return matchesSearch && matchesCategory && hasAccess;
   });
 
   if (loading) {
