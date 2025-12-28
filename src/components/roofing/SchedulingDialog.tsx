@@ -82,6 +82,25 @@ export const SchedulingDialog = ({
 
       if (error) throw error;
 
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: 'Roofing Consultations',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          address: consultationData.zipCode,
+          service: `${consultationData.roofType} - ${consultationData.recommendedPackage}`,
+          urgency: consultationData.priority,
+          estimateLow: consultationData.estimatedPrice,
+          estimateHigh: consultationData.estimatedPrice,
+          appointmentDate: format(date, "yyyy-MM-dd"),
+          appointmentTime: time,
+          appointmentType: appointmentType,
+          notes: `Timeline: ${consultationData.timeline}, Budget: ${consultationData.budget}, Sqft: ${consultationData.sqft}`
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
       toast.success("Appointment scheduled successfully! We'll send you a confirmation email.");
       onComplete();
       onOpenChange(false);

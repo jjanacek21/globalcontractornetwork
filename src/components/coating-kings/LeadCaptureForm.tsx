@@ -64,6 +64,22 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
 
       if (error) throw error;
 
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: 'Coating Kings',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          address: formData.propertyAddress,
+          service: `${formData.coatingType} - ${formData.roofType}`,
+          urgency: formData.urgency,
+          estimateLow: formData.estimateLow,
+          estimateHigh: formData.estimateHigh,
+          notes: formData.notes
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
       setIsSuccess(true);
       toast({
         title: "Request Submitted!",

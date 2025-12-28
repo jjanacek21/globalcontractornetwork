@@ -61,6 +61,18 @@ const LeadCaptureForm = () => {
 
       if (error) throw error;
 
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: 'Northern Landscaping',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          service: formData.service,
+          notes: `Property: ${formData.propertyType}\n${formData.message}`
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
       setIsSuccess(true);
       toast({
         title: "Request Submitted!",
