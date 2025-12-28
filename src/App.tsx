@@ -25,6 +25,7 @@ import StoreDashboard from "./pages/StoreDashboard";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import MarketingConsulting from "./pages/MarketingConsulting";
+import DigitalMarketingServices from "./pages/DigitalMarketingServices";
 import Franchise from "./pages/Franchise";
 import LearningAuth from "./pages/LearningAuth";
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -163,6 +164,7 @@ const App = () => (
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/consulting" element={<MarketingConsulting />} />
+          <Route path="/digital-marketing" element={<DigitalMarketingServices />} />
           <Route path="/franchise" element={<Franchise />} />
           
           {/* CRM Routes */}
