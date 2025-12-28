@@ -9,6 +9,7 @@ import { lazy, Suspense } from "react";
 const SocialFeed = lazy(() => import("./pages/social/SocialFeed"));
 const SocialProfile = lazy(() => import("./pages/social/SocialProfile"));
 const SocialMessages = lazy(() => import("./pages/social/SocialMessages"));
+const SocialNotifications = lazy(() => import("./pages/social/SocialNotifications"));
 const SocialAccessPending = lazy(() => import("./pages/social/SocialAccessPending"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
@@ -274,6 +275,11 @@ const App = () => (
           <Route path="/social/messages" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
               <SocialMessages />
+            </Suspense>
+          } />
+          <Route path="/social/notifications" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <SocialNotifications />
             </Suspense>
           } />
           <Route path="/social/pending" element={
