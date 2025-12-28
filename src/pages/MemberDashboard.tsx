@@ -10,7 +10,8 @@ import {
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
-  Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone
+  Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
+  Settings
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -47,6 +48,7 @@ const MemberDashboard = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [networkMember, setNetworkMember] = useState<NetworkMember | null>(null);
   const [contractorProfile, setContractorProfile] = useState<ContractorProfile | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
   const navigate = useNavigate();
@@ -97,6 +99,15 @@ const MemberDashboard = () => {
       if (contractorData) {
         setContractorProfile(contractorData as ContractorProfile);
       }
+
+      // Check if user is a super admin
+      const { data: superAdminData } = await supabase
+        .from("super_admins")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      setIsSuperAdmin(!!superAdminData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -483,6 +494,38 @@ const MemberDashboard = () => {
                         </p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Super Admin Only - Master Portal */}
+        {isSuperAdmin && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Shield className="h-5 w-5 text-red-500" />
+              Master Admin Portal
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Link to="/super-admin/auth" className="group">
+                <Card className="h-full transition-all hover:shadow-lg hover:border-red-500/50 border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center">
+                        <Settings className="h-6 w-6 text-red-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-red-900 group-hover:text-red-600 transition-colors">
+                          Master Admin Dashboard
+                        </h3>
+                        <p className="text-sm text-red-700/70">
+                          Full system control & management
+                        </p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-red-400 group-hover:text-red-600 transition-all group-hover:translate-x-1" />
                     </div>
                   </CardContent>
                 </Card>
