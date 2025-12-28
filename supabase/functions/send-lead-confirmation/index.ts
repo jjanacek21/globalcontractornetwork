@@ -554,7 +554,7 @@ const handler = async (req: Request): Promise<Response> => {
     const html = buildEmailHtml(data);
 
     const emailResponse = await resend.emails.send({
-      from: "Global Contractor Network <onboarding@resend.dev>",
+      from: "Global Contractor Network <noreply@globalcontractor.network>",
       to: [data.email],
       subject: subject,
       html: html,
