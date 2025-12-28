@@ -210,6 +210,27 @@ export const WindowQuoteCalculator = () => {
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
+      // Send confirmation email to customer
+      supabase.functions.invoke('send-lead-confirmation', {
+        body: {
+          email,
+          name,
+          source: 'Green Home Solutions - Windows',
+          phone,
+          address: `${address}, ${city}, FL ${zipCode}`,
+          windowSelections,
+          totalWindows: windowSelections.reduce((sum, w) => sum + w.quantity, 0),
+          performanceLevel,
+          interiorColor,
+          exteriorColor,
+          glassType,
+          gridStyle,
+          estimateLow: discountedLow,
+          estimateHigh: discountedHigh,
+          spinDiscount: discount
+        }
+      }).catch(err => console.error('Email confirmation failed:', err));
+
       setShowThankYou(true);
       toast.success("Quote submitted successfully!");
     } catch (error) {

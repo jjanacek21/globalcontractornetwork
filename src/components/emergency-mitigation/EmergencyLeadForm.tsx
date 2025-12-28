@@ -43,6 +43,20 @@ export const EmergencyLeadForm = () => {
         }
       });
 
+      // Send confirmation email to customer
+      if (formData.email) {
+        supabase.functions.invoke('send-lead-confirmation', {
+          body: {
+            email: formData.email,
+            name: formData.name,
+            source: 'Emergency Mitigation',
+            phone: formData.phone,
+            service: formData.service,
+            message: formData.message
+          }
+        }).catch(err => console.error('Email confirmation failed:', err));
+      }
+
       setIsSubmitted(true);
       toast({
         title: "Request Submitted!",

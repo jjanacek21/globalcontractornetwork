@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.telegram-lead-alert]
 verify_jwt = false
+
+[functions.send-lead-confirmation]
+verify_jwt = false
