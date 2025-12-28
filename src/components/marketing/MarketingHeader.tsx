@@ -81,7 +81,7 @@ const MarketingHeader = () => {
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/member/dashboard" className="flex items-center gap-3 group">
             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gcn-gold/50 group-hover:border-gcn-gold transition-colors">
               <img
                 src={gcnLogo}

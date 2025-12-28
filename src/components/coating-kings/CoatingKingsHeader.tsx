@@ -37,10 +37,10 @@ export function CoatingKingsHeader({ onGetQuote, onContact }: CoatingKingsHeader
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/member/dashboard")}
           >
             <Home className="h-4 w-4 mr-1" />
-            Home
+            Dashboard
           </Button>
           <Link to="/coating-kings" className="flex items-center gap-3">
             <img src={coatingKingsLogo} alt="Coating Kings" className="h-10 w-auto" />

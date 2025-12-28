@@ -36,10 +36,10 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             variant="ghost"
             size="sm"
             className="text-slate-400 hover:text-white hover:bg-slate-800"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/member/dashboard")}
           >
             <Home className="h-4 w-4 mr-1" />
-            Home
+            Dashboard
           </Button>
           <Link to="/permit-queens" className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">

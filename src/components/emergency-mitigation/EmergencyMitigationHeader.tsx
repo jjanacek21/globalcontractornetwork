@@ -1,10 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Menu, X, AlertTriangle } from "lucide-react";
+import { Phone, Menu, X, AlertTriangle, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 
 export const EmergencyMitigationHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -17,15 +18,26 @@ export const EmergencyMitigationHeader = () => {
   return (
     <header className="sticky top-0 z-50 w-full bg-slate-900 text-white shadow-lg">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/emergency-mitigation" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600">
-            <AlertTriangle className="h-6 w-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold">Emergency Mitigation</span>
-            <span className="text-xs text-slate-400">24/7 Rapid Response</span>
-          </div>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            onClick={() => navigate("/member/dashboard")}
+          >
+            <LayoutDashboard className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+          <Link to="/emergency-mitigation" className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600">
+              <AlertTriangle className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold">Emergency Mitigation</span>
+              <span className="text-xs text-slate-400">24/7 Rapid Response</span>
+            </div>
+          </Link>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">

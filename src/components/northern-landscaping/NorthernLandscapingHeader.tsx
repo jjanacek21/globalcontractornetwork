@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Menu, X, Trees } from "lucide-react";
+import { Phone, Menu, X, Trees, LayoutDashboard } from "lucide-react";
 
 const NorthernLandscapingHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -17,12 +18,23 @@ const NorthernLandscapingHeader = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container flex h-20 items-center justify-between">
-        <Link to="/northern-landscaping" className="flex items-center gap-3">
-          <div className="bg-green-700 p-2 rounded-lg">
-            <Trees className="h-8 w-8 text-white" />
-          </div>
-          <span className="text-xl font-bold text-green-800">Tree & Landscaping</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-green-700 hover:text-green-900 hover:bg-green-100"
+            onClick={() => navigate("/member/dashboard")}
+          >
+            <LayoutDashboard className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+          <Link to="/northern-landscaping" className="flex items-center gap-3">
+            <div className="bg-green-700 p-2 rounded-lg">
+              <Trees className="h-8 w-8 text-white" />
+            </div>
+            <span className="text-xl font-bold text-green-800">Tree & Landscaping</span>
+          </Link>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
