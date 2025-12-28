@@ -29,8 +29,8 @@ export const SocialAccessGuard = ({ children }: SocialAccessGuardProps) => {
           .maybeSingle();
 
         if (!profile) {
-          // No contractor profile, redirect to join
-          navigate("/join-network");
+          // No contractor profile, redirect to pending with state
+          navigate("/social/pending", { state: { reason: "no_profile" } });
           return;
         }
 
