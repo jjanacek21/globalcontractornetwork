@@ -3,6 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+
+// Social Pages (lazy loaded)
+const SocialFeed = lazy(() => import("./pages/social/SocialFeed"));
+const SocialProfile = lazy(() => import("./pages/social/SocialProfile"));
+const SocialMessages = lazy(() => import("./pages/social/SocialMessages"));
+const SocialAccessPending = lazy(() => import("./pages/social/SocialAccessPending"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
