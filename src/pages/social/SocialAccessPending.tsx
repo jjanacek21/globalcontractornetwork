@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, XCircle, Home, RefreshCw } from "lucide-react";
+import { Clock, XCircle, Home, RefreshCw, UserPlus } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 const SocialAccessPending = () => {
-  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | 'no_profile'>('pending');
+  const location = useLocation();
   const [profile, setProfile] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkStatus();
-  }, []);
+    // Check if we were redirected with no_profile reason
+    const state = location.state as { reason?: string } | null;
+    if (state?.reason === "no_profile") {
+      setStatus("no_profile");
+    } else {
+      checkStatus();
+    }
+  }, [location.state]);
 
   const checkStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,6 +91,24 @@ const SocialAccessPending = () => {
                   Unfortunately, your application was not approved. Please contact support for more information.
                 </p>
               </div>
+            </div>
+          )}
+
+          {status === 'no_profile' && (
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                <UserPlus className="h-8 w-8 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">Contractor Profile Required</h3>
+                <p className="text-muted-foreground mt-2">
+                  You need a contractor profile to access the Social Hub. Join the network to connect with other contractors!
+                </p>
+              </div>
+              <Button onClick={() => navigate("/join-network")} className="w-full">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Become a Contractor
+              </Button>
             </div>
           )}
 
