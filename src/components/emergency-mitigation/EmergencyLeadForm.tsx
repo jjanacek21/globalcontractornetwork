@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Phone, Mail, MapPin, Send, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const EmergencyLeadForm = () => {
   const { toast } = useToast();
@@ -28,15 +29,36 @@ export const EmergencyLeadForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Send Telegram notification for emergency leads (high priority)
+      await supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: '🚨 Emergency Mitigation',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          service: formData.service,
+          urgency: 'immediate',
+          notes: formData.message
+        }
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    toast({
-      title: "Request Submitted!",
-      description: "We'll contact you within 15 minutes.",
-    });
+      setIsSubmitted(true);
+      toast({
+        title: "Request Submitted!",
+        description: "We'll contact you within 15 minutes.",
+      });
+    } catch (error) {
+      console.error('Error submitting emergency lead:', error);
+      // Still show success to user even if notification fails
+      setIsSubmitted(true);
+      toast({
+        title: "Request Submitted!",
+        description: "We'll contact you within 15 minutes.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {

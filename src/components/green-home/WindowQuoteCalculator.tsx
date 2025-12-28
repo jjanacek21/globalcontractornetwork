@@ -194,6 +194,22 @@ export const WindowQuoteCalculator = () => {
       }]);
 
       if (error) throw error;
+
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: 'Green Home Solutions - Windows',
+          name,
+          phone,
+          email,
+          address: `${address}, ${city}, FL ${zipCode}`,
+          service: `Windows (${windowSelections.reduce((sum, w) => sum + w.quantity, 0)} units)`,
+          estimateLow: discountedLow,
+          estimateHigh: discountedHigh,
+          notes: `Performance: ${performanceLevel}, Glass: ${glassType}, Discount: ${discount}%`
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
       setShowThankYou(true);
       toast.success("Quote submitted successfully!");
     } catch (error) {
