@@ -34,22 +34,22 @@ export function PackageComparisonTable() {
   const renderValue = (value: boolean | string, isPopular: boolean) => {
     if (typeof value === 'boolean') {
       return value ? (
-        <Check className={`h-5 w-5 ${isPopular ? 'text-amber-500' : 'text-green-500'}`} />
+        <Check className={`h-5 w-5 ${isPopular ? 'text-amber-400' : 'text-green-400'}`} />
       ) : (
-        <X className="h-5 w-5 text-slate-300" />
+        <X className="h-5 w-5 text-slate-600" />
       );
     }
-    return <span className={`text-sm font-medium ${isPopular ? 'text-amber-600' : 'text-slate-700'}`}>{value}</span>;
+    return <span className={`text-sm font-medium ${isPopular ? 'text-amber-400' : 'text-slate-300'}`}>{value}</span>;
   };
 
   return (
-    <section className="py-20 bg-slate-50">
+    <section className="py-20 bg-slate-900">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
             Compare Marketing Packages
           </h2>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
             See exactly what's included in each package to make the right choice for your business.
           </p>
         </div>
@@ -83,15 +83,15 @@ export function PackageComparisonTable() {
               {features.map((feature, index) => (
                 <tr 
                   key={index}
-                  className={`border-b border-slate-100 ${index % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}`}
+                  className={`border-b border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/50' : 'bg-slate-800'}`}
                 >
-                  <td className="p-4 font-medium text-slate-700">{feature.name}</td>
+                  <td className="p-4 font-medium text-slate-300">{feature.name}</td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center">
                       {renderValue(feature.localEssentials, false)}
                     </div>
                   </td>
-                  <td className="p-4 text-center bg-amber-50/50">
+                  <td className="p-4 text-center bg-amber-500/10">
                     <div className="flex justify-center">
                       {renderValue(feature.digitalGrowth, true)}
                     </div>
@@ -103,14 +103,14 @@ export function PackageComparisonTable() {
                   </td>
                 </tr>
               ))}
-              <tr className="bg-slate-100">
+              <tr className="bg-slate-800">
                 <td className="p-6"></td>
                 <td className="p-6 text-center">
-                  <Button onClick={scrollToForm} variant="outline" className="border-slate-300">
+                  <Button onClick={scrollToForm} variant="outline" className="border-slate-600 text-white hover:bg-slate-700">
                     Get Started
                   </Button>
                 </td>
-                <td className="p-6 text-center bg-amber-100/50">
+                <td className="p-6 text-center bg-amber-500/10">
                   <Button 
                     onClick={scrollToForm}
                     className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
@@ -119,7 +119,7 @@ export function PackageComparisonTable() {
                   </Button>
                 </td>
                 <td className="p-6 text-center">
-                  <Button onClick={scrollToForm} variant="outline" className="border-slate-300">
+                  <Button onClick={scrollToForm} variant="outline" className="border-slate-600 text-white hover:bg-slate-700">
                     Get Started
                   </Button>
                 </td>
