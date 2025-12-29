@@ -2710,6 +2710,7 @@ export type Database = {
           customer_phone: string | null
           estimated_price: number | null
           id: string
+          notes: string | null
           priority: string | null
           recommended_package: string | null
           roof_type: string | null
@@ -2730,6 +2731,7 @@ export type Database = {
           customer_phone?: string | null
           estimated_price?: number | null
           id?: string
+          notes?: string | null
           priority?: string | null
           recommended_package?: string | null
           roof_type?: string | null
@@ -2750,6 +2752,7 @@ export type Database = {
           customer_phone?: string | null
           estimated_price?: number | null
           id?: string
+          notes?: string | null
           priority?: string | null
           recommended_package?: string | null
           roof_type?: string | null

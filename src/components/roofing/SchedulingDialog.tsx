@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,7 +48,8 @@ export const SchedulingDialog = ({
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: ""
+    phone: "",
+    notes: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +79,7 @@ export const SchedulingDialog = ({
           customer_name: formData.name,
           customer_email: formData.email,
           customer_phone: formData.phone,
+          notes: formData.notes,
           status: "scheduled"
         }]);
 
@@ -97,7 +100,7 @@ export const SchedulingDialog = ({
           appointmentDate: format(date, "yyyy-MM-dd"),
           appointmentTime: time,
           appointmentType: appointmentType,
-          notes: `Timeline: ${consultationData.timeline}, Budget: ${consultationData.budget}, Sqft: ${consultationData.sqft}`
+          notes: `Timeline: ${consultationData.timeline}, Budget: ${consultationData.budget}, Sqft: ${consultationData.sqft}${formData.notes ? `, Customer Notes: ${formData.notes}` : ''}`
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
@@ -187,6 +190,17 @@ export const SchedulingDialog = ({
               placeholder="(555) 123-4567"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Additional Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Any special requirements, current roof issues, accessibility notes, or questions..."
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={3}
             />
           </div>
 

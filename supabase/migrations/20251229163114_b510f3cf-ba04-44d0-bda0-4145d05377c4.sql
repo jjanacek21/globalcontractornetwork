@@ -1,0 +1,1 @@
+ALTER TABLE public.roofing_consultations ADD COLUMN notes text;
