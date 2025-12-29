@@ -106,7 +106,7 @@ export function InstantEstimateFlow({
     try {
       // First geocode the address
       const geocodeResponse = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoibG92YWJsZWRldiIsImEiOiJjbHJldzlhOHUwNXViMmlxdWxhbHY3bDd4In0.9y4oBFKQqWftXXF4YcLisA&country=US&types=address`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g&country=US&types=address`
       );
       const geocodeData = await geocodeResponse.json();
 
