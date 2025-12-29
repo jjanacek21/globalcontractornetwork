@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye, Video, Users } from "lucide-react";
+import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye, Video, Users, Calendar, Palette, AlertTriangle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
 import { SchedulingDialog } from "./SchedulingDialog";
+import { RoofPhotoUpload } from "./RoofPhotoUpload";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -31,6 +32,15 @@ interface EstimateResult {
   roofComplexity?: string;
   flatSqft?: number;
   adjustedSqft?: number;
+  // Mixed roof detection
+  hasMixedRoof?: boolean;
+  shingleSection?: { sqft: number; color: string };
+  flatSection?: { sqft: number; color: string };
+  primaryRoofColor?: string;
+  // Age estimation
+  estimatedAgeYears?: number;
+  ageConfidence?: string;
+  degradationNotes?: string;
 }
 
 interface AddressSuggestion {
@@ -64,20 +74,18 @@ const formatCurrency = (amount: number) => {
 
 // Apply pitch factors based on roof complexity
 const applyPitchFactor = (flatSqft: number, complexity: string): { adjustedSqft: number; factor: number } => {
-  // Step 1: Apply 1.1x for true sqft from flat satellite image
   const trueSqft = flatSqft * 1.1;
   
-  // Step 2: Apply complexity factor
   let complexityFactor = 1.0;
   switch (complexity) {
     case 'gable':
-      complexityFactor = 1.10; // +10% for 2-sided roofs
+      complexityFactor = 1.10;
       break;
     case 'hip':
-      complexityFactor = 1.15; // +15% for 4-sided roofs
+      complexityFactor = 1.15;
       break;
     case 'complex':
-      complexityFactor = 1.17; // +17% for complex cut-up roofs
+      complexityFactor = 1.17;
       break;
     case 'flat':
     default:
@@ -116,6 +124,7 @@ export function InstantEstimateFlow({
   const [showScheduling, setShowScheduling] = useState(false);
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const debounceRef = useRef<NodeJS.Timeout>();
+  const saveDebounceRef = useRef<NodeJS.Timeout>();
 
   const resetFlow = () => {
     setStep("address");
@@ -135,6 +144,33 @@ export function InstantEstimateFlow({
     }
     onOpenChange(open);
   };
+
+  // Save manual adjustments to cache (debounced)
+  useEffect(() => {
+    if (manualSquares === null || !address) return;
+    
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    
+    saveDebounceRef.current = setTimeout(async () => {
+      const normalizedAddr = normalizeAddress(address);
+      const { error } = await supabase
+        .from('roof_analysis_cache')
+        .update({
+          user_adjusted_sqft: manualSquares * 100,
+          user_adjusted_squares: manualSquares,
+          updated_at: new Date().toISOString()
+        })
+        .eq('normalized_address', normalizedAddr);
+      
+      if (!error) {
+        console.log('Saved adjusted measurement:', manualSquares);
+      }
+    }, 1000);
+    
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    };
+  }, [manualSquares, address]);
 
   // Address autocomplete
   useEffect(() => {
@@ -181,7 +217,6 @@ export function InstantEstimateFlow({
       return;
     }
 
-    // If we don't have coordinates yet, geocode the address
     if (!coordinates) {
       try {
         const geocodeResponse = await fetch(
@@ -216,8 +251,9 @@ export function InstantEstimateFlow({
       "Checking for cached measurements...",
       "Fetching satellite imagery...",
       "Detecting roof boundaries...",
+      "Analyzing roof color and type...",
+      "Estimating roof age...",
       "Calculating roof area...",
-      "Applying pitch factor...",
       "Generating estimate..."
     ];
 
@@ -227,7 +263,7 @@ export function InstantEstimateFlow({
         setProgressMessage(messages[messageIndex]);
         messageIndex++;
       }
-    }, 800);
+    }, 700);
 
     try {
       const normalizedAddr = normalizeAddress(address);
@@ -243,12 +279,33 @@ export function InstantEstimateFlow({
       let flatSqft: number;
       let roofComplexity: string;
       let confidence: string;
+      let hasMixedRoof = false;
+      let shingleSection: { sqft: number; color: string } | undefined;
+      let flatSection: { sqft: number; color: string } | undefined;
+      let primaryRoofColor: string | undefined;
+      let estimatedAgeYears: number | undefined;
+      let ageConfidence: string | undefined;
+      let degradationNotes: string | undefined;
 
       if (cached) {
         console.log("Using cached roof analysis:", cached);
+        // Check if user previously adjusted
+        if (cached.user_adjusted_squares) {
+          setManualSquares(Number(cached.user_adjusted_squares));
+        }
         flatSqft = Number(cached.flat_sqft);
         roofComplexity = cached.roof_complexity || 'gable';
         confidence = cached.confidence || 'medium';
+        hasMixedRoof = cached.has_mixed_roof || false;
+        if (cached.shingle_section_sqft) {
+          shingleSection = { sqft: Number(cached.shingle_section_sqft), color: cached.shingle_section_color || 'unknown' };
+        }
+        if (cached.flat_section_sqft) {
+          flatSection = { sqft: Number(cached.flat_section_sqft), color: cached.flat_section_color || 'unknown' };
+        }
+        estimatedAgeYears = cached.estimated_roof_age_years || undefined;
+        ageConfidence = cached.roof_age_confidence || undefined;
+        degradationNotes = cached.degradation_notes || undefined;
         setProgressMessage("Found cached measurement!");
       } else {
         // Call the AI vision function
@@ -262,11 +319,19 @@ export function InstantEstimateFlow({
 
         if (error) throw error;
 
-        flatSqft = data.estimation.estimatedSqft;
-        roofComplexity = data.estimation.roofComplexity || 'gable';
-        confidence = data.estimation.confidence || 'medium';
+        const estimation = data.estimation;
+        flatSqft = estimation.estimatedSqft;
+        roofComplexity = estimation.roofComplexity || 'gable';
+        confidence = estimation.confidence || 'medium';
+        hasMixedRoof = estimation.hasMixedRoof || false;
+        shingleSection = estimation.shingleSection || undefined;
+        flatSection = estimation.flatSection || undefined;
+        primaryRoofColor = estimation.primaryRoofColor || undefined;
+        estimatedAgeYears = estimation.estimatedAgeYears || undefined;
+        ageConfidence = estimation.ageConfidence || undefined;
+        degradationNotes = estimation.degradationNotes || undefined;
 
-        // Cache the result
+        // Cache the result with new fields
         const { adjustedSqft, factor } = applyPitchFactor(flatSqft, roofComplexity);
         await supabase.from('roof_analysis_cache').insert({
           address,
@@ -277,12 +342,21 @@ export function InstantEstimateFlow({
           adjusted_sqft: adjustedSqft,
           total_squares: adjustedSqft / 100,
           roof_complexity: roofComplexity,
-          roof_shape: data.estimation.roofShape,
+          roof_shape: estimation.roofShape,
           confidence,
-          methodology: data.estimation.methodology,
-          satellite_image_url: data.estimation.satelliteImageUrl,
+          methodology: estimation.methodology,
+          satellite_image_url: estimation.satelliteImageUrl,
           pitch_factor: 1.1,
-          complexity_factor: factor / 1.1
+          complexity_factor: factor / 1.1,
+          // New fields
+          has_mixed_roof: hasMixedRoof,
+          shingle_section_sqft: shingleSection?.sqft || null,
+          shingle_section_color: shingleSection?.color || null,
+          flat_section_sqft: flatSection?.sqft || null,
+          flat_section_color: flatSection?.color || null,
+          estimated_roof_age_years: estimatedAgeYears || null,
+          roof_age_confidence: ageConfidence || null,
+          degradation_notes: degradationNotes || null
         });
       }
 
@@ -305,7 +379,14 @@ export function InstantEstimateFlow({
         estimateHigh,
         roofComplexity,
         flatSqft,
-        adjustedSqft
+        adjustedSqft,
+        hasMixedRoof,
+        shingleSection,
+        flatSection,
+        primaryRoofColor,
+        estimatedAgeYears,
+        ageConfidence,
+        degradationNotes
       });
 
       setStep("results");
@@ -351,11 +432,25 @@ export function InstantEstimateFlow({
     }
   };
 
+  const getAgeLabel = (years: number) => {
+    if (years <= 5) return 'New';
+    if (years <= 12) return 'Good';
+    if (years <= 20) return 'Aging';
+    return 'End of Life';
+  };
+
+  const getAgeColor = (years: number) => {
+    if (years <= 5) return 'bg-green-100 text-green-700';
+    if (years <= 12) return 'bg-blue-100 text-blue-700';
+    if (years <= 20) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+  };
+
   if (!selectedPackage) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         {step === "address" && (
           <>
             <DialogHeader>
@@ -383,7 +478,6 @@ export function InstantEstimateFlow({
                   autoComplete="off"
                 />
                 
-                {/* Autocomplete dropdown */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
                     {suggestions.map((suggestion, idx) => (
@@ -430,7 +524,6 @@ export function InstantEstimateFlow({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Satellite preview */}
               <div className="rounded-lg overflow-hidden border">
                 <img 
                   src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
@@ -515,6 +608,87 @@ export function InstantEstimateFlow({
                 </CardContent>
               </Card>
 
+              {/* Roof Age & Color Info */}
+              {(estimate.estimatedAgeYears || estimate.primaryRoofColor) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {estimate.estimatedAgeYears && (
+                    <Card>
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Roof Age</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">~{estimate.estimatedAgeYears} years</span>
+                          <Badge className={`text-xs ${getAgeColor(estimate.estimatedAgeYears)}`}>
+                            {getAgeLabel(estimate.estimatedAgeYears)}
+                          </Badge>
+                        </div>
+                        {estimate.ageConfidence && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {estimate.ageConfidence} confidence
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                  {estimate.primaryRoofColor && (
+                    <Card>
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Palette className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Roof Color</span>
+                        </div>
+                        <span className="font-semibold capitalize">{estimate.primaryRoofColor}</span>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Mixed Roof Detection */}
+              {estimate.hasMixedRoof && (estimate.shingleSection || estimate.flatSection) && (
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Home className="h-5 w-5 text-amber-600" />
+                      <span className="font-medium text-amber-800">Mixed Roof Detected</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {estimate.shingleSection && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Shingle Section</p>
+                          <p className="font-medium">{Math.round(estimate.shingleSection.sqft).toLocaleString()} sq ft</p>
+                          <p className="text-xs text-amber-700 capitalize">{estimate.shingleSection.color}</p>
+                        </div>
+                      )}
+                      {estimate.flatSection && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Flat Section</p>
+                          <p className="font-medium">{Math.round(estimate.flatSection.sqft).toLocaleString()} sq ft</p>
+                          <p className="text-xs text-amber-700 capitalize">{estimate.flatSection.color}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Degradation Notes */}
+              {estimate.degradationNotes && estimate.estimatedAgeYears && estimate.estimatedAgeYears > 15 && (
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-orange-800">Condition Notes</p>
+                        <p className="text-xs text-orange-700">{estimate.degradationNotes}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Measurement with manual adjustment */}
               <Card>
                 <CardContent className="p-4">
@@ -579,6 +753,24 @@ export function InstantEstimateFlow({
                   <p className="text-sm text-muted-foreground mt-1">Estimated Total</p>
                 </CardContent>
               </Card>
+
+              {/* Photo Upload */}
+              <RoofPhotoUpload
+                address={address}
+                normalizedAddress={normalizeAddress(address)}
+                onAnalysisComplete={(analysis) => {
+                  // Update estimate with photo analysis data
+                  if (estimate) {
+                    setEstimate({
+                      ...estimate,
+                      primaryRoofColor: analysis.detectedColor,
+                      estimatedAgeYears: analysis.estimatedAgeYears,
+                      ageConfidence: analysis.ageConfidence,
+                      degradationNotes: analysis.analysisNotes
+                    });
+                  }
+                }}
+              />
 
               {/* Key Features */}
               <div className="space-y-2">
