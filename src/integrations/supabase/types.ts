@@ -2624,19 +2624,29 @@ export type Database = {
           complexity_factor: number | null
           confidence: string | null
           created_at: string
+          degradation_notes: string | null
+          estimated_roof_age_years: number | null
           expires_at: string | null
+          flat_section_color: string | null
+          flat_section_sqft: number | null
           flat_sqft: number
+          has_mixed_roof: boolean | null
           id: string
           latitude: number
           longitude: number
           methodology: string | null
           normalized_address: string
           pitch_factor: number | null
+          roof_age_confidence: string | null
           roof_complexity: string | null
           roof_shape: string | null
           satellite_image_url: string | null
+          shingle_section_color: string | null
+          shingle_section_sqft: number | null
           total_squares: number | null
           updated_at: string
+          user_adjusted_sqft: number | null
+          user_adjusted_squares: number | null
         }
         Insert: {
           address: string
@@ -2644,19 +2654,29 @@ export type Database = {
           complexity_factor?: number | null
           confidence?: string | null
           created_at?: string
+          degradation_notes?: string | null
+          estimated_roof_age_years?: number | null
           expires_at?: string | null
+          flat_section_color?: string | null
+          flat_section_sqft?: number | null
           flat_sqft: number
+          has_mixed_roof?: boolean | null
           id?: string
           latitude: number
           longitude: number
           methodology?: string | null
           normalized_address: string
           pitch_factor?: number | null
+          roof_age_confidence?: string | null
           roof_complexity?: string | null
           roof_shape?: string | null
           satellite_image_url?: string | null
+          shingle_section_color?: string | null
+          shingle_section_sqft?: number | null
           total_squares?: number | null
           updated_at?: string
+          user_adjusted_sqft?: number | null
+          user_adjusted_squares?: number | null
         }
         Update: {
           address?: string
@@ -2664,21 +2684,81 @@ export type Database = {
           complexity_factor?: number | null
           confidence?: string | null
           created_at?: string
+          degradation_notes?: string | null
+          estimated_roof_age_years?: number | null
           expires_at?: string | null
+          flat_section_color?: string | null
+          flat_section_sqft?: number | null
           flat_sqft?: number
+          has_mixed_roof?: boolean | null
           id?: string
           latitude?: number
           longitude?: number
           methodology?: string | null
           normalized_address?: string
           pitch_factor?: number | null
+          roof_age_confidence?: string | null
           roof_complexity?: string | null
           roof_shape?: string | null
           satellite_image_url?: string | null
+          shingle_section_color?: string | null
+          shingle_section_sqft?: number | null
           total_squares?: number | null
           updated_at?: string
+          user_adjusted_sqft?: number | null
+          user_adjusted_squares?: number | null
         }
         Relationships: []
+      }
+      roof_photos: {
+        Row: {
+          address: string
+          analysis_result: Json | null
+          cache_id: string | null
+          created_at: string
+          detected_color: string | null
+          detected_condition: string | null
+          detected_material: string | null
+          id: string
+          normalized_address: string
+          photo_type: string | null
+          photo_url: string
+        }
+        Insert: {
+          address: string
+          analysis_result?: Json | null
+          cache_id?: string | null
+          created_at?: string
+          detected_color?: string | null
+          detected_condition?: string | null
+          detected_material?: string | null
+          id?: string
+          normalized_address: string
+          photo_type?: string | null
+          photo_url: string
+        }
+        Update: {
+          address?: string
+          analysis_result?: Json | null
+          cache_id?: string | null
+          created_at?: string
+          detected_color?: string | null
+          detected_condition?: string | null
+          detected_material?: string | null
+          id?: string
+          normalized_address?: string
+          photo_type?: string | null
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roof_photos_cache_id_fkey"
+            columns: ["cache_id"]
+            isOneToOne: false
+            referencedRelation: "roof_analysis_cache"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roofing_admins: {
         Row: {

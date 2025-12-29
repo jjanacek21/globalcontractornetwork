@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.send-lead-confirmation]
 verify_jwt = false
+
+[functions.analyze-roof-photo]
+verify_jwt = false

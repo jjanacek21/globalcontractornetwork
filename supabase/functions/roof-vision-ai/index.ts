@@ -24,6 +24,22 @@ interface VisionEstimation {
   roofShape: string;
   roofComplexity: 'flat' | 'gable' | 'hip' | 'complex';
   satelliteImageUrl: string;
+  // Mixed roof detection
+  hasMixedRoof?: boolean;
+  shingleSection?: {
+    sqft: number;
+    color: string;
+  };
+  flatSection?: {
+    sqft: number;
+    color: string;
+  };
+  // Roof age estimation
+  estimatedAgeYears?: number;
+  ageConfidence?: 'high' | 'medium' | 'low';
+  degradationNotes?: string;
+  // Primary roof color
+  primaryRoofColor?: string;
 }
 
 serve(async (req) => {
@@ -102,6 +118,53 @@ ROOF COMPLEXITY DETECTION (Critical for pricing):
 - "hip": 4-sided roof with hips meeting at corners, slopes on all 4 sides
 - "complex": Multiple facets, dormers, different sections, multiple ridges, valleys
 
+MIXED ROOF TYPE DETECTION (Critical for Florida homes):
+Many Florida homes have BOTH pitched shingle sections AND flat sections. Common patterns:
+- Main house with shingle roof + flat-roofed addition/carport/lanai
+- Two-story with shingle + flat section over garage
+- Ranch home with shingle + flat lanai/patio cover
+- Commercial-residential hybrid buildings
+
+If you detect BOTH roof types on the same building:
+1. Estimate each section separately
+2. Note the approximate color of each section:
+   - Shingle colors: gray, black, brown, tan, red, blue, green, weathered-gray
+   - Flat roof colors: white (reflective coating), black (tar/rubber), silver (metal), tan
+
+ROOF COLOR DETECTION:
+- Shingle roofs: Look at the dominant color visible from satellite
+- Flat roofs: White = likely coated/reflective, Black = tar/EPDM rubber, Silver = metal
+- Color affects coating/replacement recommendations
+
+ROOF AGE ESTIMATION (From satellite imagery):
+Analyze shingle degradation patterns to estimate roof age:
+
+NEW (0-5 years):
+- Uniform dark color
+- Sharp, well-defined edges on shingles
+- No visible streaking or discoloration
+- Consistent texture across entire roof
+
+MODERATE WEAR (5-12 years):
+- Some color fading, especially on south-facing slopes
+- Early signs of dark streaking (algae)
+- Minor granule loss visible as lighter patches
+- Still relatively uniform appearance
+
+SIGNIFICANT WEAR (12-20 years):
+- Obvious color inconsistency across roof
+- Heavy dark streaking (algae/moss growth)
+- Visible granule loss creating mottled appearance
+- Curling edges visible on some shingles
+- Possible moss growth in shaded areas
+
+END OF LIFE (20+ years):
+- Severe discoloration and weathering
+- Large patches of missing granules
+- Visible sagging or warping
+- Multiple patched areas
+- Very faded, almost gray appearance regardless of original color
+
 IMPORTANT: The frontend will apply these adjustments to your flat footprint estimate:
 - 1.1x multiplier for satellite angle correction (converting overhead view to true area)
 - Additional complexity factor: +10% for gable, +15% for hip, +17% for complex roofs
@@ -120,7 +183,14 @@ Respond ONLY with valid JSON in this exact format:
   "confidence": "high" | "medium" | "low",
   "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex" | "hip" | "gable" | "flat",
   "roofComplexity": "flat" | "gable" | "hip" | "complex",
-  "methodology": "Brief explanation including any shadow/tree correction you applied"
+  "hasMixedRoof": boolean (true if both shingle and flat sections detected),
+  "shingleSection": { "sqft": number, "color": "gray" | "black" | "brown" | "tan" | "red" | "weathered-gray" | "other" } | null,
+  "flatSection": { "sqft": number, "color": "white" | "black" | "silver" | "tan" } | null,
+  "primaryRoofColor": "string describing dominant roof color",
+  "estimatedAgeYears": number (best estimate of roof age in years),
+  "ageConfidence": "high" | "medium" | "low",
+  "degradationNotes": "Brief description of visible wear indicators",
+  "methodology": "Brief explanation including any shadow/tree correction and age assessment reasoning"
 }`;
 
     const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for the property located at: ${address}
@@ -132,7 +202,14 @@ Please:
 2. Trace the COMPLETE building outline, extending through any shadows or tree coverage
 3. Estimate the FLAT FOOTPRINT area in square feet (do NOT apply pitch factor)
 4. Determine the roof complexity (flat, gable, hip, or complex)
-5. Provide your confidence level based on visibility
+5. Check if this is a MIXED ROOF (both shingle pitched sections AND flat sections)
+6. If mixed roof detected, estimate each section's square footage and color separately
+7. Detect the primary roof color(s) visible from satellite
+8. ESTIMATE THE ROOF AGE based on shingle degradation patterns:
+   - Look for color fading, streaking, granule loss, moss/algae growth
+   - Check for curling, warping, or patched areas
+   - Consider the uniformity of the roof surface
+9. Provide your confidence level based on visibility
 
 REMEMBER: If shadows cover parts of the roof, estimate the FULL building footprint anyway by tracing through the shadows.`;
 
@@ -197,6 +274,13 @@ REMEMBER: If shadows cover parts of the roof, estimate the FULL building footpri
         estimation = {
           ...parsed,
           roofComplexity: parsed.roofComplexity || 'gable',
+          hasMixedRoof: parsed.hasMixedRoof || false,
+          shingleSection: parsed.shingleSection || null,
+          flatSection: parsed.flatSection || null,
+          primaryRoofColor: parsed.primaryRoofColor || 'unknown',
+          estimatedAgeYears: parsed.estimatedAgeYears || null,
+          ageConfidence: parsed.ageConfidence || 'low',
+          degradationNotes: parsed.degradationNotes || null,
           satelliteImageUrl
         };
       } else {
@@ -211,6 +295,7 @@ REMEMBER: If shadows cover parts of the roof, estimate the FULL building footpri
         confidence: 'low',
         roofShape: 'unknown',
         roofComplexity: 'gable',
+        hasMixedRoof: false,
         methodology: 'Could not analyze image clearly. Using average residential estimate.',
         satelliteImageUrl
       };
