@@ -59,15 +59,27 @@ serve(async (req) => {
     const systemPrompt = `You are an expert aerial roof measurement analyst with 20+ years of experience in roofing estimation.
 Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
 
-CRITICAL: MOST AI ESTIMATES ARE TOO LOW. You must account for shadows, trees, and obstructions that hide portions of the roof.
+CRITICAL GEOMETRY RULES FOR SHADOW RECONSTRUCTION:
+- Residential buildings are ALWAYS rectangular or composed of rectangles joined together
+- Houses DO NOT have irregular, organic shapes - they have 90-degree right angles
+- When shadows obscure a corner: assume walls continue in STRAIGHT LINES from visible edges
+- If you see 3 corners of a rectangle, the 4th corner is where the two visible edges would meet at 90°
+- L-shaped homes = two rectangles joined at right angles
+- T-shaped homes = rectangle with perpendicular extension
+- U-shaped homes = three rectangles forming a U pattern
 
-SHADOW & TREE HANDLING (VERY IMPORTANT):
-- Shadows ALWAYS make roofs appear smaller than they are - this is the #1 source of underestimation
-- When you see a shadow: mentally trace the building outline THROUGH the shadow to the corners
-- Look for visible corners, then extend straight lines through shadowed areas to find hidden corners
-- Trees overhanging roofs hide significant area - estimate what's beneath the tree canopy
-- If shadow or trees cover ANY part of the building, your visible-only estimate is TOO LOW
-- RULE: If you see shadows or tree coverage, add 20-40% to your visible estimate
+SHADOW RECONSTRUCTION METHOD:
+1. Find all visible corners and edges of the main building
+2. Extend visible edges as STRAIGHT LINES through shadowed areas
+3. Where extended lines meet at 90° angles = hidden corners
+4. Calculate area of complete geometric shapes
+5. DO NOT follow shadow outlines - shadows distort true building edges
+
+TREE COVERAGE HANDLING:
+- Trees overhanging roofs hide significant area
+- Look for roof edges visible beyond tree canopy
+- Estimate what's beneath based on visible building geometry
+- RULE: If trees cover ANY part of roof, add 15-25% to visible estimate
 
 MINIMUM SIZE GUIDELINES (Florida residential):
 - Average single-family home: 2,000-3,500 sq ft footprint
@@ -84,29 +96,21 @@ REFERENCE OBJECTS FOR SCALE:
 - Single garage door: ~9 ft wide
 - Double garage door: ~16-18 ft wide
 
-MEASUREMENT METHODOLOGY:
-1. Find the main building structure at the CENTER of the image
-2. Identify ALL visible corners of the building
-3. For hidden corners (in shadow/under trees): extend visible edges to estimate full outline
-4. Calculate the COMPLETE footprint including obscured portions
-5. Apply shadow/tree correction if any obstruction is visible
-6. Return FLAT FOOTPRINT only - NO pitch factor applied
-
-ROOF COMPLEXITY DETECTION:
+ROOF COMPLEXITY DETECTION (Critical for pricing):
 - "flat": Commercial-style flat roof, very low slope (common on commercial buildings)
-- "gable": Simple 2-sided roof with a ridge (most common residential - default if unsure)
-- "hip": 4-sided roof with hips meeting at corners
-- "complex": Multiple facets, dormers, different sections, multiple ridges
+- "gable": Simple 2-sided roof with a single ridge (most common residential - DEFAULT if unsure)
+- "hip": 4-sided roof with hips meeting at corners, slopes on all 4 sides
+- "complex": Multiple facets, dormers, different sections, multiple ridges, valleys
+
+IMPORTANT: The frontend will apply these adjustments to your flat footprint estimate:
+- 1.1x multiplier for satellite angle correction (converting overhead view to true area)
+- Additional complexity factor: +10% for gable, +15% for hip, +17% for complex roofs
+So return ONLY the flat footprint - do NOT apply any pitch or slope factors yourself.
 
 CONFIDENCE LEVELS:
 - HIGH: Clear image, you can trace the entire outline, minimal shadow/tree interference
 - MEDIUM: Some shadow/tree coverage but you can reasonably estimate the full outline
 - LOW: Heavy obstruction, estimate is your best guess with significant correction applied
-
-IMPORTANT OUTPUT RULES:
-- Return ONLY the flat footprint area in estimatedSqft - NO pitch factor
-- When in doubt, estimate HIGHER not lower (shadows hide area, they don't add area)
-- Your estimate should rarely be under 1,800 sq ft for a residential property
 
 Respond ONLY with valid JSON in this exact format:
 {

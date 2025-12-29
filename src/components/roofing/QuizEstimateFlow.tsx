@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
+import { MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign, Eye, Edit2, Ruler } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
+import { SalesAvatar } from "./SalesAvatar";
+import { cn } from "@/lib/utils";
+
+const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
 interface QuizEstimateFlowProps {
   open: boolean;
@@ -33,7 +38,12 @@ interface TieredRecommendation {
   reason: string;
 }
 
-type Step = "address" | "quiz" | "analyzing" | "results";
+interface AddressSuggestion {
+  place_name: string;
+  center: [number, number];
+}
+
+type Step = "address" | "verify" | "quiz" | "analyzing" | "results";
 
 const parsePrice = (priceStr: string): { low: number; high: number } | null => {
   const cleaned = priceStr.replace(/[,$]/g, '').replace('/sq', '');
@@ -57,49 +67,65 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+// Original quiz questions with emoji icons
 const quizQuestions = [
   {
     id: "roofType",
-    question: "What type of roof do you currently have?",
+    question: "Hi! I'm here to help you find the perfect roof. First, what type of roof do you currently have?",
     options: [
-      { value: "shingle", label: "Shingle (Asphalt)" },
-      { value: "tile", label: "Tile (Clay/Concrete)" },
-      { value: "metal", label: "Metal" },
-      { value: "flat", label: "Flat Roof" },
-      { value: "unknown", label: "Not Sure" }
+      { label: "Shingle Roof", value: "shingle", icon: "🏠" },
+      { label: "Metal Roof", value: "metal", icon: "🔧" },
+      { label: "Tile Roof", value: "tile", icon: "🏛️" },
+      { label: "Flat Roof", value: "flat", icon: "📦" },
+      { label: "Not Sure", value: "unknown", icon: "❓" }
     ]
   },
   {
     id: "priority",
-    question: "What's most important to you?",
+    question: "Great choice! What matters most to you in a new roof?",
     options: [
-      { value: "budget", label: "Staying within budget" },
-      { value: "value", label: "Best value for money" },
-      { value: "quality", label: "Premium quality & durability" },
-      { value: "protection", label: "Maximum weather protection" }
+      { label: "Best Price", value: "budget", icon: "💰" },
+      { label: "Maximum Durability", value: "durability", icon: "💪" },
+      { label: "Beautiful Appearance", value: "appearance", icon: "✨" },
+      { label: "Energy Efficiency", value: "efficiency", icon: "⚡" }
     ]
   },
   {
     id: "timeline",
-    question: "When do you need the work done?",
+    question: "How long do you plan to stay in this home?",
     options: [
-      { value: "asap", label: "As soon as possible" },
-      { value: "1-3months", label: "Within 1-3 months" },
-      { value: "3-6months", label: "Within 3-6 months" },
-      { value: "researching", label: "Just researching for now" }
+      { label: "1-5 Years", value: "short", icon: "📅" },
+      { label: "5-15 Years", value: "medium", icon: "🏡" },
+      { label: "Forever Home", value: "long", icon: "🏰" }
     ]
   },
   {
     id: "budget",
-    question: "What's your approximate budget?",
+    question: "What's your budget range per roofing square (100 sq ft)?",
     options: [
-      { value: "under10k", label: "Under $10,000" },
-      { value: "10-20k", label: "$10,000 - $20,000" },
-      { value: "20-30k", label: "$20,000 - $30,000" },
-      { value: "over30k", label: "$30,000+" }
+      { label: "Economy ($575-$700)", value: "economy", icon: "💵" },
+      { label: "Mid-Range ($700-$950)", value: "mid", icon: "💳" },
+      { label: "Premium ($1,000+)", value: "premium", icon: "💎" }
     ]
   }
 ];
+
+// Apply pitch factors based on roof complexity
+const applyPitchFactor = (flatSqft: number, complexity: string): { adjustedSqft: number; factor: number } => {
+  const trueSqft = flatSqft * 1.1;
+  let complexityFactor = 1.0;
+  switch (complexity) {
+    case 'gable': complexityFactor = 1.10; break;
+    case 'hip': complexityFactor = 1.15; break;
+    case 'complex': complexityFactor = 1.17; break;
+    default: complexityFactor = 1.0;
+  }
+  return { adjustedSqft: trueSqft * complexityFactor, factor: 1.1 * complexityFactor };
+};
+
+const normalizeAddress = (addr: string): string => {
+  return addr.toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9\s]/g, '').trim();
+};
 
 export function QuizEstimateFlow({ 
   open, 
@@ -109,6 +135,9 @@ export function QuizEstimateFlow({
 }: QuizEstimateFlowProps) {
   const [step, setStep] = useState<Step>("address");
   const [address, setAddress] = useState("");
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [quizStep, setQuizStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({
     roofType: "",
@@ -116,75 +145,121 @@ export function QuizEstimateFlow({
     timeline: "",
     budget: ""
   });
+  const [isSpeaking, setIsSpeaking] = useState(true);
   const [progressMessage, setProgressMessage] = useState("");
   const [totalSquares, setTotalSquares] = useState(0);
+  const [roofComplexity, setRoofComplexity] = useState("gable");
   const [recommendations, setRecommendations] = useState<TieredRecommendation[]>([]);
+  const [manualSquares, setManualSquares] = useState<number | null>(null);
+  const [isEditingSquares, setIsEditingSquares] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout>();
 
   const resetFlow = () => {
     setStep("address");
     setAddress("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setCoordinates(null);
     setQuizStep(0);
     setAnswers({ roofType: "", priority: "", timeline: "", budget: "" });
     setProgressMessage("");
     setTotalSquares(0);
+    setRoofComplexity("gable");
     setRecommendations([]);
+    setManualSquares(null);
+    setIsEditingSquares(false);
   };
 
   const handleClose = (open: boolean) => {
-    if (!open) {
-      resetFlow();
-    }
+    if (!open) resetFlow();
     onOpenChange(open);
   };
 
+  // Speaking animation
+  useEffect(() => {
+    setIsSpeaking(true);
+    const timer = setTimeout(() => setIsSpeaking(false), 2000);
+    return () => clearTimeout(timer);
+  }, [quizStep, step]);
+
+  // Address autocomplete
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (address.length < 3) { setSuggestions([]); return; }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=US&types=address&limit=5`
+        );
+        const data = await response.json();
+        if (data.features) {
+          setSuggestions(data.features.map((f: any) => ({ place_name: f.place_name, center: f.center })));
+          setShowSuggestions(true);
+        }
+      } catch (error) { console.error("Geocoding error:", error); }
+    }, 300);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [address]);
+
+  const selectAddress = (suggestion: AddressSuggestion) => {
+    setAddress(suggestion.place_name);
+    setCoordinates({ lng: suggestion.center[0], lat: suggestion.center[1] });
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  const verifyAddress = async () => {
+    if (!address.trim()) { toast.error("Please enter your property address"); return; }
+
+    if (!coordinates) {
+      try {
+        const geocodeResponse = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=US&types=address`
+        );
+        const geocodeData = await geocodeResponse.json();
+        if (!geocodeData.features || geocodeData.features.length === 0) {
+          toast.error("Could not find that address."); return;
+        }
+        const [longitude, latitude] = geocodeData.features[0].center;
+        setCoordinates({ lat: latitude, lng: longitude });
+        setAddress(geocodeData.features[0].place_name);
+      } catch (error) { toast.error("Error finding address."); return; }
+    }
+    setStep("verify");
+  };
+
+  const startQuiz = () => setStep("quiz");
+
   const getRecommendations = (squares: number, quizAnswers: QuizAnswers): TieredRecommendation[] => {
-    // Filter packages based on roof type preference
     let relevantPackages = [...packages];
     
     if (quizAnswers.roofType === "tile") {
       relevantPackages = packages.filter(p => 
-        p.name.toLowerCase().includes("tile") || 
-        p.name.toLowerCase().includes("refresh")
+        p.name.toLowerCase().includes("tile") || p.name.toLowerCase().includes("refresh")
       );
-      // If no tile packages, fall back to all
-      if (relevantPackages.length < 3) {
-        relevantPackages = packages;
-      }
+      if (relevantPackages.length < 3) relevantPackages = packages;
     } else if (quizAnswers.roofType === "metal") {
       relevantPackages = packages.filter(p => 
-        p.name.toLowerCase().includes("metal") || 
-        p.name.toLowerCase().includes("collar") ||
-        p.name.toLowerCase().includes("platinum") ||
-        p.name.toLowerCase().includes("ultimate")
+        p.name.toLowerCase().includes("metal") || p.name.toLowerCase().includes("collar") ||
+        p.name.toLowerCase().includes("platinum") || p.name.toLowerCase().includes("ultimate")
       );
-      if (relevantPackages.length < 3) {
-        relevantPackages = packages;
-      }
+      if (relevantPackages.length < 3) relevantPackages = packages;
     }
 
-    // Sort by price
     const sortedPackages = relevantPackages
       .filter(p => parsePrice(p.pricePerSquare) !== null)
-      .sort((a, b) => {
-        const priceA = parsePrice(a.pricePerSquare)?.low || 0;
-        const priceB = parsePrice(b.pricePerSquare)?.low || 0;
-        return priceA - priceB;
-      });
+      .sort((a, b) => (parsePrice(a.pricePerSquare)?.low || 0) - (parsePrice(b.pricePerSquare)?.low || 0));
 
-    if (sortedPackages.length < 3) {
-      return [];
-    }
+    if (sortedPackages.length < 3) return [];
 
-    // Select good, better, best based on priority
-    let goodIdx = 0;
-    let betterIdx = Math.floor(sortedPackages.length / 2);
-    let bestIdx = sortedPackages.length - 1;
+    let goodIdx = 0, betterIdx = Math.floor(sortedPackages.length / 2), bestIdx = sortedPackages.length - 1;
 
-    // Adjust based on budget
-    if (quizAnswers.budget === "under10k") {
+    if (quizAnswers.budget === "economy") {
       betterIdx = Math.min(2, sortedPackages.length - 1);
       bestIdx = Math.min(4, sortedPackages.length - 1);
-    } else if (quizAnswers.budget === "over30k") {
+    } else if (quizAnswers.budget === "premium") {
       goodIdx = Math.max(0, sortedPackages.length - 5);
       betterIdx = Math.max(0, sortedPackages.length - 3);
     }
@@ -192,14 +267,11 @@ export function QuizEstimateFlow({
     const createRec = (pkg: RoofingPackage, tier: "good" | "better" | "best"): TieredRecommendation => {
       const price = parsePrice(pkg.pricePerSquare)!;
       return {
-        tier,
-        package: pkg,
+        tier, package: pkg,
         estimateLow: Math.round(price.low * squares),
         estimateHigh: Math.round(price.high * squares),
-        reason: tier === "good" 
-          ? "Best for budget-conscious homeowners"
-          : tier === "better"
-          ? "Recommended for best value"
+        reason: tier === "good" ? "Best for budget-conscious homeowners"
+          : tier === "better" ? "Recommended for best value"
           : "Premium protection and durability"
       };
     };
@@ -211,45 +283,29 @@ export function QuizEstimateFlow({
     ];
   };
 
-  const startQuiz = () => {
-    if (!address.trim()) {
-      toast.error("Please enter your property address");
-      return;
-    }
-    setStep("quiz");
-  };
-
   const handleQuizAnswer = (questionId: string, value: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
-  };
-
-  const nextQuizStep = () => {
-    const currentQuestion = quizQuestions[quizStep];
-    if (!answers[currentQuestion.id as keyof QuizAnswers]) {
-      toast.error("Please select an option");
-      return;
-    }
-
-    if (quizStep < quizQuestions.length - 1) {
-      setQuizStep(quizStep + 1);
-    } else {
-      analyzeAndRecommend();
-    }
+    // Auto-advance to next question
+    setTimeout(() => {
+      if (quizStep < quizQuestions.length - 1) {
+        setQuizStep(quizStep + 1);
+      } else {
+        analyzeAndRecommend();
+      }
+    }, 300);
   };
 
   const prevQuizStep = () => {
-    if (quizStep > 0) {
-      setQuizStep(quizStep - 1);
-    } else {
-      setStep("address");
-    }
+    if (quizStep > 0) setQuizStep(quizStep - 1);
+    else setStep("verify");
   };
 
   const analyzeAndRecommend = async () => {
+    if (!coordinates) return;
     setStep("analyzing");
 
     const messages = [
-      "Locating property...",
+      "Checking for cached measurements...",
       "Analyzing satellite imagery...",
       "Measuring roof area...",
       "Matching your preferences...",
@@ -265,29 +321,54 @@ export function QuizEstimateFlow({
     }, 800);
 
     try {
-      // Geocode the address
-      const geocodeResponse = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g&country=US&types=address`
-      );
-      const geocodeData = await geocodeResponse.json();
+      const normalizedAddr = normalizeAddress(address);
 
-      if (!geocodeData.features || geocodeData.features.length === 0) {
-        throw new Error("Could not find that address");
+      // Check cache first
+      const { data: cached } = await supabase
+        .from('roof_analysis_cache')
+        .select('*')
+        .eq('normalized_address', normalizedAddr)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      let flatSqft: number;
+      let complexity: string;
+
+      if (cached) {
+        flatSqft = Number(cached.flat_sqft);
+        complexity = cached.roof_complexity || 'gable';
+        setProgressMessage("Found cached measurement!");
+      } else {
+        const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
+          body: { latitude: coordinates.lat, longitude: coordinates.lng, address }
+        });
+
+        if (error) throw error;
+
+        flatSqft = data.estimation.estimatedSqft;
+        complexity = data.estimation.roofComplexity || 'gable';
+
+        // Cache the result
+        const { adjustedSqft, factor } = applyPitchFactor(flatSqft, complexity);
+        await supabase.from('roof_analysis_cache').insert({
+          address, normalized_address: normalizedAddr,
+          latitude: coordinates.lat, longitude: coordinates.lng,
+          flat_sqft: flatSqft, adjusted_sqft: adjustedSqft,
+          total_squares: adjustedSqft / 100, roof_complexity: complexity,
+          roof_shape: data.estimation.roofShape,
+          confidence: data.estimation.confidence,
+          methodology: data.estimation.methodology,
+          satellite_image_url: data.estimation.satelliteImageUrl,
+          pitch_factor: 1.1, complexity_factor: factor / 1.1
+        });
       }
-
-      const [longitude, latitude] = geocodeData.features[0].center;
-
-      // Call AI vision
-      const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
-        body: { latitude, longitude, address }
-      });
 
       clearInterval(interval);
 
-      if (error) throw error;
-
-      const squares = data.estimation.estimatedSqft / 100;
+      const { adjustedSqft } = applyPitchFactor(flatSqft, complexity);
+      const squares = adjustedSqft / 100;
       setTotalSquares(squares);
+      setRoofComplexity(complexity);
 
       const recs = getRecommendations(squares, answers);
       setRecommendations(recs);
@@ -320,6 +401,11 @@ export function QuizEstimateFlow({
     }
   };
 
+  const getDisplaySquares = () => manualSquares ?? totalSquares;
+  
+  const currentQuestion = quizQuestions[quizStep];
+  const progress = ((quizStep + 1) / quizQuestions.length) * 100;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -336,85 +422,121 @@ export function QuizEstimateFlow({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="quiz-address">Property Address</Label>
                 <Input
                   id="quiz-address"
-                  placeholder="123 Main Street, Miami, FL 33101"
+                  placeholder="Start typing your address..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && startQuiz()}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  onKeyDown={(e) => e.key === "Enter" && verifyAddress()}
+                  autoComplete="off"
                 />
+                
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
+                    {suggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b last:border-b-0 text-sm"
+                        onClick={() => selectAddress(suggestion)}
+                      >
+                        <MapPin className="h-4 w-4 inline mr-2 text-muted-foreground" />
+                        {suggestion.place_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <Button 
-                onClick={startQuiz} 
-                className="w-full" 
-                size="lg"
-                disabled={!address.trim()}
-              >
-                Continue to Questions
+              <Button onClick={verifyAddress} className="w-full" size="lg" disabled={!address.trim()}>
+                Find My Property
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </>
         )}
 
-        {step === "quiz" && (
+        {step === "verify" && coordinates && (
           <>
             <DialogHeader>
-              <DialogTitle>
-                Question {quizStep + 1} of {quizQuestions.length}
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-primary" />
+                Verify Your Property
               </DialogTitle>
-              <DialogDescription>
-                {quizQuestions[quizStep].question}
-              </DialogDescription>
+              <DialogDescription>Is this the correct location?</DialogDescription>
             </DialogHeader>
 
-            <div className="py-4">
-              {/* Progress bar */}
-              <div className="w-full bg-muted rounded-full h-2 mb-6">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((quizStep + 1) / quizQuestions.length) * 100}%` }}
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg overflow-hidden border">
+                <img 
+                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                  alt="Satellite view of property"
+                  className="w-full"
                 />
               </div>
 
-              <RadioGroup
-                value={answers[quizQuestions[quizStep].id as keyof QuizAnswers]}
-                onValueChange={(value) => handleQuizAnswer(quizQuestions[quizStep].id, value)}
-                className="space-y-3"
-              >
-                {quizQuestions[quizStep].options.map((option) => (
-                  <div 
-                    key={option.value}
-                    className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-all ${
-                      answers[quizQuestions[quizStep].id as keyof QuizAnswers] === option.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => handleQuizAnswer(quizQuestions[quizStep].id, option.value)}
-                  >
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="cursor-pointer flex-1">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+              <p className="text-center font-medium text-sm">{address}</p>
 
-              <div className="flex gap-2 mt-6">
-                <Button variant="outline" onClick={prevQuizStep}>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => { setStep("address"); setCoordinates(null); }} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
+                  Wrong Property
                 </Button>
-                <Button onClick={nextQuizStep} className="flex-1">
-                  {quizStep === quizQuestions.length - 1 ? "Get Recommendations" : "Next"}
+                <Button onClick={startQuiz} className="flex-1">
+                  Yes, Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           </>
+        )}
+
+        {step === "quiz" && (
+          <div className="py-4">
+            {/* Progress */}
+            <div className="mb-6">
+              <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                <span>Step {quizStep + 1} of {quizQuestions.length}</span>
+                <span>{Math.round(progress)}% complete</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+
+            {/* Avatar and Question */}
+            <div className="flex flex-col items-center text-center mb-8">
+              <SalesAvatar speaking={isSpeaking} className="mb-6" />
+              
+              <div className="bg-muted/50 rounded-2xl rounded-tl-sm p-4 max-w-md">
+                <p className="text-lg">{currentQuestion.question}</p>
+              </div>
+            </div>
+
+            {/* Options Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {currentQuestion.options.map((option) => (
+                <Button
+                  key={option.value}
+                  variant="outline"
+                  onClick={() => handleQuizAnswer(currentQuestion.id, option.value)}
+                  className={cn(
+                    "h-auto py-4 flex-col gap-2 hover:border-primary hover:bg-primary/5 transition-all",
+                    answers[currentQuestion.id as keyof QuizAnswers] === option.value && "border-primary bg-primary/10"
+                  )}
+                >
+                  <span className="text-2xl">{option.icon}</span>
+                  <span className="text-sm font-medium">{option.label}</span>
+                </Button>
+              ))}
+            </div>
+
+            {/* Back button */}
+            <Button variant="ghost" onClick={prevQuizStep} className="mt-6">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          </div>
         )}
 
         {step === "analyzing" && (
@@ -440,21 +562,58 @@ export function QuizEstimateFlow({
                 Your Personalized Recommendations
               </DialogTitle>
               <DialogDescription>
-                Based on your {totalSquares.toFixed(1)} square roof and preferences
+                Based on your {getDisplaySquares().toFixed(1)} square {roofComplexity} roof
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
+              {/* Manual adjustment */}
+              <Card className="bg-muted/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Ruler className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Roof Size: {getDisplaySquares().toFixed(1)} squares</span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditingSquares(!isEditingSquares)}>
+                      <Edit2 className="h-4 w-4 mr-1" />
+                      {isEditingSquares ? "Done" : "Adjust"}
+                    </Button>
+                  </div>
+                  
+                  {isEditingSquares && (
+                    <div className="space-y-2">
+                      <Slider
+                        value={[getDisplaySquares()]}
+                        onValueChange={(v) => {
+                          setManualSquares(v[0]);
+                          setRecommendations(getRecommendations(v[0], answers));
+                        }}
+                        min={10}
+                        max={100}
+                        step={0.5}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>10 sq</span>
+                        <span>100 sq</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {recommendations.map((rec) => {
                 const TierIcon = getTierIcon(rec.tier);
                 const isRecommended = rec.tier === "better";
+                const displaySquares = getDisplaySquares();
+                const price = parsePrice(rec.package.pricePerSquare);
+                const estimateLow = price ? Math.round(price.low * displaySquares) : rec.estimateLow;
+                const estimateHigh = price ? Math.round(price.high * displaySquares) : rec.estimateHigh;
 
                 return (
                   <Card 
                     key={rec.tier}
-                    className={`relative transition-all hover:shadow-md ${
-                      isRecommended ? "ring-2 ring-primary" : ""
-                    }`}
+                    className={`relative transition-all hover:shadow-md ${isRecommended ? "ring-2 ring-primary" : ""}`}
                   >
                     {isRecommended && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -474,9 +633,7 @@ export function QuizEstimateFlow({
                           </Badge>
                           <CardTitle className="text-lg">{rec.package.name}</CardTitle>
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {rec.package.pricePerSquare}/sq
-                        </span>
+                        <span className="text-sm text-muted-foreground">{rec.package.pricePerSquare}/sq</span>
                       </div>
                     </CardHeader>
 
@@ -487,45 +644,32 @@ export function QuizEstimateFlow({
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-5 w-5 text-green-600" />
                           <span className="font-semibold text-green-600">
-                            {formatCurrency(rec.estimateLow)} - {formatCurrency(rec.estimateHigh)}
+                            {formatCurrency(estimateLow)} - {formatCurrency(estimateHigh)}
                           </span>
                         </div>
                         <Button 
                           size="sm"
                           onClick={() => onSelectPackage(rec.package, {
                             address,
-                            totalSquares,
-                            estimateLow: rec.estimateLow,
-                            estimateHigh: rec.estimateHigh
+                            totalSquares: displaySquares,
+                            estimateLow,
+                            estimateHigh,
+                            confidence: "high",
+                            roofComplexity
                           })}
                         >
-                          Select
-                          <ArrowRight className="ml-1 h-3 w-3" />
+                          Select Package
+                          <ArrowRight className="ml-1 h-4 w-4" />
                         </Button>
                       </div>
-
-                      <ul className="grid grid-cols-1 gap-1">
-                        {rec.package.features.slice(0, 3).map((feature, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
-                            <CheckCircle2 className="h-3 w-3 text-primary flex-shrink-0 mt-0.5" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
                     </CardContent>
                   </Card>
                 );
               })}
 
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  handleClose(false);
-                }}
-                className="w-full"
-              >
+              <Button variant="outline" onClick={() => setStep("quiz")} className="w-full">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Browse All Packages
+                Retake Quiz
               </Button>
             </div>
           </>
