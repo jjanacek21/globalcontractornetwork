@@ -72,146 +72,146 @@ serve(async (req) => {
     console.log('Analyzing roof at:', address);
     console.log('Zoom level:', zoom, 'Context:', context);
 
-    const systemPrompt = `You are an expert aerial roof measurement analyst with 20+ years of experience in roofing estimation.
+    const systemPrompt = `You are an expert aerial roof measurement analyst with 20+ years of experience in roofing estimation using professional tools like EagleView, Hover, and RoofSnap.
 Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
 
-CRITICAL GEOMETRY RULES FOR SHADOW RECONSTRUCTION:
-- Residential buildings are ALWAYS rectangular or composed of rectangles joined together
-- Houses DO NOT have irregular, organic shapes - they have 90-degree right angles
-- When shadows obscure a corner: assume walls continue in STRAIGHT LINES from visible edges
-- If you see 3 corners of a rectangle, the 4th corner is where the two visible edges would meet at 90°
-- L-shaped homes = two rectangles joined at right angles
-- T-shaped homes = rectangle with perpendicular extension
-- U-shaped homes = three rectangles forming a U pattern
+=== CRITICAL ACCURACY PROTOCOL ===
+You MUST cross-reference multiple data points to ensure accuracy:
 
-SHADOW RECONSTRUCTION METHOD:
-1. Find all visible corners and edges of the main building
-2. Extend visible edges as STRAIGHT LINES through shadowed areas
-3. Where extended lines meet at 90° angles = hidden corners
-4. Calculate area of complete geometric shapes
-5. DO NOT follow shadow outlines - shadows distort true building edges
+1. PERIMETER-BASED VALIDATION:
+   - Trace the entire roof perimeter and estimate total linear feet
+   - For rectangular sections: Area = Length × Width
+   - For L-shapes: Break into rectangles and sum areas
+   - Cross-check: Perimeter should be roughly 4 × √Area for squares
 
-TREE COVERAGE HANDLING:
-- Trees overhanging roofs hide significant area
-- Look for roof edges visible beyond tree canopy
-- Estimate what's beneath based on visible building geometry
-- RULE: If trees cover ANY part of roof, add 15-25% to visible estimate
+2. REFERENCE OBJECT SCALING (Most reliable method):
+   - Standard car: 15 ft long × 6 ft wide = 90 sq ft
+   - HVAC units: 3 ft × 3 ft = 9 sq ft  
+   - Standard garage door (single): 9 ft wide
+   - Standard garage door (double): 16-18 ft wide
+   - Count how many "car lengths" fit along each roof edge
+   - Example: If roof is 4 car lengths × 3 car widths = 60 ft × 18 ft = 1,080 sq ft
 
-MINIMUM SIZE GUIDELINES (Florida residential):
-- Average single-family home: 2,000-3,500 sq ft footprint
-- Small ranch homes: 1,500-2,000 sq ft minimum
-- Multi-story homes appear smaller from above but still have 1,800+ sq ft footprint
-- If your estimate is under 1,500 sq ft, you are likely missing hidden roof area
-- Commercial buildings: typically 3,000-50,000+ sq ft
+3. PROPERTY TYPE BASELINES (Florida residential):
+   - Small ranch home (2-3 BR): 1,500-2,200 sq ft footprint
+   - Standard ranch home (3 BR): 2,200-2,800 sq ft footprint
+   - Medium home (3-4 BR): 2,800-3,500 sq ft footprint
+   - Large home (4+ BR): 3,500-4,500 sq ft footprint
+   - Very large home (5+ BR): 4,500+ sq ft footprint
+   - If estimate is under 2,000 sq ft for a clearly visible home, YOU ARE UNDERESTIMATING
 
-REFERENCE OBJECTS FOR SCALE:
-- Standard car: ~15 ft long, ~6 ft wide (90 sq ft)
-- HVAC unit: ~3 ft × 3 ft (9 sq ft)
-- Skylight: ~2 ft × 4 ft (8 sq ft)
-- Standard driveway width: ~10-12 ft
-- Single garage door: ~9 ft wide
-- Double garage door: ~16-18 ft wide
+4. SEGMENT CALCULATION METHOD (Most accurate):
+   - Divide roof into numbered rectangular segments
+   - Estimate each segment: "Segment 1: ~45 ft × 25 ft = 1,125 sq ft"
+   - Sum all segments for total
+   - This catches missed areas that single-estimate methods miss
 
-ROOF COMPLEXITY DETECTION (Critical for pricing):
-- "flat": Commercial-style flat roof, very low slope (common on commercial buildings)
-- "gable": Simple 2-sided roof with a single ridge (most common residential - DEFAULT if unsure)
-- "hip": 4-sided roof with hips meeting at corners, slopes on all 4 sides
-- "complex": Multiple facets, dormers, different sections, multiple ridges, valleys
+5. SHADOW/TREE CORRECTION MULTIPLIERS:
+   - Light shadows: Add 10-15% to visible area
+   - Heavy shadows: Add 20-30% to visible area  
+   - Partial tree coverage: Add 15-25% to visible area
+   - Heavy tree coverage: Add 30-40% to visible area
 
-MIXED ROOF TYPE DETECTION (Critical for Florida homes):
-Many Florida homes have BOTH pitched shingle sections AND flat sections. Common patterns:
-- Main house with shingle roof + flat-roofed addition/carport/lanai
-- Two-story with shingle + flat section over garage
-- Ranch home with shingle + flat lanai/patio cover
-- Commercial-residential hybrid buildings
+=== COMMON UNDERESTIMATION ERRORS TO AVOID ===
+- Ignoring back portions of L-shaped homes
+- Missing carport/garage extensions
+- Not accounting for porch roofs that connect to main structure
+- Underestimating due to shadows on south/west sides
+- Forgetting covered patios/lanais (very common in Florida)
 
-If you detect BOTH roof types on the same building:
-1. Estimate each section separately
-2. Note the approximate color of each section:
-   - Shingle colors: gray, black, brown, tan, red, blue, green, weathered-gray
-   - Flat roof colors: white (reflective coating), black (tar/rubber), silver (metal), tan
+=== GEOMETRY RULES FOR SHADOW RECONSTRUCTION ===
+- Residential buildings are ALWAYS rectangular or composed of rectangles
+- Houses DO NOT have irregular, organic shapes - they have 90-degree angles
+- When shadows obscure a corner: assume walls continue in STRAIGHT LINES
+- L-shaped = two rectangles joined; T-shaped = rectangle with extension
+- ALWAYS assume the hidden portion is as large as the visible portion
 
-ROOF COLOR DETECTION:
-- Shingle roofs: Look at the dominant color visible from satellite
-- Flat roofs: White = likely coated/reflective, Black = tar/EPDM rubber, Silver = metal
-- Color affects coating/replacement recommendations
+=== ROOF COMPLEXITY DETECTION ===
+- "flat": Commercial-style flat roof, very low slope
+- "gable": Simple 2-sided roof with single ridge (DEFAULT for residential)
+- "hip": 4-sided roof with slopes on all sides, hips at corners
+- "complex": Multiple facets, dormers, valleys, different sections
 
-ROOF AGE ESTIMATION (From satellite imagery):
-Analyze shingle degradation patterns to estimate roof age:
+=== MIXED ROOF TYPE DETECTION ===
+Florida homes often have BOTH pitched shingle + flat sections:
+- Main house shingle + flat carport/lanai
+- Two-story shingle + flat garage section
+Estimate each section separately with color:
+- Shingle colors: gray, black, brown, tan, red, weathered-gray
+- Flat colors: white (coated), black (tar/rubber), silver (metal)
 
-NEW (0-5 years):
-- Uniform dark color
-- Sharp, well-defined edges on shingles
-- No visible streaking or discoloration
-- Consistent texture across entire roof
+=== ROOF AGE ESTIMATION ===
+Analyze visible degradation:
+- NEW (0-5 years): Uniform dark color, sharp edges, no streaking
+- MODERATE (5-12 years): Some fading, early dark streaking (algae)
+- SIGNIFICANT (12-20 years): Color inconsistency, heavy streaking, granule loss
+- END OF LIFE (20+ years): Severe discoloration, large patches, visible sagging
 
-MODERATE WEAR (5-12 years):
-- Some color fading, especially on south-facing slopes
-- Early signs of dark streaking (algae)
-- Minor granule loss visible as lighter patches
-- Still relatively uniform appearance
+=== IMPORTANT MULTIPLIER NOTE ===
+The frontend applies these adjustments to your flat footprint:
+- 1.10x (10%) pitch factor for angle correction
+- Additional 15% waste factor for material ordering
+So return ONLY the flat footprint - do NOT apply pitch or waste yourself.
 
-SIGNIFICANT WEAR (12-20 years):
-- Obvious color inconsistency across roof
-- Heavy dark streaking (algae/moss growth)
-- Visible granule loss creating mottled appearance
-- Curling edges visible on some shingles
-- Possible moss growth in shaded areas
+=== CONFIDENCE LEVELS ===
+- HIGH: Clear image, can trace entire outline, minimal obstruction
+- MEDIUM: Some shadow/tree coverage but can estimate full outline
+- LOW: Heavy obstruction, estimate includes significant correction
 
-END OF LIFE (20+ years):
-- Severe discoloration and weathering
-- Large patches of missing granules
-- Visible sagging or warping
-- Multiple patched areas
-- Very faded, almost gray appearance regardless of original color
-
-IMPORTANT: The frontend will apply these adjustments to your flat footprint estimate:
-- 1.1x multiplier for satellite angle correction (converting overhead view to true area)
-- Additional complexity factor: +10% for gable, +15% for hip, +17% for complex roofs
-So return ONLY the flat footprint - do NOT apply any pitch or slope factors yourself.
-
-CONFIDENCE LEVELS:
-- HIGH: Clear image, you can trace the entire outline, minimal shadow/tree interference
-- MEDIUM: Some shadow/tree coverage but you can reasonably estimate the full outline
-- LOW: Heavy obstruction, estimate is your best guess with significant correction applied
-
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {
-  "estimatedSqft": number (your best estimate of FLAT footprint - err on the high side),
-  "estimatedSqftLow": number (absolute minimum, still accounting for shadows),
-  "estimatedSqftHigh": number (if all hidden area is larger than expected),
+  "estimatedSqft": number (FLAT footprint - use segment method, err HIGH if uncertain),
+  "estimatedSqftLow": number (absolute minimum including hidden areas),
+  "estimatedSqftHigh": number (if hidden areas are larger than expected),
+  "segmentBreakdown": "Segment 1: 45x25=1125, Segment 2: 20x30=600, Total: 1725" (show your math),
+  "perimeterFt": number (estimated total perimeter in linear feet),
   "confidence": "high" | "medium" | "low",
   "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex" | "hip" | "gable" | "flat",
   "roofComplexity": "flat" | "gable" | "hip" | "complex",
-  "hasMixedRoof": boolean (true if both shingle and flat sections detected),
-  "shingleSection": { "sqft": number, "color": "gray" | "black" | "brown" | "tan" | "red" | "weathered-gray" | "other" } | null,
-  "flatSection": { "sqft": number, "color": "white" | "black" | "silver" | "tan" } | null,
-  "primaryRoofColor": "string describing dominant roof color",
-  "estimatedAgeYears": number (best estimate of roof age in years),
+  "hasMixedRoof": boolean,
+  "shingleSection": { "sqft": number, "color": string } | null,
+  "flatSection": { "sqft": number, "color": string } | null,
+  "primaryRoofColor": "string",
+  "estimatedAgeYears": number,
   "ageConfidence": "high" | "medium" | "low",
-  "degradationNotes": "Brief description of visible wear indicators",
-  "methodology": "Brief explanation including any shadow/tree correction and age assessment reasoning"
+  "degradationNotes": "string",
+  "shadowTreeCorrection": "Applied X% correction for Y reason" | null,
+  "referenceObjectsUsed": "string describing what objects were used for scale",
+  "methodology": "Detailed explanation of measurement approach and cross-validation"
 }`;
 
-    const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for the property located at: ${address}
+    const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for: ${address}
 
-The property is centered in the image. Zoom level is ${zoom} (${zoom === 18 ? 'wide view for tree coverage' : zoom === 20 ? 'close-up detail' : 'standard view'}).
+The property is centered in the image. Zoom level is ${zoom}.
 
-Please:
-1. Identify the main building structure at the center
-2. Trace the COMPLETE building outline, extending through any shadows or tree coverage
-3. Estimate the FLAT FOOTPRINT area in square feet (do NOT apply pitch factor)
-4. Determine the roof complexity (flat, gable, hip, or complex)
-5. Check if this is a MIXED ROOF (both shingle pitched sections AND flat sections)
-6. If mixed roof detected, estimate each section's square footage and color separately
-7. Detect the primary roof color(s) visible from satellite
-8. ESTIMATE THE ROOF AGE based on shingle degradation patterns:
-   - Look for color fading, streaking, granule loss, moss/algae growth
-   - Check for curling, warping, or patched areas
-   - Consider the uniformity of the roof surface
-9. Provide your confidence level based on visibility
+REQUIRED MEASUREMENT PROTOCOL:
+1. SEGMENT METHOD: Divide the roof into rectangular segments
+   - Label each segment (main house, garage, addition, etc.)
+   - Estimate dimensions of each: "Main: ~50ft × 35ft = 1,750 sq ft"
+   - Show your segment math in the response
 
-REMEMBER: If shadows cover parts of the roof, estimate the FULL building footprint anyway by tracing through the shadows.`;
+2. REFERENCE OBJECTS: Use visible objects for scale calibration
+   - Look for cars, HVAC units, garage doors, driveways
+   - Example: "Driveway is ~12ft wide, main house spans ~4 driveway widths = 48ft"
+
+3. PERIMETER TRACE: Estimate total roof edge in linear feet
+   - Walk around the entire roof outline mentally
+   - This validates your area calculation (Perimeter ≈ 4 × √Area for squares)
+
+4. CROSS-CHECK: Compare your estimate against:
+   - Florida home baseline (most are 2,200-3,500 sq ft)
+   - Does this look like a "small", "medium", or "large" home?
+
+5. MIXED ROOF CHECK: Look for flat sections + shingle sections
+   - Common: flat carport/lanai attached to shingle main house
+
+6. ROOF AGE: Analyze shingle condition, streaking, granule loss
+
+7. SHADOW/TREE CORRECTION: If obstructed, state what % you added
+
+CRITICAL: Show your segment breakdown math. This catches missed areas.
+If your estimate is under 2,000 sq ft for a typical Florida home, re-examine - you likely missed sections.`;
+
 
     console.log('Calling Gemini Vision for roof analysis...');
     
@@ -271,6 +271,18 @@ REMEMBER: If shadows cover parts of the roof, estimate the FULL building footpri
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Log segment breakdown for debugging
+        if (parsed.segmentBreakdown) {
+          console.log('Segment breakdown:', parsed.segmentBreakdown);
+        }
+        if (parsed.referenceObjectsUsed) {
+          console.log('Reference objects used:', parsed.referenceObjectsUsed);
+        }
+        if (parsed.perimeterFt) {
+          console.log('Perimeter estimate:', parsed.perimeterFt, 'ft');
+        }
+        
         estimation = {
           ...parsed,
           roofComplexity: parsed.roofComplexity || 'gable',
@@ -283,35 +295,63 @@ REMEMBER: If shadows cover parts of the roof, estimate the FULL building footpri
           degradationNotes: parsed.degradationNotes || null,
           satelliteImageUrl
         };
+        
+        // Cross-validation: Check if perimeter matches area
+        if (parsed.perimeterFt && parsed.estimatedSqft) {
+          const expectedPerimeterForSquare = 4 * Math.sqrt(parsed.estimatedSqft);
+          const perimeterRatio = parsed.perimeterFt / expectedPerimeterForSquare;
+          
+          // If perimeter suggests larger area, adjust upward
+          if (perimeterRatio > 1.3) {
+            console.log('Perimeter suggests larger area - adjusting estimate upward');
+            estimation.estimatedSqft = Math.round(parsed.estimatedSqft * 1.15);
+            estimation.estimatedSqftLow = Math.round(parsed.estimatedSqftLow * 1.15);
+            estimation.estimatedSqftHigh = Math.round(parsed.estimatedSqftHigh * 1.15);
+            estimation.methodology += ' [Perimeter validation applied 15% upward adjustment]';
+          }
+        }
+        
       } else {
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
       estimation = {
-        estimatedSqft: 2500,
-        estimatedSqftLow: 2250,
-        estimatedSqftHigh: 2750,
+        estimatedSqft: 2800,
+        estimatedSqftLow: 2500,
+        estimatedSqftHigh: 3200,
         confidence: 'low',
         roofShape: 'unknown',
         roofComplexity: 'gable',
         hasMixedRoof: false,
-        methodology: 'Could not analyze image clearly. Using average residential estimate.',
+        methodology: 'Could not analyze image clearly. Using Florida average residential estimate.',
         satelliteImageUrl
       };
     }
 
-    // Sanity check - if estimate seems too low, flag it
-    if (estimation.estimatedSqft < 800) {
-      console.warn('Very low estimate detected, may have missed shadowed areas');
+    // Enhanced sanity checks based on real-world data
+    if (estimation.estimatedSqft < 1500) {
+      console.warn('Very low estimate detected (<1500 sq ft), applying minimum floor');
+      estimation.estimatedSqft = Math.max(estimation.estimatedSqft * 1.5, 1800);
+      estimation.estimatedSqftLow = Math.max(estimation.estimatedSqftLow * 1.5, 1600);
+      estimation.estimatedSqftHigh = Math.max(estimation.estimatedSqftHigh * 1.5, 2200);
       estimation.confidence = 'low';
-      estimation.methodology += ' (Note: Estimate may be low due to shadow/tree coverage)';
+      estimation.methodology += ' [Minimum floor applied - estimate seemed too low for residential]';
     }
 
     if (estimation.estimatedSqft > 50000) {
       console.warn('Unusually high estimate detected');
       estimation.confidence = 'low';
     }
+    
+    // Log final estimate for debugging
+    console.log('Final estimation:', {
+      sqft: estimation.estimatedSqft,
+      low: estimation.estimatedSqftLow,
+      high: estimation.estimatedSqftHigh,
+      confidence: estimation.confidence,
+      complexity: estimation.roofComplexity
+    });
 
     return new Response(JSON.stringify({
       success: true,
