@@ -2617,6 +2617,69 @@ export type Database = {
           },
         ]
       }
+      roof_analysis_cache: {
+        Row: {
+          address: string
+          adjusted_sqft: number | null
+          complexity_factor: number | null
+          confidence: string | null
+          created_at: string
+          expires_at: string | null
+          flat_sqft: number
+          id: string
+          latitude: number
+          longitude: number
+          methodology: string | null
+          normalized_address: string
+          pitch_factor: number | null
+          roof_complexity: string | null
+          roof_shape: string | null
+          satellite_image_url: string | null
+          total_squares: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          adjusted_sqft?: number | null
+          complexity_factor?: number | null
+          confidence?: string | null
+          created_at?: string
+          expires_at?: string | null
+          flat_sqft: number
+          id?: string
+          latitude: number
+          longitude: number
+          methodology?: string | null
+          normalized_address: string
+          pitch_factor?: number | null
+          roof_complexity?: string | null
+          roof_shape?: string | null
+          satellite_image_url?: string | null
+          total_squares?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          adjusted_sqft?: number | null
+          complexity_factor?: number | null
+          confidence?: string | null
+          created_at?: string
+          expires_at?: string | null
+          flat_sqft?: number
+          id?: string
+          latitude?: number
+          longitude?: number
+          methodology?: string | null
+          normalized_address?: string
+          pitch_factor?: number | null
+          roof_complexity?: string | null
+          roof_shape?: string | null
+          satellite_image_url?: string | null
+          total_squares?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       roofing_admins: {
         Row: {
           created_at: string | null
@@ -4043,6 +4106,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      normalize_address: { Args: { addr: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "sales_rep" | "teacher" | "student" | "contractor"
