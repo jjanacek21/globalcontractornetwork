@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye } from "lucide-react";
+import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye, Video, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
+import { SchedulingDialog } from "./SchedulingDialog";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -112,6 +113,8 @@ export function InstantEstimateFlow({
   const [progressMessage, setProgressMessage] = useState("");
   const [manualSquares, setManualSquares] = useState<number | null>(null);
   const [isEditingSquares, setIsEditingSquares] = useState(false);
+  const [showScheduling, setShowScheduling] = useState(false);
+  const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const debounceRef = useRef<NodeJS.Timeout>();
 
   const resetFlow = () => {
@@ -590,24 +593,35 @@ export function InstantEstimateFlow({
                 </ul>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Schedule Consultation */}
               <div className="flex flex-col gap-2 pt-2">
                 <Button 
-                  onClick={() => onRequestQuote(selectedPackage, {
-                    ...estimate,
-                    totalSquares: getDisplaySquares(),
-                    estimateLow: getDisplayEstimates().low,
-                    estimateHigh: getDisplayEstimates().high
-                  })}
+                  onClick={() => {
+                    setAppointmentType("zoom");
+                    setShowScheduling(true);
+                  }}
                   size="lg"
                   className="w-full"
                 >
-                  Request Official Quote
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <Video className="mr-2 h-4 w-4" />
+                  Schedule Zoom Call
                 </Button>
                 
                 <Button 
                   variant="outline"
+                  onClick={() => {
+                    setAppointmentType("in_person");
+                    setShowScheduling(true);
+                  }}
+                  size="lg"
+                  className="w-full"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Schedule In-Person Meeting
+                </Button>
+                
+                <Button 
+                  variant="ghost"
                   onClick={() => {
                     handleClose(false);
                     onCompareOthers();
@@ -618,6 +632,26 @@ export function InstantEstimateFlow({
                 </Button>
               </div>
             </div>
+
+            {/* Scheduling Dialog */}
+            <SchedulingDialog
+              open={showScheduling}
+              onOpenChange={setShowScheduling}
+              appointmentType={appointmentType}
+              consultationData={{
+                roofType: estimate?.roofComplexity || "unknown",
+                priority: "contact",
+                timeline: "asap",
+                budget: selectedPackage.pricePerSquare,
+                zipCode: address,
+                sqft: Math.round(getDisplaySquares() * 100),
+                recommendedPackage: selectedPackage.name,
+                estimatedPrice: Math.round((getDisplayEstimates().low + getDisplayEstimates().high) / 2)
+              }}
+              onComplete={() => {
+                handleClose(false);
+              }}
+            />
           </>
         )}
       </DialogContent>

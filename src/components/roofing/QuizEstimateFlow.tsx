@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign, Eye, Edit2, Ruler } from "lucide-react";
+import { MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign, Eye, Edit2, Ruler, Video, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
 import { SalesAvatar } from "./SalesAvatar";
+import { SchedulingDialog } from "./SchedulingDialog";
 import { cn } from "@/lib/utils";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
@@ -152,6 +153,9 @@ export function QuizEstimateFlow({
   const [recommendations, setRecommendations] = useState<TieredRecommendation[]>([]);
   const [manualSquares, setManualSquares] = useState<number | null>(null);
   const [isEditingSquares, setIsEditingSquares] = useState(false);
+  const [showScheduling, setShowScheduling] = useState(false);
+  const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
+  const [selectedRec, setSelectedRec] = useState<TieredRecommendation | null>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
 
   const resetFlow = () => {
@@ -233,53 +237,87 @@ export function QuizEstimateFlow({
   const startQuiz = () => setStep("quiz");
 
   const getRecommendations = (squares: number, quizAnswers: QuizAnswers): TieredRecommendation[] => {
-    let relevantPackages = [...packages];
-    
+    const findPackage = (name: string) => packages.find(p => 
+      p.name.toLowerCase().includes(name.toLowerCase())
+    );
+
+    let good: RoofingPackage | undefined;
+    let better: RoofingPackage | undefined;
+    let best: RoofingPackage | undefined;
+
     if (quizAnswers.roofType === "tile") {
-      relevantPackages = packages.filter(p => 
-        p.name.toLowerCase().includes("tile") || p.name.toLowerCase().includes("refresh")
-      );
-      if (relevantPackages.length < 3) relevantPackages = packages;
+      // Tile roofs can ONLY go back with tile packages
+      good = findPackage("Tile Roof Package") || findPackage("Tile");
+      better = findPackage("Tile+");
+      best = findPackage("Ultimate Roof");
     } else if (quizAnswers.roofType === "metal") {
-      relevantPackages = packages.filter(p => 
-        p.name.toLowerCase().includes("metal") || p.name.toLowerCase().includes("collar") ||
-        p.name.toLowerCase().includes("platinum") || p.name.toLowerCase().includes("ultimate")
-      );
-      if (relevantPackages.length < 3) relevantPackages = packages;
+      // Metal roof options
+      good = findPackage("Blue Collar Special");
+      better = findPackage("Blue Collar+");
+      best = findPackage("Platinum");
+    } else if (quizAnswers.roofType === "flat") {
+      // Flat roof options
+      good = findPackage("Roof Refresh");
+      better = findPackage("Bronze");
+      best = findPackage("Silver");
+    } else {
+      // Shingle roofs (or unknown) - logic based on timeline and budget
+      if (quizAnswers.timeline === "long") {
+        // Forever home - premium options
+        if (quizAnswers.budget === "economy") {
+          good = findPackage("Silver");
+          better = findPackage("Gold");
+          best = findPackage("Blue Collar+");
+        } else if (quizAnswers.budget === "premium") {
+          good = findPackage("Gold");
+          better = findPackage("Platinum");
+          best = findPackage("Ultimate Roof");
+        } else {
+          // Mid-range forever home
+          good = findPackage("Silver");
+          better = findPackage("Blue Collar+");
+          best = findPackage("Platinum");
+        }
+      } else {
+        // Short/medium term - economy options
+        good = findPackage("Bronze");
+        better = findPackage("Silver");
+        best = findPackage("Gold");
+      }
     }
 
-    const sortedPackages = relevantPackages
-      .filter(p => parsePrice(p.pricePerSquare) !== null)
-      .sort((a, b) => (parsePrice(a.pricePerSquare)?.low || 0) - (parsePrice(b.pricePerSquare)?.low || 0));
-
-    if (sortedPackages.length < 3) return [];
-
-    let goodIdx = 0, betterIdx = Math.floor(sortedPackages.length / 2), bestIdx = sortedPackages.length - 1;
-
-    if (quizAnswers.budget === "economy") {
-      betterIdx = Math.min(2, sortedPackages.length - 1);
-      bestIdx = Math.min(4, sortedPackages.length - 1);
-    } else if (quizAnswers.budget === "premium") {
-      goodIdx = Math.max(0, sortedPackages.length - 5);
-      betterIdx = Math.max(0, sortedPackages.length - 3);
+    // Fallback if packages not found
+    if (!good || !better || !best) {
+      const sorted = packages
+        .filter(p => parsePrice(p.pricePerSquare) !== null)
+        .sort((a, b) => (parsePrice(a.pricePerSquare)?.low || 0) - (parsePrice(b.pricePerSquare)?.low || 0));
+      good = good || sorted[1];
+      better = better || sorted[Math.floor(sorted.length / 2)];
+      best = best || sorted[sorted.length - 1];
     }
 
     const createRec = (pkg: RoofingPackage, tier: "good" | "better" | "best"): TieredRecommendation => {
       const price = parsePrice(pkg.pricePerSquare)!;
+      const reasons = {
+        good: quizAnswers.timeline === "long" 
+          ? "Quality protection for your forever home" 
+          : "Best value for budget-conscious homeowners",
+        better: "Recommended for best balance of price and quality",
+        best: "Premium protection and maximum durability"
+      };
       return {
-        tier, package: pkg,
+        tier,
+        package: pkg,
         estimateLow: Math.round(price.low * squares),
         estimateHigh: Math.round(price.high * squares),
-        reason: tier === "good" ? "Best for budget-conscious homeowners"
-          : tier === "better" ? "Recommended for best value"
-          : "Premium protection and durability"
+        reason: reasons[tier]
       };
     };
 
     return [
-      createRec(sortedPackages[goodIdx], "good"),
-      createRec(sortedPackages[betterIdx], "better"),
-      createRec(sortedPackages[bestIdx], "best")
+      createRec(good!, "good"),
+      createRec(better!, "better"),
+      createRec(best!, "best")
     ];
   };
 
@@ -640,27 +678,40 @@ export function QuizEstimateFlow({
                     <CardContent className="space-y-3">
                       <p className="text-sm text-muted-foreground">{rec.reason}</p>
                       
-                      <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
+                      <div className="p-3 bg-green-500/10 rounded-lg space-y-3">
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-5 w-5 text-green-600" />
                           <span className="font-semibold text-green-600">
                             {formatCurrency(estimateLow)} - {formatCurrency(estimateHigh)}
                           </span>
                         </div>
-                        <Button 
-                          size="sm"
-                          onClick={() => onSelectPackage(rec.package, {
-                            address,
-                            totalSquares: displaySquares,
-                            estimateLow,
-                            estimateHigh,
-                            confidence: "high",
-                            roofComplexity
-                          })}
-                        >
-                          Select Package
-                          <ArrowRight className="ml-1 h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRec(rec);
+                              setAppointmentType("zoom");
+                              setShowScheduling(true);
+                            }}
+                            className="flex-1"
+                          >
+                            <Video className="mr-1 h-3 w-3" />
+                            Zoom Call
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedRec(rec);
+                              setAppointmentType("in_person");
+                              setShowScheduling(true);
+                            }}
+                            className="flex-1"
+                          >
+                            <Users className="mr-1 h-3 w-3" />
+                            In-Person
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -673,6 +724,28 @@ export function QuizEstimateFlow({
               </Button>
             </div>
           </>
+        )}
+
+        {/* Scheduling Dialog */}
+        {selectedRec && (
+          <SchedulingDialog
+            open={showScheduling}
+            onOpenChange={setShowScheduling}
+            appointmentType={appointmentType}
+            consultationData={{
+              roofType: answers.roofType || "unknown",
+              priority: answers.priority || "contact",
+              timeline: answers.timeline || "asap",
+              budget: answers.budget || selectedRec.package.pricePerSquare,
+              zipCode: address,
+              sqft: Math.round(getDisplaySquares() * 100),
+              recommendedPackage: selectedRec.package.name,
+              estimatedPrice: Math.round((selectedRec.estimateLow + selectedRec.estimateHigh) / 2)
+            }}
+            onComplete={() => {
+              handleClose(false);
+            }}
+          />
         )}
       </DialogContent>
     </Dialog>
