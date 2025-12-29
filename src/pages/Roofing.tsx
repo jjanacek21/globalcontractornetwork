@@ -1,23 +1,22 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Home, Ruler, MessageCircle, Sparkles } from "lucide-react";
+import { Home, ArrowDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
-import { RoofMeasurementTool } from "@/components/roofing/RoofMeasurementTool";
-import { MeasurementReport } from "@/components/roofing/MeasurementReport";
-import { PackageSelector } from "@/components/roofing/PackageSelector";
-import { InteractiveSalesAssistant } from "@/components/roofing/InteractiveSalesAssistant";
-import { AIQuoteGenerator } from "@/components/roofing/AIQuoteGenerator";
 import { AIRoofingChat } from "@/components/roofing/AIRoofingChat";
+import { PackageBrowser, RoofingPackage } from "@/components/roofing/PackageBrowser";
+import { ComparisonBar } from "@/components/roofing/ComparisonBar";
+import { PackageComparisonDialog } from "@/components/roofing/PackageComparisonDialog";
+import { InstantEstimateFlow } from "@/components/roofing/InstantEstimateFlow";
+import { QuizEstimateFlow } from "@/components/roofing/QuizEstimateFlow";
 
-const roofingPackages = [
+const roofingPackages: RoofingPackage[] = [
   {
     name: "Bronze Roof Package",
     pricePerSquare: "$575-$650",
@@ -54,7 +53,7 @@ const roofingPackages = [
   },
   {
     name: "The Blue Collar Special",
-    pricePerSquare: "$860/sq",
+    pricePerSquare: "$860",
     features: [
       "5V crimp metal roof in mill finish",
       "Polyglass synthetic underlayment",
@@ -76,7 +75,7 @@ const roofingPackages = [
   },
   {
     name: "Platinum Roof Package",
-    pricePerSquare: "$1,000-$1,200",
+    pricePerSquare: "$1000-$1200",
     features: [
       "1\" Snap-lock standing seam metal roof (24-gauge, Kynar-coated)",
       "Polyglass MTS high-temp underlayment",
@@ -87,7 +86,7 @@ const roofingPackages = [
   },
   {
     name: "Tile Roof Package",
-    pricePerSquare: "$900-$1,000",
+    pricePerSquare: "$900-$1000",
     features: [
       "Complete removal and replacement of existing tile roof",
       "Standard tile underlayment with screw-down fastening",
@@ -98,7 +97,7 @@ const roofingPackages = [
   },
   {
     name: "Tile+ Roof Package",
-    pricePerSquare: "$1,000-$1,100",
+    pricePerSquare: "$1000-$1100",
     features: [
       "Tile removal and replacement with premium materials",
       "Polyglass TU MAX underlayment",
@@ -109,7 +108,7 @@ const roofingPackages = [
   },
   {
     name: "Roof Refresh",
-    pricePerSquare: "TBD",
+    pricePerSquare: "$400-$600",
     features: [
       "Repair broken or damaged tiles and apply matching stain",
       "Recoat metal roofs with acrylic, elastomeric, or Kynar finishes",
@@ -120,7 +119,7 @@ const roofingPackages = [
   },
   {
     name: "Ultimate Roof Package",
-    pricePerSquare: "$1,360-$1,850",
+    pricePerSquare: "$1360-$1850",
     features: [
       "Premium standing seam metal roof (1.5\" with clips) or stone-coated steel (Tefute/Novatik)",
       "Polyglass XFR high-temp and fire-rated underlayment",
@@ -133,15 +132,19 @@ const roofingPackages = [
 ];
 
 const Roofing = () => {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState("");
-  const [estimatedPrice, setEstimatedPrice] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [showMeasurement, setShowMeasurement] = useState(false);
-  const [showAssistant, setShowAssistant] = useState(false);
+  // Flow state
+  const [selectedPackage, setSelectedPackage] = useState<RoofingPackage | null>(null);
+  const [comparisonPackages, setComparisonPackages] = useState<RoofingPackage[]>([]);
   const [measurements, setMeasurements] = useState<any>(null);
-  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
-  const [pendingEstimate, setPendingEstimate] = useState<{ sqft: number; address: string } | null>(null);
+  
+  // Dialog states
+  const [estimateFlowOpen, setEstimateFlowOpen] = useState(false);
+  const [quizFlowOpen, setQuizFlowOpen] = useState(false);
+  const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Quote form data
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -149,38 +152,53 @@ const Roofing = () => {
     property_address: "",
     message: ""
   });
+  const [pendingQuote, setPendingQuote] = useState<{
+    package: RoofingPackage;
+    estimate: any;
+  } | null>(null);
 
-  const handleEstimateAccepted = (sqft: number, address: string) => {
-    setPendingEstimate({ sqft, address });
-    setQuizDialogOpen(true);
+  // Handle package selection for instant estimate
+  const handleSelectPackage = (pkg: RoofingPackage) => {
+    setSelectedPackage(pkg);
+    setEstimateFlowOpen(true);
   };
 
-  const handleQuizComplete = () => {
-    setQuizDialogOpen(false);
-    // Continue to measurement completion flow
-    if (pendingEstimate) {
-      // The user will still be on the measurement tool, they can click Generate Report
-    }
-  };
-
-  const handleMeasurementComplete = (measurementData: any) => {
-    setMeasurements(measurementData);
-    setShowMeasurement(false);
-  };
-
-  const handleRequestService = (packageName: string, price: string) => {
-    setSelectedPackage(packageName);
-    setEstimatedPrice(price);
-    setFormData({
-      ...formData,
-      property_address: measurements?.address || "",
-      message: measurements 
-        ? `Roof Measurements:\n- Total Squares: ${measurements.totalSquares.toFixed(2)}\n- Flat Area: ${measurements.flatArea.toFixed(0)} sq ft\n- Pitched Area: ${measurements.pitchedArea.toFixed(0)} sq ft\n- Pitch Multiplier: ${measurements.pitchMultiplier}\n- Waste Factor: ${measurements.wasteFactor}%\n\nEstimated Price: ${price}`
-        : ""
+  // Handle comparison toggle
+  const handleToggleComparison = (pkg: RoofingPackage) => {
+    setComparisonPackages(prev => {
+      const exists = prev.some(p => p.name === pkg.name);
+      if (exists) {
+        return prev.filter(p => p.name !== pkg.name);
+      }
+      if (prev.length >= 3) {
+        toast.error("You can only compare up to 3 packages");
+        return prev;
+      }
+      return [...prev, pkg];
     });
-    setDialogOpen(true);
   };
 
+  // Handle request quote from estimate flow
+  const handleRequestQuote = (pkg: RoofingPackage, estimate: any) => {
+    setPendingQuote({ package: pkg, estimate });
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      property_address: estimate.address || "",
+      message: `Package: ${pkg.name}\nRoof Size: ${estimate.totalSquares?.toFixed(1) || "N/A"} squares\nEstimate: $${estimate.estimateLow?.toLocaleString()} - $${estimate.estimateHigh?.toLocaleString()}`
+    });
+    setEstimateFlowOpen(false);
+    setQuizFlowOpen(false);
+    setQuoteDialogOpen(true);
+  };
+
+  // Handle quiz package selection
+  const handleQuizSelectPackage = (pkg: RoofingPackage, estimate: any) => {
+    handleRequestQuote(pkg, estimate);
+  };
+
+  // Submit quote request
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -194,14 +212,31 @@ const Roofing = () => {
             email: formData.email,
             phone: formData.phone,
             property_address: formData.property_address,
-            message: `${selectedPackage}\n\n${formData.message}`
+            message: formData.message
           }
         ]);
 
       if (error) throw error;
 
-      toast.success("Request submitted successfully! We'll contact you soon.");
-      setDialogOpen(false);
+      // Send Telegram notification
+      supabase.functions.invoke('telegram-lead-alert', {
+        body: {
+          source: '🏠 Roofing Services',
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          address: formData.property_address,
+          service: pendingQuote?.package.name || 'Roofing',
+          urgency: 'quote-request',
+          estimateLow: pendingQuote?.estimate.estimateLow,
+          estimateHigh: pendingQuote?.estimate.estimateHigh,
+          notes: formData.message
+        }
+      }).catch(err => console.error('Telegram notification failed:', err));
+
+      toast.success("Request submitted! We'll contact you soon.");
+      setQuoteDialogOpen(false);
+      setPendingQuote(null);
       setFormData({
         name: "",
         email: "",
@@ -215,6 +250,10 @@ const Roofing = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const scrollToPackages = () => {
+    document.getElementById('packages-section')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -255,15 +294,15 @@ const Roofing = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      {/* Hero Section - Simplified */}
+      <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Professional <span className="text-primary">Roofing Services</span>
+              Explore Our <span className="text-primary">Roofing Packages</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Get your free roof measurement and choose from our comprehensive range of roofing packages
+              Browse our comprehensive range of roofing solutions. Select any package to get an instant AI-powered estimate for your property.
             </p>
             
             {/* YouTube Video */}
@@ -277,170 +316,82 @@ const Roofing = () => {
               />
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                onClick={() => {
-                  setShowAssistant(true);
-                  setShowMeasurement(false);
-                }}
-                className="text-lg px-8"
-              >
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Start Interactive Consultation
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => {
-                  setShowMeasurement(true);
-                  setShowAssistant(false);
-                }}
-                className="text-lg px-8"
-              >
-                <Ruler className="mr-2 h-5 w-5" />
-                Get Free Measurement
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Sales Assistant */}
-      {showAssistant && !showMeasurement && !measurements && (
-        <section className="py-20 bg-muted/30">
-          <div className="container">
-            <InteractiveSalesAssistant 
-              onComplete={() => {
-                setShowAssistant(false);
-                setShowMeasurement(true);
-              }}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Measurement Tool Section */}
-      {showMeasurement && !measurements && (
-        <section className="py-20 bg-muted/30">
-          <div className="container max-w-5xl">
-            <RoofMeasurementTool 
-              onMeasurementComplete={handleMeasurementComplete}
-              onEstimateAccepted={handleEstimateAccepted}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Quiz Dialog - Auto-opens after accepting AI estimate */}
-      <Dialog open={quizDialogOpen} onOpenChange={setQuizDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Find Your Perfect Roofing Package
-            </DialogTitle>
-            <DialogDescription>
-              Answer a few quick questions to get a personalized recommendation
-            </DialogDescription>
-          </DialogHeader>
-          <InteractiveSalesAssistant 
-            onComplete={handleQuizComplete}
-            initialSqft={pendingEstimate?.sqft}
-            initialAddress={pendingEstimate?.address}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Measurement Report Section */}
-      {measurements && (
-        <section className="py-20 bg-muted/30">
-          <div className="container max-w-4xl space-y-8">
-            <MeasurementReport measurements={measurements} />
-            
-            {/* AI Quote Generator */}
-            <AIQuoteGenerator 
-              measurements={measurements}
-              packages={roofingPackages}
-              onSelectPackage={handleRequestService}
-            />
-            
             <Button 
-              variant="outline" 
-              onClick={() => {
-                setMeasurements(null);
-                setShowMeasurement(true);
-              }}
-              className="w-full"
+              size="lg" 
+              onClick={scrollToPackages}
+              variant="outline"
+              className="text-lg px-8 group"
             >
-              Take New Measurement
+              Browse Packages
+              <ArrowDown className="ml-2 h-5 w-5 group-hover:translate-y-1 transition-transform" />
             </Button>
           </div>
-        </section>
-      )}
-
-      {/* Roofing Packages */}
-      <section className="py-20">
-        <div className="container">
-          {measurements ? (
-            <PackageSelector 
-              packages={roofingPackages}
-              totalSquares={measurements.totalSquares}
-              onSelectPackage={handleRequestService}
-            />
-          ) : (
-            <>
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold mb-4">Roofing Packages</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  From budget-friendly solutions to premium installations, we have a package for every need and budget
-                </p>
-              </div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {roofingPackages.map((pkg) => (
-                  <Card key={pkg.name} className="shadow-card hover:shadow-elevated transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{pkg.name}</span>
-                      </CardTitle>
-                      <CardDescription className="text-2xl font-bold text-primary">
-                        {pkg.pricePerSquare}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-2">
-                        {pkg.features.map((feature, idx) => (
-                          <li key={idx} className="flex gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Button 
-                        onClick={() => handleRequestService(pkg.name, pkg.pricePerSquare)}
-                        className="w-full"
-                      >
-                        Request Quote
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
         </div>
       </section>
 
-      {/* Request Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Package Browser Section */}
+      <section id="packages-section" className="py-16">
+        <div className="container">
+          <PackageBrowser
+            packages={roofingPackages}
+            comparisonPackages={comparisonPackages}
+            onSelectPackage={handleSelectPackage}
+            onToggleComparison={handleToggleComparison}
+            onStartQuiz={() => setQuizFlowOpen(true)}
+          />
+        </div>
+      </section>
+
+      {/* Comparison Bar */}
+      <ComparisonBar
+        packages={comparisonPackages}
+        onRemove={handleToggleComparison}
+        onCompare={() => setComparisonDialogOpen(true)}
+        onClear={() => setComparisonPackages([])}
+      />
+
+      {/* Comparison Dialog */}
+      <PackageComparisonDialog
+        open={comparisonDialogOpen}
+        onOpenChange={setComparisonDialogOpen}
+        packages={comparisonPackages}
+        measurements={measurements}
+        onSelectPackage={handleSelectPackage}
+      />
+
+      {/* Instant Estimate Flow */}
+      <InstantEstimateFlow
+        open={estimateFlowOpen}
+        onOpenChange={setEstimateFlowOpen}
+        selectedPackage={selectedPackage}
+        onRequestQuote={handleRequestQuote}
+        onCompareOthers={() => {
+          setEstimateFlowOpen(false);
+          scrollToPackages();
+        }}
+      />
+
+      {/* Quiz Estimate Flow */}
+      <QuizEstimateFlow
+        open={quizFlowOpen}
+        onOpenChange={setQuizFlowOpen}
+        packages={roofingPackages}
+        onSelectPackage={handleQuizSelectPackage}
+      />
+
+      {/* Quote Request Dialog */}
+      <Dialog open={quoteDialogOpen} onOpenChange={setQuoteDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request Quote</DialogTitle>
+            <DialogTitle>Request Official Quote</DialogTitle>
             <DialogDescription className="space-y-1">
-              <div>Package: <span className="font-semibold">{selectedPackage}</span></div>
-              {estimatedPrice && (
-                <div>Estimated Price: <span className="font-semibold text-primary">{estimatedPrice}</span></div>
+              {pendingQuote && (
+                <>
+                  <div>Package: <span className="font-semibold">{pendingQuote.package.name}</span></div>
+                  <div>Estimated: <span className="font-semibold text-primary">
+                    ${pendingQuote.estimate.estimateLow?.toLocaleString()} - ${pendingQuote.estimate.estimateHigh?.toLocaleString()}
+                  </span></div>
+                </>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -495,7 +446,7 @@ const Roofing = () => {
               <Button type="submit" disabled={submitting} className="flex-1">
                 {submitting ? "Submitting..." : "Submit Request"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setQuoteDialogOpen(false)}>
                 Cancel
               </Button>
             </div>
@@ -504,7 +455,7 @@ const Roofing = () => {
       </Dialog>
 
       {/* Footer */}
-      <footer className="border-t py-12 bg-muted/30">
+      <footer className="border-t py-12 bg-muted/30 mt-16">
         <div className="container text-center">
           <p className="text-sm text-muted-foreground">
             © 2025 Global Contractor Network. All rights reserved.
