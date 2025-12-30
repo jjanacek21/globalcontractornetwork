@@ -135,6 +135,100 @@ All colors MUST be HSL.
   }
 }
 
+/* 3D Card Lift Animation */
+@keyframes card3dLift {
+  0% {
+    transform: perspective(1000px) translateY(0) rotateX(0deg);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    transform: perspective(1000px) translateY(-8px) rotateX(2deg);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* Floating Orb Animation */
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  25% {
+    transform: translate(10px, -20px) scale(1.05);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-5px, -35px) scale(1);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(-15px, -15px) scale(0.95);
+    opacity: 0.6;
+  }
+}
+
+/* Staggered Slide Up */
+@keyframes staggerSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Gold Shimmer */
+@keyframes goldShimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Pulse Glow */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px hsl(var(--primary) / 0.2);
+  }
+}
+
+/* Gradient Border Animation */
+@keyframes gradientBorder {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Icon Float */
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Ring Pulse */
+@keyframes ringPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+  }
+}
+
 /* GCN Marketing Animations */
 @keyframes fadeInUp {
   from {
@@ -317,6 +411,201 @@ All colors MUST be HSL.
   border: 1px solid hsla(0, 0%, 100%, 0.1);
 }
 
+/* ========================================
+   3D DASHBOARD UTILITY CLASSES
+   ======================================== */
+
+/* Glass Card */
+.glass-card {
+  background: hsl(var(--card) / 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* 3D Card Hover Effect */
+.card-3d {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) translateY(-8px) rotateX(2deg);
+  box-shadow: 
+    0 20px 40px -15px hsl(var(--primary) / 0.2),
+    0 10px 20px -10px hsl(var(--foreground) / 0.1);
+}
+
+/* Floating Orb */
+.floating-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: floatOrb 15s ease-in-out infinite;
+}
+
+.floating-orb-1 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.3), hsl(142 76% 36% / 0.2));
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
+}
+
+.floating-orb-2 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(135deg, hsl(45 100% 51% / 0.2), hsl(var(--accent) / 0.15));
+  bottom: 20%;
+  left: 5%;
+  animation-delay: -5s;
+}
+
+.floating-orb-3 {
+  width: 150px;
+  height: 150px;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(45 100% 51% / 0.15));
+  top: 50%;
+  right: 25%;
+  animation-delay: -10s;
+}
+
+/* Staggered Animation Helper */
+.stagger-item {
+  opacity: 0;
+  animation: staggerSlideUp 0.6s ease-out forwards;
+}
+
+.stagger-delay-1 { animation-delay: 0.05s; }
+.stagger-delay-2 { animation-delay: 0.1s; }
+.stagger-delay-3 { animation-delay: 0.15s; }
+.stagger-delay-4 { animation-delay: 0.2s; }
+.stagger-delay-5 { animation-delay: 0.25s; }
+.stagger-delay-6 { animation-delay: 0.3s; }
+.stagger-delay-7 { animation-delay: 0.35s; }
+.stagger-delay-8 { animation-delay: 0.4s; }
+.stagger-delay-9 { animation-delay: 0.45s; }
+.stagger-delay-10 { animation-delay: 0.5s; }
+.stagger-delay-11 { animation-delay: 0.55s; }
+.stagger-delay-12 { animation-delay: 0.6s; }
+
+/* Gold Shimmer Text */
+.gold-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--foreground)) 0%,
+    hsl(45 100% 51%) 25%,
+    hsl(var(--foreground)) 50%,
+    hsl(45 100% 51%) 75%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldShimmer 4s linear infinite;
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(142 76% 46%) 50%, hsl(45 100% 51%) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Gradient Border */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(45 100% 51%), hsl(var(--primary)));
+  background-size: 200% 200%;
+  animation: gradientBorder 3s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Icon Float Animation */
+.icon-float {
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+/* Pulse Glow */
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Avatar Ring Animation */
+.avatar-ring {
+  transition: all 0.3s ease;
+}
+
+.avatar-ring:hover {
+  animation: ringPulse 1s ease-in-out;
+}
+
+/* Stat Card Gradient Backgrounds */
+.stat-card-green {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(142 76% 36% / 0.05) 100%);
+}
+
+.stat-card-gold {
+  background: linear-gradient(135deg, hsl(45 100% 51% / 0.1) 0%, hsl(45 93% 47% / 0.05) 100%);
+}
+
+.stat-card-blue {
+  background: linear-gradient(135deg, hsl(221 83% 53% / 0.1) 0%, hsl(217 91% 60% / 0.05) 100%);
+}
+
+/* Service Card Category Gradients */
+.service-gradient-home {
+  background: linear-gradient(135deg, hsl(142 76% 36% / 0.08) 0%, hsl(142 76% 36% / 0.02) 100%);
+}
+
+.service-gradient-business {
+  background: linear-gradient(135deg, hsl(221 83% 53% / 0.08) 0%, hsl(221 83% 53% / 0.02) 100%);
+}
+
+.service-gradient-emergency {
+  background: linear-gradient(135deg, hsl(0 72% 51% / 0.08) 0%, hsl(0 72% 51% / 0.02) 100%);
+}
+
+.service-gradient-shopping {
+  background: linear-gradient(135deg, hsl(271 81% 56% / 0.08) 0%, hsl(271 81% 56% / 0.02) 100%);
+}
+
+.service-gradient-learning {
+  background: linear-gradient(135deg, hsl(239 84% 67% / 0.08) 0%, hsl(239 84% 67% / 0.02) 100%);
+}
+
+/* Dark Section */
+.dark-section {
+  background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(0 0% 15%) 100%);
+  color: hsl(var(--background));
+}
+
+/* Grid Pattern Background */
+.grid-pattern {
+  background-image: radial-gradient(circle, hsl(var(--border) / 0.3) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 /* Gold border glow */
 .gold-border-glow {
   position: relative;
@@ -352,4 +641,23 @@ html {
 .section-reveal.revealed {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .card-3d:hover {
+    transform: translateY(-4px);
+  }
+  
+  .floating-orb,
+  .icon-float,
+  .gold-shimmer-text,
+  .pulse-glow {
+    animation: none;
+  }
+  
+  .stagger-item {
+    opacity: 1;
+    animation: none;
+  }
 }
