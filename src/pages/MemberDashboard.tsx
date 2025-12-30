@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users
+  Settings, Users, Sparkles
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -44,6 +44,24 @@ interface ContractorProfile {
 
 type ServiceCategory = "all" | "home" | "business" | "emergency" | "shopping" | "learning";
 
+const getTimeGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+};
+
+const getCategoryGradientClass = (category: ServiceCategory) => {
+  switch (category) {
+    case "home": return "service-gradient-home";
+    case "business": return "service-gradient-business";
+    case "emergency": return "service-gradient-emergency";
+    case "shopping": return "service-gradient-shopping";
+    case "learning": return "service-gradient-learning";
+    default: return "";
+  }
+};
+
 const MemberDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -68,7 +86,6 @@ const MemberDashboard = () => {
     }
 
     try {
-      // Fetch profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -79,7 +96,6 @@ const MemberDashboard = () => {
         setProfile(profileData as UserProfile);
       }
 
-      // Fetch network member record
       const { data: memberData } = await supabase
         .from("network_members")
         .select("*")
@@ -90,7 +106,6 @@ const MemberDashboard = () => {
         setNetworkMember(memberData as NetworkMember);
       }
 
-      // Fetch contractor profile if exists
       const { data: contractorData } = await supabase
         .from("contractor_profiles")
         .select("*")
@@ -101,7 +116,6 @@ const MemberDashboard = () => {
         setContractorProfile(contractorData as ContractorProfile);
       }
 
-      // Check if user is a super admin
       const { data: superAdminData } = await supabase
         .from("super_admins")
         .select("id")
@@ -125,7 +139,6 @@ const MemberDashboard = () => {
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
   const canSeeContractorServices = isContractor || isSuperAdmin;
 
-  // Services hidden from homeowners (only visible to contractors and super admins)
   const contractorOnlyServices = [
     "Contractor Social Hub",
     "Training Academy", 
@@ -249,13 +262,13 @@ const MemberDashboard = () => {
     }
   ];
 
-  const categories: { value: ServiceCategory; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "home", label: "Home" },
-    { value: "business", label: "Business" },
-    { value: "emergency", label: "Emergency" },
-    { value: "shopping", label: "Shopping" },
-    { value: "learning", label: "Learning" }
+  const categories: { value: ServiceCategory; label: string; icon: typeof Home }[] = [
+    { value: "all", label: "All", icon: Sparkles },
+    { value: "home", label: "Home", icon: Home },
+    { value: "business", label: "Business", icon: Building2 },
+    { value: "emergency", label: "Emergency", icon: AlertTriangle },
+    { value: "shopping", label: "Shopping", icon: ShoppingBag },
+    { value: "learning", label: "Learning", icon: BookOpen }
   ];
 
   const filteredServices = services.filter(service => {
@@ -263,91 +276,119 @@ const MemberDashboard = () => {
       service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "all" || service.category === activeCategory;
-    
-    // Hide contractor-only services from homeowners
     const isContractorOnly = contractorOnlyServices.includes(service.title);
     const hasAccess = !isContractorOnly || canSeeContractorServices;
-    
     return matchesSearch && matchesCategory && hasAccess;
   });
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
+          </div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Floating Background Orbs */}
+      <div className="floating-orb floating-orb-1" />
+      <div className="floating-orb floating-orb-2" />
+      <div className="floating-orb floating-orb-3" />
+      
+      {/* Grid Pattern Overlay */}
+      <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
+
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-50 w-full glass-card border-b">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-[hsl(45,100%,51%)] to-primary opacity-60" />
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto rounded-lg transition-transform group-hover:scale-105" />
+              <div className="absolute -inset-1 bg-primary/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold">Global Contractor Network</span>
+              <span className="text-lg font-bold tracking-tight">Global Contractor Network</span>
               <span className="text-xs text-muted-foreground">Member Dashboard</span>
             </div>
           </Link>
+          
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <User className="h-4 w-4" />
-              <span>{profile?.first_name} {profile?.last_name}</span>
-              {isContractor && (
-                <Badge variant={isPendingContractor ? "secondary" : "default"}>
-                  {isPendingContractor ? "Pending" : "Contractor"}
-                </Badge>
-              )}
-              {networkMember && !isContractor && (
-                <Badge variant="outline">Property Owner</Badge>
-              )}
+            <div className="flex items-center gap-3">
+              <div className="avatar-ring w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+              </div>
+              <div className="hidden sm:flex flex-col">
+                <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
+                <div className="flex items-center gap-1">
+                  {isContractor && (
+                    <Badge variant={isPendingContractor ? "secondary" : "default"} className="text-[10px] h-4">
+                      {isPendingContractor ? "Pending" : "Pro"}
+                    </Badge>
+                  )}
+                  {networkMember && !isContractor && (
+                    <Badge variant="outline" className="text-[10px] h-4">Owner</Badge>
+                  )}
+                </div>
+              </div>
             </div>
+            
             {isSuperAdmin && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link to="/admin/auth">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10">
                       <Settings className="h-4 w-4" />
                     </Button>
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent>Master Admin Portal</TooltipContent>
+                <TooltipContent>Admin Portal</TooltipContent>
               </Tooltip>
             )}
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+            
+            <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-full">
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container py-8 space-y-8">
-        {/* Welcome Section */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">
-            Welcome back, {profile?.first_name || "Member"}!
+      <main className="container relative z-10 py-8 space-y-10">
+        {/* Hero Welcome Section */}
+        <div className="space-y-4 stagger-item stagger-delay-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary icon-float" />
+            <span className="text-sm font-medium text-primary">{getTimeGreeting()}</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+            Welcome back, <span className="gradient-text">{profile?.first_name || "Member"}</span>!
           </h1>
-          <p className="text-muted-foreground">
-            Access all GCN services from your dashboard
+          <p className="text-lg text-muted-foreground max-w-2xl">
+            Access all GCN services and tools from your personalized dashboard
           </p>
         </div>
 
         {/* Pending Contractor Notice */}
         {isPendingContractor && (
-          <Card className="border-amber-200 bg-amber-50">
+          <Card className="border-amber-300/50 bg-gradient-to-r from-amber-50 to-amber-100/50 dark:from-amber-950/20 dark:to-amber-900/10 overflow-hidden stagger-item stagger-delay-2">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 animate-pulse" />
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-amber-600" />
+                <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center icon-float">
+                  <Shield className="h-6 w-6 text-amber-600" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-amber-900">Application Under Review</h3>
-                  <p className="text-sm text-amber-700">
-                    Your contractor application is being reviewed by our team. You'll receive an email once 
-                    your account is approved. In the meantime, feel free to explore our services.
+                <div className="space-y-1 flex-1">
+                  <h3 className="font-semibold text-amber-900 dark:text-amber-100">Application Under Review</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-200/70">
+                    Your contractor application is being reviewed. You'll receive an email once approved.
                   </p>
                 </div>
               </div>
@@ -358,63 +399,79 @@ const MemberDashboard = () => {
         {/* Quick Stats for Contractors */}
         {isContractor && !isPendingContractor && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="glass-card card-3d gradient-border stagger-item stagger-delay-2 stat-card-green">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Company</p>
-                    <p className="text-xl font-semibold">{contractorProfile?.company_name}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Company</p>
+                    <p className="text-xl font-bold">{contractorProfile?.company_name}</p>
                   </div>
-                  <Building2 className="h-8 w-8 text-primary/30" />
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Building2 className="h-6 w-6 text-primary icon-float" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            
+            <Card className="glass-card card-3d gradient-border stagger-item stagger-delay-3 stat-card-gold">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
-                    <p className="text-xl font-semibold">{contractorProfile?.category}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</p>
+                    <p className="text-xl font-bold">{contractorProfile?.category}</p>
                   </div>
-                  <CheckCircle2 className="h-8 w-8 text-green-500/30" />
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <Crown className="h-6 w-6 text-amber-500 icon-float" style={{ animationDelay: '0.5s' }} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            
+            <Card className="glass-card card-3d gradient-border stagger-item stagger-delay-4 stat-card-blue">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Verification</p>
-                    <p className="text-xl font-semibold">
-                      {contractorProfile?.is_verified ? "Verified" : "Pending"}
-                    </p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold">
+                        {contractorProfile?.is_verified ? "Verified" : "Pending"}
+                      </p>
+                      {contractorProfile?.is_verified && (
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
                   </div>
-                  <Shield className="h-8 w-8 text-primary/30" />
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-blue-500 icon-float" style={{ animationDelay: '1s' }} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Services Grid */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Available Services</h2>
+        {/* Services Section */}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 stagger-item stagger-delay-3">
+            <h2 className="text-2xl font-bold">Available Services</h2>
+            <span className="text-sm text-muted-foreground">{filteredServices.length} services</span>
+          </div>
           
           {/* Search and Filter */}
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="space-y-4 stagger-item stagger-delay-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search services..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-9"
+                className="pl-11 pr-11 h-11 rounded-full bg-muted/50 border-muted-foreground/20 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               />
               {searchQuery && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full"
                   onClick={() => setSearchQuery("")}
                 >
                   <X className="h-4 w-4" />
@@ -424,26 +481,36 @@ const MemberDashboard = () => {
             
             {/* Category Filter Pills */}
             <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <Button
-                  key={cat.value}
-                  variant={activeCategory === cat.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveCategory(cat.value)}
-                  className="rounded-full"
-                >
-                  {cat.label}
-                </Button>
-              ))}
+              {categories.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <Button
+                    key={cat.value}
+                    variant={activeCategory === cat.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCategory(cat.value)}
+                    className={`rounded-full transition-all ${
+                      activeCategory === cat.value 
+                        ? "shadow-lg shadow-primary/25 scale-105" 
+                        : "hover:scale-105"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 mr-1.5" />
+                    {cat.label}
+                  </Button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Services Grid or Empty State */}
+          {/* Services Grid */}
           {filteredServices.length === 0 ? (
-            <Card className="p-8 text-center">
-              <div className="space-y-2">
-                <Search className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                <h3 className="font-semibold">No services found</h3>
+            <Card className="p-12 text-center glass-card">
+              <div className="space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center">
+                  <Search className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="font-semibold text-lg">No services found</h3>
                 <p className="text-sm text-muted-foreground">
                   Try adjusting your search or filter criteria
                 </p>
@@ -451,34 +518,37 @@ const MemberDashboard = () => {
                   variant="outline" 
                   size="sm"
                   onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
+                  className="rounded-full"
                 >
                   Clear filters
                 </Button>
               </div>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredServices.map((service) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredServices.map((service, index) => (
                 <Link
                   key={service.title}
                   to={service.link}
-                  className="group"
+                  className={`group stagger-item stagger-delay-${Math.min(index + 5, 12)}`}
                 >
-                  <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50">
-                    <CardContent className="pt-6">
+                  <Card className={`h-full card-3d gradient-border glass-card ${getCategoryGradientClass(service.category)}`}>
+                    <CardContent className="pt-6 pb-5">
                       <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${service.color}`}>
-                          <service.icon className="h-6 w-6" />
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${service.color} transition-transform group-hover:scale-110`}>
+                          <service.icon className="h-7 w-7" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
                             {service.title}
                           </h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
                             {service.description}
                           </p>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -488,56 +558,58 @@ const MemberDashboard = () => {
           )}
         </div>
 
-        {/* Contractor-Only Section */}
+        {/* Contractor Tools Section */}
         {isContractor && !isPendingContractor && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Contractor Tools</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Link to="/crm/auth" className="group">
-                <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-primary" />
+          <div className="stagger-item stagger-delay-8">
+            <div className="rounded-2xl p-6 md:p-8 dark-section">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                  <Crown className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Contractor Tools</h2>
+                  <p className="text-sm text-white/60">Pro features for your business</p>
+                </div>
+              </div>
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Link to="/crm/auth" className="group">
+                  <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                        <Building2 className="h-6 w-6 text-[hsl(45,100%,51%)]" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold group-hover:text-primary transition-colors">
+                        <h3 className="font-semibold text-white group-hover:text-[hsl(45,100%,51%)] transition-colors">
                           CRM Portal
                         </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Manage your leads and customers
-                        </p>
+                        <p className="text-sm text-white/60">Manage leads & customers</p>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                      <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </Link>
 
-              <Link to="/contractor/dashboard" className="group">
-                <Card className="h-full transition-all hover:shadow-lg hover:border-primary/50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                        <User className="h-6 w-6 text-accent-foreground" />
+                <Link to="/contractor/dashboard" className="group">
+                  <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                        <User className="h-6 w-6 text-[hsl(45,100%,51%)]" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold group-hover:text-primary transition-colors">
+                        <h3 className="font-semibold text-white group-hover:text-[hsl(45,100%,51%)] transition-colors">
                           My Profile
                         </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Manage your contractor profile
-                        </p>
+                        <p className="text-sm text-white/60">Manage your profile</p>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                      <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </Link>
+              </div>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
