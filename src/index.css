@@ -342,8 +342,15 @@ All colors MUST be HSL.
 /* Hero Section Styles */
 .hero-gradient-bg {
   background: linear-gradient(135deg, hsl(0, 0%, 5%) 0%, hsl(0, 0%, 12%) 50%, hsl(0, 0%, 8%) 100%);
+  background-size: 400% 400%;
+  animation: heroGradientShift 20s ease infinite;
   position: relative;
   overflow: hidden;
+}
+
+@keyframes heroGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .hero-gradient-bg::before {
@@ -356,6 +363,94 @@ All colors MUST be HSL.
   background: radial-gradient(ellipse at 30% 20%, hsla(45, 90%, 55%, 0.08) 0%, transparent 50%),
               radial-gradient(ellipse at 70% 80%, hsla(45, 90%, 55%, 0.05) 0%, transparent 50%);
   pointer-events: none;
+}
+
+/* Floating Icon Animations */
+@keyframes floatIconSlow {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+    opacity: 0.25;
+  }
+}
+
+@keyframes floatIconMedium {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translateY(-15px) rotate(-5deg);
+    opacity: 0.22;
+  }
+}
+
+@keyframes floatIconFast {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-25px) rotate(8deg);
+    opacity: 0.2;
+  }
+}
+
+@keyframes driftHorizontal {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(10px) translateY(-10px);
+  }
+  75% {
+    transform: translateX(-10px) translateY(10px);
+  }
+}
+
+.floating-icon {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 1;
+}
+
+.floating-icon-home {
+  color: hsla(152, 45%, 50%, 0.3);
+  filter: drop-shadow(0 0 10px hsla(152, 45%, 50%, 0.2));
+}
+
+.floating-icon-tool {
+  color: hsla(45, 90%, 55%, 0.3);
+  filter: drop-shadow(0 0 10px hsla(45, 90%, 55%, 0.2));
+}
+
+.float-slow { animation: floatIconSlow 8s ease-in-out infinite; }
+.float-medium { animation: floatIconMedium 6s ease-in-out infinite; }
+.float-fast { animation: floatIconFast 4s ease-in-out infinite; }
+.float-drift { animation: driftHorizontal 10s ease-in-out infinite; }
+
+.float-delay-1 { animation-delay: 0s; }
+.float-delay-2 { animation-delay: 1s; }
+.float-delay-3 { animation-delay: 2s; }
+.float-delay-4 { animation-delay: 3s; }
+.float-delay-5 { animation-delay: 4s; }
+.float-delay-6 { animation-delay: 5s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-icon {
+    animation: none !important;
+    opacity: 0.1;
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-icon {
+    display: none;
+  }
 }
 
 /* Gold Button Styles */

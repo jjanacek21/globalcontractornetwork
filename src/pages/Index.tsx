@@ -31,7 +31,11 @@ import {
   Award,
   Headphones,
   Globe,
-  Sparkles
+  Sparkles,
+  Hammer,
+  HardHat,
+  Ruler,
+  ClipboardList
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -130,6 +134,22 @@ const Index = () => {
 
       {/* Hero Section */}
       <section className="hero-gradient-bg min-h-[90vh] flex items-center relative">
+        {/* Floating Home Icons - Left Side (Homeowners) */}
+        <Home className="floating-icon floating-icon-home float-slow float-delay-1 h-12 w-12" style={{ top: '15%', left: '5%' }} />
+        <PanelTop className="floating-icon floating-icon-home float-medium float-delay-2 h-10 w-10" style={{ top: '35%', left: '12%' }} />
+        <Trees className="floating-icon floating-icon-home float-fast float-delay-3 h-14 w-14" style={{ top: '55%', left: '3%' }} />
+        <Shield className="floating-icon floating-icon-home float-slow float-delay-4 h-8 w-8" style={{ top: '70%', left: '15%' }} />
+        <Droplets className="floating-icon floating-icon-home float-medium float-delay-5 h-10 w-10" style={{ top: '25%', left: '18%' }} />
+        <Home className="floating-icon floating-icon-home float-drift float-delay-6 h-6 w-6" style={{ top: '85%', left: '8%' }} />
+        
+        {/* Floating Tool Icons - Right Side (Contractors) */}
+        <Wrench className="floating-icon floating-icon-tool float-slow float-delay-1 h-12 w-12" style={{ top: '18%', right: '6%' }} />
+        <Hammer className="floating-icon floating-icon-tool float-medium float-delay-2 h-10 w-10" style={{ top: '40%', right: '4%' }} />
+        <HardHat className="floating-icon floating-icon-tool float-fast float-delay-3 h-14 w-14" style={{ top: '60%', right: '12%' }} />
+        <DollarSign className="floating-icon floating-icon-tool float-slow float-delay-4 h-8 w-8" style={{ top: '30%', right: '16%' }} />
+        <Ruler className="floating-icon floating-icon-tool float-medium float-delay-5 h-10 w-10" style={{ top: '75%', right: '5%' }} />
+        <ClipboardList className="floating-icon floating-icon-tool float-drift float-delay-6 h-6 w-6" style={{ top: '48%', right: '18%' }} />
+        
         <div className="gold-orb gold-orb-1" />
         <div className="gold-orb gold-orb-2" />
         <div className="container relative z-10 py-20">
