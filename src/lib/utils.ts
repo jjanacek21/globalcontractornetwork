@@ -14,3 +14,8 @@ export function isCoatingKingsDomain(): boolean {
 export function getMainSiteUrl(): string {
   return isCoatingKingsDomain() ? 'https://gcn.lovable.app' : '/';
 }
+
+// Get admin paths based on domain
+export function getCoatingKingsAdminPath(path: 'auth' | 'dashboard'): string {
+  return isCoatingKingsDomain() ? `/admin/${path}` : `/coating-kings/admin/${path}`;
+}

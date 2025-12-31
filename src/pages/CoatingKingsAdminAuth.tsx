@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getCoatingKingsAdminPath } from "@/lib/utils";
 
 const CoatingKingsAdminAuth = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const CoatingKingsAdminAuth = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const dashboardPath = getCoatingKingsAdminPath('dashboard');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,7 +33,7 @@ const CoatingKingsAdminAuth = () => {
           .maybeSingle();
 
         if (adminData) {
-          navigate("/coating-kings/admin/dashboard");
+          navigate(dashboardPath);
           return;
         }
       }
@@ -38,7 +41,7 @@ const CoatingKingsAdminAuth = () => {
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, dashboardPath]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +77,7 @@ const CoatingKingsAdminAuth = () => {
         description: "Logged in successfully.",
       });
 
-      navigate("/coating-kings/admin/dashboard");
+      navigate(dashboardPath);
     } catch (error: any) {
       toast({
         title: "Login failed",

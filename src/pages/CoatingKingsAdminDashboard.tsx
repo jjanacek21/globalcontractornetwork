@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, LogOut, Home, Search, Calendar, Users, DollarSign, Percent, Download, Crown } from "lucide-react";
+import { Loader2, LogOut, Home, Search, Calendar, Users, DollarSign, Percent, Download, Crown, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { isCoatingKingsDomain, getMainSiteUrl } from "@/lib/utils";
 
 interface CoatingLead {
   id: string;
@@ -49,12 +50,16 @@ const CoatingKingsAdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  const isStandaloneDomain = isCoatingKingsDomain();
+  const authPath = isStandaloneDomain ? "/admin/auth" : "/coating-kings/admin/auth";
+  const mainSiteUrl = getMainSiteUrl();
+
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/coating-kings/admin/auth");
+        navigate(authPath);
         return;
       }
 
@@ -67,7 +72,7 @@ const CoatingKingsAdminDashboard = () => {
 
       if (!adminData) {
         await supabase.auth.signOut();
-        navigate("/coating-kings/admin/auth");
+        navigate(authPath);
         return;
       }
 
@@ -75,7 +80,7 @@ const CoatingKingsAdminDashboard = () => {
     };
 
     checkAuthAndFetch();
-  }, [navigate]);
+  }, [navigate, authPath]);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -195,17 +200,26 @@ const CoatingKingsAdminDashboard = () => {
             <h1 className="text-xl font-bold">Coating Kings Admin</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/coating-kings">
+            <Link to="/">
               <Button variant="ghost" size="sm">
                 <Home className="h-4 w-4 mr-2" />
                 Coating Kings
               </Button>
             </Link>
-            <Link to="/">
-              <Button variant="ghost" size="sm">
-                Home
-              </Button>
-            </Link>
+            {isStandaloneDomain ? (
+              <a href={mainSiteUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="ghost" size="sm">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  GCN
+                </Button>
+              </a>
+            ) : (
+              <Link to="/">
+                <Button variant="ghost" size="sm">
+                  Home
+                </Button>
+              </Link>
+            )}
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
