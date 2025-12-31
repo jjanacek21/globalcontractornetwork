@@ -1,7 +1,10 @@
 import { MapPin, Phone, Mail, Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
-import { Link } from "react-router-dom";
+import { isCoatingKingsDomain } from "@/lib/utils";
 
 export const CoatingKingsFooter = () => {
+  const isStandaloneDomain = isCoatingKingsDomain();
+  const gcnUrl = isStandaloneDomain ? "https://gcn.lovable.app" : "/";
+
   return (
     <footer className="bg-background border-t">
       <div className="container px-4 py-12 mx-auto">
@@ -82,9 +85,14 @@ export const CoatingKingsFooter = () => {
                 </a>
               </li>
               <li>
-                <Link to="/" className="hover:text-primary transition-colors">
+                <a 
+                  href={gcnUrl}
+                  target={isStandaloneDomain ? "_blank" : undefined}
+                  rel={isStandaloneDomain ? "noopener noreferrer" : undefined}
+                  className="hover:text-primary transition-colors"
+                >
                   Global Contractor Network
-                </Link>
+                </a>
               </li>
             </ul>
           </div>

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import { isCoatingKingsDomain } from "@/lib/utils";
 
 // Social Pages (lazy loaded)
 const SocialFeed = lazy(() => import("./pages/social/SocialFeed"));
@@ -72,6 +73,11 @@ import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 
 const queryClient = new QueryClient();
 
+// Determine homepage based on domain
+const HomePage = () => {
+  return isCoatingKingsDomain() ? <CoatingKings /> : <LandingPage />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -81,8 +87,8 @@ const App = () => (
         <ScrollToTop />
         <GlobalAIChat />
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          {/* Public Routes - Domain-aware homepage */}
+          <Route path="/" element={<HomePage />} />
           <Route path="/services" element={<Index />} />
           <Route path="/join" element={<JoinNetwork />} />
           <Route path="/login" element={<NetworkLogin />} />

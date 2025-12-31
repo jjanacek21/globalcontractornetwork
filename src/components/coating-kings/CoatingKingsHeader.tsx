@@ -1,8 +1,9 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Menu, X } from "lucide-react";
+import { ExternalLink, Menu, X } from "lucide-react";
 import { useState } from "react";
 import coatingKingsLogo from "@/assets/coating-kings-logo.png";
+import { isCoatingKingsDomain, getMainSiteUrl } from "@/lib/utils";
 
 interface CoatingKingsHeaderProps {
   onGetQuote?: () => void;
@@ -11,7 +12,7 @@ interface CoatingKingsHeaderProps {
 
 export function CoatingKingsHeader({ onGetQuote, onContact }: CoatingKingsHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
+  const isStandaloneDomain = isCoatingKingsDomain();
 
   const navLinks = [
     { href: "#products", label: "Coating Systems" },
@@ -29,26 +30,33 @@ export function CoatingKingsHeader({ onGetQuote, onContact }: CoatingKingsHeader
     setMobileMenuOpen(false);
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted"
-            onClick={() => navigate("/member/dashboard")}
-          >
-            <Home className="h-4 w-4 mr-1" />
-            Dashboard
-          </Button>
-          <Link to="/coating-kings" className="flex items-center gap-3">
+          {/* Show GCN link only when on standalone domain */}
+          {isStandaloneDomain && (
+            <a
+              href="https://gcn.lovable.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              GCN
+            </a>
+          )}
+          <button onClick={scrollToTop} className="flex items-center gap-3">
             <img src={coatingKingsLogo} alt="Coating Kings" className="h-10 w-auto" />
             <div className="hidden sm:flex flex-col">
               <span className="text-lg font-bold">Coating Kings</span>
               <span className="text-xs text-muted-foreground">Roof Coating Specialists</span>
             </div>
-          </Link>
+          </button>
         </div>
         
         {/* Desktop Nav */}
