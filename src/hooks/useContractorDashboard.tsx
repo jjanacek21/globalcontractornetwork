@@ -37,7 +37,7 @@ export interface ContractorJob {
   scheduled_time: string | null;
   quoted_amount: number | null;
   collected_amount: number | null;
-  job_details: Record<string, unknown>;
+  job_details: Record<string, unknown> | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -189,7 +189,19 @@ export const useContractorDashboard = () => {
     }
   };
 
-  const createJob = async (jobData: Omit<ContractorJob, "id" | "contractor_id" | "created_at" | "updated_at">) => {
+  const createJob = async (jobData: {
+    homeowner_name: string;
+    homeowner_email?: string;
+    homeowner_phone?: string;
+    property_address: string;
+    service_type: string;
+    status?: string;
+    quoted_amount?: number;
+    scheduled_date?: string;
+    scheduled_time?: string;
+    notes?: string;
+    project_id?: string | null;
+  }) => {
     if (!contractorProfileId) return null;
 
     try {
@@ -202,12 +214,10 @@ export const useContractorDashboard = () => {
           homeowner_email: jobData.homeowner_email,
           property_address: jobData.property_address,
           service_type: jobData.service_type,
-          status: jobData.status,
+          status: jobData.status || "new",
           scheduled_date: jobData.scheduled_date,
           scheduled_time: jobData.scheduled_time,
           quoted_amount: jobData.quoted_amount,
-          collected_amount: jobData.collected_amount,
-          job_details: jobData.job_details,
           notes: jobData.notes,
           project_id: jobData.project_id,
         }])
