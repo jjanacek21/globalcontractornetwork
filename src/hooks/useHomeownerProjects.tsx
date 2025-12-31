@@ -82,7 +82,7 @@ export const useHomeownerProjects = () => {
     lng?: number;
     ai_estimate_low?: number;
     ai_estimate_high?: number;
-    project_details?: Record<string, unknown>;
+    project_details?: Record<string, string | number | boolean | null>;
   }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
