@@ -607,6 +607,129 @@ export type Database = {
           },
         ]
       }
+      contractor_jobs: {
+        Row: {
+          collected_amount: number | null
+          contractor_id: string
+          created_at: string
+          homeowner_email: string | null
+          homeowner_name: string
+          homeowner_phone: string | null
+          id: string
+          job_details: Json | null
+          notes: string | null
+          project_id: string | null
+          property_address: string
+          quoted_amount: number | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          service_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collected_amount?: number | null
+          contractor_id: string
+          created_at?: string
+          homeowner_email?: string | null
+          homeowner_name: string
+          homeowner_phone?: string | null
+          id?: string
+          job_details?: Json | null
+          notes?: string | null
+          project_id?: string | null
+          property_address: string
+          quoted_amount?: number | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collected_amount?: number | null
+          contractor_id?: string
+          created_at?: string
+          homeowner_email?: string | null
+          homeowner_name?: string
+          homeowner_phone?: string | null
+          id?: string
+          job_details?: Json | null
+          notes?: string | null
+          project_id?: string | null
+          property_address?: string
+          quoted_amount?: number | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_jobs_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_leads: {
+        Row: {
+          contractor_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          quoted_amount: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          quoted_amount?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          quoted_amount?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_leads_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_leads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_profiles: {
         Row: {
           average_rating: number | null
@@ -1345,6 +1468,77 @@ export type Database = {
             columns: ["uploaded_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homeowner_projects: {
+        Row: {
+          ai_estimate_high: number | null
+          ai_estimate_low: number | null
+          assigned_contractor_id: string | null
+          city: string | null
+          created_at: string
+          id: string
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          official_quote: number | null
+          project_details: Json | null
+          property_address: string
+          service_type: string
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          ai_estimate_high?: number | null
+          ai_estimate_low?: number | null
+          assigned_contractor_id?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          official_quote?: number | null
+          project_details?: Json | null
+          property_address: string
+          service_type: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          ai_estimate_high?: number | null
+          ai_estimate_low?: number | null
+          assigned_contractor_id?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          official_quote?: number | null
+          project_details?: Json | null
+          property_address?: string
+          service_type?: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homeowner_projects_assigned_contractor_id_fkey"
+            columns: ["assigned_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2499,6 +2693,44 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      project_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          project_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          project_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          project_id?: string
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
