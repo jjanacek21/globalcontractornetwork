@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Menu, X } from "lucide-react";
+import { ExternalLink, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import coatingKingsLogo from "@/assets/coating-kings-logo.png";
 import { isCoatingKingsDomain, getMainSiteUrl } from "@/lib/utils";
@@ -38,8 +38,8 @@ export function CoatingKingsHeader({ onGetQuote, onContact }: CoatingKingsHeader
     <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* Show GCN link only when on standalone domain */}
-          {isStandaloneDomain && (
+          {/* Show Dashboard on GCN domain, GCN link on standalone domain */}
+          {isStandaloneDomain ? (
             <a
               href="https://gcn.lovable.app"
               target="_blank"
@@ -49,6 +49,13 @@ export function CoatingKingsHeader({ onGetQuote, onContact }: CoatingKingsHeader
               <ExternalLink className="h-3 w-3" />
               GCN
             </a>
+          ) : (
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+              <Link to="/member/dashboard">
+                <LayoutDashboard className="h-4 w-4 mr-1" />
+                Dashboard
+              </Link>
+            </Button>
           )}
           <button onClick={scrollToTop} className="flex items-center gap-3">
             <img src={coatingKingsLogo} alt="Coating Kings" className="h-10 w-auto" />

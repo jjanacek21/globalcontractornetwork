@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { DigitalMarketingHeader } from "@/components/digital-marketing/DigitalMarketingHeader";
 import { MarketingHero } from "@/components/digital-marketing/MarketingHero";
 import { SingleServicesGrid } from "@/components/digital-marketing/SingleServicesGrid";
 import { MarketingPackages } from "@/components/digital-marketing/MarketingPackages";
@@ -26,6 +27,7 @@ export default function DigitalMarketingServices() {
       </Helmet>
 
       <div className="min-h-screen bg-white">
+        <DigitalMarketingHeader />
         <MarketingHero />
         <WhyChooseUs />
         <div id="packages">
