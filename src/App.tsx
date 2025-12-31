@@ -73,45 +73,49 @@ import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 
 const queryClient = new QueryClient();
 
-// Determine homepage based on domain
-const HomePage = () => {
-  return isCoatingKingsDomain() ? <CoatingKings /> : <LandingPage />;
-};
+// Coating Kings Domain Routes - Standalone site
+const CoatingKingsRoutes = () => (
+  <Routes>
+    <Route path="/" element={<CoatingKings />} />
+    <Route path="/admin/auth" element={<CoatingKingsAdminAuth />} />
+    <Route path="/admin/dashboard" element={
+      <ProtectedRoute redirectTo="/admin/auth">
+        <CoatingKingsAdminDashboard />
+      </ProtectedRoute>
+    } />
+    {/* Catch-all: redirect to home for this domain */}
+    <Route path="*" element={<CoatingKings />} />
+  </Routes>
+);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <GlobalAIChat />
-        <Routes>
-          {/* Public Routes - Domain-aware homepage */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/services" element={<Index />} />
-          <Route path="/join" element={<JoinNetwork />} />
-          <Route path="/login" element={<NetworkLogin />} />
-          <Route path="/member/dashboard" element={<MemberDashboard />} />
-          <Route path="/directory" element={<ContractorDirectory />} />
-          <Route path="/contractor-directory" element={<ContractorDirectory />} />
-          
-          {/* Master Admin Hub Routes */}
-          <Route path="/admin/auth" element={<SuperAdminAuth />} />
-          <Route path="/admin/dashboard" element={
-            <ProtectedRoute redirectTo="/admin/auth">
-              <SuperAdminDashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* Coating Kings Routes */}
-          <Route path="/coating-kings" element={<CoatingKings />} />
-          <Route path="/coating-kings/admin/auth" element={<CoatingKingsAdminAuth />} />
-          <Route path="/coating-kings/admin/dashboard" element={
-            <ProtectedRoute redirectTo="/coating-kings/admin/auth">
-              <CoatingKingsAdminDashboard />
-            </ProtectedRoute>
-          } />
+// GCN Main Site Routes
+const GCNRoutes = () => (
+  <Routes>
+    {/* Public Routes */}
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/services" element={<Index />} />
+    <Route path="/join" element={<JoinNetwork />} />
+    <Route path="/login" element={<NetworkLogin />} />
+    <Route path="/member/dashboard" element={<MemberDashboard />} />
+    <Route path="/directory" element={<ContractorDirectory />} />
+    <Route path="/contractor-directory" element={<ContractorDirectory />} />
+    
+    {/* Master Admin Hub Routes */}
+    <Route path="/admin/auth" element={<SuperAdminAuth />} />
+    <Route path="/admin/dashboard" element={
+      <ProtectedRoute redirectTo="/admin/auth">
+        <SuperAdminDashboard />
+      </ProtectedRoute>
+    } />
+    
+    {/* Coating Kings Routes (accessible from GCN) */}
+    <Route path="/coating-kings" element={<CoatingKings />} />
+    <Route path="/coating-kings/admin/auth" element={<CoatingKingsAdminAuth />} />
+    <Route path="/coating-kings/admin/dashboard" element={
+      <ProtectedRoute redirectTo="/coating-kings/admin/auth">
+        <CoatingKingsAdminDashboard />
+      </ProtectedRoute>
+    } />
           
           {/* Green Home Solutions Routes */}
           <Route path="/green-home-solutions" element={<GreenHomeSolutions />} />
@@ -335,6 +339,17 @@ const App = () => (
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+);
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <ScrollToTop />
+        <GlobalAIChat />
+        {isCoatingKingsDomain() ? <CoatingKingsRoutes /> : <GCNRoutes />}
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
