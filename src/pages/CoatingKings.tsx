@@ -47,7 +47,7 @@ const CoatingKings = () => {
           name="keywords"
           content="roof coating, South Florida, Miami roofing, silicone coating, acrylic coating, commercial roofing, flat roof coating, metal roof coating"
         />
-        <link rel="canonical" href="https://yourdomain.com/coating-kings" />
+        <link rel="canonical" href="https://coatingkingz.ai" />
       </Helmet>
 
       <div className="min-h-screen bg-background">
