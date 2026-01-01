@@ -1,8 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronRight, LogIn, UserPlus } from "lucide-react";
+import { 
+  Menu, 
+  X, 
+  ChevronRight, 
+  Home, 
+  Wrench,
+  ChevronDown
+} from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const LandingHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -32,11 +45,23 @@ const LandingHeader = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Services", href: "/services" },
-    { label: "Directory", href: "/directory" },
+  const homeownerLinks = [
+    { label: "Contractor Directory", href: "/directory" },
+    { label: "Roofing Services", href: "/roofing" },
+    { label: "Roof Coatings", href: "/coating-kings" },
+    { label: "Windows & Doors", href: "/green-home-solutions" },
+    { label: "Emergency Mitigation", href: "/emergency-mitigation" },
+    { label: "Landscaping", href: "/northern-landscaping" },
+    { label: "Property Prep", href: "/prep-property" },
+  ];
+
+  const contractorLinks = [
+    { label: "CRM Dashboard", href: "/crm/dashboard" },
+    { label: "Permit Expediting", href: "/permit-queens" },
+    { label: "Supplements", href: "/supplement-kings" },
+    { label: "Digital Marketing", href: "/digital-marketing" },
+    { label: "Training Academy", href: "/learning" },
+    { label: "Merch Store", href: "/store" },
   ];
 
   return (
@@ -61,43 +86,62 @@ const LandingHeader = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              link.href.startsWith('#') ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-foreground/80 hover:text-primary transition-colors font-medium"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  className="text-foreground/80 hover:text-primary transition-colors font-medium"
-                >
-                  {link.label}
-                </Link>
-              )
-            ))}
+          <nav className="hidden lg:flex items-center gap-6">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-foreground/80 hover:text-primary gap-1">
+                  For Homeowners
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-56">
+                {homeownerLinks.map((link) => (
+                  <DropdownMenuItem key={link.label} asChild>
+                    <Link to={link.href}>{link.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <Button 
-              variant="ghost" 
-              className="text-foreground/80 hover:text-primary"
-              onClick={() => navigate("/login")}
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Login
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-foreground/80 hover:text-primary gap-1">
+                  For Contractors
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-56">
+                {contractorLinks.map((link) => (
+                  <DropdownMenuItem key={link.label} asChild>
+                    <Link to={link.href}>{link.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <Button
-              onClick={() => navigate("/join")}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Start for Free
-            </Button>
+            <Link to="/directory" className="text-foreground/80 hover:text-primary transition-colors font-medium">
+              Directory
+            </Link>
+
+            <div className="flex items-center gap-2 ml-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/login?type=homeowner")}
+                className="border-primary/50 hover:border-primary"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Homeowner Login
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => navigate("/login?type=contractor")}
+                className="border-primary/50 hover:border-primary"
+              >
+                <Wrench className="w-4 h-4 mr-2" />
+                Contractor Login
+              </Button>
+            </div>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -140,57 +184,60 @@ const LandingHeader = () => {
 
         <nav className="flex flex-col h-[calc(100%-80px)] overflow-y-auto">
           <div className="flex-1 py-4">
-            {navLinks.map((link) => (
-              link.href.startsWith('#') ? (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="flex items-center justify-between px-6 py-4 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium text-lg"
-                  onClick={closeMobileMenu}
-                >
-                  {link.label}
-                  <ChevronRight className="w-5 h-5 opacity-50" />
-                </a>
-              ) : (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  className="flex items-center justify-between px-6 py-4 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium text-lg"
-                  onClick={closeMobileMenu}
-                >
-                  {link.label}
-                  <ChevronRight className="w-5 h-5 opacity-50" />
-                </Link>
-              )
+            <div className="px-6 py-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">For Homeowners</span>
+            </div>
+            {homeownerLinks.map((link) => (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="flex items-center justify-between px-6 py-3 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
+                {link.label}
+                <ChevronRight className="w-5 h-5 opacity-50" />
+              </Link>
             ))}
 
             <hr className="my-4 border-border mx-6" />
 
-            <button
-              onClick={() => {
-                navigate("/login");
-                closeMobileMenu();
-              }}
-              className="flex items-center justify-between w-full px-6 py-4 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium text-lg"
-            >
-              <span className="flex items-center gap-3">
-                <LogIn className="w-5 h-5" />
-                Login
-              </span>
-              <ChevronRight className="w-5 h-5 opacity-50" />
-            </button>
+            <div className="px-6 py-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">For Contractors</span>
+            </div>
+            {contractorLinks.map((link) => (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="flex items-center justify-between px-6 py-3 text-foreground hover:text-primary hover:bg-muted/50 transition-colors font-medium"
+                onClick={closeMobileMenu}
+              >
+                {link.label}
+                <ChevronRight className="w-5 h-5 opacity-50" />
+              </Link>
+            ))}
           </div>
 
-          <div className="p-6 border-t border-border">
+          <div className="p-6 border-t border-border space-y-3">
             <Button
+              variant="outline"
               onClick={() => {
-                navigate("/join");
+                navigate("/login?type=homeowner");
                 closeMobileMenu();
               }}
-              className="w-full font-bold py-6 text-lg"
+              className="w-full"
             >
-              <UserPlus className="w-5 h-5 mr-2" />
-              Start for Free
+              <Home className="w-4 h-4 mr-2" />
+              Homeowner Login
+            </Button>
+            <Button
+              onClick={() => {
+                navigate("/login?type=contractor");
+                closeMobileMenu();
+              }}
+              className="w-full"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              Contractor Login
             </Button>
           </div>
         </nav>
