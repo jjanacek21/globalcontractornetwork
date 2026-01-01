@@ -66,6 +66,8 @@ import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
 import NetworkLogin from "./pages/NetworkLogin";
+import Login from "./pages/Login";
+import HomeownerDashboard from "./pages/HomeownerDashboard";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -95,7 +97,9 @@ const GCNRoutes = () => (
     <Route path="/" element={<LandingPage />} />
     <Route path="/services" element={<Index />} />
     <Route path="/join" element={<JoinNetwork />} />
-    <Route path="/login" element={<NetworkLogin />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/homeowner/dashboard" element={<HomeownerDashboard />} />
+    <Route path="/member/dashboard" element={<MemberDashboard />} />
     <Route path="/member/dashboard" element={<MemberDashboard />} />
     <Route path="/directory" element={<ContractorDirectory />} />
     <Route path="/contractor-directory" element={<ContractorDirectory />} />
