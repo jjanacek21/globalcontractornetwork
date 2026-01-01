@@ -79,6 +79,20 @@ const JoinNetwork = () => {
 
         if (memberError) throw memberError;
 
+        // Send welcome email (non-blocking)
+        try {
+          await supabase.functions.invoke("send-welcome-email", {
+            body: {
+              email: ownerForm.email,
+              name: `${ownerForm.firstName} ${ownerForm.lastName}`,
+              userType: "homeowner"
+            }
+          });
+          console.log("Welcome email sent successfully");
+        } catch (emailError) {
+          console.error("Failed to send welcome email:", emailError);
+        }
+
         toast({
           title: "Welcome to GCN!",
           description: "Your account has been created. Redirecting to your dashboard..."
@@ -148,7 +162,21 @@ const JoinNetwork = () => {
           console.log("Admin notification sent successfully");
         } catch (notifyError) {
           console.error("Failed to send admin notification:", notifyError);
-          // Don't fail the signup if notification fails
+        }
+
+        // Send welcome/confirmation email to contractor (non-blocking)
+        try {
+          await supabase.functions.invoke("send-welcome-email", {
+            body: {
+              email: contractorForm.email,
+              name: `${contractorForm.firstName} ${contractorForm.lastName}`,
+              userType: "contractor",
+              companyName: contractorForm.companyName
+            }
+          });
+          console.log("Contractor welcome email sent successfully");
+        } catch (emailError) {
+          console.error("Failed to send contractor welcome email:", emailError);
         }
 
         setSuccess(true);

@@ -43,15 +43,14 @@ const LandingHero = () => {
 
             {/* Headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-              One Platform.{" "}
-              <span className="text-primary">All the Tools</span>{" "}
-              for Every Contractor Need.
+              Your One Stop Shop for{" "}
+              <span className="text-primary">All Your Contractor Service Needs</span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-xl text-muted-foreground max-w-xl">
-              Managing leads, estimates, permits, supplements, and payments has never been easier. 
-              Join 1,000+ contractors growing their business with GCN.
+              Whether you're a homeowner looking for trusted contractors or a contractor 
+              growing your business — GCN has everything you need in one place.
             </p>
 
             {/* Email Signup Form */}

@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Menu, 
   X, 
-  ChevronRight, 
-  Home, 
-  Wrench,
+  ChevronRight,
   ChevronDown
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -123,23 +121,19 @@ const LandingHeader = () => {
               Directory
             </Link>
 
-            <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-3 ml-4">
               <Button
                 variant="outline"
-                onClick={() => navigate("/login?type=homeowner")}
+                onClick={() => navigate("/join")}
                 className="border-primary/50 hover:border-primary"
               >
-                <Home className="w-4 h-4 mr-2" />
-                Homeowner Login
+                Join Network
               </Button>
 
               <Button
-                variant="outline"
-                onClick={() => navigate("/login?type=contractor")}
-                className="border-primary/50 hover:border-primary"
+                onClick={() => navigate("/network-login")}
               >
-                <Wrench className="w-4 h-4 mr-2" />
-                Contractor Login
+                Member Login
               </Button>
             </div>
           </nav>
@@ -221,23 +215,21 @@ const LandingHeader = () => {
             <Button
               variant="outline"
               onClick={() => {
-                navigate("/login?type=homeowner");
+                navigate("/join");
                 closeMobileMenu();
               }}
               className="w-full"
             >
-              <Home className="w-4 h-4 mr-2" />
-              Homeowner Login
+              Join Network
             </Button>
             <Button
               onClick={() => {
-                navigate("/login?type=contractor");
+                navigate("/network-login");
                 closeMobileMenu();
               }}
               className="w-full"
             >
-              <Wrench className="w-4 h-4 mr-2" />
-              Contractor Login
+              Member Login
             </Button>
           </div>
         </nav>
