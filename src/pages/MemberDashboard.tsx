@@ -11,10 +11,11 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles
+  Settings, Users, Sparkles, Lightbulb
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
+import ReferralsDashboard from "@/components/referrals/ReferralsDashboard";
 
 interface UserProfile {
   id: string;
@@ -372,7 +373,10 @@ const MemberDashboard = () => {
             Welcome back, <span className="gradient-text">{profile?.first_name || "Member"}</span>!
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl">
-            Access all GCN services and tools from your personalized dashboard
+            {isContractor && !isPendingContractor 
+              ? "Your Business Operating System — manage leads, referrals, and grow your network"
+              : "Your Property Management Hub — access services, quotes, and trusted contractors"
+            }
           </p>
         </div>
 
@@ -447,6 +451,22 @@ const MemberDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Referrals Section for Approved Contractors */}
+        {isContractor && !isPendingContractor && contractorProfile && (
+          <div className="stagger-item stagger-delay-3">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Lightbulb className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Referral Network</h2>
+                <p className="text-sm text-muted-foreground">Identify opportunities, earn when jobs complete</p>
+              </div>
+            </div>
+            <ReferralsDashboard contractorId={contractorProfile.id} />
           </div>
         )}
 

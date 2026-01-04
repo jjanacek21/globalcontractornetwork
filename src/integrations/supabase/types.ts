@@ -841,6 +841,84 @@ export type Database = {
         }
         Relationships: []
       }
+      contractor_referrals: {
+        Row: {
+          assigned_contractor_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          job_amount: number | null
+          notes: string | null
+          paid_at: string | null
+          payout_amount: number | null
+          property_address: string
+          referral_fee_percentage: number | null
+          referral_source_context: string | null
+          referred_customer_email: string | null
+          referred_customer_name: string
+          referred_customer_phone: string | null
+          referred_service_type: string
+          referring_contractor_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_contractor_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          job_amount?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payout_amount?: number | null
+          property_address: string
+          referral_fee_percentage?: number | null
+          referral_source_context?: string | null
+          referred_customer_email?: string | null
+          referred_customer_name: string
+          referred_customer_phone?: string | null
+          referred_service_type: string
+          referring_contractor_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_contractor_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          job_amount?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payout_amount?: number | null
+          property_address?: string
+          referral_fee_percentage?: number | null
+          referral_source_context?: string | null
+          referred_customer_email?: string | null
+          referred_customer_name?: string
+          referred_customer_phone?: string | null
+          referred_service_type?: string
+          referring_contractor_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_referrals_assigned_contractor_id_fkey"
+            columns: ["assigned_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_referrals_referring_contractor_id_fkey"
+            columns: ["referring_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_reviews: {
         Row: {
           contractor_id: string
