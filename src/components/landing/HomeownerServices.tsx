@@ -53,14 +53,14 @@ const services = [
     icon: Calendar,
     title: "Maintenance Membership",
     description: "Annual property protection plans. Regular inspections and priority service for members.",
-    link: "/prep-your-property",
+    link: "/prep-property",
     color: "from-purple-500 to-purple-600"
   },
   {
     icon: Droplets,
     title: "Pre-Storm Certifications",
     description: "Hurricane prep inspections. Ensure your property is ready before storm season hits.",
-    link: "/prep-your-property",
+    link: "/prep-property",
     color: "from-cyan-500 to-cyan-600"
   },
   {
