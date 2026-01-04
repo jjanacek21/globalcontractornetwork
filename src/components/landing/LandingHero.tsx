@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, ArrowRight, CheckCircle2, Users, Home, Shield } from "lucide-react";
+import { Star, ArrowRight, CheckCircle2, Users, Home, Shield, Wrench } from "lucide-react";
 
 const LandingHero = () => {
   const [email, setEmail] = useState("");
@@ -12,6 +12,13 @@ const LandingHero = () => {
     e.preventDefault();
     if (email) {
       navigate(`/join?email=${encodeURIComponent(email)}`);
+    }
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -43,9 +50,14 @@ const LandingHero = () => {
 
             {/* Headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-              Your One Stop Shop for{" "}
-              <span className="text-primary">All Your Contractor Service Needs</span>
+              One Platform for{" "}
+              <span className="text-primary">All Your Contractor Needs</span>
             </h1>
+
+            {/* Secondary Tagline */}
+            <p className="text-lg text-muted-foreground/80 italic border-l-4 border-primary/30 pl-4">
+              A trusted network for contractors and property owners — not a lead marketplace.
+            </p>
 
             {/* Subheadline */}
             <p className="text-xl text-muted-foreground max-w-xl">
@@ -53,26 +65,53 @@ const LandingHero = () => {
               growing your business — GCN has everything you need in one place.
             </p>
 
+            {/* Split CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                size="lg" 
+                className="h-14 px-8 text-lg font-semibold gap-2"
+                onClick={() => scrollToSection('homeowner-services')}
+              >
+                <Home className="w-5 h-5" />
+                I'm a Homeowner
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="h-14 px-8 text-lg font-semibold gap-2 border-2"
+                onClick={() => scrollToSection('contractor-tools')}
+              >
+                <Wrench className="w-5 h-5" />
+                I'm a Contractor
+              </Button>
+            </div>
+
+            {/* Trust Bar */}
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+              <Shield className="w-6 h-6 text-primary" />
+              <span className="font-semibold text-primary">Referred. Verified. Accountable.</span>
+            </div>
+
             {/* Email Signup Form */}
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-lg">
               <Input
                 type="email"
-                placeholder="Enter your email address"
+                placeholder="Enter your email to get started"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-14 text-lg px-6 flex-1"
                 required
               />
-              <Button type="submit" size="lg" className="h-14 px-8 text-lg font-semibold gap-2">
-                Start for Free
+              <Button type="submit" size="lg" variant="secondary" className="h-14 px-8 text-lg font-semibold gap-2">
+                Join Free
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </form>
 
-            {/* Trust Indicators */}
+            {/* Trust Indicator */}
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary" />
-              Sign up free. No credit card required.
+              No credit card required. No spam. Ever.
             </p>
 
             {/* Stats Row */}

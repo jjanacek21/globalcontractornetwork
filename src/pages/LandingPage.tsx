@@ -1,5 +1,6 @@
 import LandingHeader from "@/components/landing/LandingHeader";
 import LandingHero from "@/components/landing/LandingHero";
+import TrustDifferentiators from "@/components/landing/TrustDifferentiators";
 import HomeownerServices from "@/components/landing/HomeownerServices";
 import ContractorTools from "@/components/landing/ContractorTools";
 import LandingTestimonials from "@/components/landing/LandingTestimonials";
@@ -17,8 +18,13 @@ const LandingPage = () => {
       <div className="min-h-screen bg-background">
         <LandingHeader />
         <LandingHero />
-        <HomeownerServices />
-        <ContractorTools />
+        <TrustDifferentiators />
+        <section id="homeowner-services">
+          <HomeownerServices />
+        </section>
+        <section id="contractor-tools">
+          <ContractorTools />
+        </section>
         <LandingTestimonials />
         <LandingFinalCTA />
         <LandingFooter />
