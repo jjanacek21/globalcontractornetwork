@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" fill="none">
+  <!-- House base - 3D view -->
+  <polygon points="15,75 15,50 75,40 75,65" fill="#E5E7EB" stroke="#374151" stroke-width="2"/>
+  <polygon points="15,75 75,65 105,75 45,85" fill="#D1D5DB" stroke="#374151" stroke-width="2"/>
+  <polygon points="75,40 105,50 105,75 75,65" fill="#9CA3AF" stroke="#374151" stroke-width="2"/>
+  <!-- Main roof section -->
+  <polygon points="15,50 35,28 65,25 45,40" fill="#6B7280" stroke="#374151" stroke-width="2"/>
+  <polygon points="65,25 90,30 105,50 75,40" fill="#9CA3AF" stroke="#374151" stroke-width="2"/>
+  <!-- Dormer/additional section -->
+  <polygon points="55,35 55,22 75,18 75,32" fill="#E5E7EB" stroke="#374151" stroke-width="1.5"/>
+  <polygon points="55,22 65,12 75,18" fill="#6B7280" stroke="#374151" stroke-width="1.5"/>
+  <!-- Valley lines -->
+  <line x1="35" y1="28" x2="55" y2="35" stroke="#374151" stroke-width="1.5"/>
+  <line x1="90" y1="30" x2="75" y2="32" stroke="#374151" stroke-width="1.5"/>
+  <!-- Ridge lines -->
+  <line x1="35" y1="28" x2="65" y2="25" stroke="#374151" stroke-width="2"/>
+  <line x1="65" y1="25" x2="90" y2="30" stroke="#374151" stroke-width="2"/>
+  <!-- Label -->
+  <text x="60" y="95" text-anchor="middle" font-size="9" fill="#6B7280" font-family="sans-serif">Complex</text>
+</svg>
