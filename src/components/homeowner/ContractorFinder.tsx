@@ -6,8 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, MapPin, Phone, Mail, ExternalLink, DollarSign, Clock, Filter, CheckCircle2 } from 'lucide-react';
+import { Search, Star, Phone, Mail, ExternalLink, DollarSign, Clock, Filter, CheckCircle2, Heart, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useFavoriteContractors } from '@/hooks/useFavoriteContractors';
+import { cn } from '@/lib/utils';
 
 interface ContractorProfile {
   id: string;
@@ -24,6 +26,11 @@ interface ContractorProfile {
   service_area: string[] | null;
   price_tier: string | null;
   availability_days: number | null;
+}
+
+interface ContractorFinderProps {
+  userId?: string | null;
+  onMessageContractor?: (contractorId: string) => void;
 }
 
 const CATEGORIES = [
@@ -45,7 +52,7 @@ const PRICE_TIERS = [
   { value: 'luxury', label: '$$$$ Luxury' }
 ];
 
-export function ContractorFinder() {
+export function ContractorFinder({ userId, onMessageContractor }: ContractorFinderProps) {
   const [contractors, setContractors] = useState<ContractorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -57,6 +64,8 @@ export function ContractorFinder() {
   const [minRating, setMinRating] = useState<string>('all');
   const [maxAvailability, setMaxAvailability] = useState<string>('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+
+  const { isFavorite, toggleFavorite } = useFavoriteContractors(userId || null);
 
   useEffect(() => {
     fetchContractors();
@@ -103,7 +112,7 @@ export function ContractorFinder() {
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <CardTitle className="text-white flex items-center gap-2">
-            <Search className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+            <Search className="h-5 w-5 text-primary" />
             Find Contractors
           </CardTitle>
           <Button
@@ -219,7 +228,7 @@ export function ContractorFinder() {
             {filteredContractors.map(contractor => (
               <div
                 key={contractor.id}
-                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all"
+                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all"
               >
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Logo/Avatar */}
@@ -231,7 +240,7 @@ export function ContractorFinder() {
                         className="w-full h-full object-cover rounded-xl"
                       />
                     ) : (
-                      <span className="text-2xl font-bold text-[hsl(45,100%,51%)]">
+                      <span className="text-2xl font-bold text-primary">
                         {contractor.company_name[0]}
                       </span>
                     )}
@@ -244,7 +253,7 @@ export function ContractorFinder() {
                         <h3 className="font-semibold text-white flex items-center gap-2">
                           {contractor.company_name}
                           {contractor.is_verified && (
-                            <CheckCircle2 className="h-4 w-4 text-[hsl(45,100%,51%)]" />
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
                           )}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -266,16 +275,37 @@ export function ContractorFinder() {
                         </div>
                       </div>
                       
-                      {/* Rating */}
-                      {contractor.average_rating && (
-                        <div className="flex items-center gap-1 text-[hsl(45,100%,51%)]">
-                          <Star className="h-4 w-4 fill-current" />
-                          <span className="font-medium">{contractor.average_rating.toFixed(1)}</span>
-                          {contractor.review_count && (
-                            <span className="text-white/50 text-sm">({contractor.review_count})</span>
-                          )}
-                        </div>
-                      )}
+                      {/* Rating & Favorite */}
+                      <div className="flex items-center gap-2">
+                        {contractor.average_rating && (
+                          <div className="flex items-center gap-1 text-yellow-400">
+                            <Star className="h-4 w-4 fill-current" />
+                            <span className="font-medium">{contractor.average_rating.toFixed(1)}</span>
+                            {contractor.review_count && (
+                              <span className="text-white/50 text-sm">({contractor.review_count})</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {userId && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleFavorite(contractor.id)}
+                            className={cn(
+                              "h-8 w-8",
+                              isFavorite(contractor.id)
+                                ? "text-red-500 hover:text-red-600"
+                                : "text-white/40 hover:text-red-500"
+                            )}
+                          >
+                            <Heart className={cn(
+                              "h-4 w-4",
+                              isFavorite(contractor.id) && "fill-current"
+                            )} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {contractor.description && (
@@ -284,6 +314,17 @@ export function ContractorFinder() {
 
                     {/* Contact Actions */}
                     <div className="flex flex-wrap gap-2 mt-3">
+                      {userId && onMessageContractor && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => onMessageContractor(contractor.id)}
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Message
+                        </Button>
+                      )}
                       {contractor.phone && (
                         <Button
                           variant="outline"
