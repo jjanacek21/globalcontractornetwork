@@ -12,6 +12,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Phone, Mail, MapPin } from "lucide-react";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 const services = [
   "Lawn Maintenance",
@@ -52,11 +53,20 @@ const LeadCaptureForm = () => {
     setIsSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
       const { error } = await supabase.from("contact_requests").insert({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         message: `Property: ${formData.propertyType}\nService: ${formData.service}\n\n${formData.message}`,
+        user_id: userId,
+        email_normalized: emailNormalized,
       });
 
       if (error) throw error;

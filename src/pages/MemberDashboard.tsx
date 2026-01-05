@@ -145,7 +145,8 @@ const MemberDashboard = () => {
     "Training Academy", 
     "Estimating/Supplementing",
     "Permit Expediting",
-    "CRM Portal"
+    "CRM Portal",
+    "Digital Marketing, Management & Design"
   ];
 
   const services = [
@@ -610,7 +611,7 @@ const MemberDashboard = () => {
                   </div>
                 </Link>
 
-                <Link to="/contractor/dashboard" className="group">
+                <Link to="/my-profile" className="group">
                   <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
@@ -620,7 +621,7 @@ const MemberDashboard = () => {
                         <h3 className="font-semibold text-white group-hover:text-[hsl(45,100%,51%)] transition-colors">
                           My Profile
                         </h3>
-                        <p className="text-sm text-white/60">Manage your profile</p>
+                        <p className="text-sm text-white/60">View all your data & activity</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
                     </div>
@@ -631,6 +632,20 @@ const MemberDashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation - Mobile */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t z-40 md:hidden">
+        <div className="container flex justify-around py-3">
+          <Link to="/member/dashboard" className="flex flex-col items-center gap-1 text-primary">
+            <Home className="h-5 w-5" />
+            <span className="text-xs font-medium">Dashboard</span>
+          </Link>
+          <Link to="/my-profile" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+            <User className="h-5 w-5" />
+            <span className="text-xs font-medium">My Profile</span>
+          </Link>
+        </div>
+      </nav>
     </div>
   );
 };

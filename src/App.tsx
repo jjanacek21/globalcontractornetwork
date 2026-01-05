@@ -65,6 +65,7 @@ import EmergencyMitigation from "./pages/EmergencyMitigation";
 import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
+import MyProfile from "./pages/MyProfile";
 import NetworkLogin from "./pages/NetworkLogin";
 import Login from "./pages/Login";
 import HomeownerDashboard from "./pages/HomeownerDashboard";
@@ -101,6 +102,11 @@ const GCNRoutes = () => (
     <Route path="/login" element={<NetworkLogin />} />
     <Route path="/homeowner/dashboard" element={<HomeownerDashboard />} />
     <Route path="/member/dashboard" element={<MemberDashboard />} />
+    <Route path="/my-profile" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <MyProfile />
+      </ProtectedRoute>
+    } />
     <Route path="/directory" element={<ContractorDirectory />} />
     <Route path="/contractor-directory" element={<ContractorDirectory />} />
     

@@ -12,6 +12,7 @@ import {
 import { Phone, Mail, MapPin, Send, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 export const EmergencyLeadForm = () => {
   const { toast } = useToast();
@@ -30,6 +31,23 @@ export const EmergencyLeadForm = () => {
     setIsSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
+      // Insert to contact_requests for tracking
+      await supabase.from("contact_requests").insert({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: `Emergency Service: ${formData.service}\n\n${formData.message}`,
+        user_id: userId,
+        email_normalized: emailNormalized,
+      });
+
       // Send Telegram notification for emergency leads (high priority)
       await supabase.functions.invoke('telegram-lead-alert', {
         body: {

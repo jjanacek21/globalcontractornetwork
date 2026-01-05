@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 const certificationTiers = [
   { name: "Basic", price: 599, features: ["Visual inspection", "Basic documentation", "Safety checklist", "Email report"] },
@@ -40,17 +41,30 @@ export default function PrepYourProperty() {
     e.preventDefault();
     setSubmitting(true);
 
-    const { error } = await supabase.from("service_requests").insert({
-      ...formData,
-      message: `${selectedTier} tier request: ${formData.message}`,
-    });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
 
-    if (error) {
+      const { error } = await supabase.from("service_requests").insert({
+        ...formData,
+        message: `${selectedTier} tier request: ${formData.message}`,
+        user_id: userId,
+        email_normalized: emailNormalized,
+      });
+
+      if (error) {
+        toast({ title: "Error", description: "Failed to submit request", variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "We'll contact you within 24 hours!" });
+        setDialogOpen(false);
+        setFormData({ name: "", email: "", phone: "", property_address: "", message: "" });
+      }
+    } catch (err) {
       toast({ title: "Error", description: "Failed to submit request", variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: "We'll contact you within 24 hours!" });
-      setDialogOpen(false);
-      setFormData({ name: "", email: "", phone: "", property_address: "", message: "" });
     }
     setSubmitting(false);
   };

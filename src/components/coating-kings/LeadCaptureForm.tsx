@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, CheckCircle2 } from "lucide-react";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 interface LeadCaptureFormProps {
   prefilledData?: {
@@ -45,6 +46,13 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
     setIsSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
       const { error } = await supabase
         .from("coating_leads")
         .insert({
@@ -59,7 +67,9 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
           estimate_high: formData.estimateHigh,
           property_type: formData.propertyType,
           urgency: formData.urgency,
-          notes: formData.notes
+          notes: formData.notes,
+          user_id: userId,
+          email_normalized: emailNormalized
         });
 
       if (error) throw error;
