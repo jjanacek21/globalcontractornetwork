@@ -219,6 +219,8 @@ export type Database = {
           phone: string | null
           property_address: string
           property_type: string | null
+          referral_contractor_id: string | null
+          referral_source: string | null
           roof_age: string | null
           roof_condition: string | null
           roof_type: string
@@ -247,6 +249,8 @@ export type Database = {
           phone?: string | null
           property_address: string
           property_type?: string | null
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           roof_age?: string | null
           roof_condition?: string | null
           roof_type: string
@@ -275,6 +279,8 @@ export type Database = {
           phone?: string | null
           property_address?: string
           property_type?: string | null
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           roof_age?: string | null
           roof_condition?: string | null
           roof_type?: string
@@ -286,6 +292,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coating_leads_referral_contractor_id_fkey"
+            columns: ["referral_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coating_leads_user_id_fkey"
             columns: ["user_id"]
@@ -420,6 +433,8 @@ export type Database = {
           name: string
           phone: string | null
           product_id: string | null
+          referral_contractor_id: string | null
+          referral_source: string | null
           status: string | null
           user_id: string | null
         }
@@ -432,6 +447,8 @@ export type Database = {
           name: string
           phone?: string | null
           product_id?: string | null
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           status?: string | null
           user_id?: string | null
         }
@@ -444,6 +461,8 @@ export type Database = {
           name?: string
           phone?: string | null
           product_id?: string | null
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           status?: string | null
           user_id?: string | null
         }
@@ -453,6 +472,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_requests_referral_contractor_id_fkey"
+            columns: ["referral_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2144,6 +2170,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_communication_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string
+          lead_type: string
+          message: string
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          lead_type: string
+          message: string
+          sender_id?: string | null
+          sender_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          lead_type?: string
+          message?: string
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: []
       }
       leads: {
         Row: {
@@ -4682,6 +4738,8 @@ export type Database = {
           performance_level: string | null
           phone: string | null
           property_address: string
+          referral_contractor_id: string | null
+          referral_source: string | null
           show_as_winner: boolean | null
           spin_result: string | null
           state: string | null
@@ -4717,6 +4775,8 @@ export type Database = {
           performance_level?: string | null
           phone?: string | null
           property_address: string
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           show_as_winner?: boolean | null
           spin_result?: string | null
           state?: string | null
@@ -4752,6 +4812,8 @@ export type Database = {
           performance_level?: string | null
           phone?: string | null
           property_address?: string
+          referral_contractor_id?: string | null
+          referral_source?: string | null
           show_as_winner?: boolean | null
           spin_result?: string | null
           state?: string | null
@@ -4764,6 +4826,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "window_leads_referral_contractor_id_fkey"
+            columns: ["referral_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "window_leads_user_id_fkey"
             columns: ["user_id"]
