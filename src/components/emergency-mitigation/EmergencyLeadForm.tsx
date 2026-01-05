@@ -13,6 +13,7 @@ import { Phone, Mail, MapPin, Send, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 export const EmergencyLeadForm = () => {
   const { toast } = useToast();
@@ -23,7 +24,9 @@ export const EmergencyLeadForm = () => {
     phone: "",
     email: "",
     service: "",
-    message: ""
+    message: "",
+    referralSource: "",
+    referralContractorId: null as string | null
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +49,8 @@ export const EmergencyLeadForm = () => {
         message: `Emergency Service: ${formData.service}\n\n${formData.message}`,
         user_id: userId,
         email_normalized: emailNormalized,
+        referral_source: formData.referralSource || null,
+        referral_contractor_id: formData.referralContractorId || null
       });
 
       // Send Telegram notification for emergency leads (high priority)
@@ -237,8 +242,16 @@ export const EmergencyLeadForm = () => {
                     <SelectItem value="roof">Roof Tarping / Leak Repair</SelectItem>
                     <SelectItem value="other">Other / Not Sure</SelectItem>
                   </SelectContent>
-                </Select>
+              </Select>
               </div>
+
+              {/* Referral Source */}
+              <ReferralSourceSelect
+                referralSource={formData.referralSource}
+                referralContractorId={formData.referralContractorId}
+                onReferralSourceChange={(value) => setFormData(prev => ({ ...prev, referralSource: value }))}
+                onContractorChange={(id) => setFormData(prev => ({ ...prev, referralContractorId: id }))}
+              />
               
               <div>
                 <Textarea

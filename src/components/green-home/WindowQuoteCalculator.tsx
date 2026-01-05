@@ -14,6 +14,7 @@ import { ArrowLeft, ArrowRight, Calculator, Check } from "lucide-react";
 import { resolveUserForSubmission } from "@/lib/userLinking";
 import { WindowSpinWheel } from "./WindowSpinWheel";
 import { WindowThankYouScreen } from "./WindowThankYouScreen";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 import {
   WINDOW_TYPES,
   DISCOUNTS,
@@ -71,6 +72,8 @@ export const WindowQuoteCalculator = () => {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [zipCode, setZipCode] = useState("");
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
   
   // Quote & UI State
   const [spinDiscount, setSpinDiscount] = useState<number | null>(null);
@@ -200,7 +203,9 @@ export const WindowQuoteCalculator = () => {
         spin_result: `${discount}% off`,
         status: "new",
         user_id: userId,
-        email_normalized: emailNormalized
+        email_normalized: emailNormalized,
+        referral_source: referralSource || null,
+        referral_contractor_id: referralContractorId || null
       }]);
 
       if (error) throw error;
@@ -561,6 +566,14 @@ export const WindowQuoteCalculator = () => {
                 ))}
               </RadioGroup>
             </div>
+            
+            {/* Referral Source */}
+            <ReferralSourceSelect
+              referralSource={referralSource}
+              referralContractorId={referralContractorId}
+              onReferralSourceChange={setReferralSource}
+              onContractorChange={setReferralContractorId}
+            />
           </div>
         );
 
