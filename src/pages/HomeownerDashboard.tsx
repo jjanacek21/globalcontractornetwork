@@ -194,8 +194,58 @@ const HomeownerDashboard = () => {
             </Card>
           </div>
 
+          {/* Homeowner Tools Section */}
+          <div className="rounded-2xl p-6 md:p-8 bg-slate-900">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                <Home className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Homeowner Tools</h2>
+                <p className="text-sm text-white/60">Manage Your Projects</p>
+              </div>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* My Projects Card */}
+              <div 
+                className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all cursor-pointer"
+                onClick={() => document.getElementById('projects-tabs')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                    <ClipboardList className="h-6 w-6 text-[hsl(45,100%,51%)]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white">My Projects</h3>
+                    <p className="text-sm text-white/60">Track & manage your projects</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-white/40" />
+                </div>
+              </div>
+
+              {/* My Profile Card */}
+              <Link to="/my-profile" className="group">
+                <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                      <User className="h-6 w-6 text-[hsl(45,100%,51%)]" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white group-hover:text-[hsl(45,100%,51%)] transition-colors">
+                        My Profile
+                      </h3>
+                      <p className="text-sm text-white/60">View all your data & activity</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+
           {/* Main Content Tabs */}
-          <Tabs defaultValue="active" className="space-y-6">
+          <Tabs defaultValue="active" className="space-y-6" id="projects-tabs">
             <TabsList>
               <TabsTrigger value="active">Active Projects</TabsTrigger>
               <TabsTrigger value="completed">Completed</TabsTrigger>
