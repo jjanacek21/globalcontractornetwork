@@ -64,7 +64,7 @@ export default function HomeownerMessages() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -75,31 +75,30 @@ export default function HomeownerMessages() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+      <header className="sticky top-0 z-50 glass-card border-b">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-[hsl(45,100%,51%)] to-primary opacity-60" />
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/homeowner-profile')}
-                className="text-white hover:bg-white/10"
+                onClick={() => navigate('/member/dashboard')}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <img src={gcnLogo} alt="GCN" className="h-10 w-auto" />
+              <img src={gcnLogo} alt="GCN" className="h-10 w-auto rounded-lg" />
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-white">Messages</h1>
-                <p className="text-sm text-white/60">Chat with your contractors</p>
+                <h1 className="text-lg font-semibold">Messages</h1>
+                <p className="text-sm text-muted-foreground">Chat with your contractors</p>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="border-white/20 text-white hover:bg-white/10"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout

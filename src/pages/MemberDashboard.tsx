@@ -16,6 +16,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import ReferralsDashboard from "@/components/referrals/ReferralsDashboard";
+import { useHomeownerMessages } from "@/hooks/useHomeownerMessages";
 
 interface UserProfile {
   id: string;
@@ -71,8 +72,12 @@ const MemberDashboard = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
+  const [homeownerUserId, setHomeownerUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch unread messages for non-contractors
+  const { totalUnread } = useHomeownerMessages(homeownerUserId);
 
   useEffect(() => {
     checkSessionAndFetchData();
@@ -115,6 +120,9 @@ const MemberDashboard = () => {
 
       if (contractorData) {
         setContractorProfile(contractorData as ContractorProfile);
+      } else if (memberData) {
+        // Set userId for homeowner messages if not a contractor
+        setHomeownerUserId(session.user.id);
       }
 
       const { data: superAdminData } = await supabase
@@ -663,10 +671,15 @@ const MemberDashboard = () => {
 
                   <Link 
                     to="/homeowner-messages" 
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all relative"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform relative">
                       <MessageCircle className="h-6 w-6 text-blue-400" />
+                      {totalUnread > 0 && (
+                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                          {totalUnread}
+                        </Badge>
+                      )}
                     </div>
                     <div>
                       <p className="font-semibold text-white">My Messages</p>
