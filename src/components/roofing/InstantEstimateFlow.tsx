@@ -879,27 +879,12 @@ export function InstantEstimateFlow({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              {/* Package Info */}
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-lg">{selectedPackage.name}</p>
-                      <p className="text-sm text-muted-foreground">{selectedPackage.pricePerSquare} per square</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="bg-background">
-                        {estimate.confidence} Confidence
-                      </Badge>
-                      {estimate.roofComplexity && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {getComplexityLabel(estimate.roofComplexity)} {getComplexityFactor(estimate.roofComplexity)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Confidence Badge */}
+              <div className="flex justify-center">
+                <Badge variant="outline" className="bg-background">
+                  {estimate.confidence} Confidence
+                </Badge>
+              </div>
 
               {/* Roof Age & Color Info */}
               {(estimate.estimatedAgeYears || estimate.primaryRoofColor) && (
@@ -1073,18 +1058,6 @@ export function InstantEstimateFlow({
                 }}
               />
 
-              {/* Key Features */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Package Includes:</p>
-                <ul className="grid grid-cols-1 gap-1">
-                  {selectedPackage.features.slice(0, 3).map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
 
               {/* Actions - Schedule Consultation */}
               <div className="flex flex-col gap-2 pt-2">
