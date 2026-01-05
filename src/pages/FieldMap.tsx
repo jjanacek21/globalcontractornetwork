@@ -11,8 +11,9 @@ import { MeasurementToolbar } from "@/components/field-map/MeasurementToolbar";
 import { MeasurementPanel } from "@/components/field-map/MeasurementPanel";
 import { MeasurementBottomSheet } from "@/components/field-map/MeasurementBottomSheet";
 import { AddressSearchBar } from "@/components/field-map/AddressSearchBar";
+import { Roof3DVisualization } from "@/components/shared/Roof3DVisualization";
 import { Button } from "@/components/ui/button";
-import { MapPin, Locate } from "lucide-react";
+import { MapPin, Locate, Box } from "lucide-react";
 
 mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -52,6 +53,7 @@ export default function FieldMap() {
     coordinates: [number, number];
     address: string;
   } | null>(null);
+  const [show3DVisualization, setShow3DVisualization] = useState(false);
   const tempMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const { toast } = useToast();
 
@@ -488,11 +490,30 @@ export default function FieldMap() {
 
       {/* Measurement panel */}
       {measurements.area > 0 && (
-        <div className="absolute bottom-4 left-4">
+        <div className="absolute bottom-4 left-4 space-y-2">
           <MeasurementPanel
             area={measurements.area}
             perimeter={measurements.perimeter}
           />
+          {/* 3D Visualization Toggle */}
+          {show3DVisualization && (
+            <Roof3DVisualization
+              totalSqft={totalWithWaste}
+              roofComplexity="gable"
+              className="w-80"
+            />
+          )}
+          {!show3DVisualization && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShow3DVisualization(true)}
+              className="w-full bg-background/90"
+            >
+              <Box className="h-4 w-4 mr-2" />
+              View 3D Model
+            </Button>
+          )}
         </div>
       )}
 

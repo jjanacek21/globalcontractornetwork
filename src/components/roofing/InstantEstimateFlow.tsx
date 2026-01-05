@@ -1,17 +1,26 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription as CardDesc } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye, Video, Users, Calendar, Palette, AlertTriangle, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Ruler, DollarSign, Edit2, Eye, Video, Users, Calendar, Palette, AlertTriangle, Clock, Navigation, Satellite, Map, Pencil, Trash2, Zap, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
 import { SchedulingDialog } from "./SchedulingDialog";
 import { RoofPhotoUpload } from "./RoofPhotoUpload";
+import { RoofAnalysisNote } from "@/components/shared/RoofAnalysisNote";
+import { Roof3DVisualization } from "@/components/shared/Roof3DVisualization";
+import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import * as turf from "@turf/turf";
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -48,7 +57,7 @@ interface AddressSuggestion {
   center: [number, number];
 }
 
-type Step = "address" | "verify" | "analyzing" | "results";
+type Step = "address" | "verify" | "draw" | "analyzing" | "results";
 
 const parsePrice = (priceStr: string): { low: number; high: number } | null => {
   const cleaned = priceStr.replace(/[,$]/g, '').replace('/sq', '');
@@ -125,6 +134,24 @@ export function InstantEstimateFlow({
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const debounceRef = useRef<NodeJS.Timeout>();
   const saveDebounceRef = useRef<NodeJS.Timeout>();
+  
+  // New states for unified UI
+  const [zoomLevel, setZoomLevel] = useState(19);
+  const [activeTab, setActiveTab] = useState<"ai" | "draw">("ai");
+  const [isLocating, setIsLocating] = useState(false);
+  
+  // Map drawing state
+  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
+  const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setMapContainerNode(node);
+    }
+  }, []);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const draw = useRef<MapboxDraw | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [mapInitialized, setMapInitialized] = useState(false);
+  const [drawSqft, setDrawSqft] = useState(0);
 
   const resetFlow = () => {
     setStep("address");
@@ -136,6 +163,143 @@ export function InstantEstimateFlow({
     setProgressMessage("");
     setManualSquares(null);
     setIsEditingSquares(false);
+    setActiveTab("ai");
+    setDrawSqft(0);
+    setZoomLevel(19);
+    // Cleanup map
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+      draw.current = null;
+      setMapContainerNode(null);
+      setMapInitialized(false);
+    }
+  };
+
+  // Initialize map only when Draw tab is active AND container is ready
+  useEffect(() => {
+    if (step !== "draw" || !mapContainerNode || map.current) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    map.current = new mapboxgl.Map({
+      container: mapContainerNode,
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      center: coordinates ? [coordinates.lng, coordinates.lat] : [-80.1918, 25.7617],
+      zoom: 19,
+    });
+
+    draw.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {},
+      defaultMode: "simple_select",
+    });
+
+    map.current.addControl(draw.current as any);
+    map.current.addControl(new mapboxgl.NavigationControl());
+
+    map.current.on("draw.create", updateDrawnArea);
+    map.current.on("draw.update", updateDrawnArea);
+    map.current.on("draw.delete", () => setDrawSqft(0));
+
+    map.current.on("load", () => {
+      setMapInitialized(true);
+      if (coordinates) {
+        map.current?.flyTo({
+          center: [coordinates.lng, coordinates.lat],
+          zoom: 19,
+        });
+      }
+    });
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+      draw.current = null;
+      setMapContainerNode(null);
+      setMapInitialized(false);
+    };
+  }, [step, mapContainerNode, coordinates]);
+
+  const updateDrawnArea = () => {
+    if (!draw.current) return;
+    const data = draw.current.getAll();
+    if (data.features.length === 0) {
+      setDrawSqft(0);
+      return;
+    }
+    const polygon = data.features[0];
+    const area = turf.area(polygon);
+    const sqftCalc = Math.round(area * 10.764);
+    setDrawSqft(sqftCalc);
+  };
+
+  const handleStartDrawing = () => {
+    if (draw.current) {
+      draw.current.changeMode("draw_polygon");
+      setIsDrawing(true);
+    }
+  };
+
+  const handleClearDraw = () => {
+    if (draw.current) {
+      draw.current.deleteAll();
+      setDrawSqft(0);
+      setIsDrawing(false);
+    }
+  };
+
+  const handleUseDrawnMeasurement = () => {
+    if (drawSqft > 0 && selectedPackage) {
+      // Apply pitch factor for drawn area
+      const { adjustedSqft } = applyPitchFactor(drawSqft, 'gable');
+      const totalSquares = adjustedSqft / 100;
+      const price = parsePrice(selectedPackage.pricePerSquare);
+      
+      setEstimate({
+        address,
+        totalSquares,
+        confidence: 'high',
+        estimateLow: price ? Math.round(price.low * totalSquares) : 0,
+        estimateHigh: price ? Math.round(price.high * totalSquares) : 0,
+        roofComplexity: 'gable',
+        flatSqft: drawSqft,
+        adjustedSqft,
+      });
+      setStep("results");
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported by your browser");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+          );
+          const data = await response.json();
+          if (data.features && data.features.length > 0) {
+            const addr = data.features[0];
+            setAddress(addr.place_name);
+            setCoordinates({ lat: latitude, lng: longitude });
+            toast.success("Location found");
+          }
+        } catch (error) {
+          toast.error("Could not get address for your location");
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      () => {
+        setIsLocating(false);
+        toast.error("Could not get your location");
+      }
+    );
   };
 
   const handleClose = (open: boolean) => {
@@ -466,8 +630,21 @@ export function InstantEstimateFlow({
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="space-y-2 relative">
+              <div className="flex items-center justify-between">
                 <Label htmlFor="address">Property Address</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUseCurrentLocation}
+                  disabled={isLocating}
+                  className="h-7 text-xs"
+                >
+                  <Navigation className="h-3 w-3 mr-1" />
+                  {isLocating ? "Locating..." : "Use Current Location"}
+                </Button>
+              </div>
+              <div className="space-y-2 relative">
                 <Input
                   id="address"
                   placeholder="Start typing your address..."
@@ -519,38 +696,154 @@ export function InstantEstimateFlow({
                 Verify Your Property
               </DialogTitle>
               <DialogDescription>
-                Is this the correct location?
+                Confirm this is the correct location, then choose how to measure
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="rounded-lg overflow-hidden border">
+              {/* Zoom Level Selector */}
+              <div className="flex items-center gap-4">
+                <Label className="whitespace-nowrap text-sm">Satellite Zoom:</Label>
+                <Select value={zoomLevel.toString()} onValueChange={(v) => setZoomLevel(parseInt(v))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select zoom level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="18">Zoom 18 - Wide View (heavy tree areas)</SelectItem>
+                    <SelectItem value="19">Zoom 19 - Standard</SelectItem>
+                    <SelectItem value="20">Zoom 20 - Close-up (detailed roofs)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Satellite Preview with Crosshair */}
+              <div className="relative rounded-lg overflow-hidden border">
                 <img 
-                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
                   alt="Satellite view of property"
-                  className="w-full"
+                  className="w-full h-[250px] object-cover"
                 />
+                <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-medium">
+                  🛰️ Satellite Preview (Zoom {zoomLevel})
+                </div>
+                {/* Center crosshair */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-8 h-8 border-2 border-primary rounded-full opacity-70" />
+                  <div className="absolute w-0.5 h-4 bg-primary opacity-70" />
+                  <div className="absolute w-4 h-0.5 bg-primary opacity-70" />
+                </div>
               </div>
 
               <p className="text-center font-medium text-sm">{address}</p>
 
-              <div className="flex gap-2">
+              {/* Roof Analysis Note */}
+              <RoofAnalysisNote variant="compact" />
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setStep("address");
                     setCoordinates(null);
                   }}
-                  className="flex-1"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Wrong Property
                 </Button>
                 <Button 
                   onClick={analyzeRoof}
+                >
+                  <Zap className="mr-2 h-4 w-4" />
+                  Analyze Full Roof
+                </Button>
+              </div>
+              
+              <Button 
+                variant="secondary"
+                onClick={() => setStep("draw")}
+                className="w-full"
+              >
+                <Map className="mr-2 h-4 w-4" />
+                Draw Specific Section on Map
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Draw on Map Step */}
+        {step === "draw" && coordinates && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-primary" />
+                Draw Your Roof Section
+              </DialogTitle>
+              <DialogDescription>
+                Trace the outline of the roof area you want to measure
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="relative">
+                <div ref={mapContainerRef} className="w-full h-[350px] rounded-lg" />
+                
+                {/* Drawing Controls */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <Button
+                    onClick={handleStartDrawing}
+                    disabled={!mapInitialized}
+                    size="sm"
+                    variant={isDrawing ? "default" : "secondary"}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    {isDrawing ? "Drawing..." : "Draw Roof"}
+                  </Button>
+                  <Button
+                    onClick={handleClearDraw}
+                    size="sm"
+                    variant="destructive"
+                    disabled={drawSqft === 0}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                </div>
+
+                {/* Measurement Display */}
+                {drawSqft > 0 && (
+                  <Card className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur">
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <Label className="text-xs text-muted-foreground">Drawn Area</Label>
+                          <div className="text-lg font-bold">{drawSqft.toLocaleString()} sq ft</div>
+                        </div>
+                        <div className="text-center">
+                          <Label className="text-xs text-muted-foreground">With Pitch (+10%)</Label>
+                          <div className="text-lg font-bold text-primary">{Math.round(drawSqft * 1.1).toLocaleString()} sq ft</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep("verify")}
                   className="flex-1"
                 >
-                  Yes, Analyze Roof
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleUseDrawnMeasurement}
+                  disabled={drawSqft === 0}
+                  className="flex-1"
+                >
+                  Use This Measurement
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -753,6 +1046,14 @@ export function InstantEstimateFlow({
                   <p className="text-sm text-muted-foreground mt-1">Estimated Total</p>
                 </CardContent>
               </Card>
+
+              {/* 3D Roof Visualization */}
+              {estimate.roofComplexity && (
+                <Roof3DVisualization
+                  totalSqft={Math.round(getDisplaySquares() * 100)}
+                  roofComplexity={estimate.roofComplexity as any}
+                />
+              )}
 
               {/* Photo Upload */}
               <RoofPhotoUpload
