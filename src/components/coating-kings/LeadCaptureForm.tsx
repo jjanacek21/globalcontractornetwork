@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, CheckCircle2 } from "lucide-react";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 interface LeadCaptureFormProps {
   prefilledData?: {
@@ -34,7 +35,9 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
     estimateHigh: prefilledData?.estimateHigh || 0,
     propertyType: "",
     urgency: "",
-    notes: ""
+    notes: "",
+    referralSource: "",
+    referralContractorId: null as string | null
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,7 +72,9 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
           urgency: formData.urgency,
           notes: formData.notes,
           user_id: userId,
-          email_normalized: emailNormalized
+          email_normalized: emailNormalized,
+          referral_source: formData.referralSource || null,
+          referral_contractor_id: formData.referralContractorId || null
         });
 
       if (error) throw error;
@@ -130,7 +135,9 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
           estimateHigh: 0,
           propertyType: "",
           urgency: "",
-          notes: ""
+          notes: "",
+          referralSource: "",
+          referralContractorId: null
         });
       }, 3000);
     } catch (error) {
@@ -315,6 +322,14 @@ export const LeadCaptureForm = ({ prefilledData }: LeadCaptureFormProps) => {
                   </Select>
                 </div>
               </div>
+
+              {/* Referral Source */}
+              <ReferralSourceSelect
+                referralSource={formData.referralSource}
+                referralContractorId={formData.referralContractorId}
+                onReferralSourceChange={(value) => setFormData({ ...formData, referralSource: value })}
+                onContractorChange={(id) => setFormData({ ...formData, referralContractorId: id })}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Additional Notes (Optional)</Label>

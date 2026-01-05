@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Phone, Mail, MapPin } from "lucide-react";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 const services = [
   "Lawn Maintenance",
@@ -46,6 +47,8 @@ const LeadCaptureForm = () => {
     propertyType: "",
     service: "",
     message: "",
+    referralSource: "",
+    referralContractorId: null as string | null
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,6 +70,8 @@ const LeadCaptureForm = () => {
         message: `Property: ${formData.propertyType}\nService: ${formData.service}\n\n${formData.message}`,
         user_id: userId,
         email_normalized: emailNormalized,
+        referral_source: formData.referralSource || null,
+        referral_contractor_id: formData.referralContractorId || null
       });
 
       if (error) throw error;
@@ -275,6 +280,15 @@ const LeadCaptureForm = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Referral Source */}
+              <ReferralSourceSelect
+                referralSource={formData.referralSource}
+                referralContractorId={formData.referralContractorId}
+                onReferralSourceChange={(value) => setFormData({ ...formData, referralSource: value })}
+                onContractorChange={(id) => setFormData({ ...formData, referralContractorId: id })}
+                className="bg-white rounded-xl"
+              />
 
               <Textarea
                 placeholder="Tell us about your project (optional)"

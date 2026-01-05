@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 interface DiscountClaimFormProps {
   open: boolean;
@@ -82,6 +83,8 @@ export const DiscountClaimForm = ({
     roofAge: "",
     roofCondition: "",
     notes: "",
+    referralSource: "",
+    referralContractorId: null as string | null
   });
   const [appointmentDate, setAppointmentDate] = useState<Date | undefined>();
   const [appointmentTime, setAppointmentTime] = useState("");
@@ -160,6 +163,8 @@ export const DiscountClaimForm = ({
         status: "new",
         user_id: userId,
         email_normalized: emailNormalized,
+        referral_source: formData.referralSource || null,
+        referral_contractor_id: formData.referralContractorId || null
       };
 
       const { error } = await supabase
@@ -417,6 +422,14 @@ export const DiscountClaimForm = ({
               </Select>
             </div>
           </div>
+
+          {/* Referral Source */}
+          <ReferralSourceSelect
+            referralSource={formData.referralSource}
+            referralContractorId={formData.referralContractorId}
+            onReferralSourceChange={(value) => setFormData({ ...formData, referralSource: value })}
+            onContractorChange={(id) => setFormData({ ...formData, referralContractorId: id })}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="notes">Additional Notes</Label>

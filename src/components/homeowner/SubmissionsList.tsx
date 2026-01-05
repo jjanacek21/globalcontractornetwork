@@ -1,7 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { FileText, MessageSquare, ClipboardList, Calendar, MapPin, DollarSign, Home } from 'lucide-react';
+import { FileText, MessageSquare, ClipboardList, Calendar, MapPin, DollarSign, Home, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { HomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 
@@ -11,6 +12,8 @@ interface SubmissionsListProps {
 }
 
 export function SubmissionsList({ submissions, loading }: SubmissionsListProps) {
+  const navigate = useNavigate();
+
   const getStatusColor = (status: string | null) => {
     switch (status?.toLowerCase()) {
       case 'pending': return 'bg-yellow-500/10 text-yellow-600';
@@ -65,7 +68,8 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                 submissions.coatingLeads.map(lead => (
                   <div 
                     key={lead.id}
-                    className="p-4 rounded-lg bg-muted/30 border"
+                    className="p-4 rounded-lg bg-muted/30 border cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-colors group"
+                    onClick={() => navigate(`/quote/coating/${lead.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -79,9 +83,12 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                           {formatDate(lead.created_at)}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(lead.status)}>
-                        {lead.status || 'Pending'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(lead.status)}>
+                          {lead.status || 'Pending'}
+                        </Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
                   </div>
                 ))
@@ -98,7 +105,8 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                 submissions.windowLeads.map(lead => (
                   <div 
                     key={lead.id}
-                    className="p-4 rounded-lg bg-muted/30 border"
+                    className="p-4 rounded-lg bg-muted/30 border cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-colors group"
+                    onClick={() => navigate(`/quote/window/${lead.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -125,9 +133,12 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                           {formatDate(lead.created_at)}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(lead.status)}>
-                        {lead.status || 'Pending'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(lead.status)}>
+                          {lead.status || 'Pending'}
+                        </Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
                   </div>
                 ))
@@ -144,7 +155,8 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                 submissions.contactRequests.map(request => (
                   <div 
                     key={request.id}
-                    className="p-4 rounded-lg bg-muted/30 border"
+                    className="p-4 rounded-lg bg-muted/30 border cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-colors group"
+                    onClick={() => navigate(`/quote/contact/${request.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -157,9 +169,12 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                           {formatDate(request.created_at)}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(request.status)}>
-                        {request.status || 'Pending'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(request.status)}>
+                          {request.status || 'Pending'}
+                        </Badge>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
                   </div>
                 ))
