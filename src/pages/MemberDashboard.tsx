@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb
+  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -629,7 +629,68 @@ const MemberDashboard = () => {
                 </Link>
               </div>
             </div>
-          </div>
+            </div>
+          )}
+
+          {/* Property Owner Tools Section - Show for non-contractors */}
+          {!isContractor && networkMember && (
+            <div className="stagger-item stagger-delay-8">
+              <div className="rounded-2xl p-6 md:p-8 dark-section">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
+                    <Home className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Property Owner Tools</h2>
+                    <p className="text-sm text-white/60">Manage your projects & profile</p>
+                  </div>
+                </div>
+                
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <Link 
+                    to="/homeowner-profile" 
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <User className="h-6 w-6 text-[hsl(45,100%,51%)]" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">My Profile</p>
+                      <p className="text-sm text-white/60">View & edit profile</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
+                  </Link>
+
+                  <Link 
+                    to="/homeowner-messages" 
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <MessageCircle className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">My Messages</p>
+                      <p className="text-sm text-white/60">Chat with contractors</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
+                  </Link>
+
+                  <Link 
+                    to="/homeowner-dashboard" 
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <ClipboardList className="h-6 w-6 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">My Projects</p>
+                      <p className="text-sm text-white/60">Track your requests</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
+                  </Link>
+                </div>
+              </div>
+            </div>
         )}
       </main>
 
@@ -640,7 +701,7 @@ const MemberDashboard = () => {
             <Home className="h-5 w-5" />
             <span className="text-xs font-medium">Dashboard</span>
           </Link>
-          <Link to="/my-profile" className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+          <Link to={isContractor ? "/my-profile" : "/homeowner-profile"} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
             <User className="h-5 w-5" />
             <span className="text-xs font-medium">My Profile</span>
           </Link>
