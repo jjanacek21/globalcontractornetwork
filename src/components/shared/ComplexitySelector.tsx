@@ -26,7 +26,6 @@ export function ComplexitySelector({ value, onChange, serviceType }: ComplexityS
           <div>
             <span className="text-sm font-medium">{options[0].label}</span>
             <p className="text-xs text-muted-foreground">{options[0].description}</p>
-            <span className="text-xs text-primary font-medium">+{(options[0].wastePct * 100).toFixed(0)}% waste</span>
           </div>
         </div>
       </div>
@@ -57,9 +56,6 @@ export function ComplexitySelector({ value, onChange, serviceType }: ComplexityS
             <span className="text-xs font-medium text-center">{option.label}</span>
             <span className="text-[10px] text-muted-foreground text-center leading-tight mt-1">
               {option.description}
-            </span>
-            <span className="text-xs text-primary font-medium mt-1">
-              +{(option.wastePct * 100).toFixed(0)}% waste
             </span>
           </button>
         ))}

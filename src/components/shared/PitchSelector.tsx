@@ -36,9 +36,6 @@ export function PitchSelector({ value, onChange, serviceType }: PitchSelectorPro
               {option.id === 'steep' && 'Steep'}
               {option.id === 'verysteep' && 'Very Steep'}
             </span>
-            <span className="text-[9px] text-muted-foreground">
-              ×{option.multiplier.toFixed(2)}
-            </span>
           </button>
         ))}
       </div>
