@@ -759,6 +759,7 @@ export type Database = {
       }
       contractor_profiles: {
         Row: {
+          availability_days: number | null
           average_rating: number | null
           banner_image_url: string | null
           bio_long: string | null
@@ -778,6 +779,7 @@ export type Database = {
           license_state: string | null
           logo_url: string | null
           phone: string | null
+          price_tier: string | null
           review_count: number | null
           secondary_trades: string[] | null
           service_area: string[] | null
@@ -795,6 +797,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          availability_days?: number | null
           average_rating?: number | null
           banner_image_url?: string | null
           bio_long?: string | null
@@ -814,6 +817,7 @@ export type Database = {
           license_state?: string | null
           logo_url?: string | null
           phone?: string | null
+          price_tier?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
@@ -831,6 +835,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          availability_days?: number | null
           average_rating?: number | null
           banner_image_url?: string | null
           bio_long?: string | null
@@ -850,6 +855,7 @@ export type Database = {
           license_state?: string | null
           logo_url?: string | null
           phone?: string | null
+          price_tier?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
@@ -1576,6 +1582,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      homeowner_photos: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          file_name: string | null
+          file_url: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_url: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       homeowner_projects: {
         Row: {
