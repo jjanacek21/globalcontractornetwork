@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign, Eye, Edit2, Ruler, Video, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, CheckCircle2, ArrowRight, ArrowLeft, Home, Sparkles, Crown, Star, Hammer, DollarSign, Eye, Edit2, Ruler, Video, Users, Satellite, Zap, Map, Pencil, Trash2, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RoofingPackage } from "./PackageBrowser";
 import { SalesAvatar } from "./SalesAvatar";
 import { SchedulingDialog } from "./SchedulingDialog";
+import { RoofAnalysisNote } from "@/components/shared/RoofAnalysisNote";
 import { cn } from "@/lib/utils";
+import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import * as turf from "@turf/turf";
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -44,7 +51,7 @@ interface AddressSuggestion {
   center: [number, number];
 }
 
-type Step = "address" | "verify" | "quiz" | "analyzing" | "results";
+type Step = "address" | "verify" | "draw" | "quiz" | "analyzing" | "results";
 
 const parsePrice = (priceStr: string): { low: number; high: number } | null => {
   const cleaned = priceStr.replace(/[,$]/g, '').replace('/sq', '');
@@ -157,6 +164,18 @@ export function QuizEstimateFlow({
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const [selectedRec, setSelectedRec] = useState<TieredRecommendation | null>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+  
+  // New state for matching InstantEstimateFlow UI
+  const [zoomLevel, setZoomLevel] = useState(19);
+  const [isLocating, setIsLocating] = useState(false);
+  const [mapContainerNode, setMapContainerNode] = useState<HTMLDivElement | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
+  const [drawnSqft, setDrawnSqft] = useState(0);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) setMapContainerNode(node);
+  }, []);
 
   const resetFlow = () => {
     setStep("address");
@@ -172,6 +191,14 @@ export function QuizEstimateFlow({
     setRecommendations([]);
     setManualSquares(null);
     setIsEditingSquares(false);
+    setZoomLevel(19);
+    setDrawnSqft(0);
+    setIsDrawing(false);
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+    if (drawRef.current) drawRef.current = null;
   };
 
   const handleClose = (open: boolean) => {
@@ -235,6 +262,106 @@ export function QuizEstimateFlow({
   };
 
   const startQuiz = () => setStep("quiz");
+
+  // Map initialization for draw step
+  useEffect(() => {
+    if (step !== "draw" || !mapContainerNode || !coordinates) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    
+    mapRef.current = new mapboxgl.Map({
+      container: mapContainerNode,
+      style: "mapbox://styles/mapbox/satellite-v9",
+      center: [coordinates.lng, coordinates.lat],
+      zoom: 19,
+    });
+
+    drawRef.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: { polygon: true, trash: true },
+      defaultMode: "simple_select",
+    });
+
+    mapRef.current.addControl(drawRef.current);
+    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    mapRef.current.on("draw.create", updateDrawnArea);
+    mapRef.current.on("draw.update", updateDrawnArea);
+    mapRef.current.on("draw.delete", () => {
+      setDrawnSqft(0);
+      setIsDrawing(false);
+    });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [step, mapContainerNode, coordinates]);
+
+  const updateDrawnArea = () => {
+    if (!drawRef.current) return;
+    const data = drawRef.current.getAll();
+    if (data.features.length > 0) {
+      const polygon = data.features[0];
+      const area = turf.area(polygon);
+      const sqft = Math.round(area * 10.764);
+      setDrawnSqft(sqft);
+      setIsDrawing(false);
+    }
+  };
+
+  const handleStartDrawing = () => {
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+      drawRef.current.changeMode("draw_polygon");
+      setIsDrawing(true);
+    }
+  };
+
+  const handleClearDraw = () => {
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+      setDrawnSqft(0);
+      setIsDrawing(false);
+    }
+  };
+
+  const handleUseDrawnMeasurement = () => {
+    const squares = drawnSqft / 100;
+    setManualSquares(squares);
+    setTotalSquares(squares);
+    setStep("quiz");
+  };
+
+  const handleUseCurrentLocation = () => {
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setCoordinates({ lat: latitude, lng: longitude });
+        
+        try {
+          const response = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+          );
+          const data = await response.json();
+          if (data.features?.[0]) {
+            setAddress(data.features[0].place_name);
+          }
+          setStep("verify");
+        } catch (error) {
+          toast.error("Could not get address from location");
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        toast.error("Could not get your location");
+        setIsLocating(false);
+      }
+    );
+  };
 
   const getRecommendations = (squares: number, quizAnswers: QuizAnswers): TieredRecommendation[] => {
     const findPackage = (name: string) => packages.find(p => 
@@ -492,6 +619,25 @@ export function QuizEstimateFlow({
                 Find My Property
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button 
+                variant="outline" 
+                onClick={handleUseCurrentLocation} 
+                disabled={isLocating}
+                className="w-full"
+              >
+                <Navigation className="mr-2 h-4 w-4" />
+                {isLocating ? "Getting location..." : "Use Current Location"}
+              </Button>
             </div>
           </>
         )}
@@ -503,28 +649,140 @@ export function QuizEstimateFlow({
                 <Eye className="h-5 w-5 text-primary" />
                 Verify Your Property
               </DialogTitle>
-              <DialogDescription>Is this the correct location?</DialogDescription>
+              <DialogDescription>
+                Confirm this is the correct location, then choose how to measure
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
-              <div className="rounded-lg overflow-hidden border">
-                <img 
-                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},19,0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
-                  alt="Satellite view of property"
-                  className="w-full"
-                />
+              {/* Zoom Level Selector */}
+              <div className="flex items-center gap-4">
+                <Label className="text-sm font-medium">Satellite Zoom:</Label>
+                <Select value={zoomLevel.toString()} onValueChange={(v) => setZoomLevel(parseInt(v))}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="18">Zoom 18 - Wide View</SelectItem>
+                    <SelectItem value="19">Zoom 19 - Standard</SelectItem>
+                    <SelectItem value="20">Zoom 20 - Close-up</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <p className="text-center font-medium text-sm">{address}</p>
+              {/* Satellite Preview with Crosshair */}
+              <div className="relative rounded-lg overflow-hidden border">
+                <Badge className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm">
+                  <Satellite className="h-3 w-3 mr-1" /> Satellite Preview (Zoom {zoomLevel})
+                </Badge>
+                <img
+                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${coordinates.lng},${coordinates.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                  alt="Satellite view"
+                  className="w-full h-48 object-cover"
+                />
+                {/* Crosshair Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full border-2 border-primary bg-primary/10" />
+                    <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-primary transform -translate-y-1/2" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary transform -translate-x-1/2" />
+                  </div>
+                </div>
+              </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => { setStep("address"); setCoordinates(null); }} className="flex-1">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Wrong Property
+              <p className="text-sm text-center font-medium">{address}</p>
+
+              {/* RoofAnalysisNote Component */}
+              <RoofAnalysisNote />
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setStep("address"); setCoordinates(null); }} className="flex-1">
+                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    Wrong Property
+                  </Button>
+                  <Button onClick={startQuiz} className="flex-1">
+                    <Zap className="h-4 w-4 mr-1" />
+                    Analyze Full Roof
+                  </Button>
+                </div>
+                <Button variant="outline" onClick={() => setStep("draw")} className="w-full">
+                  <Map className="h-4 w-4 mr-2" />
+                  Draw Specific Section on Map
                 </Button>
-                <Button onClick={startQuiz} className="flex-1">
-                  Yes, Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === "draw" && coordinates && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-primary" />
+                Draw Roof Section
+              </DialogTitle>
+              <DialogDescription>
+                Use the polygon tool to trace the specific roof section you want measured
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Map Container */}
+              <div
+                ref={mapContainerRef}
+                className="w-full h-64 rounded-lg overflow-hidden border"
+              />
+
+              {/* Drawing Controls */}
+              <div className="flex gap-2">
+                <Button
+                  variant={isDrawing ? "default" : "outline"}
+                  onClick={handleStartDrawing}
+                  disabled={isDrawing}
+                  className="flex-1"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  {isDrawing ? "Drawing..." : "Start Drawing"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleClearDraw}
+                  disabled={drawnSqft === 0}
+                  className="flex-1"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </div>
+
+              {/* Drawn Area Display */}
+              {drawnSqft > 0 && (
+                <div className="p-4 bg-primary/10 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground">Measured Area</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {drawnSqft.toLocaleString()} sq ft
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    ({(drawnSqft / 100).toFixed(1)} squares)
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep("verify")} className="flex-1">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleUseDrawnMeasurement}
+                  disabled={drawnSqft === 0}
+                  className="flex-1"
+                >
+                  Use This Measurement
+                  <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
             </div>
