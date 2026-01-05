@@ -623,21 +623,15 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
                   </div>
                 )}
                 
-                {/* 4-Column Results Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="text-center p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground">Base (Plan) Sq Ft</p>
-                    <p className="text-lg font-bold">{measurement.baseSqFt.toLocaleString()}</p>
-                  </div>
+                {/* 3-Column Results Grid */}
+                <div className="grid grid-cols-3 gap-3">
                   <div className="text-center p-3 bg-muted rounded-lg">
                     <p className="text-xs text-muted-foreground">True Sq Ft</p>
                     <p className="text-lg font-bold">{measurement.trueSqft.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">×{measurement.pitchMultiplier.toFixed(2)} pitch</p>
                   </div>
                   <div className="text-center p-3 bg-primary/10 rounded-lg">
                     <p className="text-xs text-muted-foreground">Total with Waste</p>
                     <p className="text-lg font-bold text-primary">{measurement.totalWithWaste.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">+{(measurement.wastePct * 100).toFixed(0)}% waste</p>
                   </div>
                   <div className="text-center p-3 bg-primary/20 rounded-lg">
                     <p className="text-xs text-muted-foreground">Roof Squares</p>
@@ -656,13 +650,6 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
                     <span className="text-sm font-medium capitalize">{confidence} Confidence</span>
                   </div>
                 </div>
-
-                {/* Methodology text */}
-                {methodology && (
-                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
-                    {methodology}
-                  </p>
-                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-2">
