@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 interface DiscountClaimFormProps {
   open: boolean;
@@ -131,6 +132,14 @@ export const DiscountClaimForm = ({
     setIsSubmitting(true);
 
     try {
+      // Get current user session for linking
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
       const leadData = {
         name: formData.name,
         email: formData.email,
@@ -149,6 +158,8 @@ export const DiscountClaimForm = ({
         appointment_date: format(appointmentDate, "yyyy-MM-dd"),
         appointment_time: appointmentTime,
         status: "new",
+        user_id: userId,
+        email_normalized: emailNormalized,
       };
 
       const { error } = await supabase

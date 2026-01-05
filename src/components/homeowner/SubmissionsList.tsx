@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { FileText, MessageSquare, ClipboardList, Calendar, MapPin, DollarSign } from 'lucide-react';
+import { FileText, MessageSquare, ClipboardList, Calendar, MapPin, DollarSign, Home } from 'lucide-react';
 import { format } from 'date-fns';
 import { HomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 
@@ -40,9 +40,12 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
           <div className="text-center py-8 text-muted-foreground">Loading submissions...</div>
         ) : (
           <Tabs defaultValue="quotes" className="space-y-4">
-            <TabsList>
+            <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="quotes">
-                Quote Requests ({submissions.coatingLeads.length})
+                Coating Quotes ({submissions.coatingLeads.length})
+              </TabsTrigger>
+              <TabsTrigger value="windows">
+                Window Quotes ({submissions.windowLeads?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="contact">
                 Contact ({submissions.contactRequests.length})
@@ -71,6 +74,52 @@ export function SubmissionsList({ submissions, loading }: SubmissionsListProps) 
                           <MapPin className="h-3 w-3" />
                           {lead.property_address}
                         </p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(lead.created_at)}
+                        </p>
+                      </div>
+                      <Badge className={getStatusColor(lead.status)}>
+                        {lead.status || 'Pending'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="windows" className="space-y-3">
+              {!submissions.windowLeads?.length ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Home className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p>No window quote requests yet</p>
+                </div>
+              ) : (
+                submissions.windowLeads.map(lead => (
+                  <div 
+                    key={lead.id}
+                    className="p-4 rounded-lg bg-muted/30 border"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium">Window Quote</h4>
+                        {lead.property_address && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {lead.property_address}
+                          </p>
+                        )}
+                        {lead.total_windows && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {lead.total_windows} windows
+                          </p>
+                        )}
+                        {(lead.estimate_low || lead.estimate_high) && (
+                          <p className="text-sm text-primary flex items-center gap-1 mt-1">
+                            <DollarSign className="h-3 w-3" />
+                            ${lead.estimate_low?.toLocaleString()} - ${lead.estimate_high?.toLocaleString()}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                           <Calendar className="h-3 w-3" />
                           {formatDate(lead.created_at)}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, LogOut, MessageSquare, Bell } from 'lucide-react';
+import { ArrowLeft, LogOut, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ProfileHeader } from '@/components/homeowner/ProfileHeader';
@@ -14,6 +14,7 @@ import { ReferralInvitationsSection } from '@/components/homeowner/ReferralInvit
 import { PendingReviewsCard } from '@/components/homeowner/PendingReviewsCard';
 import { LeaveReviewDialog } from '@/components/homeowner/LeaveReviewDialog';
 import { AppointmentsSection } from '@/components/homeowner/AppointmentsSection';
+import { NotificationsPanel } from '@/components/homeowner/NotificationsPanel';
 import { useHomeownerPhotos } from '@/hooks/useHomeownerPhotos';
 import { useHomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 import { useFavoriteContractors } from '@/hooks/useFavoriteContractors';
@@ -21,6 +22,7 @@ import { useHomeownerReferralInvitations } from '@/hooks/useHomeownerReferralInv
 import { useHomeownerReviews, ReviewableProject } from '@/hooks/useHomeownerReviews';
 import { useHomeownerMessages } from '@/hooks/useHomeownerMessages';
 import { useHomeownerAppointments } from '@/hooks/useHomeownerAppointments';
+import { useHomeownerNotifications } from '@/hooks/useHomeownerNotifications';
 import gcnLogo from '@/assets/gcn-logo.jpg';
 
 interface Profile {
@@ -52,6 +54,7 @@ export default function HomeownerProfile() {
   const { reviewableProjects, submittedReviews, loading: reviewsLoading, submitReview, submitting } = useHomeownerReviews(userId);
   const { totalUnread } = useHomeownerMessages(userId);
   const { upcomingAppointments, pastAppointments, loading: appointmentsLoading, cancelAppointment } = useHomeownerAppointments(userId);
+  const { notifications, unreadCount: notificationUnreadCount, loading: notificationsLoading, markAsRead, markAllAsRead } = useHomeownerNotifications(userId);
 
   useEffect(() => {
     checkAuth();
@@ -170,22 +173,14 @@ export default function HomeownerProfile() {
                 )}
               </Button>
               
-              {/* Notifications indicator */}
-              {pendingCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative"
-                >
-                  <Bell className="h-5 w-5" />
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {pendingCount}
-                  </Badge>
-                </Button>
-              )}
+              {/* Notifications Panel */}
+              <NotificationsPanel
+                notifications={notifications}
+                unreadCount={notificationUnreadCount}
+                loading={notificationsLoading}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+              />
               
               <Button
                 variant="outline"

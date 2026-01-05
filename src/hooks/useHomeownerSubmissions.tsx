@@ -12,6 +12,18 @@ interface CoatingLead {
   created_at: string | null;
 }
 
+interface WindowLead {
+  id: string;
+  name: string;
+  email: string;
+  property_address: string | null;
+  total_windows: number | null;
+  estimate_low: number | null;
+  estimate_high: number | null;
+  status: string | null;
+  created_at: string | null;
+}
+
 interface ContactRequest {
   id: string;
   name: string;
@@ -38,6 +50,7 @@ interface HomeownerProject {
 
 export interface HomeownerSubmissions {
   coatingLeads: CoatingLead[];
+  windowLeads: WindowLead[];
   contactRequests: ContactRequest[];
   projects: HomeownerProject[];
 }
@@ -45,6 +58,7 @@ export interface HomeownerSubmissions {
 export function useHomeownerSubmissions(userId: string | null, email: string | null) {
   const [submissions, setSubmissions] = useState<HomeownerSubmissions>({
     coatingLeads: [],
+    windowLeads: [],
     contactRequests: [],
     projects: []
   });
@@ -67,6 +81,20 @@ export function useHomeownerSubmissions(userId: string | null, email: string | n
       }
 
       const { data: coatingLeads } = await coatingQuery;
+
+      // Fetch window leads
+      const windowQuery = supabase
+        .from('window_leads')
+        .select('id, name, email, property_address, total_windows, estimate_low, estimate_high, status, created_at')
+        .order('created_at', { ascending: false });
+      
+      if (email) {
+        windowQuery.or(`user_id.eq.${userId},email.ilike.${email}`);
+      } else {
+        windowQuery.eq('user_id', userId);
+      }
+
+      const { data: windowLeads } = await windowQuery;
 
       // Fetch contact requests
       const contactQuery = supabase
@@ -101,6 +129,7 @@ export function useHomeownerSubmissions(userId: string | null, email: string | n
 
       setSubmissions({
         coatingLeads: coatingLeads || [],
+        windowLeads: windowLeads || [],
         contactRequests: contactRequests || [],
         projects: (projects || []).map(p => ({
           ...p,
