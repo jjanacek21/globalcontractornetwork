@@ -209,6 +209,7 @@ export type Database = {
           discount_percent: number | null
           discounted_price: number | null
           email: string
+          email_normalized: string | null
           estimate_high: number | null
           estimate_low: number | null
           estimated_sqft: number | null
@@ -226,6 +227,7 @@ export type Database = {
           testimonial_text: string | null
           updated_at: string | null
           urgency: string | null
+          user_id: string | null
         }
         Insert: {
           appointment_date?: string | null
@@ -235,6 +237,7 @@ export type Database = {
           discount_percent?: number | null
           discounted_price?: number | null
           email: string
+          email_normalized?: string | null
           estimate_high?: number | null
           estimate_low?: number | null
           estimated_sqft?: number | null
@@ -252,6 +255,7 @@ export type Database = {
           testimonial_text?: string | null
           updated_at?: string | null
           urgency?: string | null
+          user_id?: string | null
         }
         Update: {
           appointment_date?: string | null
@@ -261,6 +265,7 @@ export type Database = {
           discount_percent?: number | null
           discounted_price?: number | null
           email?: string
+          email_normalized?: string | null
           estimate_high?: number | null
           estimate_low?: number | null
           estimated_sqft?: number | null
@@ -278,8 +283,17 @@ export type Database = {
           testimonial_text?: string | null
           updated_at?: string | null
           urgency?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coating_leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       companies: {
         Row: {
@@ -400,32 +414,38 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          email_normalized: string | null
           id: string
           message: string | null
           name: string
           phone: string | null
           product_id: string | null
           status: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name: string
           phone?: string | null
           product_id?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name?: string
           phone?: string | null
           product_id?: string | null
           status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -433,6 +453,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1973,6 +2000,7 @@ export type Database = {
           company_name: string | null
           created_at: string | null
           email: string
+          email_normalized: string | null
           id: string
           message: string | null
           name: string
@@ -1980,12 +2008,14 @@ export type Database = {
           service_interest: string | null
           status: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           budget_range?: string | null
           company_name?: string | null
           created_at?: string | null
           email: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name: string
@@ -1993,12 +2023,14 @@ export type Database = {
           service_interest?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           budget_range?: string | null
           company_name?: string | null
           created_at?: string | null
           email?: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name?: string
@@ -2006,8 +2038,17 @@ export type Database = {
           service_interest?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketing_leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       material_requests: {
         Row: {
@@ -2746,28 +2787,34 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string | null
+          email_normalized: string | null
           first_name: string | null
           id: string
           last_name: string | null
           phone: string | null
+          role: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           email?: string | null
+          email_normalized?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string | null
+          email_normalized?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -3098,6 +3145,7 @@ export type Database = {
           customer_email: string | null
           customer_name: string | null
           customer_phone: string | null
+          email_normalized: string | null
           estimated_price: number | null
           id: string
           notes: string | null
@@ -3108,6 +3156,7 @@ export type Database = {
           status: string | null
           timeline: string | null
           updated_at: string | null
+          user_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -3119,6 +3168,7 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          email_normalized?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
@@ -3129,6 +3179,7 @@ export type Database = {
           status?: string | null
           timeline?: string | null
           updated_at?: string | null
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -3140,6 +3191,7 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          email_normalized?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
@@ -3150,9 +3202,18 @@ export type Database = {
           status?: string | null
           timeline?: string | null
           updated_at?: string | null
+          user_id?: string | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "roofing_consultations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_categories: {
         Row: {
@@ -3182,6 +3243,7 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          email_normalized: string | null
           id: string
           message: string | null
           name: string
@@ -3190,10 +3252,12 @@ export type Database = {
           service_tier_id: string | null
           status: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name: string
@@ -3202,10 +3266,12 @@ export type Database = {
           service_tier_id?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
+          email_normalized?: string | null
           id?: string
           message?: string | null
           name?: string
@@ -3214,6 +3280,7 @@ export type Database = {
           service_tier_id?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3221,6 +3288,13 @@ export type Database = {
             columns: ["service_tier_id"]
             isOneToOne: false
             referencedRelation: "service_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4246,6 +4320,7 @@ export type Database = {
           discount_type: string | null
           discounted_price: number | null
           email: string
+          email_normalized: string | null
           estimate_high: number | null
           estimate_low: number | null
           existing_window_type: string | null
@@ -4267,6 +4342,7 @@ export type Database = {
           testimonial_text: string | null
           total_windows: number | null
           updated_at: string | null
+          user_id: string | null
           window_selections: Json | null
           zip_code: string | null
         }
@@ -4279,6 +4355,7 @@ export type Database = {
           discount_type?: string | null
           discounted_price?: number | null
           email: string
+          email_normalized?: string | null
           estimate_high?: number | null
           estimate_low?: number | null
           existing_window_type?: string | null
@@ -4300,6 +4377,7 @@ export type Database = {
           testimonial_text?: string | null
           total_windows?: number | null
           updated_at?: string | null
+          user_id?: string | null
           window_selections?: Json | null
           zip_code?: string | null
         }
@@ -4312,6 +4390,7 @@ export type Database = {
           discount_type?: string | null
           discounted_price?: number | null
           email?: string
+          email_normalized?: string | null
           estimate_high?: number | null
           estimate_low?: number | null
           existing_window_type?: string | null
@@ -4333,10 +4412,19 @@ export type Database = {
           testimonial_text?: string | null
           total_windows?: number | null
           updated_at?: string | null
+          user_id?: string | null
           window_selections?: Json | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "window_leads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_order_photos: {
         Row: {

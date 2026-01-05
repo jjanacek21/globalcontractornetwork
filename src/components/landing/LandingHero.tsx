@@ -1,19 +1,9 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Star, ArrowRight, CheckCircle2, Users, Home, Shield, Wrench } from "lucide-react";
+import { Star, CheckCircle2, Users, Home, Shield, Wrench } from "lucide-react";
 
 const LandingHero = () => {
-  const [email, setEmail] = useState("");
   const navigate = useNavigate();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      navigate(`/join?email=${encodeURIComponent(email)}`);
-    }
-  };
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -92,27 +82,25 @@ const LandingHero = () => {
               <span className="font-semibold text-primary">Referred. Verified. Accountable.</span>
             </div>
 
-            {/* Email Signup Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-lg">
-              <Input
-                type="email"
-                placeholder="Enter your email to get started"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-14 text-lg px-6 flex-1"
-                required
-              />
-              <Button type="submit" size="lg" variant="secondary" className="h-14 px-8 text-lg font-semibold gap-2">
-                Join Free
-                <ArrowRight className="w-5 h-5" />
+{/* Login/Signup CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                className="h-12 px-6"
+                onClick={() => navigate("/network-login")}
+              >
+                Log In
               </Button>
-            </form>
-
-            {/* Trust Indicator */}
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-              No credit card required. No spam. Ever.
-            </p>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="h-12 px-6"
+                onClick={() => navigate("/join")}
+              >
+                Create Account
+              </Button>
+            </div>
 
             {/* Stats Row */}
             <div className="grid grid-cols-3 gap-6 pt-4">

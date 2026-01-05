@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ArrowRight, Calculator, Check } from "lucide-react";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 import { WindowSpinWheel } from "./WindowSpinWheel";
 import { WindowThankYouScreen } from "./WindowThankYouScreen";
 import {
@@ -167,6 +168,13 @@ export const WindowQuoteCalculator = () => {
       const discountedLow = Math.round(estimateLow * (1 - discount / 100));
       const discountedHigh = Math.round(estimateHigh * (1 - discount / 100));
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        email
+      );
+
       const { error } = await supabase.from("window_leads").insert([{
         name,
         email,
@@ -190,7 +198,9 @@ export const WindowQuoteCalculator = () => {
         discount_percent: discount,
         discounted_price: discountedLow,
         spin_result: `${discount}% off`,
-        status: "new"
+        status: "new",
+        user_id: userId,
+        email_normalized: emailNormalized
       }]);
 
       if (error) throw error;

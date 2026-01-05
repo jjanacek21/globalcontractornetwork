@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, Phone, Mail, MapPin } from "lucide-react";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 const serviceInterests = [
   "Google/YouTube Ads",
@@ -62,6 +63,13 @@ export function MarketingLeadForm() {
     setIsSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
       const { error } = await supabase
         .from('marketing_leads')
         .insert({
@@ -72,6 +80,8 @@ export function MarketingLeadForm() {
           service_interest: formData.service_interest || null,
           budget_range: formData.budget_range || null,
           message: formData.message || null,
+          user_id: userId,
+          email_normalized: emailNormalized,
         });
 
       if (error) throw error;

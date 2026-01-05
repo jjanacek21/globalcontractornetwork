@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { CalendarIcon, Video, Users } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { resolveUserForSubmission } from "@/lib/userLinking";
 
 interface SchedulingDialogProps {
   open: boolean;
@@ -62,6 +63,13 @@ export const SchedulingDialog = ({
     setSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { userId, emailNormalized } = await resolveUserForSubmission(
+        supabase,
+        session?.user?.id || null,
+        formData.email
+      );
+
       const { error } = await supabase
         .from("roofing_consultations")
         .insert([{
@@ -80,7 +88,9 @@ export const SchedulingDialog = ({
           customer_email: formData.email,
           customer_phone: formData.phone,
           notes: formData.notes,
-          status: "scheduled"
+          status: "scheduled",
+          user_id: userId,
+          email_normalized: emailNormalized
         }]);
 
       if (error) throw error;
