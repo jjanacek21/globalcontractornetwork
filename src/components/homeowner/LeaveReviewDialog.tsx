@@ -71,10 +71,10 @@ export function LeaveReviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white">Leave a Review</DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogTitle>Leave a Review</DialogTitle>
+          <DialogDescription>
             Share your experience with{' '}
             <span className="text-primary font-medium">
               {project?.contractor?.company_name}
@@ -84,15 +84,15 @@ export function LeaveReviewDialog({
         
         <div className="space-y-6 py-4">
           {/* Project info */}
-          <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-            <p className="text-sm text-white/60">Project</p>
-            <p className="text-white font-medium">{project?.service_type}</p>
-            <p className="text-sm text-white/60 mt-1">{project?.property_address}</p>
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-sm text-muted-foreground">Project</p>
+            <p className="font-medium">{project?.service_type}</p>
+            <p className="text-sm text-muted-foreground mt-1">{project?.property_address}</p>
           </div>
 
           {/* Star rating */}
           <div className="space-y-2">
-            <Label className="text-white">Your Rating</Label>
+            <Label>Your Rating</Label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -108,14 +108,14 @@ export function LeaveReviewDialog({
                       "h-8 w-8 transition-colors",
                       (hoverRating || rating) >= star
                         ? "fill-yellow-400 text-yellow-400"
-                        : "text-slate-600"
+                        : "text-muted-foreground"
                     )}
                   />
                 </button>
               ))}
             </div>
             {rating > 0 && (
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-muted-foreground">
                 {rating === 5 && "Excellent!"}
                 {rating === 4 && "Very Good"}
                 {rating === 3 && "Good"}
@@ -127,18 +127,18 @@ export function LeaveReviewDialog({
 
           {/* Review text */}
           <div className="space-y-2">
-            <Label className="text-white">Your Review (Optional)</Label>
+            <Label>Your Review (Optional)</Label>
             <Textarea
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               placeholder="Tell others about your experience..."
-              className="min-h-[100px] bg-slate-800 border-slate-700 text-white placeholder:text-white/40"
+              className="min-h-[100px]"
             />
           </div>
 
           {/* Reviewer info */}
-          <div className="text-sm text-white/60">
-            Reviewing as: <span className="text-white">{reviewerName}</span>
+          <div className="text-sm text-muted-foreground">
+            Reviewing as: <span className="font-medium">{reviewerName}</span>
           </div>
         </div>
         
@@ -146,14 +146,12 @@ export function LeaveReviewDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="border-slate-600 text-white"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={rating === 0 || submitting}
-            className="bg-primary hover:bg-primary/90"
           >
             {submitting ? 'Submitting...' : 'Submit Review'}
           </Button>

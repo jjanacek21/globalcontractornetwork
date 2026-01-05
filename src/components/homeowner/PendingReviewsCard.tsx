@@ -23,10 +23,10 @@ export function PendingReviewsCard({
 
   if (loading) {
     return (
-      <Card className="bg-slate-900/50 border-slate-700">
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Star className="h-5 w-5 text-yellow-400" />
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
             Reviews
           </CardTitle>
         </CardHeader>
@@ -42,10 +42,10 @@ export function PendingReviewsCard({
   }
 
   return (
-    <Card className="bg-slate-900/50 border-slate-700">
+    <Card className="glass-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
-          <Star className="h-5 w-5 text-yellow-400" />
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-yellow-500" />
           Reviews
           {pendingReviews.length > 0 && (
             <Badge variant="destructive" className="ml-2">
@@ -58,7 +58,7 @@ export function PendingReviewsCard({
         {/* Pending reviews */}
         {pendingReviews.length > 0 && (
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-white/80">
+            <h4 className="text-sm font-medium text-muted-foreground">
               Leave a review for completed projects
             </h4>
             
@@ -70,17 +70,17 @@ export function PendingReviewsCard({
                 <div className="flex items-start gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={project.contractor?.logo_url || ''} />
-                    <AvatarFallback className="bg-yellow-500/20 text-yellow-400">
+                    <AvatarFallback className="bg-yellow-500/10 text-yellow-600">
                       <Building2 className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1">
-                    <h4 className="font-medium text-white">
+                    <h4 className="font-medium">
                       {project.contractor?.company_name}
                     </h4>
-                    <p className="text-sm text-white/60">{project.service_type}</p>
-                    <div className="flex items-center gap-1 text-xs text-white/40 mt-1">
+                    <p className="text-sm text-muted-foreground">{project.service_type}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3" />
                       {project.property_address}
                     </div>
@@ -104,19 +104,19 @@ export function PendingReviewsCard({
         {submittedReviews.length > 0 && (
           <div className="space-y-3">
             {pendingReviews.length > 0 && (
-              <div className="border-t border-slate-700 pt-4">
-                <h4 className="text-sm font-medium text-white/60 mb-3">Your Reviews</h4>
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Your Reviews</h4>
               </div>
             )}
             
             {submittedReviews.slice(0, 3).map((review) => (
               <div
                 key={review.id}
-                className="p-3 rounded-lg bg-slate-800/30 border border-slate-700/50"
+                className="p-3 rounded-lg bg-muted/30 border"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-white">
+                    <p className="text-sm">
                       {review.contractor?.company_name}
                     </p>
                     <div className="flex items-center gap-1 mt-1">
@@ -126,7 +126,7 @@ export function PendingReviewsCard({
                           className={`h-3 w-3 ${
                             star <= review.rating
                               ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-slate-600'
+                              : 'text-muted-foreground'
                           }`}
                         />
                       ))}
@@ -134,19 +134,19 @@ export function PendingReviewsCard({
                   </div>
                   
                   {review.is_approved ? (
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                    <Badge className="bg-green-500/10 text-green-600">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Published
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="bg-slate-700 text-white/60">
+                    <Badge variant="secondary">
                       Pending Review
                     </Badge>
                   )}
                 </div>
                 
                 {review.review_text && (
-                  <p className="text-sm text-white/60 mt-2 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                     "{review.review_text}"
                   </p>
                 )}

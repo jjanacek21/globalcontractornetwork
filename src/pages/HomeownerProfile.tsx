@@ -9,17 +9,18 @@ import { ProfileHeader } from '@/components/homeowner/ProfileHeader';
 import { HomeownerNotes } from '@/components/homeowner/HomeownerNotes';
 import { PhotoGallery } from '@/components/homeowner/PhotoGallery';
 import { SubmissionsList } from '@/components/homeowner/SubmissionsList';
-import { ContractorFinder } from '@/components/homeowner/ContractorFinder';
 import { FavoriteContractorsList } from '@/components/homeowner/FavoriteContractorsList';
 import { ReferralInvitationsSection } from '@/components/homeowner/ReferralInvitationsSection';
 import { PendingReviewsCard } from '@/components/homeowner/PendingReviewsCard';
 import { LeaveReviewDialog } from '@/components/homeowner/LeaveReviewDialog';
+import { AppointmentsSection } from '@/components/homeowner/AppointmentsSection';
 import { useHomeownerPhotos } from '@/hooks/useHomeownerPhotos';
 import { useHomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 import { useFavoriteContractors } from '@/hooks/useFavoriteContractors';
 import { useHomeownerReferralInvitations } from '@/hooks/useHomeownerReferralInvitations';
 import { useHomeownerReviews, ReviewableProject } from '@/hooks/useHomeownerReviews';
 import { useHomeownerMessages } from '@/hooks/useHomeownerMessages';
+import { useHomeownerAppointments } from '@/hooks/useHomeownerAppointments';
 import gcnLogo from '@/assets/gcn-logo.jpg';
 
 interface Profile {
@@ -50,6 +51,7 @@ export default function HomeownerProfile() {
   const { invitations, pendingCount, loading: invitationsLoading, acceptInvitation, declineInvitation } = useHomeownerReferralInvitations(userId, profile?.email || null);
   const { reviewableProjects, submittedReviews, loading: reviewsLoading, submitReview, submitting } = useHomeownerReviews(userId);
   const { totalUnread } = useHomeownerMessages(userId);
+  const { upcomingAppointments, pastAppointments, loading: appointmentsLoading, cancelAppointment } = useHomeownerAppointments(userId);
 
   useEffect(() => {
     checkAuth();
@@ -115,7 +117,7 @@ export default function HomeownerProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -128,24 +130,24 @@ export default function HomeownerProfile() {
   const reviewerName = profile.full_name || profile.email || 'Anonymous';
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+      <header className="sticky top-0 z-50 glass-card border-b">
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-[hsl(45,100%,51%)] to-primary opacity-60" />
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/homeowner-dashboard')}
-                className="text-white hover:bg-white/10"
+                onClick={() => navigate('/member/dashboard')}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <img src={gcnLogo} alt="GCN" className="h-10 w-auto" />
+              <img src={gcnLogo} alt="GCN" className="h-10 w-auto rounded-lg" />
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-white">My Profile</h1>
-                <p className="text-sm text-white/60">Manage your information & find contractors</p>
+                <h1 className="text-lg font-semibold">My Profile</h1>
+                <p className="text-sm text-muted-foreground">Manage your information</p>
               </div>
             </div>
             
@@ -155,7 +157,7 @@ export default function HomeownerProfile() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/homeowner-messages')}
-                className="text-white hover:bg-white/10 relative"
+                className="relative"
               >
                 <MessageSquare className="h-5 w-5" />
                 {totalUnread > 0 && (
@@ -173,7 +175,7 @@ export default function HomeownerProfile() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-white hover:bg-white/10 relative"
+                  className="relative"
                 >
                   <Bell className="h-5 w-5" />
                   <Badge 
@@ -189,7 +191,6 @@ export default function HomeownerProfile() {
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="border-white/20 text-white hover:bg-white/10"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -204,6 +205,14 @@ export default function HomeownerProfile() {
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Profile Header */}
           <ProfileHeader profile={profile} onUpdate={checkAuth} />
+
+          {/* Appointments Section */}
+          <AppointmentsSection
+            upcomingAppointments={upcomingAppointments}
+            pastAppointments={pastAppointments}
+            loading={appointmentsLoading}
+            onCancel={cancelAppointment}
+          />
 
           {/* Referral Invitations Section */}
           <ReferralInvitationsSection
@@ -246,12 +255,6 @@ export default function HomeownerProfile() {
           <SubmissionsList 
             submissions={submissions} 
             loading={submissionsLoading} 
-          />
-
-          {/* Contractor Finder */}
-          <ContractorFinder 
-            userId={userId}
-            onMessageContractor={handleMessageContractor}
           />
         </div>
       </main>

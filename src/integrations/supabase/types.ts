@@ -765,11 +765,13 @@ export type Database = {
           bio_long: string | null
           bio_short: string | null
           category: string
+          client_references: Json | null
           company_name: string
           created_at: string | null
           description: string | null
           email: string | null
           first_name: string | null
+          google_business_url: string | null
           id: string
           insurance_info: Json | null
           is_verified: boolean | null
@@ -780,10 +782,12 @@ export type Database = {
           logo_url: string | null
           phone: string | null
           price_tier: string | null
+          profile_gallery: Json | null
           review_count: number | null
           secondary_trades: string[] | null
           service_area: string[] | null
           service_areas: Json | null
+          services_offered: string[] | null
           social_access_approved: boolean | null
           social_approved_at: string | null
           social_approved_by: string | null
@@ -803,11 +807,13 @@ export type Database = {
           bio_long?: string | null
           bio_short?: string | null
           category: string
+          client_references?: Json | null
           company_name: string
           created_at?: string | null
           description?: string | null
           email?: string | null
           first_name?: string | null
+          google_business_url?: string | null
           id?: string
           insurance_info?: Json | null
           is_verified?: boolean | null
@@ -818,10 +824,12 @@ export type Database = {
           logo_url?: string | null
           phone?: string | null
           price_tier?: string | null
+          profile_gallery?: Json | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
           service_areas?: Json | null
+          services_offered?: string[] | null
           social_access_approved?: boolean | null
           social_approved_at?: string | null
           social_approved_by?: string | null
@@ -841,11 +849,13 @@ export type Database = {
           bio_long?: string | null
           bio_short?: string | null
           category?: string
+          client_references?: Json | null
           company_name?: string
           created_at?: string | null
           description?: string | null
           email?: string | null
           first_name?: string | null
+          google_business_url?: string | null
           id?: string
           insurance_info?: Json | null
           is_verified?: boolean | null
@@ -856,10 +866,12 @@ export type Database = {
           logo_url?: string | null
           phone?: string | null
           price_tier?: string | null
+          profile_gallery?: Json | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
           service_areas?: Json | null
+          services_offered?: string[] | null
           social_access_approved?: boolean | null
           social_approved_at?: string | null
           social_approved_by?: string | null
@@ -1624,6 +1636,78 @@ export type Database = {
             columns: ["uploaded_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homeowner_appointments: {
+        Row: {
+          appointment_type: string
+          cancelled_at: string | null
+          confirmed_at: string | null
+          contractor_id: string
+          conversation_id: string | null
+          created_at: string | null
+          duration_minutes: number | null
+          homeowner_id: string
+          id: string
+          notes: string | null
+          property_address: string | null
+          scheduled_date: string
+          scheduled_time: string
+          service_type: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_type: string
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contractor_id: string
+          conversation_id?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          homeowner_id: string
+          id?: string
+          notes?: string | null
+          property_address?: string | null
+          scheduled_date: string
+          scheduled_time: string
+          service_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_type?: string
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          contractor_id?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          homeowner_id?: string
+          id?: string
+          notes?: string | null
+          property_address?: string | null
+          scheduled_date?: string
+          scheduled_time?: string
+          service_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homeowner_appointments_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homeowner_appointments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_conversations"
             referencedColumns: ["id"]
           },
         ]

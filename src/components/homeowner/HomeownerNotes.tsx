@@ -33,17 +33,16 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
   });
 
   return (
-    <Card className="bg-slate-900 border-slate-800">
+    <Card className="glass-card">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-white flex items-center gap-2">
-          <StickyNote className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+        <CardTitle className="flex items-center gap-2">
+          <StickyNote className="h-5 w-5 text-primary" />
           My Notes
         </CardTitle>
         {!showForm && (
           <Button 
             size="sm"
             onClick={() => setShowForm(true)}
-            className="bg-[hsl(45,100%,51%)] text-black hover:bg-[hsl(45,100%,45%)]"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Note
@@ -53,19 +52,18 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
       <CardContent className="space-y-4">
         {/* Add Note Form */}
         {showForm && (
-          <div className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 space-y-3">
+          <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
             <Textarea
               placeholder="Write a note..."
               value={newNote}
               onChange={e => setNewNote(e.target.value)}
-              className="bg-slate-800 border-slate-700 text-white min-h-[100px]"
+              className="min-h-[100px]"
             />
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => { setShowForm(false); setNewNote(''); }}
-                className="border-white/20 text-white hover:bg-white/10"
               >
                 Cancel
               </Button>
@@ -73,7 +71,6 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
                 size="sm"
                 onClick={handleAddNote}
                 disabled={isAdding || !newNote.trim()}
-                className="bg-[hsl(45,100%,51%)] text-black hover:bg-[hsl(45,100%,45%)]"
               >
                 {isAdding ? 'Saving...' : 'Save Note'}
               </Button>
@@ -83,9 +80,9 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
 
         {/* Notes List */}
         {isLoading ? (
-          <div className="text-center py-8 text-white/60">Loading notes...</div>
+          <div className="text-center py-8 text-muted-foreground">Loading notes...</div>
         ) : sortedNotes.length === 0 ? (
-          <div className="text-center py-12 text-white/60">
+          <div className="text-center py-12 text-muted-foreground">
             <StickyNote className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p>No notes yet</p>
             <p className="text-sm">Add personal notes about your projects or property</p>
@@ -97,14 +94,14 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
                 key={note.id}
                 className={`p-4 rounded-lg border ${
                   note.is_pinned 
-                    ? 'bg-[hsl(45,100%,51%)]/10 border-[hsl(45,100%,51%)]/30' 
-                    : 'bg-white/5 border-white/10'
+                    ? 'bg-primary/5 border-primary/20' 
+                    : 'bg-muted/30'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <p className="text-white whitespace-pre-wrap">{note.content}</p>
-                    <p className="text-xs text-white/50 mt-2">
+                    <p className="whitespace-pre-wrap">{note.content}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
                       {format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
@@ -112,7 +109,7 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-white/50 hover:text-[hsl(45,100%,51%)] hover:bg-white/10"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
                       onClick={() => togglePin(note.id, note.is_pinned || false)}
                     >
                       {note.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -120,7 +117,7 @@ export function HomeownerNotes({ userId }: HomeownerNotesProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-white/50 hover:text-red-400 hover:bg-white/10"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
                       onClick={() => deleteNote(note.id)}
                     >
                       <Trash2 className="h-4 w-4" />

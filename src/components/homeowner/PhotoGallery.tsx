@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, Upload, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { Camera, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import { HomeownerPhoto } from '@/hooks/useHomeownerPhotos';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
@@ -42,25 +42,25 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
 
   const getCategoryColor = (category: string | null) => {
     switch (category) {
-      case 'damage': return 'bg-red-500/20 text-red-400';
-      case 'before': return 'bg-blue-500/20 text-blue-400';
-      case 'after': return 'bg-green-500/20 text-green-400';
-      case 'property': return 'bg-purple-500/20 text-purple-400';
-      default: return 'bg-slate-500/20 text-slate-400';
+      case 'damage': return 'bg-red-500/10 text-red-600';
+      case 'before': return 'bg-blue-500/10 text-blue-600';
+      case 'after': return 'bg-green-500/10 text-green-600';
+      case 'property': return 'bg-purple-500/10 text-purple-600';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
     <>
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-white flex items-center gap-2">
-            <Camera className="h-5 w-5 text-[hsl(45,100%,51%)]" />
+          <CardTitle className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
             My Photos
           </CardTitle>
           <div className="flex items-center gap-2">
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[120px] bg-slate-800 border-slate-700 text-white">
+              <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -74,7 +74,7 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Upload Section */}
-          <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-slate-700 bg-slate-800/50">
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed bg-muted/30">
             <input
               ref={fileInputRef}
               type="file"
@@ -83,7 +83,7 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
               className="hidden"
             />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[120px] bg-slate-800 border-slate-700 text-white">
+              <SelectTrigger className="w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -95,7 +95,6 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
             <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="bg-[hsl(45,100%,51%)] text-black hover:bg-[hsl(45,100%,45%)]"
             >
               <Upload className="h-4 w-4 mr-2" />
               {uploading ? 'Uploading...' : 'Upload Photo'}
@@ -104,9 +103,9 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
 
           {/* Photo Grid */}
           {loading ? (
-            <div className="text-center py-8 text-white/60">Loading photos...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading photos...</div>
           ) : filteredPhotos.length === 0 ? (
-            <div className="text-center py-12 text-white/60">
+            <div className="text-center py-12 text-muted-foreground">
               <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No photos yet</p>
               <p className="text-sm">Upload photos of your property or projects</p>
@@ -148,7 +147,7 @@ export function PhotoGallery({ photos, loading, uploading, onUpload, onDelete }:
 
       {/* Lightbox Dialog */}
       <Dialog open={!!lightboxPhoto} onOpenChange={() => setLightboxPhoto(null)}>
-        <DialogContent className="max-w-4xl bg-slate-900 border-slate-800 p-0">
+        <DialogContent className="max-w-4xl p-0">
           {lightboxPhoto && (
             <div className="relative">
               <img
