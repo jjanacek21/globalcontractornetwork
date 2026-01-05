@@ -958,30 +958,36 @@ export type Database = {
           created_at: string | null
           id: string
           is_approved: boolean | null
+          project_id: string | null
           rating: number
           review_text: string | null
           reviewer_email: string | null
           reviewer_name: string
+          user_id: string | null
         }
         Insert: {
           contractor_id: string
           created_at?: string | null
           id?: string
           is_approved?: boolean | null
+          project_id?: string | null
           rating: number
           review_text?: string | null
           reviewer_email?: string | null
           reviewer_name: string
+          user_id?: string | null
         }
         Update: {
           contractor_id?: string
           created_at?: string | null
           id?: string
           is_approved?: boolean | null
+          project_id?: string | null
           rating?: number
           review_text?: string | null
           reviewer_email?: string | null
           reviewer_name?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -989,6 +995,13 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1464,6 +1477,38 @@ export type Database = {
           },
         ]
       }
+      favorite_contractors: {
+        Row: {
+          contractor_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_contractors_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_properties: {
         Row: {
           address: string
@@ -1583,6 +1628,82 @@ export type Database = {
           },
         ]
       }
+      homeowner_conversations: {
+        Row: {
+          contractor_id: string
+          contractor_unread_count: number | null
+          created_at: string | null
+          homeowner_id: string
+          homeowner_unread_count: number | null
+          id: string
+          last_message_at: string | null
+        }
+        Insert: {
+          contractor_id: string
+          contractor_unread_count?: number | null
+          created_at?: string | null
+          homeowner_id: string
+          homeowner_unread_count?: number | null
+          id?: string
+          last_message_at?: string | null
+        }
+        Update: {
+          contractor_id?: string
+          contractor_unread_count?: number | null
+          created_at?: string | null
+          homeowner_id?: string
+          homeowner_unread_count?: number | null
+          id?: string
+          last_message_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homeowner_conversations_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homeowner_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homeowner_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homeowner_photos: {
         Row: {
           category: string | null
@@ -1678,6 +1799,76 @@ export type Database = {
           {
             foreignKeyName: "homeowner_projects_assigned_contractor_id_fkey"
             columns: ["assigned_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homeowner_referral_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          declined_at: string | null
+          homeowner_email: string | null
+          homeowner_id: string | null
+          id: string
+          job_type: string
+          message: string | null
+          project_id: string | null
+          property_address: string | null
+          recommended_contractor_id: string
+          referring_contractor_id: string
+          status: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          declined_at?: string | null
+          homeowner_email?: string | null
+          homeowner_id?: string | null
+          id?: string
+          job_type: string
+          message?: string | null
+          project_id?: string | null
+          property_address?: string | null
+          recommended_contractor_id: string
+          referring_contractor_id: string
+          status?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          declined_at?: string | null
+          homeowner_email?: string | null
+          homeowner_id?: string | null
+          id?: string
+          job_type?: string
+          message?: string | null
+          project_id?: string | null
+          property_address?: string | null
+          recommended_contractor_id?: string
+          referring_contractor_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homeowner_referral_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "homeowner_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homeowner_referral_invitations_recommended_contractor_id_fkey"
+            columns: ["recommended_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homeowner_referral_invitations_referring_contractor_id_fkey"
+            columns: ["referring_contractor_id"]
             isOneToOne: false
             referencedRelation: "contractor_profiles"
             referencedColumns: ["id"]
