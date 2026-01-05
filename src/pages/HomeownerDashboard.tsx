@@ -225,7 +225,7 @@ const HomeownerDashboard = () => {
               </div>
 
               {/* My Profile Card */}
-              <Link to="/my-profile" className="group">
+              <Link to="/homeowner-profile" className="group">
                 <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">

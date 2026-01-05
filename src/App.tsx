@@ -69,6 +69,7 @@ import MyProfile from "./pages/MyProfile";
 import NetworkLogin from "./pages/NetworkLogin";
 import Login from "./pages/Login";
 import HomeownerDashboard from "./pages/HomeownerDashboard";
+import HomeownerProfile from "./pages/HomeownerProfile";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -101,6 +102,12 @@ const GCNRoutes = () => (
     <Route path="/network-login" element={<NetworkLogin />} />
     <Route path="/login" element={<NetworkLogin />} />
     <Route path="/homeowner/dashboard" element={<HomeownerDashboard />} />
+    <Route path="/homeowner-dashboard" element={<HomeownerDashboard />} />
+    <Route path="/homeowner-profile" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <HomeownerProfile />
+      </ProtectedRoute>
+    } />
     <Route path="/member/dashboard" element={<MemberDashboard />} />
     <Route path="/my-profile" element={
       <ProtectedRoute redirectTo="/network-login">
