@@ -16,6 +16,9 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { SpinWheel } from "./SpinWheel";
 import { DiscountClaimForm } from "./DiscountClaimForm";
 import { ThankYouScreen } from "./ThankYouScreen";
+import { RoofAnalysisNote } from "@/components/shared/RoofAnalysisNote";
+import { Roof3DVisualization } from "@/components/shared/Roof3DVisualization";
+import { getConfidenceColor as getConfidenceColorUtil } from "@/lib/roofMeasurements";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -578,6 +581,11 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                     </div>
                   )}
 
+                  {/* Roof Analysis Note - shown after address is selected */}
+                  {selectedCoords && !visionEstimation && (
+                    <RoofAnalysisNote />
+                  )}
+
                   <Button
                     onClick={handleAnalyzeRoof}
                     disabled={isAnalyzing || !selectedCoords}
@@ -663,6 +671,15 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
                                 Draw Manually
                               </Button>
                             </div>
+                          )}
+
+                          {/* 3D Visualization Toggle */}
+                          {acceptedSqft && (
+                            <Roof3DVisualization
+                              totalSqft={totalWithWaste}
+                              roofComplexity={visionEstimation.roofComplexity}
+                              className="mt-4"
+                            />
                           )}
                         </div>
                       </CardContent>
