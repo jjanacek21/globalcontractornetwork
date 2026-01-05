@@ -173,6 +173,8 @@ export function QuizEstimateFlow({
   const drawRef = useRef<MapboxDraw | null>(null);
   const [drawnSqft, setDrawnSqft] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [cachedMeasurement, setCachedMeasurement] = useState<any>(null);
+  const [isSkippingQuiz, setIsSkippingQuiz] = useState(false);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) setMapContainerNode(node);
   }, []);
@@ -194,6 +196,8 @@ export function QuizEstimateFlow({
     setZoomLevel(19);
     setDrawnSqft(0);
     setIsDrawing(false);
+    setCachedMeasurement(null);
+    setIsSkippingQuiz(false);
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
@@ -261,7 +265,124 @@ export function QuizEstimateFlow({
     setStep("verify");
   };
 
+  // Check for cached measurement when address is verified
+  useEffect(() => {
+    if (step !== "verify" || !coordinates || !address) return;
+    
+    const checkCache = async () => {
+      const normalizedAddr = normalizeAddress(address);
+      const { data } = await supabase
+        .from('roof_analysis_cache')
+        .select('*')
+        .eq('normalized_address', normalizedAddr)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+      
+      if (data) setCachedMeasurement(data);
+    };
+    
+    checkCache();
+  }, [step, coordinates, address]);
+
   const startQuiz = () => setStep("quiz");
+
+  // Skip quiz - use AI defaults based on roof analysis
+  const handleSkipQuiz = async () => {
+    if (!coordinates) return;
+    setIsSkippingQuiz(true);
+    setStep("analyzing");
+
+    const messages = [
+      "Checking for cached measurements...",
+      "Analyzing satellite imagery...",
+      "Detecting roof characteristics...",
+      "Generating smart recommendations..."
+    ];
+
+    let messageIndex = 0;
+    const interval = setInterval(() => {
+      if (messageIndex < messages.length) {
+        setProgressMessage(messages[messageIndex]);
+        messageIndex++;
+      }
+    }, 800);
+
+    try {
+      const normalizedAddr = normalizeAddress(address);
+
+      // Check cache first
+      const { data: cached } = await supabase
+        .from('roof_analysis_cache')
+        .select('*')
+        .eq('normalized_address', normalizedAddr)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      let flatSqft: number;
+      let complexity: string;
+      let estimatedAge: number | null = null;
+
+      if (cached) {
+        flatSqft = Number(cached.flat_sqft);
+        complexity = cached.roof_complexity || 'gable';
+        estimatedAge = cached.estimated_roof_age_years || null;
+        setProgressMessage("Found cached measurement!");
+      } else {
+        const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
+          body: { latitude: coordinates.lat, longitude: coordinates.lng, address }
+        });
+
+        if (error) throw error;
+
+        flatSqft = data.estimation.estimatedSqft;
+        complexity = data.estimation.roofComplexity || 'gable';
+        estimatedAge = data.estimation.estimatedAgeYears || null;
+
+        // Cache the result
+        const { adjustedSqft, factor } = applyPitchFactor(flatSqft, complexity);
+        await supabase.from('roof_analysis_cache').insert({
+          address, normalized_address: normalizedAddr,
+          latitude: coordinates.lat, longitude: coordinates.lng,
+          flat_sqft: flatSqft, adjusted_sqft: adjustedSqft,
+          total_squares: adjustedSqft / 100, roof_complexity: complexity,
+          roof_shape: data.estimation.roofShape,
+          confidence: data.estimation.confidence,
+          methodology: data.estimation.methodology,
+          satellite_image_url: data.estimation.satelliteImageUrl,
+          pitch_factor: 1.1, complexity_factor: factor / 1.1,
+          estimated_roof_age_years: estimatedAge
+        });
+      }
+
+      clearInterval(interval);
+
+      const { adjustedSqft } = applyPitchFactor(flatSqft, complexity);
+      const squares = adjustedSqft / 100;
+      setTotalSquares(squares);
+      setRoofComplexity(complexity);
+
+      // AI-driven defaults based on roof characteristics
+      const smartAnswers: QuizAnswers = {
+        roofType: complexity === 'flat' ? 'flat' : 'shingle',
+        priority: estimatedAge && estimatedAge > 15 ? 'durability' : 'budget',
+        timeline: estimatedAge && estimatedAge > 20 ? 'short' : 'medium',
+        budget: 'mid'
+      };
+
+      setAnswers(smartAnswers);
+      const recs = getRecommendations(squares, smartAnswers);
+      setRecommendations(recs);
+      setStep("results");
+
+    } catch (error: any) {
+      clearInterval(interval);
+      console.error("Analysis error:", error);
+      toast.error(error.message || "Failed to analyze. Please try again.");
+      setStep("verify");
+    } finally {
+      setIsSkippingQuiz(false);
+    }
+  };
 
   // Map initialization for draw step
   useEffect(() => {
@@ -695,18 +816,42 @@ export function QuizEstimateFlow({
               {/* RoofAnalysisNote Component */}
               <RoofAnalysisNote />
 
+              {/* Cached Measurement Notice */}
+              {cachedMeasurement && (
+                <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Previous Measurement Found</p>
+                          <p className="text-xs text-muted-foreground">
+                            {cachedMeasurement.total_squares?.toFixed(1)} squares • {new Date(cachedMeasurement.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">Saved</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Action Buttons */}
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => { setStep("address"); setCoordinates(null); }} className="flex-1">
+                  <Button variant="outline" onClick={() => { setStep("address"); setCoordinates(null); setCachedMeasurement(null); }} className="flex-1">
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     Wrong Property
                   </Button>
                   <Button onClick={startQuiz} className="flex-1">
                     <Zap className="h-4 w-4 mr-1" />
-                    Analyze Full Roof
+                    Answer Quiz
                   </Button>
                 </div>
+                <Button onClick={handleSkipQuiz} disabled={isSkippingQuiz} className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Skip Quiz – Let AI Decide
+                </Button>
                 <Button variant="outline" onClick={() => setStep("draw")} className="w-full">
                   <Map className="h-4 w-4 mr-2" />
                   Draw Specific Section on Map
