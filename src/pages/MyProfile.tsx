@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   User, Mail, Phone, Building2, MapPin, FileText, 
-  Home, Briefcase, Users, ArrowLeft, CheckCircle2
+  Home, Briefcase, Users, ArrowLeft, CheckCircle2, Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -76,11 +76,17 @@ export default function MyProfile() {
       <main className="container py-8 max-w-4xl space-y-8">
         {/* Profile Overview */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               Profile Overview
             </CardTitle>
+            {isContractor && (
+              <Button onClick={() => navigate('/contractor/dashboard')} variant="outline" size="sm">
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-6">
