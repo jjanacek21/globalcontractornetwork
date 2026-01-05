@@ -82,25 +82,6 @@ const LandingHero = () => {
               <span className="font-semibold text-primary">Referred. Verified. Accountable.</span>
             </div>
 
-{/* Login/Signup CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="secondary" 
-                size="lg" 
-                className="h-12 px-6"
-                onClick={() => navigate("/network-login")}
-              >
-                Log In
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="h-12 px-6"
-                onClick={() => navigate("/join")}
-              >
-                Create Account
-              </Button>
-            </div>
 
             {/* Stats Row */}
             <div className="grid grid-cols-3 gap-6 pt-4">
