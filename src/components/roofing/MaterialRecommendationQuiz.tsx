@@ -19,6 +19,7 @@ interface MaterialRecommendationQuizProps {
   onOpenChange: (open: boolean) => void;
   packages: RoofingPackage[];
   onSelectPackage: (pkg: RoofingPackage, estimate: any) => void;
+  initialPropertyType?: string;
 }
 
 interface QuizAnswers {
@@ -41,16 +42,6 @@ interface QuizQuestion {
 }
 
 const quizQuestions: QuizQuestion[] = [
-  {
-    id: "propertyType",
-    question: "What type of property is this?",
-    subtitle: "This helps us recommend the right roofing system",
-    icon: <Building2 className="h-6 w-6" />,
-    options: [
-      { value: "residential", label: "Residential", icon: <Home className="h-5 w-5" />, description: "Single family, townhouse, or multi-family home" },
-      { value: "commercial", label: "Commercial", icon: <Building2 className="h-5 w-5" />, description: "Office, warehouse, retail, or industrial building" }
-    ]
-  },
   {
     id: "currentRoof",
     question: "What's your current roof material?",
@@ -149,10 +140,13 @@ export const MaterialRecommendationQuiz = ({
   open,
   onOpenChange,
   packages,
-  onSelectPackage
+  onSelectPackage,
+  initialPropertyType
 }: MaterialRecommendationQuizProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Partial<QuizAnswers>>({});
+  const [answers, setAnswers] = useState<Partial<QuizAnswers>>({
+    propertyType: initialPropertyType || ""
+  });
   const [showResults, setShowResults] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [comparisonItems, setComparisonItems] = useState<RoofingPackage[]>([]);
@@ -165,7 +159,7 @@ export const MaterialRecommendationQuiz = ({
 
   const resetQuiz = () => {
     setCurrentStep(0);
-    setAnswers({});
+    setAnswers({ propertyType: initialPropertyType || "" });
     setShowResults(false);
     setRecommendations([]);
     setComparisonItems([]);
