@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, CheckCircle2, Star, Shield, Zap, Droplets, Wind, Sun } from "lucide-react";
+import { ChevronDown, CheckCircle2, Star, Shield, Zap, Droplets, Wind, Sun, Layers, Wrench } from "lucide-react";
 
 interface ProductCategory {
   id: string;
@@ -22,7 +22,6 @@ interface Product {
   description: string;
   pros: string[];
   lifespan?: string;
-  priceRange?: string;
   bestFor?: string;
   popular?: boolean;
 }
@@ -39,24 +38,14 @@ const productCategories: ProductCategory[] = [
         description: "Multi-dimensional shingles with enhanced durability and aesthetics",
         pros: ["30-50 year lifespan", "Wind resistance up to 130 mph", "Dimensional appearance"],
         lifespan: "30-50 years",
-        priceRange: "$4.50-$6.00/sq ft",
         bestFor: "Most residential homes",
         popular: true
-      },
-      {
-        name: "3-Tab Shingles",
-        description: "Traditional flat shingles offering budget-friendly roofing",
-        pros: ["Lower cost", "Easy to install", "Uniform appearance"],
-        lifespan: "20-25 years",
-        priceRange: "$3.00-$4.00/sq ft",
-        bestFor: "Budget-conscious projects"
       },
       {
         name: "Designer/Luxury Shingles",
         description: "Premium shingles mimicking slate or cedar shake appearance",
         pros: ["Maximum curb appeal", "50+ year lifespan", "Enhanced warranties"],
         lifespan: "50+ years",
-        priceRange: "$6.00-$10.00/sq ft",
         bestFor: "High-end homes"
       }
     ]
@@ -72,7 +61,6 @@ const productCategories: ProductCategory[] = [
         description: "Premium metal panels with concealed fasteners and clean lines",
         pros: ["50+ year lifespan", "No exposed fasteners", "Superior weather resistance"],
         lifespan: "50-70 years",
-        priceRange: "$10-$16/sq ft",
         bestFor: "Modern aesthetics, coastal areas",
         popular: true
       },
@@ -81,7 +69,6 @@ const productCategories: ProductCategory[] = [
         description: "Economical exposed-fastener metal roofing with classic ribbed profile",
         pros: ["Cost-effective metal option", "Easy installation", "Good durability"],
         lifespan: "40-50 years",
-        priceRange: "$5-$8/sq ft",
         bestFor: "Agricultural, residential, budget metal"
       },
       {
@@ -89,7 +76,6 @@ const productCategories: ProductCategory[] = [
         description: "Steel panels coated with stone granules for tile-like appearance",
         pros: ["Looks like tile, weighs less", "Impact resistant", "Energy efficient"],
         lifespan: "50+ years",
-        priceRange: "$9-$14/sq ft",
         bestFor: "Tile look without the weight"
       }
     ]
@@ -105,7 +91,6 @@ const productCategories: ProductCategory[] = [
         description: "Heavy-duty tiles offering classic Mediterranean or flat profiles",
         pros: ["Extremely durable", "Hurricane rated", "Fire resistant"],
         lifespan: "50-75 years",
-        priceRange: "$7-$12/sq ft",
         bestFor: "Florida homes, Spanish style",
         popular: true
       },
@@ -114,7 +99,6 @@ const productCategories: ProductCategory[] = [
         description: "Traditional terracotta tiles with timeless beauty",
         pros: ["Authentic appearance", "100+ year potential", "Excellent insulation"],
         lifespan: "75-100 years",
-        priceRange: "$10-$18/sq ft",
         bestFor: "Historic homes, luxury properties"
       },
       {
@@ -122,8 +106,51 @@ const productCategories: ProductCategory[] = [
         description: "Lightweight alternatives made from composite materials",
         pros: ["Lighter weight", "Lower cost than clay", "Impact resistant"],
         lifespan: "40-50 years",
-        priceRange: "$6-$10/sq ft",
         bestFor: "Tile look on older structures"
+      }
+    ]
+  },
+  {
+    id: "flat",
+    title: "Flat Roof Systems",
+    icon: <Layers className="h-5 w-5" />,
+    description: "Commercial and residential low-slope roofing solutions",
+    products: [
+      {
+        name: "TPO (Thermoplastic Polyolefin)",
+        description: "Single-ply membrane known for heat-reflective properties",
+        pros: ["Energy efficient", "UV resistant", "Weldable seams"],
+        lifespan: "20-30 years",
+        bestFor: "Commercial buildings, flat residential roofs",
+        popular: true
+      },
+      {
+        name: "EPDM Rubber Roofing",
+        description: "Durable synthetic rubber membrane for flat roofs",
+        pros: ["Excellent durability", "Low maintenance", "Cost-effective"],
+        lifespan: "25-30 years",
+        bestFor: "Large flat roof areas"
+      },
+      {
+        name: "Modified Bitumen",
+        description: "Asphalt-based roofing with added modifiers for flexibility",
+        pros: ["Multi-layer protection", "Easy repairs", "Good flexibility"],
+        lifespan: "20-25 years",
+        bestFor: "Low-slope residential and commercial"
+      },
+      {
+        name: "PVC Membrane",
+        description: "Highly durable thermoplastic roofing membrane",
+        pros: ["Chemical resistant", "Fire resistant", "Long-lasting seams"],
+        lifespan: "25-35 years",
+        bestFor: "Restaurants, commercial kitchens"
+      },
+      {
+        name: "Built-Up Roofing (BUR)",
+        description: "Traditional multi-layer roofing with alternating asphalt and ply sheets",
+        pros: ["Time-tested performance", "Excellent waterproofing", "Gravel surfacing options"],
+        lifespan: "20-30 years",
+        bestFor: "Commercial flat roofs"
       }
     ]
   },
@@ -137,14 +164,12 @@ const productCategories: ProductCategory[] = [
         name: "Synthetic Underlayment",
         description: "Woven polyethylene or polypropylene sheets for basic protection",
         pros: ["Lightweight", "Easy to install", "Tear resistant"],
-        priceRange: "$0.15-$0.25/sq ft",
         bestFor: "Standard shingle installations"
       },
       {
         name: "Peel-and-Stick (Self-Adhering)",
         description: "Modified bitumen membrane that seals around fasteners",
         pros: ["Superior waterproofing", "Seals around nails", "Ice dam protection"],
-        priceRange: "$0.35-$0.60/sq ft",
         bestFor: "Valleys, eaves, low-slope areas",
         popular: true
       },
@@ -152,22 +177,20 @@ const productCategories: ProductCategory[] = [
         name: "High-Temperature Underlayment",
         description: "Specialized underlayment for metal and tile roofs",
         pros: ["Withstands high heat", "Extended lifespan", "Required for metal roofs"],
-        priceRange: "$0.50-$0.80/sq ft",
         bestFor: "Metal and tile installations"
       }
     ]
   },
   {
-    id: "ventilation",
-    title: "Ventilation Systems",
-    icon: <Wind className="h-5 w-5" />,
-    description: "Proper attic ventilation extends roof life and reduces energy costs",
+    id: "accessories",
+    title: "Roof Accessories",
+    icon: <Wrench className="h-5 w-5" />,
+    description: "Essential components for proper ventilation, sealing, and aesthetics",
     products: [
       {
         name: "Ridge Vents",
         description: "Continuous vents installed along the roof peak",
         pros: ["Invisible from ground", "Even ventilation", "No moving parts"],
-        priceRange: "$3-$5/linear ft",
         bestFor: "Most residential roofs",
         popular: true
       },
@@ -175,15 +198,38 @@ const productCategories: ProductCategory[] = [
         name: "Solar Attic Fans",
         description: "Powered exhaust fans using solar energy",
         pros: ["Active ventilation", "No electricity cost", "Reduces cooling bills"],
-        priceRange: "$300-$600 installed",
         bestFor: "Hot climates, large attics"
       },
       {
-        name: "Gooseneck Vents",
-        description: "Static exhaust vents with curved profiles",
-        pros: ["Good airflow", "Weather resistant", "Affordable"],
-        priceRange: "$50-$150 each installed",
+        name: "Exhaust Vents (Box Vents)",
+        description: "Static exhaust vents for attic ventilation",
+        pros: ["No moving parts", "Affordable", "Easy to install"],
         bestFor: "Supplemental ventilation"
+      },
+      {
+        name: "Turbine Vents",
+        description: "Wind-powered rotating vents for active air movement",
+        pros: ["No electricity needed", "Good airflow", "Durable construction"],
+        bestFor: "Windy areas, barns, workshops"
+      },
+      {
+        name: "Pipe Jacks / Pipe Boots",
+        description: "Rubber or metal flanges that seal around plumbing vents",
+        pros: ["Prevents leaks", "UV resistant options", "Easy replacement"],
+        bestFor: "All roof types with plumbing penetrations",
+        popular: true
+      },
+      {
+        name: "Skylights",
+        description: "Natural light windows installed in the roof",
+        pros: ["Brings in natural light", "Energy efficient options", "Ventilating models available"],
+        bestFor: "Dark interior spaces, bathrooms"
+      },
+      {
+        name: "Roof Flashing",
+        description: "Metal strips that prevent water intrusion at joints and edges",
+        pros: ["Critical leak prevention", "Multiple materials available", "Custom fabrication"],
+        bestFor: "Valleys, walls, chimneys, edges"
       }
     ]
   }
@@ -257,11 +303,6 @@ export const RoofingProductsGuide = () => {
                                 </Badge>
                               )}
                             </div>
-                            {product.priceRange && (
-                              <span className="text-sm font-medium text-primary">
-                                {product.priceRange}
-                              </span>
-                            )}
                           </div>
                           
                           <p className="text-sm text-muted-foreground mb-3">

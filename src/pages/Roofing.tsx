@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Home, ArrowDown } from "lucide-react";
+import { Home, ArrowDown, Sparkles } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { AIRoofingChat } from "@/components/roofing/AIRoofingChat";
@@ -14,8 +14,11 @@ import { PackageBrowser, RoofingPackage } from "@/components/roofing/PackageBrow
 import { ComparisonBar } from "@/components/roofing/ComparisonBar";
 import { PackageComparisonDialog } from "@/components/roofing/PackageComparisonDialog";
 import { InstantEstimateFlow } from "@/components/roofing/InstantEstimateFlow";
-import { QuizEstimateFlow } from "@/components/roofing/QuizEstimateFlow";
+import { MaterialRecommendationQuiz } from "@/components/roofing/MaterialRecommendationQuiz";
 import { RoofingProductsGuide } from "@/components/roofing/RoofingProductsGuide";
+import { FinancingCalculator } from "@/components/roofing/FinancingCalculator";
+import { RoofColorVisualizer } from "@/components/roofing/RoofColorVisualizer";
+import { WarrantyComparison } from "@/components/roofing/WarrantyComparison";
 
 const roofingPackages: RoofingPackage[] = [
   {
@@ -144,7 +147,7 @@ const Roofing = () => {
   
   // Dialog states
   const [estimateFlowOpen, setEstimateFlowOpen] = useState(false);
-  const [quizFlowOpen, setQuizFlowOpen] = useState(false);
+  const [materialQuizOpen, setMaterialQuizOpen] = useState(false);
   const [comparisonDialogOpen, setComparisonDialogOpen] = useState(false);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -194,7 +197,7 @@ const Roofing = () => {
       message: `Package: ${pkg.name}\nRoof Size: ${estimate.totalSquares?.toFixed(1) || "N/A"} squares\nEstimate: $${estimate.estimateLow?.toLocaleString()} - $${estimate.estimateHigh?.toLocaleString()}`
     });
     setEstimateFlowOpen(false);
-    setQuizFlowOpen(false);
+    setMaterialQuizOpen(false);
     setQuoteDialogOpen(true);
   };
 
@@ -310,6 +313,16 @@ const Roofing = () => {
               Browse our comprehensive range of roofing solutions. Select any package to get an instant AI-powered estimate for your property.
             </p>
             
+            {/* Material Quiz CTA */}
+            <Button 
+              size="lg" 
+              onClick={() => setMaterialQuizOpen(true)}
+              className="text-lg px-8 group"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              Find Your Perfect Roofing Material
+            </Button>
+            
             {/* YouTube Video */}
             <div className="aspect-video w-full max-w-2xl mx-auto rounded-xl overflow-hidden shadow-lg">
               <iframe
@@ -342,7 +355,7 @@ const Roofing = () => {
             comparisonPackages={comparisonPackages}
             onSelectPackage={handleSelectPackage}
             onToggleComparison={handleToggleComparison}
-            onStartQuiz={() => setQuizFlowOpen(true)}
+            onStartQuiz={() => setMaterialQuizOpen(true)}
           />
         </div>
       </section>
@@ -376,10 +389,10 @@ const Roofing = () => {
         }}
       />
 
-      {/* Quiz Estimate Flow */}
-      <QuizEstimateFlow
-        open={quizFlowOpen}
-        onOpenChange={setQuizFlowOpen}
+      {/* Material Recommendation Quiz */}
+      <MaterialRecommendationQuiz
+        open={materialQuizOpen}
+        onOpenChange={setMaterialQuizOpen}
         packages={roofingPackages}
         onSelectPackage={handleQuizSelectPackage}
       />
@@ -458,6 +471,15 @@ const Roofing = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Financing Calculator */}
+      <FinancingCalculator />
+
+      {/* Roof Color Visualizer */}
+      <RoofColorVisualizer />
+
+      {/* Warranty Comparison */}
+      <WarrantyComparison />
 
       {/* Roofing Products Guide */}
       <RoofingProductsGuide />
