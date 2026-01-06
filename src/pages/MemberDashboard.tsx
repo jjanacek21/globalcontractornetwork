@@ -10,7 +10,7 @@ import {
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
-  Paintbrush, HardHat, DoorOpen, GraduationCap, X, Megaphone,
+  HardHat, DoorOpen, GraduationCap, X, Megaphone,
   Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -167,18 +167,10 @@ const MemberDashboard = () => {
       category: "business" as ServiceCategory
     },
     {
-      icon: Paintbrush,
-      title: "Roof Coatings",
-      description: "Silicone & acrylic roof coating services",
-      link: "/coating-kings",
-      color: "bg-orange-500/10 text-orange-600",
-      category: "home" as ServiceCategory
-    },
-    {
       icon: HardHat,
       title: "Roofing Services",
-      description: "Full roof replacements & repairs",
-      link: "/roofing",
+      description: "Full roof replacements, repairs & coatings",
+      link: "/roofing-services",
       color: "bg-slate-600/10 text-slate-600",
       category: "home" as ServiceCategory
     },

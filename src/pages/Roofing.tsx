@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Home, ArrowDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { AIRoofingChat } from "@/components/roofing/AIRoofingChat";
 import { PackageBrowser, RoofingPackage } from "@/components/roofing/PackageBrowser";
@@ -15,6 +15,7 @@ import { ComparisonBar } from "@/components/roofing/ComparisonBar";
 import { PackageComparisonDialog } from "@/components/roofing/PackageComparisonDialog";
 import { InstantEstimateFlow } from "@/components/roofing/InstantEstimateFlow";
 import { QuizEstimateFlow } from "@/components/roofing/QuizEstimateFlow";
+import { RoofingProductsGuide } from "@/components/roofing/RoofingProductsGuide";
 
 const roofingPackages: RoofingPackage[] = [
   {
@@ -132,6 +133,10 @@ const roofingPackages: RoofingPackage[] = [
 ];
 
 const Roofing = () => {
+  const [searchParams] = useSearchParams();
+  const serviceType = searchParams.get('type'); // 'repair' or 'reroof'
+  const propertyType = searchParams.get('propertyType'); // 'commercial' or 'residential'
+  
   // Flow state
   const [selectedPackage, setSelectedPackage] = useState<RoofingPackage | null>(null);
   const [comparisonPackages, setComparisonPackages] = useState<RoofingPackage[]>([]);
@@ -453,6 +458,9 @@ const Roofing = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Roofing Products Guide */}
+      <RoofingProductsGuide />
 
       {/* Footer */}
       <footer className="border-t py-12 bg-muted/30 mt-16">
