@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck, Lightbulb
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck, Lightbulb, GraduationCap
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -26,6 +26,7 @@ import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess"
 import LoginRequestsTable from "@/components/admin/LoginRequestsTable";
 import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
 import ReferralsManagement from "@/components/admin/ReferralsManagement";
+import ResourcesManagement from "@/components/admin/ResourcesManagement";
 
 interface UnifiedLead {
   id: string;
@@ -507,6 +508,7 @@ const SuperAdminDashboard = () => {
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
                 <TabsTrigger value="referrals" className="gap-2"><Lightbulb className="h-4 w-4" />Referrals</TabsTrigger>
+                <TabsTrigger value="resources" className="gap-2"><GraduationCap className="h-4 w-4" />Academy Resources</TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
 
@@ -636,6 +638,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="referrals">
                 <ReferralsManagement />
+              </TabsContent>
+
+              <TabsContent value="resources">
+                <ResourcesManagement />
               </TabsContent>
 
               <TabsContent value="superadmins">
