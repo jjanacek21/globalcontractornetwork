@@ -31,6 +31,7 @@ import { GalleryManager } from '@/components/contractor/GalleryManager';
 import { SocialLinksEditor } from '@/components/contractor/SocialLinksEditor';
 import { ServicesEditor } from '@/components/contractor/ServicesEditor';
 import { ReferencesEditor } from '@/components/contractor/ReferencesEditor';
+import { ReferralEarningsCard } from '@/components/contractor/ReferralEarningsCard';
 
 export default function ContractorDashboard() {
   const navigate = useNavigate();
@@ -189,6 +190,9 @@ export default function ContractorDashboard() {
           <Badge variant="outline">{profile.subscription_status || 'Free'}</Badge>
           <Badge variant="outline">{profile.category}</Badge>
         </div>
+
+        {/* Referral Earnings Card */}
+        <ReferralEarningsCard contractorId={profile.id} />
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
