@@ -58,7 +58,7 @@ const LandingHeader = () => {
     { label: "Permit Expediting", href: "/permit-queens" },
     { label: "Supplements", href: "/supplement-kings" },
     { label: "Digital Marketing", href: "/digital-marketing" },
-    { label: "Training Academy", href: "/learning" },
+    { label: "Training Academy & Resources", href: "/academy" },
     { label: "Merch Store", href: "/store" },
   ];
 
