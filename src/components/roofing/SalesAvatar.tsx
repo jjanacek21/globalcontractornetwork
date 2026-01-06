@@ -18,16 +18,10 @@ export const SalesAvatar = ({ speaking = false, className }: SalesAvatarProps) =
           {/* Eyes */}
           <div className="flex gap-4 mb-2">
             <div className="w-3 h-3 bg-white rounded-full relative">
-              <div className={cn(
-                "absolute w-1.5 h-1.5 bg-foreground rounded-full top-0.5 left-0.5 transition-all duration-300",
-                speaking && "animate-bounce"
-              )} />
+              <div className="absolute w-1.5 h-1.5 bg-foreground rounded-full top-0.5 left-0.5" />
             </div>
             <div className="w-3 h-3 bg-white rounded-full relative">
-              <div className={cn(
-                "absolute w-1.5 h-1.5 bg-foreground rounded-full top-0.5 left-0.5 transition-all duration-300",
-                speaking && "animate-bounce"
-              )} />
+              <div className="absolute w-1.5 h-1.5 bg-foreground rounded-full top-0.5 left-0.5" />
             </div>
           </div>
           {/* Mouth */}
