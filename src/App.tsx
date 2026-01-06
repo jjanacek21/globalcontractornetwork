@@ -66,6 +66,8 @@ import EmergencyMitigation from "./pages/EmergencyMitigation";
 import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
+import TrainingAcademy from "./pages/TrainingAcademy";
+import AcademyResources from "./pages/AcademyResources";
 import MyProfile from "./pages/MyProfile";
 import NetworkLogin from "./pages/NetworkLogin";
 import Login from "./pages/Login";
@@ -276,15 +278,19 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
-          {/* Learning Platform Routes */}
-          <Route path="/learning" element={<LearningAuth />} />
+          {/* Training Academy / Resource Library Routes */}
+          <Route path="/academy" element={<TrainingAcademy />} />
+          <Route path="/academy/resources" element={<AcademyResources />} />
+          <Route path="/learning" element={<TrainingAcademy />} />
+          
+          {/* Legacy Learning Platform Routes (for enrolled students) */}
           <Route path="/learning/teacher" element={
-            <ProtectedRoute redirectTo="/learning">
+            <ProtectedRoute redirectTo="/academy">
               <TeacherDashboard />
             </ProtectedRoute>
           } />
           <Route path="/learning/student" element={
-            <ProtectedRoute redirectTo="/learning">
+            <ProtectedRoute redirectTo="/academy">
               <StudentDashboard />
             </ProtectedRoute>
           } />
