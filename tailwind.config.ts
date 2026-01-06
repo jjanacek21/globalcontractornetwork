@@ -155,6 +155,76 @@ export default {
             backgroundPosition: "200% 0",
           },
         },
+        // New 3D CRM animations
+        "tilt-in": {
+          "0%": {
+            transform: "perspective(1000px) rotateY(-10deg) rotateX(10deg)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "perspective(1000px) rotateY(0) rotateX(0)",
+            opacity: "1",
+          },
+        },
+        "count-up": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(10px)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0)",
+          },
+        },
+        "icon-float": {
+          "0%, 100%": {
+            transform: "translateY(0) rotate(0deg)",
+          },
+          "50%": {
+            transform: "translateY(-5px) rotate(3deg)",
+          },
+        },
+        "glass-glow": {
+          "0%, 100%": {
+            borderColor: "hsl(var(--primary) / 0.3)",
+          },
+          "50%": {
+            borderColor: "hsl(var(--primary) / 0.6)",
+          },
+        },
+        "slide-in-right": {
+          "0%": {
+            transform: "translateX(100%)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateX(0)",
+            opacity: "1",
+          },
+        },
+        "slide-in-left": {
+          "0%": {
+            transform: "translateX(-100%)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateX(0)",
+            opacity: "1",
+          },
+        },
+        "pop-in": {
+          "0%": {
+            transform: "scale(0.8)",
+            opacity: "0",
+          },
+          "50%": {
+            transform: "scale(1.05)",
+          },
+          "100%": {
+            transform: "scale(1)",
+            opacity: "1",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -166,6 +236,14 @@ export default {
         float: "float 3s ease-in-out infinite",
         "scale-in": "scale-in 0.6s ease-out forwards",
         shimmer: "shimmer 2s linear infinite",
+        // New 3D CRM animations
+        "tilt-in": "tilt-in 0.4s ease-out forwards",
+        "count-up": "count-up 0.6s ease-out forwards",
+        "icon-float": "icon-float 3s ease-in-out infinite",
+        "glass-glow": "glass-glow 2s ease-in-out infinite",
+        "slide-in-right": "slide-in-right 0.3s ease-out forwards",
+        "slide-in-left": "slide-in-left 0.3s ease-out forwards",
+        "pop-in": "pop-in 0.3s ease-out forwards",
       },
       fontFamily: {
         display: ["Inter", "system-ui", "sans-serif"],
