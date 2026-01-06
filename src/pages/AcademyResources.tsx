@@ -14,7 +14,8 @@ import {
   Clock, 
   Lock,
   ChevronLeft,
-  Filter
+  Filter,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -183,23 +184,32 @@ const AcademyResources = () => {
                 {resources.map((resource) => {
                   const TypeIcon = typeIcons[resource.resource_type as keyof typeof typeIcons] || FileText;
                   const typeColor = typeColors[resource.resource_type as keyof typeof typeColors] || typeColors.article;
+                  const hasExternalLink = resource.external_links && resource.external_links.length > 0;
                   
                   return (
                     <Link key={resource.id} to={`/academy/resources/${resource.id}`}>
-                      <Card3D className="h-full p-6 group cursor-pointer">
+                      <Card3D className="h-full p-6 group cursor-pointer hover:border-emerald-500/30 border border-transparent transition-all">
                         <div className="flex items-start gap-4 mb-4">
                           <div className={`w-12 h-12 rounded-lg ${typeColor} flex items-center justify-center shrink-0`}>
                             <TypeIcon className="w-6 h-6" />
                           </div>
-                          {resource.is_premium && (
-                            <AnimatedBadge variant="warning" size="sm" className="ml-auto">
-                              <Lock className="w-3 h-3 mr-1" />
-                              Premium
-                            </AnimatedBadge>
-                          )}
+                          <div className="flex-1 flex items-start gap-2">
+                            {hasExternalLink && (
+                              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
+                                <ExternalLink className="w-3 h-3" />
+                                External
+                              </span>
+                            )}
+                            {resource.is_premium && (
+                              <AnimatedBadge variant="warning" size="sm">
+                                <Lock className="w-3 h-3 mr-1" />
+                                Premium
+                              </AnimatedBadge>
+                            )}
+                          </div>
                         </div>
                         
-                        <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                        <h3 className="font-semibold text-foreground mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2">
                           {resource.title}
                         </h3>
                         
