@@ -11,7 +11,7 @@ export const SalesAvatar = ({ speaking = false, className }: SalesAvatarProps) =
       {/* Avatar container with glow effect */}
       <div className={cn(
         "relative w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg transition-all duration-300",
-        speaking && "animate-pulse shadow-primary/50 shadow-xl"
+        speaking && "shadow-primary/50 shadow-xl"
       )}>
         {/* Face */}
         <div className="relative">
