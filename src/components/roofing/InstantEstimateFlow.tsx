@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, CheckCircle2, ArrowLeft, Home, Ruler, DollarSign, Edit2, Video, Users, Clock, Palette, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowLeft, Home, Ruler, DollarSign, Edit2, Video, Users, Clock, Palette, AlertTriangle, FileText, Mail } from "lucide-react";
 import { RoofingPackage } from "./PackageBrowser";
 import { SchedulingDialog } from "./SchedulingDialog";
 import { RoofPhotoUpload } from "./RoofPhotoUpload";
 import { Roof3DVisualization } from "@/components/shared/Roof3DVisualization";
 import { MeasurementWizard } from "@/components/shared/MeasurementWizard";
 import { MeasurementResult } from "@/lib/roofMeasurements";
+import { InlineFinancingSelector, SelectedFinancing } from "./InlineFinancingSelector";
+import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
+import { toast } from "sonner";
 
 interface InstantEstimateFlowProps {
   open: boolean;
@@ -80,6 +83,7 @@ export function InstantEstimateFlow({
   const [isEditingSquares, setIsEditingSquares] = useState(false);
   const [showScheduling, setShowScheduling] = useState(false);
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
+  const [selectedFinancing, setSelectedFinancing] = useState<SelectedFinancing | null>(null);
 
   const resetFlow = () => {
     setStep("measurement");
@@ -87,6 +91,7 @@ export function InstantEstimateFlow({
     setEstimate(null);
     setManualSquares(null);
     setIsEditingSquares(false);
+    setSelectedFinancing(null);
   };
 
   const handleClose = (open: boolean) => {
@@ -144,6 +149,41 @@ export function InstantEstimateFlow({
     if (years <= 12) return 'bg-blue-100 text-blue-700';
     if (years <= 20) return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-700';
+  };
+
+  const handleDownloadPdf = () => {
+    if (!selectedPackage || !estimate || !measurementResult) return;
+
+    const estimates = getDisplayEstimates();
+    const pdfData = {
+      customerName: "Homeowner",
+      customerEmail: "",
+      customerPhone: "",
+      propertyAddress: estimate.address,
+      baseSqft: measurementResult.baseSqFt,
+      pitchMultiplier: measurementResult.pitchMultiplier,
+      trueSqft: measurementResult.trueSqft,
+      wastePct: measurementResult.wastePct,
+      totalWithWaste: measurementResult.totalWithWaste,
+      roofSquares: getDisplaySquares(),
+      roofComplexity: estimate.roofComplexity || "Standard",
+      packageName: selectedPackage.name,
+      packageFeatures: selectedPackage.features,
+      pricePerSquare: selectedPackage.pricePerSquare,
+      estimateLow: estimates.low,
+      estimateHigh: estimates.high,
+      financing: selectedFinancing ? {
+        lenderName: selectedFinancing.lenderName,
+        rate: selectedFinancing.rate,
+        termYears: selectedFinancing.termYears,
+        monthlyPayment: selectedFinancing.monthlyPayment,
+        totalCost: selectedFinancing.totalCost
+      } : null
+    };
+
+    const { blob } = generateRoofEstimatePdf(pdfData);
+    downloadPdf(blob, `roof-estimate-${Date.now()}.pdf`);
+    toast.success("Your estimate PDF has been downloaded!");
   };
 
   if (!selectedPackage) return null;
@@ -362,6 +402,28 @@ export function InstantEstimateFlow({
                 </CardContent>
               </Card>
 
+              {/* Inline Financing Selector */}
+              <InlineFinancingSelector
+                estimateAmount={Math.round((getDisplayEstimates().low + getDisplayEstimates().high) / 2)}
+                onSelect={setSelectedFinancing}
+                selectedPlanId={selectedFinancing?.planId}
+              />
+
+              {/* Monthly Payment Display */}
+              {selectedFinancing && (
+                <Card className="bg-blue-500/10 border-blue-500/30">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-sm text-muted-foreground mb-1">Estimated Monthly Payment</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatCurrency(selectedFinancing.monthlyPayment)}/mo
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedFinancing.lenderName} • {selectedFinancing.rate}% APR • {selectedFinancing.termYears} years
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* 3D Roof Visualization */}
               {estimate.roofComplexity && (
                 <Roof3DVisualization
@@ -387,6 +449,17 @@ export function InstantEstimateFlow({
                 }}
               />
 
+              {/* Download PDF Button */}
+              <Button 
+                variant="outline"
+                onClick={handleDownloadPdf}
+                size="lg"
+                className="w-full"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Download PDF Estimate
+              </Button>
+
               {/* Actions - Schedule Consultation */}
               <div className="flex flex-col gap-2 pt-2">
                 <Button 
@@ -397,8 +470,8 @@ export function InstantEstimateFlow({
                   size="lg"
                   className="w-full"
                 >
-                  <Video className="mr-2 h-4 w-4" />
-                  Schedule Zoom Call
+                  <Mail className="mr-2 h-4 w-4" />
+                  Get PDF Emailed & Schedule Call
                 </Button>
                 
                 <Button 
@@ -442,6 +515,23 @@ export function InstantEstimateFlow({
                 recommendedPackage: selectedPackage.name,
                 estimatedPrice: Math.round((getDisplayEstimates().low + getDisplayEstimates().high) / 2)
               }}
+              measurementData={{
+                baseSqft: measurementResult.baseSqFt,
+                pitchMultiplier: measurementResult.pitchMultiplier,
+                trueSqft: measurementResult.trueSqft,
+                wastePct: measurementResult.wastePct,
+                totalWithWaste: measurementResult.totalWithWaste,
+                roofSquares: getDisplaySquares(),
+                roofComplexity: estimate.roofComplexity || "Standard"
+              }}
+              packageData={{
+                name: selectedPackage.name,
+                features: selectedPackage.features,
+                pricePerSquare: selectedPackage.pricePerSquare,
+                estimateLow: getDisplayEstimates().low,
+                estimateHigh: getDisplayEstimates().high
+              }}
+              financingData={selectedFinancing}
               onComplete={() => {
                 handleClose(false);
               }}

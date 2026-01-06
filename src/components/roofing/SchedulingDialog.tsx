@@ -9,10 +9,30 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CalendarIcon, Video, Users } from "lucide-react";
+import { CalendarIcon, Video, Users, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
+import { SelectedFinancing } from "./InlineFinancingSelector";
+
+interface MeasurementData {
+  baseSqft: number;
+  pitchMultiplier: number;
+  trueSqft: number;
+  wastePct: number;
+  totalWithWaste: number;
+  roofSquares: number;
+  roofComplexity: string;
+}
+
+interface PackageData {
+  name: string;
+  features: string[];
+  pricePerSquare: string;
+  estimateLow: number;
+  estimateHigh: number;
+}
 
 interface SchedulingDialogProps {
   open: boolean;
@@ -28,6 +48,9 @@ interface SchedulingDialogProps {
     recommendedPackage: string;
     estimatedPrice: number;
   };
+  measurementData?: MeasurementData;
+  packageData?: PackageData;
+  financingData?: SelectedFinancing | null;
   onComplete: () => void;
 }
 
@@ -41,6 +64,9 @@ export const SchedulingDialog = ({
   onOpenChange,
   appointmentType,
   consultationData,
+  measurementData,
+  packageData,
+  financingData,
   onComplete
 }: SchedulingDialogProps) => {
   const [date, setDate] = useState<Date>();
@@ -69,6 +95,45 @@ export const SchedulingDialog = ({
         session?.user?.id || null,
         formData.email
       );
+
+      // Generate PDF if we have measurement and package data
+      let pdfBase64: string | null = null;
+      if (measurementData && packageData) {
+        const pdfData = {
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          propertyAddress: consultationData.zipCode,
+          baseSqft: measurementData.baseSqft,
+          pitchMultiplier: measurementData.pitchMultiplier,
+          trueSqft: measurementData.trueSqft,
+          wastePct: measurementData.wastePct,
+          totalWithWaste: measurementData.totalWithWaste,
+          roofSquares: measurementData.roofSquares,
+          roofComplexity: measurementData.roofComplexity,
+          packageName: packageData.name,
+          packageFeatures: packageData.features,
+          pricePerSquare: packageData.pricePerSquare,
+          estimateLow: packageData.estimateLow,
+          estimateHigh: packageData.estimateHigh,
+          financing: financingData ? {
+            lenderName: financingData.lenderName,
+            rate: financingData.rate,
+            termYears: financingData.termYears,
+            monthlyPayment: financingData.monthlyPayment,
+            totalCost: financingData.totalCost
+          } : null,
+          appointmentDate: format(date, "PPP"),
+          appointmentTime: time,
+          appointmentType: appointmentType
+        };
+
+        const { blob, base64 } = generateRoofEstimatePdf(pdfData);
+        pdfBase64 = base64;
+        
+        // Download PDF immediately
+        downloadPdf(blob, `roof-estimate-${formData.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`);
+      }
 
       const { error } = await supabase
         .from("roofing_consultations")
@@ -105,16 +170,16 @@ export const SchedulingDialog = ({
           address: consultationData.zipCode,
           service: `${consultationData.roofType} - ${consultationData.recommendedPackage}`,
           urgency: consultationData.priority,
-          estimateLow: consultationData.estimatedPrice,
-          estimateHigh: consultationData.estimatedPrice,
+          estimateLow: packageData?.estimateLow || consultationData.estimatedPrice,
+          estimateHigh: packageData?.estimateHigh || consultationData.estimatedPrice,
           appointmentDate: format(date, "yyyy-MM-dd"),
           appointmentTime: time,
           appointmentType: appointmentType,
-          notes: `Timeline: ${consultationData.timeline}, Budget: ${consultationData.budget}, Sqft: ${consultationData.sqft}${formData.notes ? `, Customer Notes: ${formData.notes}` : ''}`
+          notes: `Timeline: ${consultationData.timeline}, Budget: ${consultationData.budget}, Sqft: ${consultationData.sqft}${formData.notes ? `, Customer Notes: ${formData.notes}` : ''}${financingData ? `, Financing: ${financingData.lenderName} ${financingData.rate}% for ${financingData.termYears}yr` : ''}`
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
-      // Send confirmation email to customer
+      // Send confirmation email with PDF attachment
       supabase.functions.invoke('send-lead-confirmation', {
         body: {
           email: formData.email,
@@ -125,16 +190,35 @@ export const SchedulingDialog = ({
           roofType: consultationData.roofType,
           recommendedPackage: consultationData.recommendedPackage,
           estimatedPrice: consultationData.estimatedPrice,
+          estimateLow: packageData?.estimateLow,
+          estimateHigh: packageData?.estimateHigh,
           appointmentDate: format(date, "PPP"),
           appointmentTime: time,
           appointmentType: appointmentType,
           timeline: consultationData.timeline,
           budget: consultationData.budget,
-          sqft: consultationData.sqft
+          sqft: consultationData.sqft,
+          // PDF attachment data
+          pdfBase64: pdfBase64,
+          pdfFilename: `roof-estimate-${formData.name.replace(/\s+/g, '-').toLowerCase()}.pdf`,
+          // Financing data for email
+          financing: financingData ? {
+            lenderName: financingData.lenderName,
+            rate: financingData.rate,
+            termYears: financingData.termYears,
+            monthlyPayment: financingData.monthlyPayment
+          } : null,
+          // Measurement data for email
+          measurements: measurementData ? {
+            baseSqft: measurementData.baseSqft,
+            trueSqft: measurementData.trueSqft,
+            roofSquares: measurementData.roofSquares,
+            complexity: measurementData.roofComplexity
+          } : null
         }
       }).catch(err => console.error('Email confirmation failed:', err));
 
-      toast.success("Appointment scheduled successfully! We'll send you a confirmation email.");
+      toast.success("Appointment scheduled! Your estimate PDF has been downloaded and emailed to you.");
       onComplete();
       onOpenChange(false);
     } catch (error) {
@@ -163,7 +247,7 @@ export const SchedulingDialog = ({
             )}
           </DialogTitle>
           <DialogDescription>
-            Book your {appointmentType === "zoom" ? "virtual" : "in-person"} consultation with our roofing expert
+            Book your {appointmentType === "zoom" ? "virtual" : "in-person"} consultation and receive your detailed estimate PDF
           </DialogDescription>
         </DialogHeader>
 
@@ -261,13 +345,37 @@ export const SchedulingDialog = ({
 
           <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
             <p><span className="font-medium">Package:</span> {consultationData.recommendedPackage}</p>
-            <p><span className="font-medium">Estimated:</span> ${consultationData.estimatedPrice.toLocaleString()}</p>
-            <p><span className="font-medium">Zip Code:</span> {consultationData.zipCode}</p>
+            {packageData ? (
+              <p><span className="font-medium">Estimated:</span> ${packageData.estimateLow.toLocaleString()} - ${packageData.estimateHigh.toLocaleString()}</p>
+            ) : (
+              <p><span className="font-medium">Estimated:</span> ${consultationData.estimatedPrice.toLocaleString()}</p>
+            )}
+            {financingData && (
+              <p><span className="font-medium">Financing:</span> ${Math.round(financingData.monthlyPayment).toLocaleString()}/mo @ {financingData.rate}%</p>
+            )}
+            <p><span className="font-medium">Address:</span> {consultationData.zipCode}</p>
           </div>
+
+          {measurementData && packageData && (
+            <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <FileText className="h-4 w-4" />
+                <span className="font-medium">PDF Estimate Included</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your detailed itemized estimate will be downloaded automatically and emailed to you.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={submitting} className="flex-1">
-              {submitting ? "Scheduling..." : "Confirm Appointment"}
+              {submitting ? "Scheduling..." : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Confirm & Get PDF
+                </>
+              )}
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
