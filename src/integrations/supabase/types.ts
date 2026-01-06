@@ -113,6 +113,70 @@ export type Database = {
         }
         Relationships: []
       }
+      canvassing_logs: {
+        Row: {
+          address: string | null
+          company_id: string | null
+          created_at: string
+          disposition: Database["public"]["Enums"]["canvassing_disposition"]
+          follow_up_at: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          notes: string | null
+          property_id: string | null
+          rep_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          company_id?: string | null
+          created_at?: string
+          disposition: Database["public"]["Enums"]["canvassing_disposition"]
+          follow_up_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          property_id?: string | null
+          rep_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          company_id?: string | null
+          created_at?: string
+          disposition?: Database["public"]["Enums"]["canvassing_disposition"]
+          follow_up_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          notes?: string | null
+          property_id?: string | null
+          rep_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvassing_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvassing_logs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvassing_logs_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_items: {
         Row: {
           category: string | null
@@ -2167,6 +2231,260 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          due_at: string | null
+          id: string
+          invoice_number: string
+          invoice_type: string | null
+          job_id: string
+          notes: string | null
+          paid_at: string | null
+          payment_link: string | null
+          payment_method: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          invoice_number: string
+          invoice_type?: string | null
+          job_id: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_link?: string | null
+          payment_method?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          invoice_number?: string
+          invoice_type?: string | null
+          job_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_link?: string | null
+          payment_method?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_invoices_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          priority: string | null
+          status: string | null
+          title: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          title: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          appointment_at: string | null
+          assigned_crew_id: string | null
+          assigned_pm_id: string | null
+          assigned_rep_id: string | null
+          closed_at: string | null
+          cogs_budget: Json | null
+          commission_forecast: Json | null
+          company_id: string | null
+          contact_id: string | null
+          contract_amount: number | null
+          contract_signed_at: string | null
+          created_at: string
+          gross_profit_estimate: number | null
+          id: string
+          lost_reason: string | null
+          measurement_data: Json | null
+          notes: string | null
+          priority: string | null
+          property_id: string | null
+          rep_card_data: Json | null
+          service_type: string | null
+          source: string | null
+          stage: Database["public"]["Enums"]["job_stage"]
+          trade_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_at?: string | null
+          assigned_crew_id?: string | null
+          assigned_pm_id?: string | null
+          assigned_rep_id?: string | null
+          closed_at?: string | null
+          cogs_budget?: Json | null
+          commission_forecast?: Json | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_amount?: number | null
+          contract_signed_at?: string | null
+          created_at?: string
+          gross_profit_estimate?: number | null
+          id?: string
+          lost_reason?: string | null
+          measurement_data?: Json | null
+          notes?: string | null
+          priority?: string | null
+          property_id?: string | null
+          rep_card_data?: Json | null
+          service_type?: string | null
+          source?: string | null
+          stage?: Database["public"]["Enums"]["job_stage"]
+          trade_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_at?: string | null
+          assigned_crew_id?: string | null
+          assigned_pm_id?: string | null
+          assigned_rep_id?: string | null
+          closed_at?: string | null
+          cogs_budget?: Json | null
+          commission_forecast?: Json | null
+          company_id?: string | null
+          contact_id?: string | null
+          contract_amount?: number | null
+          contract_signed_at?: string | null
+          created_at?: string
+          gross_profit_estimate?: number | null
+          id?: string
+          lost_reason?: string | null
+          measurement_data?: Json | null
+          notes?: string | null
+          priority?: string | null
+          property_id?: string | null
+          rep_card_data?: Json | null
+          service_type?: string | null
+          source?: string | null
+          stage?: Database["public"]["Enums"]["job_stage"]
+          trade_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_assigned_crew_id_fkey"
+            columns: ["assigned_crew_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_assigned_pm_id_fkey"
+            columns: ["assigned_pm_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
             referencedColumns: ["id"]
           },
         ]
@@ -5007,6 +5325,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "sales_rep" | "teacher" | "student" | "contractor"
+      canvassing_disposition:
+        | "not_home"
+        | "not_interested"
+        | "follow_up"
+        | "appointment_set"
+        | "sold"
+        | "bad_data"
       company_role:
         | "company_admin"
         | "manager"
@@ -5029,6 +5354,23 @@ export type Database = {
         | "full_replacement"
         | "coating"
         | "no_action"
+      job_stage:
+        | "new_lead"
+        | "contacted"
+        | "inspection_scheduled"
+        | "inspection_completed"
+        | "estimate_sent"
+        | "presented"
+        | "won"
+        | "permitting"
+        | "material_ordered"
+        | "scheduled"
+        | "in_production"
+        | "final_walkthrough"
+        | "invoice_sent"
+        | "paid"
+        | "closed_out"
+        | "lost"
       lead_status:
         | "new"
         | "contact_made"
@@ -5189,6 +5531,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "sales_rep", "teacher", "student", "contractor"],
+      canvassing_disposition: [
+        "not_home",
+        "not_interested",
+        "follow_up",
+        "appointment_set",
+        "sold",
+        "bad_data",
+      ],
       company_role: [
         "company_admin",
         "manager",
@@ -5213,6 +5563,24 @@ export const Constants = {
         "full_replacement",
         "coating",
         "no_action",
+      ],
+      job_stage: [
+        "new_lead",
+        "contacted",
+        "inspection_scheduled",
+        "inspection_completed",
+        "estimate_sent",
+        "presented",
+        "won",
+        "permitting",
+        "material_ordered",
+        "scheduled",
+        "in_production",
+        "final_walkthrough",
+        "invoice_sent",
+        "paid",
+        "closed_out",
+        "lost",
       ],
       lead_status: [
         "new",
