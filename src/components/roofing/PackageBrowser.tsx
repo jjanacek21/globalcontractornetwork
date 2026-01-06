@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, Sparkles, Star, Zap, Crown, Shield, Hammer } from "lucide-react";
-import { NotSurePackageCard } from "./NotSurePackageCard";
+
 
 export interface RoofingPackage {
   name: string;
@@ -69,9 +69,6 @@ export function PackageBrowser({
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Not Sure Card - First Position */}
-        <NotSurePackageCard onStartQuiz={onStartQuiz} />
-
         {/* Package Cards */}
         {packages.map((pkg) => {
           const tierInfo = getTierInfo(pkg.name);
