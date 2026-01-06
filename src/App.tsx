@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
 import Roofing from "./pages/Roofing";
+import RoofingServices from "./pages/RoofingServices";
 import MerchandiseStore from "./pages/MerchandiseStore";
 import StoreAuth from "./pages/StoreAuth";
 import StoreDashboard from "./pages/StoreDashboard";
@@ -200,6 +201,7 @@ const GCNRoutes = () => (
           } />
           
           <Route path="/prep-property" element={<PrepYourProperty />} />
+          <Route path="/roofing-services" element={<RoofingServices />} />
           <Route path="/roofing" element={<Roofing />} />
           <Route path="/store" element={<MerchandiseStore />} />
           <Route path="/store/auth" element={<StoreAuth />} />
