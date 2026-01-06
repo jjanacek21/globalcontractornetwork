@@ -4,45 +4,45 @@ import { AnimatedBadge } from "@/components/crm-ui/AnimatedBadge";
 import { Video, FileText, BookOpen, Eye, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Sample featured resources
+// Sample featured resources - showcasing variety across categories
 const featuredResources = [
   {
-    id: "fl-licensing-guide",
-    title: "Complete Guide to Contractor Licensing in Florida",
-    description: "Everything you need to know about getting licensed as a contractor in Florida, including exam prep, requirements, and reciprocity.",
+    id: "how-to-measure-roof",
+    title: "How to Measure a Roof",
+    description: "Complete video guide to measuring roofs for accurate material estimates - essential for every roofing contractor.",
     type: "video",
-    category: "Licensing & Business",
-    duration: "25 min",
-    views: 12400,
+    category: "Video Library",
+    duration: "18 min",
+    views: 15600,
     thumbnail: null,
     featured: true
   },
   {
-    id: "gl-insurance-explained",
-    title: "Understanding General Liability Insurance",
-    description: "What GL covers, what it doesn't, and how much you actually need.",
-    type: "article",
-    category: "Insurance Guide",
-    duration: "5 min read",
-    views: 8200
-  },
-  {
-    id: "permit-process-101",
-    title: "Building Permits Step-by-Step",
-    description: "A complete walkthrough of the permit application process from start to finish.",
-    type: "guide",
-    category: "Permits & Codes",
-    duration: "10 min read",
-    views: 6500
-  },
-  {
-    id: "roofing-homeowner-101",
-    title: "Roofing 101 for Homeowners",
-    description: "Everything homeowners need to know before hiring a roofer.",
+    id: "metal-vs-shingles",
+    title: "Metal Roofing vs Shingles: Complete Comparison",
+    description: "Cost, durability, energy efficiency, and installation considerations.",
     type: "video",
-    category: "Homeowner Resources",
-    duration: "15 min",
-    views: 9800
+    category: "Product Knowledge",
+    duration: "22 min",
+    views: 14500
+  },
+  {
+    id: "filing-insurance-claims",
+    title: "Filing Insurance Claims Step-by-Step",
+    description: "How to document damage, file claims, and work with adjusters.",
+    type: "guide",
+    category: "Insurance Guide",
+    duration: "12 min read",
+    views: 7300
+  },
+  {
+    id: "panel-upgrades-guide",
+    title: "Panel Upgrades: 100A to 200A Guide",
+    description: "Complete guide to upgrading electrical panels including permits and costs.",
+    type: "guide",
+    category: "Product Knowledge",
+    duration: "15 min read",
+    views: 10300
   }
 ];
 
