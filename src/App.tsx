@@ -68,6 +68,7 @@ import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
 import TrainingAcademy from "./pages/TrainingAcademy";
 import AcademyResources from "./pages/AcademyResources";
+import ResourceDetail from "./pages/ResourceDetail";
 import MyProfile from "./pages/MyProfile";
 import NetworkLogin from "./pages/NetworkLogin";
 import Login from "./pages/Login";
@@ -281,6 +282,7 @@ const GCNRoutes = () => (
           {/* Training Academy / Resource Library Routes */}
           <Route path="/academy" element={<TrainingAcademy />} />
           <Route path="/academy/resources" element={<AcademyResources />} />
+          <Route path="/academy/resources/:resourceId" element={<ResourceDetail />} />
           <Route path="/learning" element={<TrainingAcademy />} />
           
           {/* Legacy Learning Platform Routes (for enrolled students) */}

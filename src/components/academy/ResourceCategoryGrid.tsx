@@ -19,7 +19,8 @@ const categories = [
     icon: ClipboardList,
     count: 24,
     color: "from-blue-500/20 to-blue-600/10",
-    iconColor: "text-blue-500"
+    iconColor: "text-blue-500",
+    hoverBorder: "hover:border-blue-500/30"
   },
   {
     id: "insurance",
@@ -28,7 +29,8 @@ const categories = [
     icon: Shield,
     count: 18,
     color: "from-emerald-500/20 to-emerald-600/10",
-    iconColor: "text-emerald-500"
+    iconColor: "text-emerald-500",
+    hoverBorder: "hover:border-emerald-500/30"
   },
   {
     id: "permits",
@@ -37,7 +39,8 @@ const categories = [
     icon: Building,
     count: 50,
     color: "from-amber-500/20 to-amber-600/10",
-    iconColor: "text-amber-500"
+    iconColor: "text-amber-500",
+    hoverBorder: "hover:border-amber-500/30"
   },
   {
     id: "products",
@@ -46,7 +49,8 @@ const categories = [
     icon: Wrench,
     count: 35,
     color: "from-purple-500/20 to-purple-600/10",
-    iconColor: "text-purple-500"
+    iconColor: "text-purple-500",
+    hoverBorder: "hover:border-purple-500/30"
   },
   {
     id: "homeowner",
@@ -55,7 +59,8 @@ const categories = [
     icon: Home,
     count: 42,
     color: "from-rose-500/20 to-rose-600/10",
-    iconColor: "text-rose-500"
+    iconColor: "text-rose-500",
+    hoverBorder: "hover:border-rose-500/30"
   },
   {
     id: "videos",
@@ -64,7 +69,8 @@ const categories = [
     icon: Video,
     count: 100,
     color: "from-red-500/20 to-red-600/10",
-    iconColor: "text-red-500"
+    iconColor: "text-red-500",
+    hoverBorder: "hover:border-red-500/30"
   },
   {
     id: "checklists",
@@ -73,7 +79,8 @@ const categories = [
     icon: CheckSquare,
     count: 25,
     color: "from-cyan-500/20 to-cyan-600/10",
-    iconColor: "text-cyan-500"
+    iconColor: "text-cyan-500",
+    hoverBorder: "hover:border-cyan-500/30"
   },
   {
     id: "states",
@@ -82,7 +89,8 @@ const categories = [
     icon: MapPin,
     count: 50,
     color: "from-indigo-500/20 to-indigo-600/10",
-    iconColor: "text-indigo-500"
+    iconColor: "text-indigo-500",
+    hoverBorder: "hover:border-indigo-500/30"
   }
 ];
 
@@ -100,17 +108,17 @@ export const ResourceCategoryGrid = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
             <Link key={category.id} to={`/academy/resources?category=${category.id}`}>
-              <Card3D className="h-full p-6 hover:shadow-lg transition-shadow cursor-pointer group">
+              <Card3D className={`h-full p-6 hover:shadow-lg transition-all cursor-pointer group border border-transparent ${category.hoverBorder}`}>
                 <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <category.icon className={`w-7 h-7 ${category.iconColor}`} />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                <h3 className="font-semibold text-foreground mb-2 group-hover:text-emerald-600 transition-colors">
                   {category.name}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-3">
                   {category.description}
                 </p>
-                <div className="text-xs font-medium text-primary">
+                <div className="text-xs font-medium text-emerald-600">
                   {category.count}+ Articles
                 </div>
               </Card3D>

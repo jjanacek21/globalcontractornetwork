@@ -35,7 +35,7 @@ export const AcademyHeader = () => {
             </Button>
           </Link>
           <Link to="/academy#membership">
-            <Button size="sm" className="bg-primary hover:bg-primary/90">
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
               <GraduationCap className="w-4 h-4 mr-2" />
               Join Academy
             </Button>
@@ -80,7 +80,7 @@ export const AcademyHeader = () => {
               <Button variant="outline" className="w-full">Member Login</Button>
             </Link>
             <Link to="/academy#membership" onClick={() => setMobileMenuOpen(false)}>
-              <Button className="w-full">Join Academy</Button>
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700">Join Academy</Button>
             </Link>
           </div>
         </div>
