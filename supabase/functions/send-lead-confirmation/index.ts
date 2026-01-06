@@ -8,6 +8,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface FinancingInfo {
+  lenderName: string;
+  rate: number;
+  termYears: number;
+  monthlyPayment: number;
+}
+
+interface MeasurementInfo {
+  baseSqft: number;
+  trueSqft: number;
+  roofSquares: number;
+  complexity: string;
+}
+
 interface LeadConfirmationRequest {
   email: string;
   name: string;
@@ -45,6 +59,13 @@ interface LeadConfirmationRequest {
   timeline?: string;
   budget?: string;
   sqft?: number;
+  // PDF attachment
+  pdfBase64?: string;
+  pdfFilename?: string;
+  // Financing data
+  financing?: FinancingInfo;
+  // Measurement data
+  measurements?: MeasurementInfo;
   // Marketing specific
   companyName?: string;
   serviceInterest?: string;
@@ -112,13 +133,22 @@ const formatService = (service: string): string => {
   return map[service] || service;
 };
 
-const getSubjectLine = (source: string): string => {
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const getSubjectLine = (source: string, hasPdf: boolean): string => {
   const subjects: Record<string, string> = {
     'Coating Kings': '✅ Your Roof Coating Quote Request Received',
     'Green Home Solutions - Windows': '✅ Your Window Quote Request Received',
     'Emergency Mitigation': '🚨 Emergency Request Received - We\'re On It!',
     'Northern Landscaping': '✅ Your Landscaping Quote Request Received',
-    'Roofing Consultations': '📅 Your Roofing Consultation is Scheduled!',
+    'Roofing Consultations': hasPdf ? '📋 Your Roofing Estimate PDF is Ready!' : '📅 Your Roofing Consultation is Scheduled!',
     'Digital Marketing': '✅ Your Marketing Consultation Request Received',
   };
   return subjects[source] || '✅ Your Request Has Been Received';
@@ -353,8 +383,27 @@ const buildRoofingConsultationRecap = (data: LeadConfirmationRequest): string =>
         </td>
       </tr>`;
   }
-  
-  if (data.sqft) {
+
+  // Add measurement details if available
+  if (data.measurements) {
+    recap += `
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+          <strong>📐 Roof Size:</strong>
+        </td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+          ${data.measurements.roofSquares.toFixed(1)} squares (${data.measurements.trueSqft.toLocaleString()} sq ft)
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+          <strong>🏗️ Complexity:</strong>
+        </td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+          ${data.measurements.complexity}
+        </td>
+      </tr>`;
+  } else if (data.sqft) {
     recap += `
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
@@ -366,7 +415,18 @@ const buildRoofingConsultationRecap = (data: LeadConfirmationRequest): string =>
       </tr>`;
   }
   
-  if (data.estimatedPrice) {
+  // Show estimate range if available, otherwise single price
+  if (data.estimateLow && data.estimateHigh) {
+    recap += `
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+          <strong>💰 Estimated:</strong>
+        </td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 18px; font-weight: bold; color: #059669;">
+          ${formatCurrency(data.estimateLow)} - ${formatCurrency(data.estimateHigh)}
+        </td>
+      </tr>`;
+  } else if (data.estimatedPrice) {
     recap += `
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
@@ -374,6 +434,20 @@ const buildRoofingConsultationRecap = (data: LeadConfirmationRequest): string =>
         </td>
         <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
           $${data.estimatedPrice.toLocaleString()}
+        </td>
+      </tr>`;
+  }
+
+  // Add financing info if available
+  if (data.financing) {
+    recap += `
+      <tr>
+        <td colspan="2" style="padding: 12px 0 8px 0; border-bottom: 1px solid #e5e7eb;">
+          <div style="background: #eff6ff; border-radius: 6px; padding: 12px;">
+            <strong style="color: #2563eb;">💳 Financing Selected</strong><br>
+            <span style="font-size: 20px; font-weight: bold; color: #2563eb;">${formatCurrency(data.financing.monthlyPayment)}/month</span><br>
+            <span style="font-size: 12px; color: #6b7280;">${data.financing.lenderName} • ${data.financing.rate}% APR • ${data.financing.termYears} years</span>
+          </div>
         </td>
       </tr>`;
   }
@@ -471,6 +545,7 @@ const buildRecapSection = (data: LeadConfirmationRequest): string => {
 const buildEmailHtml = (data: LeadConfirmationRequest): string => {
   const recapSection = buildRecapSection(data);
   const isEmergency = data.source === 'Emergency Mitigation';
+  const hasPdf = !!data.pdfBase64;
   
   return `
 <!DOCTYPE html>
@@ -488,12 +563,22 @@ const buildEmailHtml = (data: LeadConfirmationRequest): string => {
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
     <p style="font-size: 18px; margin-top: 0;">Hi ${data.name},</p>
     
+    ${hasPdf ? `
+    <div style="background: #ecfdf5; border: 2px solid #059669; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+      <h3 style="color: #059669; margin: 0 0 10px 0;">📋 Your Detailed Estimate is Attached!</h3>
+      <p style="margin: 0; font-size: 14px; color: #065f46;">
+        We've attached your itemized roofing estimate as a PDF.<br>
+        You can also download it from the button below.
+      </p>
+    </div>
+    ` : `
     <p>Thank you for contacting <strong>Global Contractor Network</strong>. Your information has been received and is now being reviewed.</p>
+    `}
     
     ${recapSection ? `
     <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="margin: 0 0 10px 0; color: #059669; border-bottom: 2px solid #059669; padding-bottom: 10px;">
-        📋 YOUR REQUEST SUMMARY
+        📋 YOUR ${hasPdf ? 'ESTIMATE' : 'REQUEST'} SUMMARY
       </h3>
       ${recapSection}
     </div>
@@ -504,6 +589,7 @@ const buildEmailHtml = (data: LeadConfirmationRequest): string => {
       <ul style="margin: 0; padding-left: 20px; color: #065f46;">
         <li>A specialist will be assigned to your request</li>
         <li>You'll receive a call or text within ${isEmergency ? '15 minutes' : '15–30 minutes'} (or next business morning if after hours)</li>
+        ${hasPdf ? '<li>Review your attached estimate PDF before your consultation</li>' : ''}
       </ul>
     </div>
     
@@ -545,20 +631,36 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("Sending lead confirmation email to:", data.email);
     console.log("Source:", data.source);
+    console.log("Has PDF attachment:", !!data.pdfBase64);
 
     if (!data.email || !data.name) {
       throw new Error("Email and name are required");
     }
 
-    const subject = getSubjectLine(data.source);
+    const hasPdf = !!data.pdfBase64;
+    const subject = getSubjectLine(data.source, hasPdf);
     const html = buildEmailHtml(data);
 
-    const emailResponse = await resend.emails.send({
+    // Build email options with optional attachment
+    const emailOptions: any = {
       from: "Global Contractor Network <noreply@globalcontractor.network>",
       to: [data.email],
       subject: subject,
       html: html,
-    });
+    };
+
+    // Add PDF attachment if provided
+    if (data.pdfBase64 && data.pdfFilename) {
+      emailOptions.attachments = [
+        {
+          filename: data.pdfFilename,
+          content: data.pdfBase64,
+        }
+      ];
+      console.log("Adding PDF attachment:", data.pdfFilename);
+    }
+
+    const emailResponse = await resend.emails.send(emailOptions);
 
     console.log("Email sent successfully:", emailResponse);
 
