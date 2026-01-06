@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 };
 
 const ReferralsManagement = () => {
+  const { toast } = useToast();
   const { referrals, loading, updateReferral, markAsPaid } = useAdminReferrals();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -67,10 +69,16 @@ const ReferralsManagement = () => {
       updates.referral_fee_percentage = parseFloat(editForm.referral_fee_percentage);
     }
 
-    // Calculate payout if job is completed
-    if (editForm.status === "completed" && updates.job_amount && updates.referral_fee_percentage) {
+    // Calculate payout if job is completed OR paid
+    if ((editForm.status === "completed" || editForm.status === "paid") && updates.job_amount && updates.referral_fee_percentage) {
       updates.payout_amount = updates.job_amount * (updates.referral_fee_percentage / 100);
-      updates.completed_at = new Date().toISOString();
+      
+      if (editForm.status === "completed") {
+        updates.completed_at = new Date().toISOString();
+      }
+      if (editForm.status === "paid") {
+        updates.paid_at = new Date().toISOString();
+      }
     }
 
     const success = await updateReferral(selectedReferral.id, updates);
@@ -80,10 +88,23 @@ const ReferralsManagement = () => {
   };
 
   const handleMarkAsPaid = async (referral: Referral) => {
-    if (!referral.payout_amount) {
+    let payoutAmount = referral.payout_amount;
+    
+    // Calculate payout if not already set
+    if (!payoutAmount && referral.job_amount && referral.referral_fee_percentage) {
+      payoutAmount = referral.job_amount * (referral.referral_fee_percentage / 100);
+    }
+    
+    if (!payoutAmount) {
+      toast({
+        title: "Cannot Mark as Paid",
+        description: "Job amount and referral fee percentage are required",
+        variant: "destructive"
+      });
       return;
     }
-    await markAsPaid(referral.id, referral.payout_amount);
+    
+    await markAsPaid(referral.id, payoutAmount);
   };
 
   if (loading) {
