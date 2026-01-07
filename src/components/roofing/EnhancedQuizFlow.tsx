@@ -4,10 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn } from "lucide-react";
+import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EnhancedMaterialQuiz } from "./EnhancedMaterialQuiz";
+import { PitchSelector } from "@/components/shared/PitchSelector";
+import { ComplexitySelector } from "@/components/shared/ComplexitySelector";
+import { 
+  PitchBucket, 
+  ComplexityLevel, 
+  calculateMeasurement,
+  getDefaultPitch,
+  getDefaultComplexity,
+  getPitchMultiplier,
+  getWastePct
+} from "@/lib/roofMeasurements";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -22,13 +33,14 @@ interface MeasurementResult {
   baseSqft: number;
   trueSqft: number;
   pitchMultiplier: number;
+  wastePct: number;
   confidence: string;
   roofComplexity?: string;
   roofShape?: string;
   satelliteImageUrl?: string;
 }
 
-type FlowStep = "address" | "analyzing" | "measurements" | "quiz";
+type FlowStep = "address" | "analyzing" | "adjustments" | "measurements" | "quiz";
 
 export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQuizFlowProps) {
   const [step, setStep] = useState<FlowStep>("address");
@@ -46,6 +58,15 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
   // Satellite preview
   const [zoomLevel, setZoomLevel] = useState(19);
   const [isLocating, setIsLocating] = useState(false);
+
+  // AI analysis results (flat footprint)
+  const [baseFlatSqft, setBaseFlatSqft] = useState<number>(0);
+  const [aiConfidence, setAiConfidence] = useState<string>("high");
+  const [satelliteImageUrl, setSatelliteImageUrl] = useState<string>("");
+
+  // User-selected pitch and complexity
+  const [pitchBucket, setPitchBucket] = useState<PitchBucket>(getDefaultPitch('reroof'));
+  const [complexity, setComplexity] = useState<ComplexityLevel>(getDefaultComplexity('reroof'));
 
   // Debounced address search
   useEffect(() => {
@@ -157,19 +178,13 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
 
       const estimation = data?.estimation;
       if (estimation?.estimatedSqft) {
-        const sqft = estimation.estimatedSqft;
-        const roofSquares = Math.round(sqft / 100);
-        setMeasurements({
-          roofSquares: roofSquares,
-          baseSqft: sqft,
-          trueSqft: sqft,
-          pitchMultiplier: 1.0,
-          confidence: estimation.confidence || "high",
-          roofComplexity: estimation.roofComplexity,
-          roofShape: estimation.roofShape,
-          satelliteImageUrl: estimation.satelliteImageUrl
-        });
-        setStep("measurements");
+        // Store raw flat footprint from AI
+        setBaseFlatSqft(estimation.estimatedSqft);
+        setAiConfidence(estimation.confidence || "high");
+        setSatelliteImageUrl(estimation.satelliteImageUrl || "");
+        
+        // Go to adjustments step where user selects pitch & complexity
+        setStep("adjustments");
       } else {
         throw new Error("Could not analyze property");
       }
@@ -180,6 +195,30 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate final measurements based on user selections
+  const handleCalculateMeasurements = () => {
+    if (!baseFlatSqft) return;
+
+    const result = calculateMeasurement({
+      baseSqFt: baseFlatSqft,
+      serviceType: 'reroof',
+      pitchBucket: pitchBucket,
+      complexity: complexity
+    });
+
+    setMeasurements({
+      roofSquares: result.squares,
+      baseSqft: result.baseSqFt,
+      trueSqft: result.totalWithWaste,
+      pitchMultiplier: result.pitchMultiplier,
+      wastePct: result.wastePct,
+      confidence: aiConfidence,
+      satelliteImageUrl: satelliteImageUrl
+    });
+
+    setStep("measurements");
   };
 
   const handleProceedToQuiz = () => {
@@ -202,6 +241,11 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     setMeasurements(null);
     setSearchResults([]);
     setShowResults(false);
+    setBaseFlatSqft(0);
+    setAiConfidence("high");
+    setSatelliteImageUrl("");
+    setPitchBucket(getDefaultPitch('reroof'));
+    setComplexity(getDefaultComplexity('reroof'));
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -210,6 +254,14 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     }
     onOpenChange(isOpen);
   };
+
+  // Live calculation preview for adjustments step
+  const liveCalc = baseFlatSqft ? calculateMeasurement({
+    baseSqFt: baseFlatSqft,
+    serviceType: 'reroof',
+    pitchBucket,
+    complexity
+  }) : null;
 
   // Render quiz directly when in quiz step
   if (step === "quiz" && measurements) {
@@ -236,7 +288,8 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
           <DialogDescription>
             {step === "address" && "Enter your property address to get started"}
             {step === "analyzing" && "Analyzing your roof with AI satellite imagery..."}
-            {step === "measurements" && "Great! Here's what we found"}
+            {step === "adjustments" && "Adjust your roof pitch and complexity"}
+            {step === "measurements" && "Great! Here's your final measurements"}
           </DialogDescription>
         </DialogHeader>
 
@@ -368,6 +421,77 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
           </div>
         )}
 
+        {step === "adjustments" && baseFlatSqft > 0 && (
+          <div className="space-y-5">
+            {/* Satellite Image Preview */}
+            {selectedCoords && (
+              <div className="relative rounded-lg overflow-hidden border h-32">
+                <img
+                  src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x200@2x?access_token=${MAPBOX_TOKEN}`}
+                  alt="Satellite view"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  AI Detected: {baseFlatSqft.toLocaleString()} sq ft flat footprint
+                </div>
+              </div>
+            )}
+
+            {/* Pitch Selector */}
+            <PitchSelector
+              value={pitchBucket}
+              onChange={setPitchBucket}
+              serviceType="reroof"
+            />
+
+            {/* Complexity Selector */}
+            <ComplexitySelector
+              value={complexity}
+              onChange={setComplexity}
+              serviceType="reroof"
+            />
+
+            {/* Live Calculation Preview */}
+            {liveCalc && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calculator className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Live Calculation</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-background rounded p-2">
+                    <p className="text-lg font-bold text-primary">{baseFlatSqft.toLocaleString()}</p>
+                    <p className="text-[10px] text-muted-foreground">Flat Footprint</p>
+                  </div>
+                  <div className="bg-background rounded p-2">
+                    <p className="text-lg font-bold text-primary">×{liveCalc.pitchMultiplier.toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Pitch Factor</p>
+                  </div>
+                  <div className="bg-background rounded p-2">
+                    <p className="text-lg font-bold text-primary">+{Math.round(liveCalc.wastePct * 100)}%</p>
+                    <p className="text-[10px] text-muted-foreground">Waste</p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t text-center">
+                  <p className="text-2xl font-bold text-primary">{liveCalc.squares.toFixed(1)} Squares</p>
+                  <p className="text-xs text-muted-foreground">({liveCalc.totalWithWaste.toLocaleString()} sq ft total)</p>
+                </div>
+              </div>
+            )}
+
+            {/* Calculate Button */}
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep("address")} className="flex-1">
+                Back
+              </Button>
+              <Button onClick={handleCalculateMeasurements} className="flex-1" size="lg">
+                <Calculator className="mr-2 h-4 w-4" />
+                Calculate My Roof
+              </Button>
+            </div>
+          </div>
+        )}
+
         {step === "measurements" && measurements && (
           <div className="space-y-6">
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
@@ -393,16 +517,36 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
                   <p className="text-xs text-muted-foreground">Confidence</p>
                 </div>
               </div>
+
+              {/* Calculation Breakdown */}
+              <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Flat footprint:</span>
+                  <span>{measurements.baseSqft.toLocaleString()} sq ft</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pitch factor:</span>
+                  <span>×{measurements.pitchMultiplier.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Waste factor:</span>
+                  <span>+{Math.round(measurements.wastePct * 100)}%</span>
+                </div>
+                <div className="flex justify-between font-medium text-foreground mt-1 pt-1 border-t">
+                  <span>Total with waste:</span>
+                  <span>{measurements.trueSqft.toLocaleString()} sq ft</span>
+                </div>
+              </div>
             </div>
 
             <div className="text-center text-sm text-muted-foreground">
-              <p>Based on satellite analysis of your property</p>
+              <p>Based on satellite analysis + your selections</p>
               <p>Final measurements will be verified during inspection</p>
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setStep("address")} className="flex-1">
-                Different Address
+              <Button variant="outline" onClick={() => setStep("adjustments")} className="flex-1">
+                Adjust Settings
               </Button>
               <Button onClick={handleProceedToQuiz} className="flex-1" size="lg">
                 <Sparkles className="mr-2 h-4 w-4" />

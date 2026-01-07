@@ -35,7 +35,7 @@ export function ComplexitySelector({ value, onChange, serviceType }: ComplexityS
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium text-muted-foreground">Select Roof Complexity</p>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {options.map((option) => (
           <button
             key={option.id}
