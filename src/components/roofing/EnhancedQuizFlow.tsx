@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator } from "lucide-react";
+import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator, Move } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EnhancedMaterialQuiz } from "./EnhancedMaterialQuiz";
@@ -58,6 +58,13 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
   // Satellite preview
   const [zoomLevel, setZoomLevel] = useState(19);
   const [isLocating, setIsLocating] = useState(false);
+
+  // Draggable marker state
+  const [markerOffset, setMarkerOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const markerStartOffset = useRef({ x: 0, y: 0 });
 
   // AI analysis results (flat footprint)
   const [baseFlatSqft, setBaseFlatSqft] = useState<number>(0);
@@ -154,9 +161,89 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     );
   };
 
+  // Drag handlers for the marker
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    dragStartPos.current = { x: clientX, y: clientY };
+    markerStartOffset.current = { ...markerOffset };
+  }, [markerOffset]);
+
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const deltaX = clientX - dragStartPos.current.x;
+    const deltaY = clientY - dragStartPos.current.y;
+    
+    // Constrain to container bounds (roughly half the container size)
+    const container = containerRef.current;
+    const maxOffset = Math.min(container.offsetWidth, container.offsetHeight) / 2 - 30;
+    
+    const newX = Math.max(-maxOffset, Math.min(maxOffset, markerStartOffset.current.x + deltaX));
+    const newY = Math.max(-maxOffset, Math.min(maxOffset, markerStartOffset.current.y + deltaY));
+    
+    setMarkerOffset({ x: newX, y: newY });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Attach/detach global drag listeners
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('touchend', handleDragEnd);
+    }
+    
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  // Calculate adjusted coordinates based on marker offset
+  const getAdjustedCoords = useCallback(() => {
+    if (!selectedCoords || !containerRef.current) return selectedCoords;
+    
+    const container = containerRef.current;
+    const containerWidth = container.offsetWidth;
+    
+    // Meters per pixel at the given zoom level (Mapbox formula)
+    const metersPerPixel = 156543.03392 * Math.cos(selectedCoords.lat * Math.PI / 180) / Math.pow(2, zoomLevel);
+    
+    // Convert pixel offset to coordinate offset
+    // Note: The satellite image is 600px wide but displayed at container width, so we need to scale
+    const scaleFactor = 600 / containerWidth;
+    const lngOffset = (markerOffset.x * scaleFactor * metersPerPixel) / 111320;
+    const latOffset = -(markerOffset.y * scaleFactor * metersPerPixel) / 110540;
+    
+    return {
+      lat: selectedCoords.lat + latOffset,
+      lng: selectedCoords.lng + lngOffset
+    };
+  }, [selectedCoords, markerOffset, zoomLevel]);
+
   const handleAnalyzeRoof = async () => {
     if (!selectedCoords || !selectedAddress) {
       toast.error("Please select an address first");
+      return;
+    }
+
+    const adjustedCoords = getAdjustedCoords();
+    if (!adjustedCoords) {
+      toast.error("Could not calculate coordinates");
       return;
     }
 
@@ -166,8 +253,8 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     try {
       const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
         body: {
-          latitude: selectedCoords.lat,
-          longitude: selectedCoords.lng,
+          latitude: adjustedCoords.lat,
+          longitude: adjustedCoords.lng,
           address: selectedAddress,
           zoomLevel: zoomLevel,
           context: 'roofing'
@@ -247,6 +334,7 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     setShowResults(false);
     setBaseFlatSqft(0);
     setAiConfidence("high");
+    setMarkerOffset({ x: 0, y: 0 });
     setSatelliteImageUrl("");
     setPitchBucket(getDefaultPitch('reroof'));
     setComplexity(getDefaultComplexity('reroof'));
@@ -361,6 +449,14 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
             {/* Satellite Preview Section - only show after address selected */}
             {selectedCoords && (
               <div className="space-y-3">
+                {/* Instruction Banner */}
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm">
+                  <Move className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <p className="text-amber-700 dark:text-amber-300">
+                    <span className="font-semibold">Drag the circle</span> to the center of your roof for the most accurate measurements
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2 text-sm">
                     <ZoomIn className="h-4 w-4" />
@@ -378,19 +474,38 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
                   </Select>
                 </div>
 
-                <div className="relative rounded-lg overflow-hidden border max-h-[200px]">
+                <div 
+                  ref={containerRef}
+                  className="relative rounded-lg overflow-hidden border max-h-[200px] select-none"
+                >
                   {/* Satellite Image */}
                   <img
                     src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x300@2x?access_token=${MAPBOX_TOKEN}`}
                     alt="Satellite view of property"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover pointer-events-none"
+                    draggable={false}
                   />
                   
-                  {/* Center Crosshair */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-8 h-8 border-2 border-white rounded-full shadow-lg flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                  {/* Draggable Marker */}
+                  <div 
+                    className={`absolute cursor-move touch-none transition-transform ${isDragging ? 'scale-110' : ''}`}
+                    style={{
+                      left: `calc(50% + ${markerOffset.x}px)`,
+                      top: `calc(50% + ${markerOffset.y}px)`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
+                  >
+                    <div className={`w-12 h-12 border-3 border-primary rounded-full shadow-lg bg-primary/20 flex items-center justify-center ${!isDragging ? 'animate-pulse' : ''}`}>
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
                     </div>
+                    {/* Drag hint text */}
+                    {markerOffset.x === 0 && markerOffset.y === 0 && !isDragging && (
+                      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/70 text-white text-[10px] px-2 py-0.5 rounded">
+                        Drag me
+                      </div>
+                    )}
                   </div>
 
                   {/* Badge */}
