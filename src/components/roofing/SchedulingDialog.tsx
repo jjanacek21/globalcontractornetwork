@@ -34,6 +34,21 @@ interface PackageData {
   estimateHigh: number;
 }
 
+interface QuizData {
+  quizResponseId: string | null;
+  recommendations: Array<{
+    tier: string;
+    name: string;
+    estimateLow: number;
+    estimateHigh: number;
+    reason: string;
+    features: string[];
+  }>;
+  address: string;
+  cityState: string;
+  roofSquares: number;
+}
+
 interface SchedulingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,6 +66,7 @@ interface SchedulingDialogProps {
   measurementData?: MeasurementData;
   packageData?: PackageData;
   financingData?: SelectedFinancing | null;
+  quizData?: QuizData;
   onComplete: () => void;
 }
 
@@ -67,6 +83,7 @@ export const SchedulingDialog = ({
   measurementData,
   packageData,
   financingData,
+  quizData,
   onComplete
 }: SchedulingDialogProps) => {
   const [date, setDate] = useState<Date>();
@@ -217,6 +234,43 @@ export const SchedulingDialog = ({
           } : null
         }
       }).catch(err => console.error('Email confirmation failed:', err));
+
+      // Send quiz results email with all recommendations if quiz data exists
+      if (quizData) {
+        supabase.functions.invoke('send-quiz-results', {
+          body: {
+            email: formData.email,
+            name: formData.name,
+            address: quizData.address,
+            cityState: quizData.cityState,
+            roofSquares: quizData.roofSquares,
+            recommendations: quizData.recommendations,
+            pdfBase64: pdfBase64,
+            pdfFilename: `roof-estimate-${formData.name.replace(/\s+/g, '-').toLowerCase()}.pdf`
+          }
+        }).catch(err => console.error('Quiz results email failed:', err));
+
+        // Update quiz response with selection and contact info
+        if (quizData.quizResponseId) {
+          (supabase
+            .from("roofing_quiz_responses" as any)
+            .update({
+              selected_package: packageData?.name,
+              selected_tier: consultationData.budget,
+              selected_estimate_low: packageData?.estimateLow,
+              selected_estimate_high: packageData?.estimateHigh,
+              appointment_type: appointmentType,
+              appointment_scheduled: true,
+              customer_name: formData.name,
+              customer_email: formData.email,
+              customer_phone: formData.phone,
+              email_normalized: formData.email.toLowerCase().trim()
+            })
+            .eq("id", quizData.quizResponseId) as any)
+            .then(() => console.log("Quiz response updated"))
+            .catch((err: any) => console.error("Failed to update quiz response:", err));
+        }
+      }
 
       toast.success("Appointment scheduled! Your estimate PDF has been downloaded and emailed to you.");
       onComplete();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,11 +6,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Sparkles, Crown, Star, Hammer, CheckCircle2, Video, Users, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Crown, Star, Hammer, CheckCircle2, Video, Users, AlertTriangle, Download } from "lucide-react";
 import { RoofTypeGraphic, ConditionGraphic, StoryGraphic, VentGraphic, UnderlaymentGraphic } from "./quiz-graphics";
 import { QuizInputs, PackageRecommendation, getRecommendations, formatCurrency, expandedPackages, ExpandedPackage } from "@/lib/roofingRecommendationEngine";
 import { SchedulingDialog } from "./SchedulingDialog";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
 
 interface EnhancedMaterialQuizProps {
   open: boolean;
@@ -44,6 +46,7 @@ export function EnhancedMaterialQuiz({
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const [compareMode, setCompareMode] = useState(false);
   const [comparePackages, setComparePackages] = useState<ExpandedPackage[]>([]);
+  const quizResponseIdRef = useRef<string | null>(null);
 
   const currentStepIndex = QUIZ_STEPS.indexOf(step as any);
   const progress = step === "results" ? 100 : ((currentStepIndex + 1) / QUIZ_STEPS.length) * 100;
@@ -65,7 +68,7 @@ export function EnhancedMaterialQuiz({
     }
   };
 
-  const generateRecommendations = () => {
+  const generateRecommendations = async () => {
     const fullInputs: QuizInputs = {
       cityState: answers.cityState || cityState,
       currentRoof: answers.currentRoof || "shingle",
@@ -86,6 +89,37 @@ export function EnhancedMaterialQuiz({
     const recs = getRecommendations(fullInputs, expandedPackages);
     setRecommendations(recs);
     setStep("results");
+
+    // Log to database for analytics
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      // Use type assertion since the table was just created
+      const { data, error } = await (supabase
+        .from("roofing_quiz_responses" as any)
+        .insert({
+          user_id: session?.user?.id || null,
+          address,
+          city_state: cityState,
+          roof_squares: roofSquares,
+          answers: fullInputs as any,
+          recommendations: recs.map(r => ({
+            tier: r.tier,
+            packageName: r.package.name,
+            estimateLow: r.estimateLow,
+            estimateHigh: r.estimateHigh,
+            reason: r.reason
+          })) as any
+        })
+        .select("id")
+        .single() as any);
+
+      if (!error && data) {
+        quizResponseIdRef.current = data.id;
+        console.log("Quiz response logged:", data.id);
+      }
+    } catch (err) {
+      console.error("Failed to log quiz response:", err);
+    }
   };
 
   const handleSelect = (value: string, field: keyof QuizInputs) => {
@@ -507,6 +541,20 @@ export function EnhancedMaterialQuiz({
             pricePerSquare: selectedRec.package.pricePerSquare,
             estimateLow: selectedRec.estimateLow,
             estimateHigh: selectedRec.estimateHigh
+          }}
+          quizData={{
+            quizResponseId: quizResponseIdRef.current,
+            recommendations: recommendations.map(r => ({
+              tier: r.tier,
+              name: r.package.name,
+              estimateLow: r.estimateLow,
+              estimateHigh: r.estimateHigh,
+              reason: r.reason,
+              features: r.package.features
+            })),
+            address,
+            cityState,
+            roofSquares
           }}
           onComplete={() => { setShowScheduling(false); onComplete(); }}
         />

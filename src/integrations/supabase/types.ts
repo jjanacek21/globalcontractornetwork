@@ -3936,6 +3936,69 @@ export type Database = {
           },
         ]
       }
+      roofing_quiz_responses: {
+        Row: {
+          address: string
+          answers: Json
+          appointment_scheduled: boolean | null
+          appointment_type: string | null
+          city_state: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          email_normalized: string | null
+          id: string
+          recommendations: Json | null
+          roof_squares: number | null
+          selected_estimate_high: number | null
+          selected_estimate_low: number | null
+          selected_package: string | null
+          selected_tier: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          answers: Json
+          appointment_scheduled?: boolean | null
+          appointment_type?: string | null
+          city_state?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          email_normalized?: string | null
+          id?: string
+          recommendations?: Json | null
+          roof_squares?: number | null
+          selected_estimate_high?: number | null
+          selected_estimate_low?: number | null
+          selected_package?: string | null
+          selected_tier?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          answers?: Json
+          appointment_scheduled?: boolean | null
+          appointment_type?: string | null
+          city_state?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          email_normalized?: string | null
+          id?: string
+          recommendations?: Json | null
+          roof_squares?: number | null
+          selected_estimate_high?: number | null
+          selected_estimate_low?: number | null
+          selected_package?: string | null
+          selected_tier?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       service_categories: {
         Row: {
           created_at: string | null
