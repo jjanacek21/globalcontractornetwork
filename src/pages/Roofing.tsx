@@ -14,7 +14,7 @@ import { PackageBrowser, RoofingPackage } from "@/components/roofing/PackageBrow
 import { ComparisonBar } from "@/components/roofing/ComparisonBar";
 import { PackageComparisonDialog } from "@/components/roofing/PackageComparisonDialog";
 import { InstantEstimateFlow } from "@/components/roofing/InstantEstimateFlow";
-import { MaterialRecommendationQuiz } from "@/components/roofing/MaterialRecommendationQuiz";
+import { EnhancedQuizFlow } from "@/components/roofing/EnhancedQuizFlow";
 import { RoofingProductsGuide } from "@/components/roofing/RoofingProductsGuide";
 import { FinancingCalculator } from "@/components/roofing/FinancingCalculator";
 import { RoofColorVisualizer } from "@/components/roofing/RoofColorVisualizer";
@@ -379,13 +379,11 @@ const Roofing = () => {
         }}
       />
 
-      {/* Material Recommendation Quiz */}
-      <MaterialRecommendationQuiz
+      {/* Enhanced Material Quiz Flow */}
+      <EnhancedQuizFlow
         open={materialQuizOpen}
         onOpenChange={setMaterialQuizOpen}
-        packages={roofingPackages}
-        onSelectPackage={handleQuizSelectPackage}
-        initialPropertyType={propertyType || undefined}
+        onComplete={() => setMaterialQuizOpen(false)}
       />
 
       {/* Quote Request Dialog */}
