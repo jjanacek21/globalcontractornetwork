@@ -18,13 +18,14 @@ export const COMPLEXITY_OPTIONS = {
   reroof: [
     { id: 'gable', label: 'Gable (2-Sided)', wastePct: 0.10, image: '/roof-gable.svg', description: '2 sloping sides meeting at ridge' },
     { id: 'hip', label: 'Hip (4-Sided)', wastePct: 0.12, image: '/roof-hip.svg', description: '4 sloping sides meeting at ridge' },
-    { id: 'complex', label: 'Complex', wastePct: 0.15, image: '/roof-complex.svg', description: 'Multiple valleys, hips, dormers' },
+    { id: 'complex', label: '10+ Facets', wastePct: 0.15, image: '/roof-complex.svg', description: 'Multiple valleys, hips, dormers' },
+    { id: 'verycomplex', label: '20+ Facets', wastePct: 0.17, image: '/roof-complex.svg', description: 'Many facets, cut-ups, intricate' },
   ],
 } as const;
 
 // ===== TYPES =====
 export type PitchBucket = 'flat' | 'low' | 'standard' | 'steep' | 'verysteep';
-export type ComplexityLevel = 'simple' | 'gable' | 'hip' | 'complex';
+export type ComplexityLevel = 'simple' | 'gable' | 'hip' | 'complex' | 'verycomplex';
 export type ServiceType = 'coating' | 'reroof';
 export type Confidence = 'high' | 'medium' | 'low';
 
@@ -88,7 +89,8 @@ export function getComplexityLabel(complexity: ComplexityLevel): string {
     case 'simple': return 'Simple';
     case 'gable': return 'Gable (2-Sided)';
     case 'hip': return 'Hip (4-Sided)';
-    case 'complex': return 'Complex';
+    case 'complex': return '10+ Facets';
+    case 'verycomplex': return '20+ Facets';
     default: return complexity;
   }
 }
