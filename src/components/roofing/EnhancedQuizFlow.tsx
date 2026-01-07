@@ -178,8 +178,12 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
 
       const estimation = data?.estimation;
       if (estimation?.estimatedSqft) {
-        // Store raw flat footprint from AI
-        setBaseFlatSqft(estimation.estimatedSqft);
+        // Add 4% buffer (3-5% range) to account for AI vision errors from shadows, 
+        // secondary structures, or hidden areas not clearly visible in satellite imagery
+        const AI_VISION_BUFFER = 1.04; // 4% buffer
+        const bufferedSqft = Math.round(estimation.estimatedSqft * AI_VISION_BUFFER);
+        
+        setBaseFlatSqft(bufferedSqft);
         setAiConfidence(estimation.confidence || "high");
         setSatelliteImageUrl(estimation.satelliteImageUrl || "");
         
@@ -456,25 +460,20 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Calculator className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Live Calculation</span>
+                  <span className="text-sm font-medium">Roof Calculation</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-background rounded p-2">
-                    <p className="text-lg font-bold text-primary">{baseFlatSqft.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground">Flat Footprint</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Area Off</span>
+                    <span className="text-lg font-semibold">{liveCalc.trueSqft.toLocaleString()} sq ft</span>
                   </div>
-                  <div className="bg-background rounded p-2">
-                    <p className="text-lg font-bold text-primary">×{liveCalc.pitchMultiplier.toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">Pitch Factor</p>
-                  </div>
-                  <div className="bg-background rounded p-2">
-                    <p className="text-lg font-bold text-primary">+{Math.round(liveCalc.wastePct * 100)}%</p>
-                    <p className="text-[10px] text-muted-foreground">Waste</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Area On</span>
+                    <span className="text-lg font-semibold">{liveCalc.totalWithWaste.toLocaleString()} sq ft</span>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t text-center">
                   <p className="text-2xl font-bold text-primary">{liveCalc.squares.toFixed(1)} Squares</p>
-                  <p className="text-xs text-muted-foreground">({liveCalc.totalWithWaste.toLocaleString()} sq ft total)</p>
                 </div>
               </div>
             )}
@@ -518,23 +517,15 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
                 </div>
               </div>
 
-              {/* Calculation Breakdown */}
-              <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+              {/* Simplified Breakdown */}
+              <div className="mt-4 pt-4 border-t text-sm">
                 <div className="flex justify-between">
-                  <span>Flat footprint:</span>
-                  <span>{measurements.baseSqft.toLocaleString()} sq ft</span>
+                  <span className="text-muted-foreground">Area Off:</span>
+                  <span className="font-medium">{Math.round(measurements.baseSqft * measurements.pitchMultiplier).toLocaleString()} sq ft</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Pitch factor:</span>
-                  <span>×{measurements.pitchMultiplier.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Waste factor:</span>
-                  <span>+{Math.round(measurements.wastePct * 100)}%</span>
-                </div>
-                <div className="flex justify-between font-medium text-foreground mt-1 pt-1 border-t">
-                  <span>Total with waste:</span>
-                  <span>{measurements.trueSqft.toLocaleString()} sq ft</span>
+                <div className="flex justify-between mt-1">
+                  <span className="text-muted-foreground">Area On:</span>
+                  <span className="font-medium">{measurements.trueSqft.toLocaleString()} sq ft</span>
                 </div>
               </div>
             </div>
