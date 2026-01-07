@@ -218,7 +218,7 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -312,12 +312,12 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
                   </Select>
                 </div>
 
-                <div className="relative rounded-lg overflow-hidden border">
+                <div className="relative rounded-lg overflow-hidden border max-h-[200px]">
                   {/* Satellite Image */}
                   <img
-                    src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
+                    src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x300@2x?access_token=${MAPBOX_TOKEN}`}
                     alt="Satellite view of property"
-                    className="w-full h-auto"
+                    className="w-full h-full object-cover"
                   />
                   
                   {/* Center Crosshair */}
