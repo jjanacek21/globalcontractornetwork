@@ -275,8 +275,8 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
                         className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-start gap-3 border-b last:border-b-0"
                         onClick={() => handleSelectResult(result)}
                       >
-                        <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{result.place_name}</span>
+                      <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm break-words whitespace-normal">{result.place_name}</span>
                       </button>
                     ))}
                   </div>
@@ -285,9 +285,9 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
 
               {/* Selected Address Confirmation */}
               {selectedAddress && (
-                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
-                  <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{selectedAddress}</span>
+                <div className="flex items-start gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/30 p-2 rounded-md">
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span className="break-words">{selectedAddress}</span>
                 </div>
               )}
             </div>
