@@ -23,6 +23,9 @@ interface MeasurementResult {
   trueSqft: number;
   pitchMultiplier: number;
   confidence: string;
+  roofComplexity?: string;
+  roofShape?: string;
+  satelliteImageUrl?: string;
 }
 
 type FlowStep = "address" | "analyzing" | "measurements" | "quiz";
@@ -152,13 +155,19 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
 
       if (error) throw error;
 
-      if (data?.roofSquares) {
+      const estimation = data?.estimation;
+      if (estimation?.estimatedSqft) {
+        const sqft = estimation.estimatedSqft;
+        const roofSquares = Math.round(sqft / 100);
         setMeasurements({
-          roofSquares: data.roofSquares,
-          baseSqft: data.baseSqft || data.roofSquares * 100,
-          trueSqft: data.trueSqft || data.roofSquares * 100,
-          pitchMultiplier: data.pitchMultiplier || 1.0,
-          confidence: data.confidence || "high"
+          roofSquares: roofSquares,
+          baseSqft: sqft,
+          trueSqft: sqft,
+          pitchMultiplier: 1.0,
+          confidence: estimation.confidence || "high",
+          roofComplexity: estimation.roofComplexity,
+          roofShape: estimation.roofShape,
+          satelliteImageUrl: estimation.satelliteImageUrl
         });
         setStep("measurements");
       } else {
