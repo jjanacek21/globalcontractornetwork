@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
-import { InstantQuoteDialog } from "./InstantQuoteDialog";
+import { EnhancedInstantEstimate } from "./EnhancedInstantEstimate";
+import { 
+  PackageConfig,
+  getPackageById,
+  calculateEstimate,
+  getGoodBetterBest
+} from "@/lib/packagePricing";
 
 interface Package {
   name: string;
@@ -16,9 +22,26 @@ interface PackageSelectorProps {
   onSelectPackage: (packageName: string, estimatedPrice: string) => void;
 }
 
+// Map legacy package name to PackageConfig
+const findPackageConfig = (name: string): PackageConfig | undefined => {
+  const lowName = name.toLowerCase();
+  
+  if (lowName.includes("bronze")) return getPackageById("bronze");
+  if (lowName.includes("silver") && !lowName.includes("tile")) return getPackageById("silver");
+  if (lowName.includes("gold") && !lowName.includes("tile")) return getPackageById("gold");
+  if (lowName.includes("platinum")) return getPackageById("platinum");
+  if (lowName.includes("ultimate")) return getPackageById("ultimate");
+  if (lowName.includes("blue collar+")) return getPackageById("blue-collar-plus");
+  if (lowName.includes("blue collar")) return getPackageById("blue-collar");
+  if (lowName.includes("tile+")) return getPackageById("tile-plus");
+  if (lowName.includes("tile")) return getPackageById("tile");
+  
+  return undefined;
+};
+
 export function PackageSelector({ packages, totalSquares, onSelectPackage }: PackageSelectorProps) {
   const [selectedPkg, setSelectedPkg] = useState<Package | null>(null);
-  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+  const [showEstimate, setShowEstimate] = useState(false);
 
   const calculatePriceRange = (pricePerSquare: string): string => {
     if (pricePerSquare === "TBD") {
@@ -51,90 +74,139 @@ export function PackageSelector({ packages, totalSquares, onSelectPackage }: Pac
 
   const handlePackageClick = (pkg: Package) => {
     setSelectedPkg(pkg);
-    setShowQuoteDialog(true);
+    setShowEstimate(true);
   };
 
-  const handleRequestQuote = () => {
+  const handleEstimateComplete = () => {
+    setShowEstimate(false);
     if (selectedPkg) {
       const estimatedPrice = calculatePriceRange(selectedPkg.pricePerSquare);
       onSelectPackage(selectedPkg.name, estimatedPrice);
-      setShowQuoteDialog(false);
     }
   };
 
+  // Build packages for the EnhancedInstantEstimate dialog
+  const getEstimatePackages = () => {
+    if (!selectedPkg) return [];
+    
+    const selectedConfig = findPackageConfig(selectedPkg.name);
+    if (!selectedConfig) return [];
+    
+    // Get Good/Better/Best based on category
+    const gbb = getGoodBetterBest(selectedConfig.category);
+    
+    const goodEst = calculateEstimate(gbb.good, totalSquares);
+    const betterEst = calculateEstimate(gbb.better, totalSquares);
+    const bestEst = calculateEstimate(gbb.best, totalSquares);
+    
+    return [
+      {
+        package: gbb.good,
+        estimateLow: goodEst.low,
+        estimateHigh: goodEst.high,
+        tier: "good" as const,
+        isRecommended: gbb.good.id === selectedConfig.id
+      },
+      {
+        package: gbb.better,
+        estimateLow: betterEst.low,
+        estimateHigh: betterEst.high,
+        tier: "better" as const,
+        isRecommended: gbb.better.id === selectedConfig.id || (gbb.good.id !== selectedConfig.id && gbb.best.id !== selectedConfig.id)
+      },
+      {
+        package: gbb.best,
+        estimateLow: bestEst.low,
+        estimateHigh: bestEst.high,
+        tier: "best" as const,
+        isRecommended: gbb.best.id === selectedConfig.id
+      }
+    ];
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Package Recommendations</h2>
-        <p className="text-lg text-muted-foreground">
-          Based on your {totalSquares.toFixed(2)} squares measurement
-        </p>
-      </div>
+    <>
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold">Package Recommendations</h2>
+          <p className="text-lg text-muted-foreground">
+            Based on your {totalSquares.toFixed(2)} squares measurement
+          </p>
+        </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {packages.map((pkg) => {
-          const estimatedPrice = calculatePriceRange(pkg.pricePerSquare);
-          const isContactPricing = estimatedPrice === "Contact for Pricing";
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {packages.map((pkg) => {
+            const estimatedPrice = calculatePriceRange(pkg.pricePerSquare);
+            const isContactPricing = estimatedPrice === "Contact for Pricing";
 
-          return (
-            <Card 
-              key={pkg.name} 
-              className="shadow-card hover:shadow-elevated transition-all hover:border-primary/50 cursor-pointer"
-              onClick={() => handlePackageClick(pkg)}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                <CardDescription className="space-y-1">
-                  <div className="text-sm font-medium text-muted-foreground">
-                    {getPriceLabel(pkg.pricePerSquare)}
-                  </div>
-                  <div className="text-2xl font-bold text-primary">
-                    {estimatedPrice}
-                  </div>
-                  {!isContactPricing && (
-                    <div className="text-xs text-muted-foreground">
-                      Estimated total for {totalSquares.toFixed(2)} squares
+            return (
+              <Card 
+                key={pkg.name} 
+                className="shadow-card hover:shadow-elevated transition-all hover:border-primary/50 cursor-pointer"
+                onClick={() => handlePackageClick(pkg)}
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg">{pkg.name}</CardTitle>
+                  <CardDescription className="space-y-1">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      {getPriceLabel(pkg.pricePerSquare)}
                     </div>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
-                  {pkg.features.map((feature, idx) => (
-                    <li key={idx} className="flex gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePackageClick(pkg);
-                  }}
-                  className="w-full"
-                  variant={isContactPricing ? "outline" : "default"}
-                >
-                  Get Instant Quote
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+                    <div className="text-2xl font-bold text-primary">
+                      {estimatedPrice}
+                    </div>
+                    {!isContactPricing && (
+                      <div className="text-xs text-muted-foreground">
+                        Estimated total for {totalSquares.toFixed(2)} squares
+                      </div>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
+                    {pkg.features.map((feature, idx) => (
+                      <li key={idx} className="flex gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePackageClick(pkg);
+                    }}
+                    className="w-full"
+                    variant={isContactPricing ? "outline" : "default"}
+                  >
+                    Get Instant Quote
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Instant Quote Dialog */}
+      {/* Enhanced Instant Estimate Dialog */}
       {selectedPkg && (
-        <InstantQuoteDialog
-          open={showQuoteDialog}
-          onOpenChange={setShowQuoteDialog}
-          packageName={selectedPkg.name}
-          pricePerSquare={selectedPkg.pricePerSquare}
-          totalSquares={totalSquares}
-          estimatedPrice={calculatePriceRange(selectedPkg.pricePerSquare)}
-          onRequestQuote={handleRequestQuote}
+        <EnhancedInstantEstimate
+          open={showEstimate}
+          onOpenChange={setShowEstimate}
+          measurements={{
+            baseSqft: totalSquares * 100,
+            pitchMultiplier: 1.0,
+            trueSqft: totalSquares * 100,
+            wastePct: 0.10,
+            totalWithWaste: totalSquares * 110,
+            roofSquares: totalSquares,
+            roofComplexity: "standard"
+          }}
+          propertyAddress="Your Property"
+          packages={getEstimatePackages()}
+          selectedPackageId={findPackageConfig(selectedPkg.name)?.id}
+          onComplete={handleEstimateComplete}
         />
       )}
-    </div>
+    </>
   );
 }
