@@ -323,10 +323,13 @@ export function QuizEstimateFlow({
       let estimatedAge: number | null = null;
 
       if (cached) {
-        flatSqft = Number(cached.flat_sqft);
+        // Prefer user-adjusted values if available
+        flatSqft = cached.user_adjusted_sqft 
+          ? Number(cached.user_adjusted_sqft) 
+          : Number(cached.flat_sqft);
         complexity = cached.roof_complexity || 'gable';
         estimatedAge = cached.estimated_roof_age_years || null;
-        setProgressMessage("Found cached measurement!");
+        setProgressMessage(cached.user_adjusted_sqft ? "Using your saved measurements!" : "Found cached measurement!");
       } else {
         const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
           body: { latitude: coordinates.lat, longitude: coordinates.lng, address }
