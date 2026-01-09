@@ -41,10 +41,11 @@ export function useHomeownerEstimates(userId: string | null, email: string | nul
 
     setLoading(true);
     try {
-      let query = supabase
-        .from('homeowner_estimates')
+      // Use type assertion for the new table
+      let query = (supabase
+        .from('homeowner_estimates' as any)
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })) as any;
 
       if (userId) {
         query = query.eq('user_id', userId);
@@ -59,6 +60,7 @@ export function useHomeownerEstimates(userId: string | null, email: string | nul
     } catch (err) {
       console.error('Error fetching estimates:', err);
       setError('Failed to load estimates');
+      setEstimates([]);
     } finally {
       setLoading(false);
     }
@@ -129,10 +131,10 @@ export function useHomeownerEstimates(userId: string | null, email: string | nul
 
   const updateEstimateStatus = useCallback(async (estimateId: string, status: string) => {
     try {
-      const { error: updateError } = await supabase
-        .from('homeowner_estimates')
+      const { error: updateError } = await (supabase
+        .from('homeowner_estimates' as any)
         .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', estimateId);
+        .eq('id', estimateId) as any);
 
       if (updateError) throw updateError;
 

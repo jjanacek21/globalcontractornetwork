@@ -15,6 +15,7 @@ import { PendingReviewsCard } from '@/components/homeowner/PendingReviewsCard';
 import { LeaveReviewDialog } from '@/components/homeowner/LeaveReviewDialog';
 import { AppointmentsSection } from '@/components/homeowner/AppointmentsSection';
 import { NotificationsPanel } from '@/components/homeowner/NotificationsPanel';
+import { MyEstimatesSection } from '@/components/homeowner/MyEstimatesSection';
 import { useHomeownerPhotos } from '@/hooks/useHomeownerPhotos';
 import { useHomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 import { useFavoriteContractors } from '@/hooks/useFavoriteContractors';
@@ -23,6 +24,7 @@ import { useHomeownerReviews, ReviewableProject } from '@/hooks/useHomeownerRevi
 import { useHomeownerMessages } from '@/hooks/useHomeownerMessages';
 import { useHomeownerAppointments } from '@/hooks/useHomeownerAppointments';
 import { useHomeownerNotifications } from '@/hooks/useHomeownerNotifications';
+import { useHomeownerEstimates } from '@/hooks/useHomeownerEstimates';
 import gcnLogo from '@/assets/gcn-logo.jpg';
 
 interface Profile {
@@ -55,6 +57,7 @@ export default function HomeownerProfile() {
   const { totalUnread } = useHomeownerMessages(userId);
   const { upcomingAppointments, pastAppointments, loading: appointmentsLoading, cancelAppointment } = useHomeownerAppointments(userId);
   const { notifications, unreadCount: notificationUnreadCount, loading: notificationsLoading, markAsRead, markAllAsRead } = useHomeownerNotifications(userId);
+  const { estimates, loading: estimatesLoading, downloadEstimate } = useHomeownerEstimates(userId, profile?.email || null);
 
   useEffect(() => {
     checkAuth();
@@ -224,6 +227,13 @@ export default function HomeownerProfile() {
             loading={favoritesLoading}
             onRemove={removeFavorite}
             onMessage={handleMessageContractor}
+          />
+
+          {/* My Estimates Section */}
+          <MyEstimatesSection
+            estimates={estimates}
+            loading={estimatesLoading}
+            onDownload={downloadEstimate}
           />
 
           {/* Pending Reviews */}

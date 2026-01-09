@@ -1,5 +1,8 @@
 // Roofing Recommendation Engine
 // Calculates pricing and recommends Good/Better/Best packages based on quiz answers
+// NOTE: Package pricing is now centralized in packagePricing.ts
+
+import { PACKAGE_CONFIGS, getPackageByName, PackageConfig } from './packagePricing';
 
 export interface QuizInputs {
   cityState: string;
@@ -394,22 +397,32 @@ export const expandedPackages: ExpandedPackage[] = [
   },
   {
     name: "Platinum Roof Package",
-    pricePerSquare: "$1000-$1200",
+    // UPDATED PRICING: $1,100-$1,300 per square (from packagePricing.ts)
+    pricePerSquare: "$1,100-$1,300",
     features: [
-      "1\" Snap-lock standing seam metal roof (24-gauge, Kynar-coated)",
-      "Polyglass MTS high-temp underlayment",
-      "Solar attic fan ventilation",
-      "Includes 7 sheets of plywood and 30 linear feet of painted fascia",
-      "Lifetime roof warranty"
+      "24-Gauge Standing Seam Metal Roofing System (Kynar-Coated)",
+      "Polyglass MTS High-Temperature Underlayment",
+      "Ice & Water Protection at All Critical Penetrations",
+      "Solar Attic Fan Ventilation System",
+      "Wind-Rated System Installation (Up to 150 MPH)",
+      "Code-Compliant Fastening & Edge Metal",
+      "Fire Barrier Underlayment (Where Required by Code)",
+      "Full Tear-Off & Disposal",
+      "Permit Handling & Inspections",
+      "Final Cleanup & Magnetic Nail Sweep",
+      "Manufacturer & Workmanship Warranty Package"
     ],
     tier: "premium",
     category: "metal",
     description: "Seamless design for maximum leak prevention with high wind/storm rating (up to 150 mph).",
     benefits: [
+      "Seamless design for maximum leak prevention",
+      "High wind/storm rating (up to 150 mph)",
       "Lifetime warranty potential",
       "Boosts home resale value significantly",
       "Customizable colors available",
-      "Fire barrier included if required"
+      "Fascia Repair & Painting Allowance (Up to 30 LF)",
+      "Plywood Replacement Allowance (Up to 7 Sheets)"
     ],
     idealFor: [
       "Premium needs with multiple concerns",
@@ -452,22 +465,30 @@ export const expandedPackages: ExpandedPackage[] = [
   },
   {
     name: "Tile+ Roof Package",
-    pricePerSquare: "$1000-$1100",
+    // UPDATED PRICING: $1,100-$1,300 per square (from packagePricing.ts)
+    pricePerSquare: "$1,100-$1,300",
     features: [
-      "Tile removal and replacement with premium materials",
-      "Polyglass TU MAX underlayment",
-      "Glued and screwed for extra durability",
-      "Upgraded ventilation system",
-      "Includes 6 sheets of plywood and 30 linear feet of fascia"
+      "Premium Tile Roofing System (Concrete or Clay)",
+      "Polyglass TU MAX High-Performance Tile Underlayment",
+      "Glued & Screwed Tile Installation System",
+      "Upgraded Ventilation System",
+      "Code-Compliant Tile Fastening",
+      "Tear-Off & Disposal of Existing Tile",
+      "Permit Processing & Inspections",
+      "Jobsite Protection & Cleanup",
+      "Extended Material & Workmanship Warranty"
     ],
     tier: "premium",
     category: "tile",
     description: "Enhanced adhesion and waterproofing with better impact resistance for hail/storms.",
     benefits: [
+      "Enhanced adhesion and waterproofing",
+      "Better impact resistance for hail/storms",
       "40-50 year warranty",
       "Premium tiles with color options",
       "HOA-friendly",
-      "Fascia painting included"
+      "Fascia Repair & Paint Allowance (Up to 20 LF)",
+      "Plywood Replacement Allowance (Up to 3 Sheets)"
     ],
     idealFor: [
       "Urgent to emergency tile roofs",
