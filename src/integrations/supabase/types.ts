@@ -1840,6 +1840,72 @@ export type Database = {
           },
         ]
       }
+      homeowner_estimates: {
+        Row: {
+          created_at: string | null
+          email_normalized: string
+          estimate_data: Json | null
+          estimate_high: number | null
+          estimate_low: number | null
+          estimate_name: string
+          estimate_version: number | null
+          id: string
+          line_items: Json | null
+          pdf_url: string | null
+          property_address: string | null
+          service_type: string
+          signature_data: string | null
+          signed_at: string | null
+          signed_ip: string | null
+          status: string | null
+          terms_agreed: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_normalized: string
+          estimate_data?: Json | null
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimate_name: string
+          estimate_version?: number | null
+          id?: string
+          line_items?: Json | null
+          pdf_url?: string | null
+          property_address?: string | null
+          service_type?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          status?: string | null
+          terms_agreed?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_normalized?: string
+          estimate_data?: Json | null
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimate_name?: string
+          estimate_version?: number | null
+          id?: string
+          line_items?: Json | null
+          pdf_url?: string | null
+          property_address?: string | null
+          service_type?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          status?: string | null
+          terms_agreed?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       homeowner_messages: {
         Row: {
           content: string

@@ -9,12 +9,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CalendarIcon, Video, Users, FileText, Download } from "lucide-react";
+import { CalendarIcon, Video, Users, FileText, Download, FileSignature } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { resolveUserForSubmission } from "@/lib/userLinking";
 import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
+import { 
+  generateProfessionalEstimatePdf, 
+  downloadProfessionalPdf,
+  ProfessionalEstimatePdfData 
+} from "@/lib/generateProfessionalEstimatePdf";
+import { getPackageByName, PackageConfig, calculateEstimate } from "@/lib/packagePricing";
 import { SelectedFinancing } from "./InlineFinancingSelector";
+import { EstimateApprovalModal } from "@/components/estimates/EstimateApprovalModal";
 
 interface MeasurementData {
   baseSqft: number;
@@ -89,12 +96,16 @@ export const SchedulingDialog = ({
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     notes: ""
   });
+
+  // Try to get PackageConfig from centralized pricing
+  const packageConfig = packageData ? getPackageByName(packageData.name) : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,40 +127,69 @@ export const SchedulingDialog = ({
       // Generate PDF if we have measurement and package data
       let pdfBase64: string | null = null;
       if (measurementData && packageData) {
-        const pdfData = {
-          customerName: formData.name,
-          customerEmail: formData.email,
-          customerPhone: formData.phone,
-          propertyAddress: consultationData.zipCode,
-          baseSqft: measurementData.baseSqft,
-          pitchMultiplier: measurementData.pitchMultiplier,
-          trueSqft: measurementData.trueSqft,
-          wastePct: measurementData.wastePct,
-          totalWithWaste: measurementData.totalWithWaste,
-          roofSquares: measurementData.roofSquares,
-          roofComplexity: measurementData.roofComplexity,
-          packageName: packageData.name,
-          packageFeatures: packageData.features,
-          pricePerSquare: packageData.pricePerSquare,
-          estimateLow: packageData.estimateLow,
-          estimateHigh: packageData.estimateHigh,
-          financing: financingData ? {
-            lenderName: financingData.lenderName,
-            rate: financingData.rate,
-            termYears: financingData.termYears,
-            monthlyPayment: financingData.monthlyPayment,
-            totalCost: financingData.totalCost
-          } : null,
-          appointmentDate: format(date, "PPP"),
-          appointmentTime: time,
-          appointmentType: appointmentType
-        };
+        // Try to use the new professional PDF generator if we have a PackageConfig
+        if (packageConfig) {
+          const pdfData: ProfessionalEstimatePdfData = {
+            customerName: formData.name,
+            customerEmail: formData.email,
+            customerPhone: formData.phone,
+            propertyAddress: consultationData.zipCode,
+            roofSquares: measurementData.roofSquares,
+            pitch: measurementData.roofComplexity,
+            complexity: measurementData.roofComplexity,
+            selectedPackage: packageConfig,
+            estimateLow: packageData.estimateLow,
+            estimateHigh: packageData.estimateHigh,
+            financing: financingData ? {
+              lenderName: financingData.lenderName,
+              rate: financingData.rate,
+              termYears: financingData.termYears,
+              monthlyPayment: financingData.monthlyPayment,
+              totalCost: financingData.totalCost
+            } : null,
+            appointmentDate: format(date, "PPP"),
+            appointmentTime: time,
+            appointmentType: appointmentType
+          };
 
-        const { blob, base64 } = generateRoofEstimatePdf(pdfData);
-        pdfBase64 = base64;
-        
-        // Download PDF immediately
-        downloadPdf(blob, `roof-estimate-${formData.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`);
+          const { blob, base64 } = generateProfessionalEstimatePdf(pdfData);
+          pdfBase64 = base64;
+          downloadProfessionalPdf(blob, formData.name);
+        } else {
+          // Fallback to legacy PDF generator
+          const pdfData = {
+            customerName: formData.name,
+            customerEmail: formData.email,
+            customerPhone: formData.phone,
+            propertyAddress: consultationData.zipCode,
+            baseSqft: measurementData.baseSqft,
+            pitchMultiplier: measurementData.pitchMultiplier,
+            trueSqft: measurementData.trueSqft,
+            wastePct: measurementData.wastePct,
+            totalWithWaste: measurementData.totalWithWaste,
+            roofSquares: measurementData.roofSquares,
+            roofComplexity: measurementData.roofComplexity,
+            packageName: packageData.name,
+            packageFeatures: packageData.features,
+            pricePerSquare: packageData.pricePerSquare,
+            estimateLow: packageData.estimateLow,
+            estimateHigh: packageData.estimateHigh,
+            financing: financingData ? {
+              lenderName: financingData.lenderName,
+              rate: financingData.rate,
+              termYears: financingData.termYears,
+              monthlyPayment: financingData.monthlyPayment,
+              totalCost: financingData.totalCost
+            } : null,
+            appointmentDate: format(date, "PPP"),
+            appointmentTime: time,
+            appointmentType: appointmentType
+          };
+
+          const { blob, base64 } = generateRoofEstimatePdf(pdfData);
+          pdfBase64 = base64;
+          downloadPdf(blob, `roof-estimate-${formData.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`);
+        }
       }
 
       const { error } = await supabase
@@ -284,6 +324,7 @@ export const SchedulingDialog = ({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -438,5 +479,41 @@ export const SchedulingDialog = ({
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Signature Modal for signing estimates */}
+    {packageConfig && measurementData && (
+      <EstimateApprovalModal
+        open={showSignatureModal}
+        onOpenChange={setShowSignatureModal}
+        estimateData={{
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          propertyAddress: consultationData.zipCode,
+          roofSquares: measurementData.roofSquares,
+          pitch: measurementData.roofComplexity,
+          complexity: measurementData.roofComplexity,
+          selectedPackage: packageConfig,
+          estimateLow: packageData?.estimateLow || 0,
+          estimateHigh: packageData?.estimateHigh || 0,
+          financing: financingData ? {
+            lenderName: financingData.lenderName,
+            rate: financingData.rate,
+            termYears: financingData.termYears,
+            monthlyPayment: financingData.monthlyPayment,
+            totalCost: financingData.totalCost
+          } : null,
+          appointmentDate: date ? format(date, "PPP") : undefined,
+          appointmentTime: time || undefined,
+          appointmentType: appointmentType
+        }}
+        onComplete={() => {
+          setShowSignatureModal(false);
+          onComplete();
+          onOpenChange(false);
+        }}
+      />
+    )}
+    </>
   );
 };
