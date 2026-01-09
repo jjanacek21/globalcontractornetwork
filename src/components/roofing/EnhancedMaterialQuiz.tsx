@@ -5,14 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Sparkles, Crown, Star, Hammer, CheckCircle2, Video, Users, AlertTriangle, Download } from "lucide-react";
+import { ArrowLeft, Sparkles, AlertTriangle } from "lucide-react";
 import { RoofTypeGraphic, ConditionGraphic, StoryGraphic, VentGraphic, UnderlaymentGraphic } from "./quiz-graphics";
-import { QuizInputs, PackageRecommendation, getRecommendations, formatCurrency, expandedPackages, ExpandedPackage } from "@/lib/roofingRecommendationEngine";
-import { SchedulingDialog } from "./SchedulingDialog";
+import { QuizInputs, getRecommendations, expandedPackages } from "@/lib/roofingRecommendationEngine";
+import { EnhancedInstantEstimate } from "./EnhancedInstantEstimate";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
+import { 
+  PackageConfig, 
+  getPackageById, 
+  getGoodBetterBest,
+  calculateEstimate 
+} from "@/lib/packagePricing";
 
 interface MeasurementData {
   baseSqft: number;
@@ -42,6 +46,23 @@ const QUIZ_STEPS: QuizStep[] = [
   "gutters-want", "timeline", "notes"
 ];
 
+// Map recommendation tier to PackageConfig
+const getPackageConfigFromTier = (tier: string, desiredRoof: string): PackageConfig | undefined => {
+  // Determine category based on desired roof type
+  let category: "shingle" | "metal" | "tile" = "shingle";
+  if (desiredRoof === "metal") category = "metal";
+  else if (desiredRoof === "tile") category = "tile";
+  
+  const gbb = getGoodBetterBest(category);
+  
+  switch (tier) {
+    case "good": return gbb.good;
+    case "better": return gbb.better;
+    case "best": return gbb.best;
+    default: return gbb.better;
+  }
+};
+
 export function EnhancedMaterialQuiz({
   open, onOpenChange, roofSquares, address, cityState, measurementData, onComplete
 }: EnhancedMaterialQuizProps) {
@@ -51,13 +72,15 @@ export function EnhancedMaterialQuiz({
     roofSquares,
     concerns: []
   });
-  const [recommendations, setRecommendations] = useState<PackageRecommendation[]>([]);
-  const [selectedRec, setSelectedRec] = useState<PackageRecommendation | null>(null);
-  const [showScheduling, setShowScheduling] = useState(false);
-  const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
-  const [compareMode, setCompareMode] = useState(false);
-  const [comparePackages, setComparePackages] = useState<ExpandedPackage[]>([]);
+  const [showEnhancedEstimate, setShowEnhancedEstimate] = useState(false);
   const quizResponseIdRef = useRef<string | null>(null);
+  const [estimatePackages, setEstimatePackages] = useState<Array<{
+    package: PackageConfig;
+    estimateLow: number;
+    estimateHigh: number;
+    tier: "good" | "better" | "best";
+    isRecommended?: boolean;
+  }>>([]);
 
   const currentStepIndex = QUIZ_STEPS.indexOf(step as any);
   const progress = step === "results" ? 100 : ((currentStepIndex + 1) / QUIZ_STEPS.length) * 100;
@@ -97,14 +120,54 @@ export function EnhancedMaterialQuiz({
       roofSquares,
       notes: answers.notes
     };
+    
     const recs = getRecommendations(fullInputs, expandedPackages);
-    setRecommendations(recs);
+    
+    // Build the packages array for EnhancedInstantEstimate
+    // Determine category based on desired roof
+    let category: "shingle" | "metal" | "tile" = "shingle";
+    if (answers.desiredRoof === "metal") category = "metal";
+    else if (answers.desiredRoof === "tile") category = "tile";
+    
+    const gbb = getGoodBetterBest(category);
+    
+    const goodEst = calculateEstimate(gbb.good, roofSquares);
+    const betterEst = calculateEstimate(gbb.better, roofSquares);
+    const bestEst = calculateEstimate(gbb.best, roofSquares);
+    
+    const pkgOptions = [
+      {
+        package: gbb.good,
+        estimateLow: goodEst.low,
+        estimateHigh: goodEst.high,
+        tier: "good" as const,
+        isRecommended: false
+      },
+      {
+        package: gbb.better,
+        estimateLow: betterEst.low,
+        estimateHigh: betterEst.high,
+        tier: "better" as const,
+        isRecommended: true // Default to "better" as recommended
+      },
+      {
+        package: gbb.best,
+        estimateLow: bestEst.low,
+        estimateHigh: bestEst.high,
+        tier: "best" as const,
+        isRecommended: false
+      }
+    ];
+    
+    setEstimatePackages(pkgOptions);
     setStep("results");
+    
+    // Show the enhanced estimate dialog
+    setShowEnhancedEstimate(true);
 
     // Log to database for analytics
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      // Use type assertion since the table was just created
       const { data, error } = await (supabase
         .from("roofing_quiz_responses" as any)
         .insert({
@@ -148,28 +211,21 @@ export function EnhancedMaterialQuiz({
     });
   };
 
-  const handleSchedule = (rec: PackageRecommendation, type: "zoom" | "in_person") => {
-    setSelectedRec(rec);
-    setAppointmentType(type);
-    setShowScheduling(true);
+  const handleEstimateComplete = () => {
+    setShowEnhancedEstimate(false);
+    onComplete();
+    onOpenChange(false);
   };
 
-  const getTierIcon = (tier: string) => {
-    switch (tier) {
-      case "good": return Hammer;
-      case "better": return Star;
-      case "best": return Crown;
-      default: return Star;
-    }
-  };
-
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case "good": return "bg-amber-500";
-      case "better": return "bg-blue-500";
-      case "best": return "bg-purple-500";
-      default: return "bg-slate-500";
-    }
+  // Get default measurement data
+  const effectiveMeasurementData: MeasurementData = measurementData || {
+    baseSqft: roofSquares * 100,
+    pitchMultiplier: 1.0,
+    trueSqft: roofSquares * 100,
+    wastePct: 0.10,
+    totalWithWaste: roofSquares * 110,
+    roofSquares: roofSquares,
+    roofComplexity: "moderate"
   };
 
   const renderQuestionContent = () => {
@@ -434,61 +490,17 @@ export function EnhancedMaterialQuiz({
         );
 
       case "results":
+        // The EnhancedInstantEstimate dialog will be shown instead
         return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-xl font-bold">Your Personalized Recommendations</h3>
-              <p className="text-muted-foreground">Based on your {roofSquares.toFixed(1)} square roof at {address}</p>
-            </div>
-
-            <div className="grid gap-4">
-              {recommendations.map((rec) => {
-                const TierIcon = getTierIcon(rec.tier);
-                return (
-                  <Card key={rec.tier} className={cn("relative", rec.tier === "better" && "ring-2 ring-primary")}>
-                    {rec.tier === "better" && (
-                      <Badge className="absolute -top-2 left-4 bg-primary">Recommended</Badge>
-                    )}
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className={cn(getTierColor(rec.tier), "text-white capitalize")}>
-                              <TierIcon className="h-3 w-3 mr-1" /> {rec.tier}
-                            </Badge>
-                            <span className="font-bold">{rec.package.name}</span>
-                          </div>
-                          <p className="text-2xl font-bold text-primary mb-1">
-                            {formatCurrency(rec.estimateLow)} - {formatCurrency(rec.estimateHigh)}
-                          </p>
-                          <p className="text-sm text-muted-foreground mb-3">{rec.reason}</p>
-                          <ul className="text-sm space-y-1">
-                            {rec.package.features.slice(0, 3).map((f, i) => (
-                              <li key={i} className="flex gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Button size="sm" onClick={() => handleSchedule(rec, "zoom")}>
-                            <Video className="h-4 w-4 mr-1" /> Zoom
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleSchedule(rec, "in_person")}>
-                            <Users className="h-4 w-4 mr-1" /> In-Person
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              * Prices are estimates and may vary by location, materials availability, and site inspection.
+          <div className="text-center py-8">
+            <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Your Recommendations Are Ready!</h3>
+            <p className="text-muted-foreground mb-4">
+              View your personalized estimate with Good/Better/Best options
             </p>
+            <Button onClick={() => setShowEnhancedEstimate(true)}>
+              View Your Estimate
+            </Button>
           </div>
         );
 
@@ -499,7 +511,7 @@ export function EnhancedMaterialQuiz({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open && !showEnhancedEstimate} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -531,52 +543,23 @@ export function EnhancedMaterialQuiz({
         </DialogContent>
       </Dialog>
 
-      {selectedRec && (
-        <SchedulingDialog
-          open={showScheduling}
-          onOpenChange={setShowScheduling}
-          appointmentType={appointmentType}
-          consultationData={{
-            roofType: answers.currentRoof || "shingle",
-            priority: answers.concerns?.join(", ") || "",
-            timeline: answers.timeInHome || "medium",
-            budget: selectedRec.package.tier,
-            zipCode: address,
-            sqft: roofSquares * 100,
-            recommendedPackage: selectedRec.package.name,
-            estimatedPrice: selectedRec.estimateHigh
+      {/* Enhanced Instant Estimate Dialog */}
+      {estimatePackages.length > 0 && (
+        <EnhancedInstantEstimate
+          open={showEnhancedEstimate}
+          onOpenChange={(open) => {
+            setShowEnhancedEstimate(open);
+            if (!open) {
+              // If they close the estimate, go back to results step
+              setStep("results");
+            }
           }}
-          measurementData={measurementData || {
-            baseSqft: roofSquares * 100,
-            pitchMultiplier: 1.0,
-            trueSqft: roofSquares * 100,
-            wastePct: 15,
-            totalWithWaste: roofSquares * 115,
-            roofSquares: roofSquares,
-            roofComplexity: 'moderate'
-          }}
-          packageData={{
-            name: selectedRec.package.name,
-            features: selectedRec.package.features,
-            pricePerSquare: selectedRec.package.pricePerSquare,
-            estimateLow: selectedRec.estimateLow,
-            estimateHigh: selectedRec.estimateHigh
-          }}
-          quizData={{
-            quizResponseId: quizResponseIdRef.current,
-            recommendations: recommendations.map(r => ({
-              tier: r.tier,
-              name: r.package.name,
-              estimateLow: r.estimateLow,
-              estimateHigh: r.estimateHigh,
-              reason: r.reason,
-              features: r.package.features
-            })),
-            address,
-            cityState,
-            roofSquares
-          }}
-          onComplete={() => { setShowScheduling(false); onComplete(); }}
+          measurements={effectiveMeasurementData}
+          propertyAddress={address}
+          cityState={cityState}
+          packages={estimatePackages}
+          quizResponseId={quizResponseIdRef.current}
+          onComplete={handleEstimateComplete}
         />
       )}
     </>
