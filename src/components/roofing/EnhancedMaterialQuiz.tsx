@@ -14,12 +14,23 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
 
+interface MeasurementData {
+  baseSqft: number;
+  pitchMultiplier: number;
+  trueSqft: number;
+  wastePct: number;
+  totalWithWaste: number;
+  roofSquares: number;
+  roofComplexity: string;
+}
+
 interface EnhancedMaterialQuizProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roofSquares: number;
   address: string;
   cityState: string;
+  measurementData?: MeasurementData;
   onComplete: () => void;
 }
 
@@ -32,7 +43,7 @@ const QUIZ_STEPS: QuizStep[] = [
 ];
 
 export function EnhancedMaterialQuiz({
-  open, onOpenChange, roofSquares, address, cityState, onComplete
+  open, onOpenChange, roofSquares, address, cityState, measurementData, onComplete
 }: EnhancedMaterialQuizProps) {
   const [step, setStep] = useState<QuizStep>("current-roof");
   const [answers, setAnswers] = useState<Partial<QuizInputs>>({
@@ -534,6 +545,15 @@ export function EnhancedMaterialQuiz({
             sqft: roofSquares * 100,
             recommendedPackage: selectedRec.package.name,
             estimatedPrice: selectedRec.estimateHigh
+          }}
+          measurementData={measurementData || {
+            baseSqft: roofSquares * 100,
+            pitchMultiplier: 1.0,
+            trueSqft: roofSquares * 100,
+            wastePct: 15,
+            totalWithWaste: roofSquares * 115,
+            roofSquares: roofSquares,
+            roofComplexity: 'moderate'
           }}
           packageData={{
             name: selectedRec.package.name,

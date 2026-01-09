@@ -364,6 +364,15 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
         roofSquares={measurements.roofSquares}
         address={selectedAddress}
         cityState={cityState}
+        measurementData={{
+          baseSqft: measurements.baseSqft,
+          pitchMultiplier: measurements.pitchMultiplier,
+          trueSqft: measurements.trueSqft,
+          wastePct: measurements.wastePct,
+          totalWithWaste: measurements.trueSqft,
+          roofSquares: measurements.roofSquares,
+          roofComplexity: complexity
+        }}
         onComplete={handleQuizComplete}
       />
     );
