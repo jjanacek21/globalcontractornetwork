@@ -354,8 +354,27 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
     }
   };
 
-  const handleAcceptMeasurement = () => {
+  const handleAcceptMeasurement = async () => {
     if (!measurement || !selectedCoords || !selectedAddress) return;
+    
+    // Save user adjustments to cache for future use
+    try {
+      const normalizedAddr = selectedAddress.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      await supabase
+        .from('roof_analysis_cache')
+        .update({
+          user_adjusted_squares: measurement.squares,
+          user_adjusted_sqft: measurement.baseSqFt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('normalized_address', normalizedAddr);
+    } catch (error) {
+      console.error("Error saving measurement to cache:", error);
+    }
     
     const result: MeasurementResult = {
       ...measurement,
@@ -370,8 +389,8 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
     onMeasurementComplete(result);
     
     toast({
-      title: "Measurement Accepted",
-      description: `Using ${measurement.totalWithWaste.toLocaleString()} sq ft (with waste) for your estimate.`,
+      title: "Measurement Saved",
+      description: `Using ${measurement.totalWithWaste.toLocaleString()} sq ft. Future estimates will use these values.`,
     });
   };
 

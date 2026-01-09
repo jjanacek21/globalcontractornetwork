@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator, Move } from "lucide-react";
+import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator, Move, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EnhancedMaterialQuiz } from "./EnhancedMaterialQuiz";
@@ -19,6 +19,11 @@ import {
   getPitchMultiplier,
   getWastePct
 } from "@/lib/roofMeasurements";
+
+// Helper to normalize addresses for cache lookup
+const normalizeAddress = (addr: string): string => {
+  return addr.toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9\s]/g, '').trim();
+};
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -251,6 +256,35 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
     setLoading(true);
 
     try {
+      // Check for cached/user-adjusted measurements first
+      const normalizedAddr = normalizeAddress(selectedAddress);
+      const { data: cached } = await supabase
+        .from('roof_analysis_cache')
+        .select('*')
+        .eq('normalized_address', normalizedAddr)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (cached) {
+        // Prefer user-adjusted values if available
+        const cachedSqft = cached.user_adjusted_sqft 
+          ? Number(cached.user_adjusted_sqft) 
+          : Number(cached.flat_sqft);
+        
+        setBaseFlatSqft(cachedSqft);
+        setAiConfidence(cached.confidence || "high");
+        setSatelliteImageUrl(cached.satellite_image_url || "");
+        
+        toast.success(cached.user_adjusted_sqft 
+          ? "Using your saved measurements!" 
+          : "Found cached measurement!");
+        
+        setStep("adjustments");
+        setLoading(false);
+        return;
+      }
+
+      // No cache found, analyze with AI
       const { data, error } = await supabase.functions.invoke('roof-vision-ai', {
         body: {
           latitude: adjustedCoords.lat,

@@ -15,7 +15,8 @@ import {
   Star,
   Hammer,
   Shield,
-  ArrowRight
+  ArrowRight,
+  Save
 } from "lucide-react";
 import { InlineFinancingSelector, SelectedFinancing } from "./InlineFinancingSelector";
 import { SchedulingDialog } from "./SchedulingDialog";
@@ -31,6 +32,7 @@ import {
   ProfessionalEstimatePdfData 
 } from "@/lib/generateProfessionalEstimatePdf";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MeasurementData {
   baseSqft: number;
@@ -133,8 +135,38 @@ export function EnhancedInstantEstimate({
 
   const averageEstimate = Math.round((currentEstimates.low + currentEstimates.high) / 2);
 
-  const handleDownloadPdf = () => {
+  // Save user-adjusted measurements to cache for future use
+  const saveUserAdjustment = async () => {
+    if (!manualSquares || manualSquares === measurements.roofSquares) return;
+    
+    try {
+      const normalizedAddr = propertyAddress.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      const { error } = await supabase
+        .from('roof_analysis_cache')
+        .update({
+          user_adjusted_squares: manualSquares,
+          user_adjusted_sqft: manualSquares * 100,
+          updated_at: new Date().toISOString()
+        })
+        .eq('normalized_address', normalizedAddr);
+      
+      if (!error) {
+        toast.success("Measurements saved! Future estimates will use these values.");
+      }
+    } catch (error) {
+      console.error("Error saving user adjustment:", error);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
     if (!currentPackage) return;
+
+    // Save user adjustments if any
+    await saveUserAdjustment();
 
     const comparisonPackages = packages.map(p => ({
       package: p.package,
@@ -169,7 +201,10 @@ export function EnhancedInstantEstimate({
     toast.success("Your professional estimate PDF has been downloaded!");
   };
 
-  const handleContinue = (type: "zoom" | "in_person") => {
+  const handleContinue = async (type: "zoom" | "in_person") => {
+    // Save user adjustments if any
+    await saveUserAdjustment();
+    
     setAppointmentType(type);
     setShowScheduling(true);
   };
