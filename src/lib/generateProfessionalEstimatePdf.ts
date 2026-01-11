@@ -65,6 +65,30 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Human-readable formatting for pitch values
+const formatPitchValue = (pitch: string): string => {
+  const pitchMap: Record<string, string> = {
+    'flat': 'Flat (0-2/12)',
+    'low': 'Low Slope (3-4/12)',
+    'standard': 'Standard (5-6/12)',
+    'steep': 'Steep (7-8/12)',
+    'verysteep': 'Very Steep (9-12/12)',
+  };
+  return pitchMap[pitch?.toLowerCase()] || pitch || 'Standard';
+};
+
+// Human-readable formatting for complexity values
+const formatComplexityValue = (complexity: string): string => {
+  const complexityMap: Record<string, string> = {
+    'simple': 'Simple (Area Off)',
+    'gable': 'Gable - 2 Sided (Area On)',
+    'hip': 'Hip - 4 Sided (Area On)',
+    'complex': 'Complex - 10+ Facets (Area On)',
+    'verycomplex': 'Very Complex - 20+ Facets (Area On)',
+  };
+  return complexityMap[complexity?.toLowerCase()] || complexity || 'Standard';
+};
+
 const addPageHeader = (doc: jsPDF, title: string, pageNum: number, totalPages: number) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   
@@ -150,8 +174,8 @@ export const generateProfessionalEstimatePdf = (data: ProfessionalEstimatePdfDat
   doc.setFontSize(11);
   doc.text(`${data.roofSquares.toFixed(1)} Roof Squares`, propX + 8, y + 22);
   doc.setFontSize(9);
-  if (data.pitch) doc.text(`Pitch: ${data.pitch}`, propX + 8, y + 30);
-  if (data.complexity) doc.text(`Complexity: ${data.complexity}`, propX + 8, y + 38);
+  if (data.pitch) doc.text(`Pitch: ${formatPitchValue(data.pitch)}`, propX + 8, y + 30);
+  if (data.complexity) doc.text(`Complexity: ${formatComplexityValue(data.complexity)}`, propX + 8, y + 38);
   
   y += 60;
   
@@ -159,12 +183,13 @@ export const generateProfessionalEstimatePdf = (data: ProfessionalEstimatePdfDat
   doc.setFillColor(30, 70, 50);
   doc.roundedRect(margin, y, pageWidth - margin * 2, 65, 5, 5, 'F');
   
-  // Gold star badge
+  // Gold recommended badge
   doc.setFillColor(218, 165, 32);
   doc.circle(margin + 20, y + 20, 12, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.text('★', margin + 16, y + 25);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('R', margin + 16, y + 24);
   
   doc.setTextColor(218, 165, 32);
   doc.setFontSize(10);
@@ -296,13 +321,14 @@ export const generateProfessionalEstimatePdf = (data: ProfessionalEstimatePdfDat
       doc.setFontSize(8);
       doc.text(pkg.package.displayName, x + colWidth / 2, y + 18, { align: 'center' });
       
-      // Recommended star
+      // Recommended badge
       if (isRecommended) {
         doc.setFillColor(218, 165, 32);
-        doc.circle(x + colWidth - 10, y + 10, 8, 'F');
+        doc.circle(x + colWidth - 10, y - 5, 8, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text('★', x + colWidth - 14, y + 13);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('R', x + colWidth - 13, y - 2);
       }
       
       // Price per square
