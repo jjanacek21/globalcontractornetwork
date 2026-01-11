@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,9 +14,10 @@ import {
   Crown,
   Star,
   Hammer,
-  Shield,
   ArrowRight,
-  Save
+  Square,
+  Home,
+  Percent
 } from "lucide-react";
 import { InlineFinancingSelector, SelectedFinancing } from "./InlineFinancingSelector";
 import { SchedulingDialog } from "./SchedulingDialog";
@@ -33,6 +34,8 @@ import {
 } from "@/lib/generateProfessionalEstimatePdf";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Card3D, GlassPanel } from "@/components/crm-ui";
+import { cn } from "@/lib/utils";
 
 interface MeasurementData {
   baseSqft: number;
@@ -220,7 +223,7 @@ export function EnhancedInstantEstimate({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background via-background to-muted/30">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -232,26 +235,33 @@ export function EnhancedInstantEstimate({
           </DialogHeader>
 
           <div className="space-y-5 py-4">
-            {/* Measurement Stats Grid */}
+            {/* Measurement Stats Grid - 3D Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-muted rounded-lg">
+              <Card3D glassEffect tiltIntensity={8} className="p-4 text-center">
+                <Square className="h-5 w-5 text-primary mx-auto mb-1" />
                 <p className="text-xs text-muted-foreground">Base Sq Ft</p>
-                <p className="text-lg font-bold">{measurements.baseSqft.toLocaleString()}</p>
-              </div>
-              <div className="text-center p-3 bg-muted rounded-lg">
+                <p className="text-xl font-bold">{measurements.baseSqft.toLocaleString()}</p>
+              </Card3D>
+              
+              <Card3D glassEffect tiltIntensity={8} className="p-4 text-center">
+                <Home className="h-5 w-5 text-blue-500 mx-auto mb-1" />
                 <p className="text-xs text-muted-foreground">True Sq Ft</p>
-                <p className="text-lg font-bold">{measurements.trueSqft.toLocaleString()}</p>
+                <p className="text-xl font-bold">{measurements.trueSqft.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">×{measurements.pitchMultiplier.toFixed(2)} pitch</p>
-              </div>
-              <div className="text-center p-3 bg-primary/10 rounded-lg">
+              </Card3D>
+              
+              <Card3D glassEffect tiltIntensity={8} className="p-4 text-center bg-primary/5">
+                <Percent className="h-5 w-5 text-amber-500 mx-auto mb-1" />
                 <p className="text-xs text-muted-foreground">With Waste</p>
-                <p className="text-lg font-bold text-primary">{measurements.totalWithWaste.toLocaleString()}</p>
+                <p className="text-xl font-bold text-primary">{measurements.totalWithWaste.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">+{Math.round(measurements.wastePct * 100)}%</p>
-              </div>
-              <div className="text-center p-3 bg-primary/20 rounded-lg">
+              </Card3D>
+              
+              <Card3D glassEffect tiltIntensity={8} className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/20">
+                <Ruler className="h-5 w-5 text-primary mx-auto mb-1" />
                 <p className="text-xs text-muted-foreground">Roof Squares</p>
-                <p className="text-xl font-bold text-primary">{displaySquares.toFixed(1)}</p>
-              </div>
+                <p className="text-2xl font-bold text-primary">{displaySquares.toFixed(1)}</p>
+              </Card3D>
             </div>
 
             {/* Confidence Badge */}
@@ -261,8 +271,8 @@ export function EnhancedInstantEstimate({
               </Badge>
             </div>
 
-            {/* Adjustable Squares */}
-            <Card>
+            {/* Adjustable Squares - 3D Card */}
+            <Card3D glassEffect className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -279,7 +289,7 @@ export function EnhancedInstantEstimate({
                   </Button>
                 </div>
                 
-                <p className="text-3xl font-bold text-center">
+                <p className="text-3xl font-bold text-center bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                   {displaySquares.toFixed(1)} squares
                 </p>
                 
@@ -313,18 +323,23 @@ export function EnhancedInstantEstimate({
                   </Button>
                 )}
               </CardContent>
-            </Card>
+            </Card3D>
 
-            {/* Price Estimate Display */}
-            <Card className="bg-green-500/10 border-green-500/30">
-              <CardContent className="p-6 text-center">
-                <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-3xl font-bold text-green-600">
-                  {formatPriceRange(currentEstimates.low, currentEstimates.high)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">Estimated Total</p>
-              </CardContent>
-            </Card>
+            {/* Price Estimate Display - GlassPanel with glow */}
+            <GlassPanel 
+              blur="md" 
+              glowBorder 
+              className="p-6 text-center bg-gradient-to-br from-emerald-500/10 via-green-500/15 to-teal-500/10"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-xl rounded-full mx-auto w-16 h-16" />
+                <DollarSign className="h-10 w-10 text-green-500 mx-auto mb-2 relative z-10" />
+              </div>
+              <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                {formatPriceRange(currentEstimates.low, currentEstimates.high)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Estimated Total</p>
+            </GlassPanel>
 
             {/* Good/Better/Best Package Tabs */}
             <div className="space-y-3">
@@ -347,7 +362,14 @@ export function EnhancedInstantEstimate({
                   const estimates = calculateEstimate(pkg.package, displaySquares);
                   return (
                     <TabsContent key={pkg.tier} value={pkg.tier} className="mt-3">
-                      <Card className={pkg.isRecommended ? "ring-2 ring-primary" : ""}>
+                      <Card3D 
+                        glassEffect 
+                        tiltIntensity={6}
+                        className={cn(
+                          "overflow-hidden transition-all duration-300",
+                          pkg.isRecommended && "ring-2 ring-primary shadow-lg shadow-primary/20"
+                        )}
+                      >
                         <CardContent className="p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -356,7 +378,7 @@ export function EnhancedInstantEstimate({
                                   {pkg.package.displayName}
                                 </Badge>
                                 {pkg.isRecommended && (
-                                  <Badge variant="outline" className="text-xs">Recommended</Badge>
+                                  <Badge variant="outline" className="text-xs border-primary/50 bg-primary/5">Recommended</Badge>
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
@@ -364,7 +386,7 @@ export function EnhancedInstantEstimate({
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-bold text-primary">
+                              <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                                 {formatPriceRange(estimates.low, estimates.high)}
                               </p>
                             </div>
@@ -383,7 +405,7 @@ export function EnhancedInstantEstimate({
                             {pkg.package.warranty} • {pkg.package.installDays}
                           </p>
                         </CardContent>
-                      </Card>
+                      </Card3D>
                     </TabsContent>
                   );
                 })}
@@ -397,28 +419,33 @@ export function EnhancedInstantEstimate({
               selectedPlanId={selectedFinancing?.planId}
             />
 
-            {/* Monthly Payment Display */}
+            {/* Monthly Payment Display - GlassPanel */}
             {selectedFinancing && (
-              <Card className="bg-blue-500/10 border-blue-500/30">
-                <CardContent className="p-4 text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Estimated Monthly Payment</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(selectedFinancing.monthlyPayment)}/mo
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedFinancing.lenderName} • {selectedFinancing.rate}% APR • {selectedFinancing.termYears} years
-                  </p>
-                </CardContent>
-              </Card>
+              <GlassPanel blur="sm" className="p-4 text-center bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
+                <p className="text-sm text-muted-foreground mb-1">Estimated Monthly Payment</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  {formatCurrency(selectedFinancing.monthlyPayment)}/mo
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFinancing.lenderName} • {selectedFinancing.rate}% APR • {selectedFinancing.termYears} years
+                </p>
+              </GlassPanel>
             )}
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Enhanced with gradients */}
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleDownloadPdf} 
+                className="gap-2 hover:shadow-md transition-all duration-300"
+              >
                 <Download className="h-4 w-4" />
                 Download PDF
               </Button>
-              <Button onClick={() => handleContinue("zoom")} className="gap-2">
+              <Button 
+                onClick={() => handleContinue("zoom")} 
+                className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+              >
                 Continue to Schedule
                 <ArrowRight className="h-4 w-4" />
               </Button>
