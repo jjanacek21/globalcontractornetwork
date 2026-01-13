@@ -47,6 +47,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Track request timing for training data
+  const requestTimestamp = new Date().toISOString();
+  const startTime = Date.now();
+
   try {
     const { latitude, longitude, address, zoomLevel = 19, context = 'roofing' } = await req.json() as VisionRequest;
     
@@ -315,9 +319,20 @@ Return precise JSON with your segmentBreakdown showing the calculation.`;
       complexity: estimation.roofComplexity
     });
 
+    // Calculate response time for training data
+    const responseTimeMs = Date.now() - startTime;
+    
     return new Response(JSON.stringify({
       success: true,
-      estimation
+      estimation,
+      metadata: {
+        requestTimestamp,
+        responseTimeMs,
+        modelVersion: 'gemini-2.5-flash',
+        zoomLevel: zoom,
+        satelliteImageUrl,
+        address
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

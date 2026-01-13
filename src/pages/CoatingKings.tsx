@@ -74,7 +74,7 @@ const CoatingKings = () => {
         <CoatingKingsHeader />
         <HeroSection onGetQuote={scrollToQuote} onLearnMore={scrollToContact} propertyType={propertyType} />
         <CoatingProductGuide onCoatingSelect={handleCoatingSelect} />
-        <InstantQuoteTool selectedCoatingType={selectedCoating} />
+        <InstantQuoteTool selectedCoatingType={selectedCoating} propertyType={propertyType || undefined} />
         <WhyChooseUs />
         <BeforeAfterSlider />
         <LeadCaptureForm />

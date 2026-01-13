@@ -35,18 +35,38 @@ interface MeasurementWizardProps {
   serviceType: ServiceType;
   onMeasurementComplete: (result: MeasurementResult) => void;
   className?: string;
+  propertyType?: string;
 }
 
 interface VisionEstimation {
   estimatedSqft: number;
+  estimatedSqftLow?: number;
+  estimatedSqftHigh?: number;
   confidence: Confidence;
   methodology: string;
   roofShape: string;
   roofComplexity: string;
+  buildingType?: string;
+  segmentBreakdown?: string;
+  pixelEstimate?: string;
+  referenceObjectsUsed?: string;
 }
 
-export function MeasurementWizard({ serviceType, onMeasurementComplete, className }: MeasurementWizardProps) {
+interface AIResponseMetadata {
+  requestTimestamp: string;
+  responseTimeMs: number;
+  modelVersion: string;
+  zoomLevel: number;
+  satelliteImageUrl: string;
+}
+
+export function MeasurementWizard({ serviceType, onMeasurementComplete, className, propertyType }: MeasurementWizardProps) {
   const { toast } = useToast();
+  
+  // Training data tracking
+  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionStartTime] = useState(() => Date.now());
+  const [aiResponseMetadata, setAiResponseMetadata] = useState<AIResponseMetadata | null>(null);
   
   // Address state
   const [query, setQuery] = useState("");
@@ -407,6 +427,11 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
         setConfidence(est.confidence || 'medium');
         setMethodology(est.methodology || 'AI satellite analysis');
         
+        // Capture AI response metadata for training data
+        if (data.metadata) {
+          setAiResponseMetadata(data.metadata);
+        }
+        
         toast({
           title: "Analysis Complete",
           description: `AI detected approximately ${est.estimatedSqft.toLocaleString()} sq ft with ${est.confidence} confidence.`,
@@ -429,13 +454,13 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
   const handleAcceptMeasurement = async () => {
     if (!measurement || !selectedCoords || !selectedAddress) return;
     
+    const normalizedAddr = selectedAddress.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
     // Save user adjustments to cache for future use
     try {
-      const normalizedAddr = selectedAddress.toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      
       await supabase
         .from('roof_analysis_cache')
         .update({
@@ -446,6 +471,54 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
         .eq('normalized_address', normalizedAddr);
     } catch (error) {
       console.error("Error saving measurement to cache:", error);
+    }
+    
+    // Log training data for AI model improvement
+    try {
+      await supabase.functions.invoke('log-training-session', {
+        body: {
+          sessionId,
+          address: selectedAddress,
+          normalizedAddress: normalizedAddr,
+          latitude: selectedCoords.lat,
+          longitude: selectedCoords.lng,
+          propertyType: propertyType || null,
+          serviceType,
+          satelliteImageUrl: aiResponseMetadata?.satelliteImageUrl || null,
+          zoomLevel: zoomLevel,
+          aiRequestTimestamp: aiResponseMetadata?.requestTimestamp || null,
+          aiModelVersion: aiResponseMetadata?.modelVersion || 'gemini-2.5-flash',
+          aiEstimatedSqft: visionEstimation?.estimatedSqft || null,
+          aiEstimatedSqftLow: visionEstimation?.estimatedSqftLow || null,
+          aiEstimatedSqftHigh: visionEstimation?.estimatedSqftHigh || null,
+          aiConfidence: visionEstimation?.confidence || null,
+          aiBuildingType: visionEstimation?.buildingType || null,
+          aiRoofShape: visionEstimation?.roofShape || null,
+          aiRoofComplexity: visionEstimation?.roofComplexity || null,
+          aiMethodology: visionEstimation?.methodology || null,
+          aiSegmentBreakdown: visionEstimation?.segmentBreakdown || null,
+          aiPixelEstimate: visionEstimation?.pixelEstimate || null,
+          aiReferenceObjects: visionEstimation?.referenceObjectsUsed || null,
+          aiResponseTimeMs: aiResponseMetadata?.responseTimeMs || null,
+          aiRawResponse: visionEstimation || null,
+          userSelectedPitch: pitchBucket,
+          userSelectedComplexity: complexity,
+          calculatedTrueSqft: measurement.trueSqft,
+          calculatedTotalWithWaste: measurement.totalWithWaste,
+          calculatedSquares: measurement.squares,
+          userUsedManualDrawing: activeTab === 'draw',
+          manualDrawingSqft: activeTab === 'draw' ? baseSqFt : null,
+          finalAcceptedSqft: measurement.totalWithWaste,
+          finalAcceptedSquares: measurement.squares,
+          measurementMethod: activeTab,
+          sessionDurationSeconds: Math.round((Date.now() - sessionStartTime) / 1000),
+          userAgent: navigator.userAgent
+        }
+      });
+      console.log('Training data logged successfully');
+    } catch (error) {
+      console.error("Error logging training data:", error);
+      // Don't block the user flow for training data errors
     }
     
     const result: MeasurementResult = {

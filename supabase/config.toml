@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.send-quiz-results]
 verify_jwt = false
+
+[functions.log-training-session]
+verify_jwt = false
