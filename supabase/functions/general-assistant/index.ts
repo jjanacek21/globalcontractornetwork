@@ -7,24 +7,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Navigation route mapping
+// Navigation route mapping with residential/commercial split
 const navigationRoutes: Record<string, { path: string; description: string }> = {
-  'roofing': { path: '/roofing', description: 'Roofing quotes and estimates' },
-  'roof-coating': { path: '/coating-kings', description: 'Roof coating services' },
-  'windows': { path: '/green-home-solutions', description: 'Impact windows and doors' },
-  'doors': { path: '/green-home-solutions', description: 'Impact windows and doors' },
-  'tree-removal': { path: '/northern-landscaping', description: 'Tree and landscaping services' },
-  'landscaping': { path: '/northern-landscaping', description: 'Landscaping services' },
-  'emergency': { path: '/emergency-mitigation', description: 'Emergency water/storm damage' },
-  'mold': { path: '/emergency-mitigation', description: 'Mold remediation services' },
-  'permits': { path: '/permit-queens', description: 'Permit processing services' },
-  'insurance-claim': { path: '/supplement-kings', description: 'Insurance claim supplements' },
-  'florida-license': { path: '/academy?q=florida+license', description: 'Florida contractor licensing' },
-  'contractor-license': { path: '/academy?category=licensing', description: 'Contractor licensing resources' },
-  'learning-center': { path: '/academy', description: 'Training Academy resources' },
-  'directory': { path: '/directory', description: 'Find verified contractors' },
-  'join': { path: '/join', description: 'Join the contractor network' },
-  'store': { path: '/store', description: 'Merchandise store' },
+  // Roofing - split by property type
+  'roofing': { path: '/roofing', description: 'Roofing Quotes & Estimates' },
+  'roofing-residential': { path: '/roofing?type=residential', description: 'Residential Roof Quote' },
+  'roofing-commercial': { path: '/roofing?type=commercial', description: 'Commercial Roof Quote' },
+  
+  // Roof Coating - split by property type
+  'roof-coating': { path: '/coating-kings', description: 'Roof Coating Services' },
+  'coating-residential': { path: '/coating-kings?propertyType=residential', description: 'Residential Roof Coating Quote' },
+  'coating-commercial': { path: '/coating-kings?propertyType=commercial', description: 'Commercial Roof Coating Quote' },
+  
+  // Windows & Doors
+  'windows': { path: '/green-home-solutions', description: 'Impact Windows Quote' },
+  'windows-residential': { path: '/green-home-solutions?type=residential', description: 'Residential Windows Quote' },
+  'windows-commercial': { path: '/green-home-solutions?type=commercial', description: 'Commercial Windows Quote' },
+  'doors': { path: '/green-home-solutions', description: 'Impact Doors Quote' },
+  
+  // Other services
+  'tree-removal': { path: '/northern-landscaping', description: 'Tree Removal Estimate' },
+  'landscaping': { path: '/northern-landscaping', description: 'Landscaping Services' },
+  'emergency': { path: '/emergency-mitigation', description: 'Emergency Water/Storm Damage' },
+  'mold': { path: '/emergency-mitigation', description: 'Mold Remediation Services' },
+  'permits': { path: '/permit-queens', description: 'Permit Processing Services' },
+  'insurance-claim': { path: '/supplement-kings', description: 'Insurance Claim Supplements' },
+  'florida-license': { path: '/academy?q=florida+license', description: 'Florida Contractor Licensing' },
+  'contractor-license': { path: '/academy?category=licensing', description: 'Contractor Licensing Resources' },
+  'learning-center': { path: '/academy', description: 'Training Academy Resources' },
+  'directory': { path: '/directory', description: 'Find Verified Contractors' },
+  'join': { path: '/join', description: 'Join the Contractor Network' },
+  'store': { path: '/store', description: 'Merchandise Store' },
 };
 
 // AI tools for navigation and contractor matching
@@ -124,45 +137,44 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    const systemPrompt = `You are a helpful AI assistant for a South Florida contractor services platform. You provide expert guidance on:
+    const systemPrompt = `You are a helpful AI assistant for a South Florida contractor services platform. Keep responses SHORT and action-oriented.
 
-**Services We Offer:**
-- **Coating Kings**: Professional roof coating services (silicone, acrylic, elastomeric, polyurea)
-- **Green Home Solutions**: Impact-rated windows and doors for hurricane protection
-- **Emergency Mitigation**: 24/7 water damage, mold remediation, storm cleanup
-- **Northern Landscaping**: Tree removal, stump grinding, landscaping services
-- **Permit Queens**: Permit processing, building department liaison, inspection scheduling
-- **Supplement Kings**: Insurance claim supplements and recoveries
-- **General Roofing**: Full roof replacements, repairs, inspections
-- **Training Academy**: Contractor resources, licensing guides, and educational materials
+**CRITICAL: ALWAYS USE NAVIGATION TOOLS FOR QUOTES**
+When users want ANY quote or estimate, you MUST use navigate_user tool immediately. DO NOT just respond with text.
 
-**NAVIGATION ACTIONS - VERY IMPORTANT:**
-When users want to:
-- Get a quote/estimate for any service → Use navigate_user tool with the appropriate destination
-- Find learning resources, licensing info → Use navigate_user to learning-center or specific resource
-- Find a contractor → Use find_contractors tool
+**PROPERTY TYPE SELECTION - VERY IMPORTANT:**
+For roofing, coating, or window quotes, if user hasn't specified residential or commercial:
+1. Ask: "Is this for a residential or commercial property?"
+2. Then use the appropriate destination:
+   - Residential roof → navigate_user("roofing-residential", "Taking you to our residential roof estimator!")
+   - Commercial roof → navigate_user("roofing-commercial", "Taking you to our commercial roof estimator!")
+   - Residential coating → navigate_user("coating-residential", "Let's get your residential coating quote!")
+   - Commercial coating → navigate_user("coating-commercial", "Taking you to commercial coating options!")
+   - Residential windows → navigate_user("windows-residential", "Let's get your window quote!")
+   - Commercial windows → navigate_user("windows-commercial", "Taking you to commercial window options!")
 
-**Navigation Examples:**
-- "Get me a roof quote" → navigate_user("roofing", "I'll take you to our instant roof estimator!")
-- "Quote for impact windows" → navigate_user("windows", "Let's get you a window quote!")
-- "Tree removal estimate" → navigate_user("tree-removal", "I'll connect you with our tree service team!")
-- "How do I get my Florida license?" → navigate_user("florida-license", "Here are our Florida licensing resources!")
-- "Find me a roofer" → find_contractors("Roofing") and ask about location if needed
+**DIRECT NAVIGATION - When user specifies property type:**
+- "residential roof quote" → navigate_user("roofing-residential", "Taking you to our residential roof estimator!")
+- "commercial roof coating" → navigate_user("coating-commercial", "Here's our commercial coating calculator!")
+- "I need windows for my house" → navigate_user("windows-residential", "Let's get your home's window quote!")
 
-**CONTRACTOR MATCHING:**
-When users want to find contractors:
-1. If category is clear, use find_contractors immediately
-2. Ask about location if they want local results
-3. Present results with ratings and verified status
+**OTHER SERVICES - Navigate immediately:**
+- Tree removal → navigate_user("tree-removal", "I'll connect you with our tree service team!")
+- Emergency/water damage → navigate_user("emergency", "Let me get you emergency help!")
+- Permits → navigate_user("permits", "Taking you to permit services!")
+- Insurance claims → navigate_user("insurance-claim", "Here's our claims supplement team!")
+- Find contractor → Use find_contractors tool
 
-**Guidelines:**
-- Be friendly, professional, and helpful
-- ALWAYS use the navigation tools when users want quotes or resources
-- Provide specific, actionable advice
-- When asked for estimates, give realistic ranges
-- Always recommend professional inspections for major work
-- Emphasize safety and code compliance
-- Keep responses concise but comprehensive
+**Services Available:**
+- Roofing: Replacements, repairs, inspections (residential & commercial)
+- Coating Kings: Silicone, acrylic, elastomeric roof coatings
+- Green Home Solutions: Impact windows & doors
+- Emergency Mitigation: Water damage, mold, storm cleanup
+- Northern Landscaping: Tree removal, stump grinding
+- Permit Queens: Permit processing & inspections
+- Supplement Kings: Insurance claim supplements
+
+Be concise. Always use tools for quotes - never just describe services without navigation.
 
 Current context: ${context || 'General inquiry'}`;
 
@@ -227,9 +239,10 @@ Current context: ${context || 'General inquiry'}`;
             for (const line of lines) {
               if (!line.startsWith('data: ')) continue;
               const jsonStr = line.slice(6).trim();
+              
+              // Don't send [DONE] yet - wait until we process tool calls
               if (jsonStr === '[DONE]') {
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                continue;
+                continue; // Will send [DONE] after loop ends
               }
 
               try {
@@ -237,13 +250,13 @@ Current context: ${context || 'General inquiry'}`;
                 const delta = parsed.choices?.[0]?.delta;
                 finishReason = parsed.choices?.[0]?.finish_reason || finishReason;
 
-                // Handle regular content
+                // Handle regular content - stream it immediately
                 if (delta?.content) {
                   accumulatedContent += delta.content;
                   controller.enqueue(encoder.encode(`data: ${jsonStr}\n\n`));
                 }
 
-                // Handle tool calls
+                // Accumulate tool calls (they come in chunks)
                 if (delta?.tool_calls) {
                   for (const toolCall of delta.tool_calls) {
                     if (toolCall.index !== undefined) {
@@ -266,72 +279,78 @@ Current context: ${context || 'General inquiry'}`;
                     }
                   }
                 }
-
-                // Process completed tool calls
-                if (finishReason === 'tool_calls' && accumulatedToolCalls.length > 0) {
-                  for (const toolCall of accumulatedToolCalls) {
-                    const funcName = toolCall.function.name;
-                    const args = JSON.parse(toolCall.function.arguments || '{}');
-
-                    if (funcName === 'navigate_user') {
-                      const route = navigationRoutes[args.destination];
-                      if (route) {
-                        const actionData = {
-                          type: 'navigate',
-                          path: route.path,
-                          label: route.description,
-                          message: args.message
-                        };
-                        // Send the message content with action
-                        const actionEvent = {
-                          choices: [{
-                            delta: { 
-                              content: args.message,
-                              action: actionData
-                            },
-                            finish_reason: null
-                          }]
-                        };
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(actionEvent)}\n\n`));
-                      }
-                    } else if (funcName === 'find_contractors') {
-                      const contractors = await searchContractors(supabase, args.category, args.location);
-                      const actionData = {
-                        type: 'contractors',
-                        contractors: contractors.slice(0, 3).map((c: any) => ({
-                          id: c.id,
-                          company_name: c.company_name,
-                          category: c.category,
-                          average_rating: c.average_rating,
-                          is_verified: c.is_verified,
-                          phone: c.phone
-                        }))
-                      };
-                      const message = contractors.length > 0 
-                        ? `I found ${contractors.length} ${args.category} contractors for you! Here are the top matches:`
-                        : `I couldn't find any ${args.category} contractors at the moment. Try browsing our directory for more options.`;
-                      
-                      const actionEvent = {
-                        choices: [{
-                          delta: { 
-                            content: message,
-                            action: actionData
-                          },
-                          finish_reason: null
-                        }]
-                      };
-                      controller.enqueue(encoder.encode(`data: ${JSON.stringify(actionEvent)}\n\n`));
-                    }
-                  }
-                  accumulatedToolCalls = [];
-                  finishReason = '';
-                }
               } catch (e) {
-                // Pass through unparseable chunks
-                controller.enqueue(encoder.encode(`${line}\n`));
+                console.error('Parse error:', e);
               }
             }
           }
+
+          // AFTER stream ends, process any accumulated tool calls
+          if (accumulatedToolCalls.length > 0) {
+            console.log('Processing tool calls:', JSON.stringify(accumulatedToolCalls));
+            
+            for (const toolCall of accumulatedToolCalls) {
+              const funcName = toolCall.function?.name;
+              if (!funcName) continue;
+
+              try {
+                const args = JSON.parse(toolCall.function.arguments || '{}');
+                console.log(`Tool call: ${funcName}`, args);
+
+                if (funcName === 'navigate_user') {
+                  const route = navigationRoutes[args.destination];
+                  if (route) {
+                    const actionEvent = {
+                      choices: [{
+                        delta: { 
+                          content: args.message || `Taking you to ${route.description}...`,
+                          action: {
+                            type: 'navigate',
+                            path: route.path,
+                            label: route.description,
+                            message: args.message
+                          }
+                        },
+                        finish_reason: null
+                      }]
+                    };
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(actionEvent)}\n\n`));
+                  }
+                } else if (funcName === 'find_contractors') {
+                  const contractors = await searchContractors(supabase, args.category, args.location);
+                  const message = contractors.length > 0 
+                    ? `I found ${contractors.length} ${args.category} contractors for you! Here are the top matches:`
+                    : `I couldn't find any ${args.category} contractors at the moment. Try browsing our directory.`;
+                  
+                  const actionEvent = {
+                    choices: [{
+                      delta: { 
+                        content: message,
+                        action: {
+                          type: 'contractors',
+                          contractors: contractors.slice(0, 3).map((c: any) => ({
+                            id: c.id,
+                            company_name: c.company_name,
+                            category: c.category,
+                            average_rating: c.average_rating,
+                            is_verified: c.is_verified,
+                            phone: c.phone
+                          }))
+                        }
+                      },
+                      finish_reason: null
+                    }]
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(actionEvent)}\n\n`));
+                }
+              } catch (e) {
+                console.error('Error processing tool call:', e);
+              }
+            }
+          }
+
+          // NOW send [DONE] after all tool calls processed
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         } catch (e) {
           console.error('Stream processing error:', e);
         } finally {
