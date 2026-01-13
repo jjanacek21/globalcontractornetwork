@@ -80,6 +80,21 @@ export const EmergencyLeadForm = () => {
         }).catch(err => console.error('Email confirmation failed:', err));
       }
 
+      // Notify contractor if selected as referral source
+      if (formData.referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: formData.referralContractorId,
+            leadName: formData.name,
+            leadEmail: formData.email,
+            leadPhone: formData.phone,
+            serviceType: formData.service || 'Emergency Services',
+            propertyAddress: 'N/A',
+            leadSource: 'Emergency Mitigation'
+          }
+        }).catch(err => console.error('Contractor referral notification failed:', err));
+      }
+
       setIsSubmitted(true);
       toast({
         title: "Request Submitted!",

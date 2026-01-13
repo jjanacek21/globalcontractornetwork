@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { Link } from "react-router-dom";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 type ServiceType = "roofing" | "windows" | "coatings" | "landscaping" | "emergency" | null;
 
@@ -42,6 +43,8 @@ const GetQuote = () => {
   const [estimateResult, setEstimateResult] = useState<{ low: number; high: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [contactInfo, setContactInfo] = useState({ name: "", email: "", phone: "" });
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
   const [projectCreated, setProjectCreated] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -126,11 +129,26 @@ const GetQuote = () => {
             property_address: address,
             ai_estimate_low: estimateResult?.low,
             ai_estimate_high: estimateResult?.high,
-            project_details: { ...projectDetails, contactInfo },
+            project_details: { ...projectDetails, contactInfo, referralSource, referralContractorId },
             status: "quote_requested",
           });
 
         if (error) throw error;
+
+        // Notify contractor if selected as referral source
+        if (referralContractorId) {
+          supabase.functions.invoke('notify-contractor-referral', {
+            body: {
+              contractorId: referralContractorId,
+              leadName: contactInfo.name,
+              leadEmail: contactInfo.email,
+              leadPhone: contactInfo.phone,
+              serviceType: selectedService || 'General Quote',
+              propertyAddress: address,
+              leadSource: 'Get Quote Page'
+            }
+          }).catch(err => console.error('Contractor referral notification failed:', err));
+        }
       }
       
       setProjectCreated(true);
@@ -518,6 +536,14 @@ const GetQuote = () => {
                       className="pl-10"
                     />
                   </div>
+
+                  {/* Referral Source */}
+                  <ReferralSourceSelect
+                    referralSource={referralSource}
+                    referralContractorId={referralContractorId}
+                    onReferralSourceChange={setReferralSource}
+                    onContractorChange={setReferralContractorId}
+                  />
                 </div>
               </div>
 
