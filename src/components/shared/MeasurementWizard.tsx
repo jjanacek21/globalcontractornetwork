@@ -87,6 +87,16 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
   const draw = useRef<MapboxDraw | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [mapInitialized, setMapInitialized] = useState(false);
+  
+  // AI Satellite Map state (separate from draw map)
+  const aiMapRef = useRef<mapboxgl.Map | null>(null);
+  const aiMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const [aiMapContainerNode, setAiMapContainerNode] = useState<HTMLDivElement | null>(null);
+  const aiMapContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setAiMapContainerNode(node);
+    }
+  }, []);
 
   // Recalculate measurement when inputs change
   useEffect(() => {
@@ -103,7 +113,69 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
     }
   }, [baseSqFt, pitchBucket, complexity, serviceType]);
 
-  // Initialize map only when Draw tab is active AND container is ready
+  // Initialize AI satellite map with draggable marker
+  useEffect(() => {
+    if (activeTab !== "ai" || !aiMapContainerNode || !selectedCoords) return;
+    
+    // Cleanup existing map
+    if (aiMapRef.current) {
+      aiMapRef.current.remove();
+      aiMapRef.current = null;
+    }
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    aiMapRef.current = new mapboxgl.Map({
+      container: aiMapContainerNode,
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      center: [selectedCoords.lng, selectedCoords.lat],
+      zoom: zoomLevel,
+      attributionControl: false,
+    });
+
+    // Add draggable marker
+    const markerEl = document.createElement('div');
+    markerEl.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; cursor: grab;">
+        <div style="width: 40px; height: 40px; border: 3px solid #22c55e; border-radius: 50%; background: rgba(34, 197, 94, 0.2); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%;"></div>
+        </div>
+        <div style="width: 2px; height: 20px; background: #22c55e;"></div>
+      </div>
+    `;
+    
+    aiMarkerRef.current = new mapboxgl.Marker({
+      element: markerEl,
+      draggable: true,
+    })
+      .setLngLat([selectedCoords.lng, selectedCoords.lat])
+      .addTo(aiMapRef.current);
+
+    // Update coordinates when marker is dragged
+    aiMarkerRef.current.on('dragend', () => {
+      const lngLat = aiMarkerRef.current?.getLngLat();
+      if (lngLat) {
+        setSelectedCoords({ lat: lngLat.lat, lng: lngLat.lng });
+      }
+    });
+
+    // Add navigation controls
+    aiMapRef.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+    return () => {
+      aiMapRef.current?.remove();
+      aiMapRef.current = null;
+      aiMarkerRef.current = null;
+    };
+  }, [activeTab, aiMapContainerNode, selectedCoords?.lat, selectedCoords?.lng]);
+
+  // Update AI map zoom when zoom level changes
+  useEffect(() => {
+    if (aiMapRef.current && activeTab === "ai") {
+      aiMapRef.current.setZoom(zoomLevel);
+    }
+  }, [zoomLevel, activeTab]);
+
+  // Initialize draw map only when Draw tab is active AND container is ready
   useEffect(() => {
     if (activeTab !== "draw" || !mapContainerNode || map.current) return;
 
@@ -494,23 +566,17 @@ export function MeasurementWizard({ serviceType, onMeasurementComplete, classNam
                   </Select>
                 </div>
 
-                {/* Satellite Preview */}
+                {/* Interactive Satellite Map with Draggable Marker */}
                 {selectedCoords && (
-                  <div className="relative rounded-lg overflow-hidden border">
-                    <img
-                      src={`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${selectedCoords.lng},${selectedCoords.lat},${zoomLevel},0/600x400@2x?access_token=${MAPBOX_TOKEN}`}
-                      alt="Satellite view of property"
-                      className="w-full h-[300px] object-cover"
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>🛰️ Satellite Preview (Zoom {zoomLevel})</span>
+                      <span className="text-xs">Drag the marker to position over the roof</span>
+                    </div>
+                    <div 
+                      ref={aiMapContainerRef}
+                      className="w-full h-[350px] rounded-lg border overflow-hidden"
                     />
-                    <div className="absolute top-2 left-2 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-medium">
-                      🛰️ Satellite Preview (Zoom {zoomLevel})
-                    </div>
-                    {/* Center crosshair */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-8 h-8 border-2 border-primary rounded-full opacity-70" />
-                      <div className="absolute w-0.5 h-4 bg-primary opacity-70" />
-                      <div className="absolute w-4 h-0.5 bg-primary opacity-70" />
-                    </div>
                   </div>
                 )}
 
