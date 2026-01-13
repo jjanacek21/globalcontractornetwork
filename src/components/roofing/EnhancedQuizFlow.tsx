@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator, Move, Save } from "lucide-react";
+import { Loader2, MapPin, Sparkles, ArrowRight, CheckCircle2, Ruler, Home, Navigation, Satellite, ZoomIn, Calculator, Move, Save, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EnhancedMaterialQuiz } from "./EnhancedMaterialQuiz";
@@ -31,6 +32,7 @@ interface EnhancedQuizFlowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete?: () => void;
+  propertyType?: string | null;
 }
 
 interface MeasurementResult {
@@ -47,7 +49,7 @@ interface MeasurementResult {
 
 type FlowStep = "address" | "analyzing" | "adjustments" | "measurements" | "quiz";
 
-export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQuizFlowProps) {
+export function EnhancedQuizFlow({ open, onOpenChange, onComplete, propertyType }: EnhancedQuizFlowProps) {
   const [step, setStep] = useState<FlowStep>("address");
   const [measurements, setMeasurements] = useState<MeasurementResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -420,6 +422,13 @@ export function EnhancedQuizFlow({ open, onOpenChange, onComplete }: EnhancedQui
             <Sparkles className="h-5 w-5 text-primary" />
             Find Your Perfect Roofing Material
           </DialogTitle>
+          {/* Property Type Badge */}
+          {propertyType && (
+            <Badge variant="outline" className="w-fit">
+              {propertyType === 'commercial' ? <Building2 className="h-3 w-3 mr-1" /> : <Home className="h-3 w-3 mr-1" />}
+              {propertyType === 'commercial' ? 'Commercial' : 'Residential'}
+            </Badge>
+          )}
           <DialogDescription>
             {step === "address" && "Enter your property address to get started"}
             {step === "analyzing" && "Analyzing your roof with AI satellite imagery..."}
