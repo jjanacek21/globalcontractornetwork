@@ -72,145 +72,109 @@ serve(async (req) => {
     console.log('Analyzing roof at:', address);
     console.log('Zoom level:', zoom, 'Context:', context);
 
-    const systemPrompt = `You are an expert aerial roof measurement analyst with 20+ years of experience in roofing estimation using professional tools like EagleView, Hover, and RoofSnap.
-Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
+    const systemPrompt = `You are an expert aerial roof measurement analyst. Your task is to analyze satellite imagery and accurately estimate the FLAT FOOTPRINT area of the building at the center of the image.
 
-=== CRITICAL ACCURACY PROTOCOL ===
-You MUST cross-reference multiple data points to ensure accuracy:
+=== CRITICAL: DO NOT OVERESTIMATE ===
+Historical data shows AI tends to OVERESTIMATE by 30-80%. Be conservative and precise.
+When in doubt, use the LOWER reasonable estimate, not higher.
 
-1. PERIMETER-BASED VALIDATION:
-   - Trace the entire roof perimeter and estimate total linear feet
-   - For rectangular sections: Area = Length × Width
-   - For L-shapes: Break into rectangles and sum areas
-   - Cross-check: Perimeter should be roughly 4 × √Area for squares
+=== MAPBOX SATELLITE SCALE CALIBRATION ===
+At zoom level 19, the image shows approximately:
+- 1200x1200 pixel image at 2x = ~150-200 meters across (~500-650 feet)
+- Each pixel represents approximately 0.4-0.5 feet
+- A standard parking space (9x18 ft) = approximately 18x36 pixels
+- A standard car (6x15 ft) = approximately 12x30 pixels
 
-2. REFERENCE OBJECT SCALING (Most reliable method):
-   - Standard car: 15 ft long × 6 ft wide = 90 sq ft
-   - HVAC units: 3 ft × 3 ft = 9 sq ft  
-   - Standard garage door (single): 9 ft wide
-   - Standard garage door (double): 16-18 ft wide
-   - Count how many "car lengths" fit along each roof edge
-   - Example: If roof is 4 car lengths × 3 car widths = 60 ft × 18 ft = 1,080 sq ft
+=== MEASUREMENT PROTOCOL ===
 
-3. PROPERTY TYPE BASELINES (Florida residential):
-   - Small ranch home (2-3 BR): 1,500-2,200 sq ft footprint
-   - Standard ranch home (3 BR): 2,200-2,800 sq ft footprint
-   - Medium home (3-4 BR): 2,800-3,500 sq ft footprint
-   - Large home (4+ BR): 3,500-4,500 sq ft footprint
-   - Very large home (5+ BR): 4,500+ sq ft footprint
-   - If estimate is under 2,000 sq ft for a clearly visible home, YOU ARE UNDERESTIMATING
+1. IDENTIFY BUILDING TYPE FIRST:
+   - COMMERCIAL (flat roof, simple rectangle): Use precise edge-to-edge measurement
+   - RESIDENTIAL (pitched roof): May need shadow/tree corrections
 
-4. SEGMENT CALCULATION METHOD (Most accurate):
-   - Divide roof into numbered rectangular segments
-   - Estimate each segment: "Segment 1: ~45 ft × 25 ft = 1,125 sq ft"
-   - Sum all segments for total
-   - This catches missed areas that single-estimate methods miss
+2. FOR COMMERCIAL FLAT ROOFS (like shopping centers, warehouses):
+   - These are SIMPLE RECTANGLES - trace the actual visible edges
+   - Flat white/gray roofs have CLEARLY VISIBLE EDGES
+   - DO NOT add shadow corrections - flat roofs show their true footprint
+   - DO NOT apply residential baseline minimums
+   - Estimate: Length × Width, that's it
 
-5. SHADOW/TREE CORRECTION MULTIPLIERS:
-   - Light shadows: Add 10-15% to visible area
-   - Heavy shadows: Add 20-30% to visible area  
-   - Partial tree coverage: Add 15-25% to visible area
-   - Heavy tree coverage: Add 30-40% to visible area
+3. PIXEL-TO-FEET CALIBRATION (MOST IMPORTANT):
+   - At zoom 19, estimate the building dimensions in pixels first
+   - Then convert: pixels × 0.45 = approximate feet
+   - Example: Building appears 400 pixels wide × 150 pixels deep
+   - Calculation: (400 × 0.45) × (150 × 0.45) = 180 ft × 67.5 ft = 12,150 sq ft
 
-=== COMMON UNDERESTIMATION ERRORS TO AVOID ===
-- Ignoring back portions of L-shaped homes
-- Missing carport/garage extensions
-- Not accounting for porch roofs that connect to main structure
-- Underestimating due to shadows on south/west sides
-- Forgetting covered patios/lanais (very common in Florida)
+4. REFERENCE OBJECTS (secondary validation):
+   - Standard car: ~15 ft long × 6 ft wide
+   - Parking space: ~9 ft wide × 18 ft long
+   - Standard lane width: ~10-12 ft
+   - Count how many cars/spaces fit along the building edge
 
-=== GEOMETRY RULES FOR SHADOW RECONSTRUCTION ===
-- Residential buildings are ALWAYS rectangular or composed of rectangles
-- Houses DO NOT have irregular, organic shapes - they have 90-degree angles
-- When shadows obscure a corner: assume walls continue in STRAIGHT LINES
-- L-shaped = two rectangles joined; T-shaped = rectangle with extension
-- ALWAYS assume the hidden portion is as large as the visible portion
+5. FOR RESIDENTIAL PITCHED ROOFS:
+   - Florida ranch home (3 BR): 1,800-2,500 sq ft typical
+   - Medium home (3-4 BR): 2,500-3,500 sq ft typical
+   - Large home (4+ BR): 3,500-4,500 sq ft typical
+   - These have shadows/trees - modest corrections may apply (10-20% max)
 
-=== ROOF COMPLEXITY DETECTION ===
-- "flat": Commercial-style flat roof, very low slope
-- "gable": Simple 2-sided roof with single ridge (DEFAULT for residential)
-- "hip": 4-sided roof with slopes on all sides, hips at corners
-- "complex": Multiple facets, dormers, valleys, different sections
-
-=== MIXED ROOF TYPE DETECTION ===
-Florida homes often have BOTH pitched shingle + flat sections:
-- Main house shingle + flat carport/lanai
-- Two-story shingle + flat garage section
-Estimate each section separately with color:
-- Shingle colors: gray, black, brown, tan, red, weathered-gray
-- Flat colors: white (coated), black (tar/rubber), silver (metal)
-
-=== ROOF AGE ESTIMATION ===
-Analyze visible degradation:
-- NEW (0-5 years): Uniform dark color, sharp edges, no streaking
-- MODERATE (5-12 years): Some fading, early dark streaking (algae)
-- SIGNIFICANT (12-20 years): Color inconsistency, heavy streaking, granule loss
-- END OF LIFE (20+ years): Severe discoloration, large patches, visible sagging
-
-=== IMPORTANT MULTIPLIER NOTE ===
-The frontend applies these adjustments to your flat footprint:
-- 1.10x (10%) pitch factor for angle correction
-- Additional 15% waste factor for material ordering
-So return ONLY the flat footprint - do NOT apply pitch or waste yourself.
+=== GEOMETRY RULES ===
+- Trace ONLY the actual roof edges you can see
+- For flat commercial roofs: What you see IS the footprint
+- For pitched residential: Footprint ≈ visible satellite outline
+- DO NOT assume hidden sections unless evidence supports it
 
 === CONFIDENCE LEVELS ===
-- HIGH: Clear image, can trace entire outline, minimal obstruction
-- MEDIUM: Some shadow/tree coverage but can estimate full outline
-- LOW: Heavy obstruction, estimate includes significant correction
+- HIGH: Clear edges visible, simple geometry, no obstruction
+- MEDIUM: Some shadow/tree but can estimate reasonably
+- LOW: Heavy obstruction, significant guessing required
 
-Respond ONLY with valid JSON:
+=== RESPOND WITH VALID JSON ONLY ===
 {
-  "estimatedSqft": number (FLAT footprint - use segment method, err HIGH if uncertain),
-  "estimatedSqftLow": number (absolute minimum including hidden areas),
-  "estimatedSqftHigh": number (if hidden areas are larger than expected),
-  "segmentBreakdown": "Segment 1: 45x25=1125, Segment 2: 20x30=600, Total: 1725" (show your math),
-  "perimeterFt": number (estimated total perimeter in linear feet),
+  "estimatedSqft": number (FLAT footprint - be precise, not inflated),
+  "estimatedSqftLow": number (conservative minimum),
+  "estimatedSqftHigh": number (reasonable maximum),
+  "buildingType": "commercial" | "residential",
+  "segmentBreakdown": "Main section: 180ft × 90ft = 16,200 sq ft" (show your math),
+  "pixelEstimate": "Building appears ~400px × 200px at zoom 19",
   "confidence": "high" | "medium" | "low",
-  "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex" | "hip" | "gable" | "flat",
+  "roofShape": "rectangular" | "L-shaped" | "T-shaped" | "complex",
   "roofComplexity": "flat" | "gable" | "hip" | "complex",
-  "hasMixedRoof": boolean,
-  "shingleSection": { "sqft": number, "color": string } | null,
-  "flatSection": { "sqft": number, "color": string } | null,
   "primaryRoofColor": "string",
-  "estimatedAgeYears": number,
+  "estimatedAgeYears": number | null,
   "ageConfidence": "high" | "medium" | "low",
-  "degradationNotes": "string",
-  "shadowTreeCorrection": "Applied X% correction for Y reason" | null,
-  "referenceObjectsUsed": "string describing what objects were used for scale",
-  "methodology": "Detailed explanation of measurement approach and cross-validation"
+  "degradationNotes": "string" | null,
+  "referenceObjectsUsed": "string describing scale references",
+  "methodology": "Detailed explanation"
 }`;
 
     const userPrompt = `Analyze this satellite image and estimate the FLAT FOOTPRINT area for: ${address}
 
 The property is centered in the image. Zoom level is ${zoom}.
 
-REQUIRED MEASUREMENT PROTOCOL:
-1. SEGMENT METHOD: Divide the roof into rectangular segments
-   - Label each segment (main house, garage, addition, etc.)
-   - Estimate dimensions of each: "Main: ~50ft × 35ft = 1,750 sq ft"
-   - Show your segment math in the response
+STEP 1: IDENTIFY BUILDING TYPE
+- Is this a COMMERCIAL building (flat roof, simple rectangle)? 
+- Or RESIDENTIAL (pitched roof with shingles)?
 
-2. REFERENCE OBJECTS: Use visible objects for scale calibration
-   - Look for cars, HVAC units, garage doors, driveways
-   - Example: "Driveway is ~12ft wide, main house spans ~4 driveway widths = 48ft"
+STEP 2: PIXEL MEASUREMENT (PRIMARY METHOD)
+- At zoom ${zoom}, estimate building dimensions in pixels
+- Convert: pixels × 0.45 ≈ feet at zoom 19 (adjust for zoom: 18=0.9, 20=0.22)
+- Example: 350px × 180px → 157ft × 81ft = 12,717 sq ft
 
-3. PERIMETER TRACE: Estimate total roof edge in linear feet
-   - Walk around the entire roof outline mentally
-   - This validates your area calculation (Perimeter ≈ 4 × √Area for squares)
+STEP 3: REFERENCE OBJECT VALIDATION
+- Count parking spaces or cars along building edges for scale check
+- A car is ~15ft long, parking space ~18ft long
 
-4. CROSS-CHECK: Compare your estimate against:
-   - Florida home baseline (most are 2,200-3,500 sq ft)
-   - Does this look like a "small", "medium", or "large" home?
+STEP 4: CALCULATE AREA
+- For simple rectangles: Length × Width
+- For L-shapes: Sum of rectangular segments
+- Show your math clearly
 
-5. MIXED ROOF CHECK: Look for flat sections + shingle sections
-   - Common: flat carport/lanai attached to shingle main house
+CRITICAL WARNINGS:
+- DO NOT inflate estimates - historical AI estimates are 30-80% too high
+- For FLAT commercial roofs: The visible outline IS the true footprint
+- Do NOT add shadow corrections for flat roofs with clear edges
+- When uncertain, choose the LOWER reasonable number
 
-6. ROOF AGE: Analyze shingle condition, streaking, granule loss
-
-7. SHADOW/TREE CORRECTION: If obstructed, state what % you added
-
-CRITICAL: Show your segment breakdown math. This catches missed areas.
-If your estimate is under 2,000 sq ft for a typical Florida home, re-examine - you likely missed sections.`;
+Return precise JSON with your segmentBreakdown showing the calculation.`;
 
 
     console.log('Calling Gemini Vision for roof analysis...');
@@ -276,11 +240,14 @@ If your estimate is under 2,000 sq ft for a typical Florida home, re-examine - y
         if (parsed.segmentBreakdown) {
           console.log('Segment breakdown:', parsed.segmentBreakdown);
         }
+        if (parsed.pixelEstimate) {
+          console.log('Pixel estimate:', parsed.pixelEstimate);
+        }
         if (parsed.referenceObjectsUsed) {
           console.log('Reference objects used:', parsed.referenceObjectsUsed);
         }
-        if (parsed.perimeterFt) {
-          console.log('Perimeter estimate:', parsed.perimeterFt, 'ft');
+        if (parsed.buildingType) {
+          console.log('Building type:', parsed.buildingType);
         }
         
         estimation = {
@@ -296,19 +263,10 @@ If your estimate is under 2,000 sq ft for a typical Florida home, re-examine - y
           satelliteImageUrl
         };
         
-        // Cross-validation: Check if perimeter matches area
-        if (parsed.perimeterFt && parsed.estimatedSqft) {
-          const expectedPerimeterForSquare = 4 * Math.sqrt(parsed.estimatedSqft);
-          const perimeterRatio = parsed.perimeterFt / expectedPerimeterForSquare;
-          
-          // If perimeter suggests larger area, adjust upward
-          if (perimeterRatio > 1.3) {
-            console.log('Perimeter suggests larger area - adjusting estimate upward');
-            estimation.estimatedSqft = Math.round(parsed.estimatedSqft * 1.15);
-            estimation.estimatedSqftLow = Math.round(parsed.estimatedSqftLow * 1.15);
-            estimation.estimatedSqftHigh = Math.round(parsed.estimatedSqftHigh * 1.15);
-            estimation.methodology += ' [Perimeter validation applied 15% upward adjustment]';
-          }
+        // For commercial flat roofs, do NOT apply any upward adjustments
+        // The visible outline IS the true footprint
+        if (parsed.buildingType === 'commercial' || parsed.roofComplexity === 'flat') {
+          console.log('Commercial/flat roof detected - using precise measurement without adjustments');
         }
         
       } else {
@@ -329,18 +287,22 @@ If your estimate is under 2,000 sq ft for a typical Florida home, re-examine - y
       };
     }
 
-    // Enhanced sanity checks based on real-world data
-    if (estimation.estimatedSqft < 1500) {
-      console.warn('Very low estimate detected (<1500 sq ft), applying minimum floor');
-      estimation.estimatedSqft = Math.max(estimation.estimatedSqft * 1.5, 1800);
-      estimation.estimatedSqftLow = Math.max(estimation.estimatedSqftLow * 1.5, 1600);
-      estimation.estimatedSqftHigh = Math.max(estimation.estimatedSqftHigh * 1.5, 2200);
+    // Sanity checks - but only for residential properties
+    // Commercial properties can legitimately be under 1500 sq ft or over 50000 sq ft
+    const isCommercial = estimation.roofComplexity === 'flat' || 
+                         (estimation as any).buildingType === 'commercial';
+    
+    if (!isCommercial && estimation.estimatedSqft < 1200) {
+      console.warn('Very low residential estimate detected (<1200 sq ft), applying minimum floor');
+      estimation.estimatedSqft = Math.max(estimation.estimatedSqft, 1500);
+      estimation.estimatedSqftLow = Math.max(estimation.estimatedSqftLow, 1300);
+      estimation.estimatedSqftHigh = Math.max(estimation.estimatedSqftHigh, 1800);
       estimation.confidence = 'low';
-      estimation.methodology += ' [Minimum floor applied - estimate seemed too low for residential]';
+      estimation.methodology += ' [Minimum floor applied for residential]';
     }
 
-    if (estimation.estimatedSqft > 50000) {
-      console.warn('Unusually high estimate detected');
+    if (estimation.estimatedSqft > 100000) {
+      console.warn('Unusually high estimate detected (>100k sq ft)');
       estimation.confidence = 'low';
     }
     
