@@ -1,8 +1,26 @@
 import { useState, useCallback } from 'react';
 
+export interface ContractorMatch {
+  id: string;
+  company_name: string;
+  category: string;
+  average_rating: number | null;
+  is_verified: boolean;
+  phone?: string;
+}
+
+export interface NavigationAction {
+  type: 'navigate' | 'contractors';
+  path?: string;
+  label?: string;
+  message?: string;
+  contractors?: ContractorMatch[];
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  action?: NavigationAction;
 }
 
 interface UseAIChatOptions {
@@ -22,17 +40,21 @@ export function useAIChat({ functionName, onError }: UseAIChatOptions) {
     setIsLoading(true);
 
     let assistantContent = '';
+    let currentAction: NavigationAction | undefined;
 
-    const updateAssistant = (chunk: string) => {
+    const updateAssistant = (chunk: string, action?: NavigationAction) => {
       assistantContent += chunk;
+      if (action) {
+        currentAction = action;
+      }
       setMessages(prev => {
         const last = prev[prev.length - 1];
         if (last?.role === 'assistant') {
           return prev.map((m, i) => 
-            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+            i === prev.length - 1 ? { ...m, content: assistantContent, action: currentAction } : m
           );
         }
-        return [...prev, { role: 'assistant', content: assistantContent }];
+        return [...prev, { role: 'assistant', content: assistantContent, action: currentAction }];
       });
     };
 
@@ -84,8 +106,12 @@ export function useAIChat({ functionName, onError }: UseAIChatOptions) {
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) updateAssistant(content);
+            const delta = parsed.choices?.[0]?.delta;
+            const content = delta?.content as string | undefined;
+            const action = delta?.action as NavigationAction | undefined;
+            
+            if (content) updateAssistant(content, action);
+            else if (action) updateAssistant('', action);
           } catch {
             textBuffer = line + '\n' + textBuffer;
             break;
@@ -104,8 +130,11 @@ export function useAIChat({ functionName, onError }: UseAIChatOptions) {
           if (jsonStr === '[DONE]') continue;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) updateAssistant(content);
+            const delta = parsed.choices?.[0]?.delta;
+            const content = delta?.content as string | undefined;
+            const action = delta?.action as NavigationAction | undefined;
+            if (content) updateAssistant(content, action);
+            else if (action) updateAssistant('', action);
           } catch { /* ignore */ }
         }
       }

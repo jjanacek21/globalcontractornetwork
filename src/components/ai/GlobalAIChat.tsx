@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles, Trash2 } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, Trash2, Mic, MicOff, ArrowRight, Star, CheckCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAIChat, Message } from '@/hooks/useAIChat';
+import { Badge } from '@/components/ui/badge';
+import { useAIChat, Message, NavigationAction } from '@/hooks/useAIChat';
 import { useToast } from '@/hooks/use-toast';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Card3D } from '@/components/crm-ui/Card3D';
+import { cn } from '@/lib/utils';
 
 const getContextFromPath = (pathname: string): { name: string; description: string; questions: string[] } => {
   if (pathname.includes('coating-kings')) {
@@ -71,13 +74,27 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
   };
 };
 
+// Quick action chips for common requests
+const quickActions = [
+  { emoji: '🏠', label: 'Roof Quote', msg: 'Get a quote for my roof' },
+  { emoji: '🪟', label: 'Windows', msg: 'Get a quote for impact windows' },
+  { emoji: '🌳', label: 'Tree Service', msg: 'Get a quote for tree removal' },
+  { emoji: '📋', label: 'Get Licensed', msg: 'How do I get my Florida contractor license?' },
+  { emoji: '🔍', label: 'Find Contractor', msg: 'Help me find a contractor' },
+  { emoji: '🚨', label: 'Emergency', msg: 'I have water damage, help!' },
+];
+
 export function GlobalAIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const context = getContextFromPath(location.pathname);
   
@@ -92,6 +109,47 @@ export function GlobalAIChat() {
     },
   });
 
+  // Initialize Web Speech API
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+      
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        setInput(transcript);
+        
+        // Auto-send on final result
+        if (event.results[event.results.length - 1].isFinal) {
+          setIsListening(false);
+          if (transcript.trim()) {
+            sendMessage(transcript);
+            setInput('');
+          }
+        }
+      };
+      
+      recognitionRef.current.onend = () => setIsListening(false);
+      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          toast({
+            title: 'Microphone Access Denied',
+            description: 'Please allow microphone access to use voice input.',
+            variant: 'destructive',
+          });
+        }
+      };
+    }
+  }, [sendMessage, toast]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -101,6 +159,21 @@ export function GlobalAIChat() {
       inputRef.current?.focus();
     }
   }, [isOpen]);
+
+  const toggleVoice = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {
+        console.error('Failed to start speech recognition:', e);
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +185,84 @@ export function GlobalAIChat() {
 
   const handleQuickQuestion = (question: string) => {
     sendMessage(question);
+  };
+
+  const handleNavigate = (path: string) => {
+    setIsOpen(false);
+    navigate(path);
+  };
+
+  const renderAction = (action: NavigationAction) => {
+    if (action.type === 'navigate' && action.path) {
+      return (
+        <Card3D className="mt-3 p-3 bg-primary/5 border-primary/20" tiltIntensity={5}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <ArrowRight className="w-4 h-4 text-primary flex-shrink-0" />
+              <span className="text-sm font-medium truncate">{action.label}</span>
+            </div>
+            <Button 
+              size="sm" 
+              onClick={() => handleNavigate(action.path!)}
+              className="gap-1 flex-shrink-0"
+            >
+              Go <ExternalLink className="w-3 h-3" />
+            </Button>
+          </div>
+        </Card3D>
+      );
+    }
+
+    if (action.type === 'contractors' && action.contractors && action.contractors.length > 0) {
+      return (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-muted-foreground font-medium">Top Matches:</p>
+          {action.contractors.map((contractor) => (
+            <Card3D key={contractor.id} className="p-3 bg-muted/50" tiltIntensity={3}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm truncate">{contractor.company_name}</span>
+                    {contractor.is_verified && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                        <CheckCircle className="w-3 h-3 mr-0.5" /> Verified
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                    <span>{contractor.category}</span>
+                    {contractor.average_rating && (
+                      <span className="flex items-center gap-0.5">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        {contractor.average_rating.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleNavigate(`/directory?contractor=${contractor.id}`)}
+                  className="flex-shrink-0"
+                >
+                  View
+                </Button>
+              </div>
+            </Card3D>
+          ))}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full text-xs"
+            onClick={() => handleNavigate('/directory')}
+          >
+            Browse all contractors <ArrowRight className="w-3 h-3 ml-1" />
+          </Button>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -160,8 +311,22 @@ export function GlobalAIChat() {
                 <p className="text-sm text-muted-foreground text-center">
                   Hi! I'm your AI assistant. How can I help you today?
                 </p>
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium">Quick questions:</p>
+                
+                {/* Quick Action Chips */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {quickActions.map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleQuickQuestion(action.msg)}
+                      className="px-3 py-1.5 text-xs bg-muted rounded-full hover:bg-primary/10 transition-colors whitespace-nowrap"
+                    >
+                      {action.emoji} {action.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <p className="text-xs text-muted-foreground font-medium">Or try these:</p>
                   {context.questions.map((question, i) => (
                     <button
                       key={i}
@@ -181,13 +346,15 @@ export function GlobalAIChat() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                      className={cn(
+                        "max-w-[85%] rounded-2xl px-4 py-2.5",
                         message.role === 'user'
                           ? 'bg-primary text-primary-foreground rounded-br-md'
                           : 'bg-muted rounded-bl-md'
-                      }`}
+                      )}
                     >
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.action && renderAction(message.action)}
                     </div>
                   </div>
                 ))}
@@ -214,10 +381,22 @@ export function GlobalAIChat() {
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={isListening ? "Listening..." : "Type or speak..."}
                 disabled={isLoading}
-                className="flex-1"
+                className={cn("flex-1", isListening && "border-primary ring-2 ring-primary/30 animate-pulse")}
               />
+              {speechSupported && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={isListening ? "destructive" : "outline"}
+                  onClick={toggleVoice}
+                  disabled={isLoading}
+                  title={isListening ? "Stop listening" : "Start voice input"}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
               <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
                 <Send className="w-4 h-4" />
               </Button>
