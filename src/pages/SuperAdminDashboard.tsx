@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck, Lightbulb, GraduationCap
+  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck, Lightbulb, GraduationCap, Brain, CheckCircle2, FileUp
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -26,6 +26,9 @@ import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess"
 import LoginRequestsTable from "@/components/admin/LoginRequestsTable";
 import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
 import ReferralsManagement from "@/components/admin/ReferralsManagement";
+import AITrainingAnalytics from "@/components/admin/AITrainingAnalytics";
+import TrainingDataVerification from "@/components/admin/TrainingDataVerification";
+import ReportUploadCenter from "@/components/admin/ReportUploadCenter";
 import ResourcesManagement from "@/components/admin/ResourcesManagement";
 
 interface UnifiedLead {
@@ -510,6 +513,9 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="referrals" className="gap-2"><Lightbulb className="h-4 w-4" />Referrals</TabsTrigger>
                 <TabsTrigger value="resources" className="gap-2"><GraduationCap className="h-4 w-4" />Academy Resources</TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
+                <TabsTrigger value="ai-training" className="gap-2"><Brain className="h-4 w-4" />AI Training</TabsTrigger>
+                <TabsTrigger value="ground-truth" className="gap-2"><CheckCircle2 className="h-4 w-4" />Ground Truth</TabsTrigger>
+                <TabsTrigger value="report-upload" className="gap-2"><FileUp className="h-4 w-4" />Report Upload</TabsTrigger>
               </TabsList>
 
               <TabsContent value="pending">
@@ -646,6 +652,18 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="superadmins">
                 <SuperAdminsTable />
+              </TabsContent>
+
+              <TabsContent value="ai-training">
+                <AITrainingAnalytics />
+              </TabsContent>
+
+              <TabsContent value="ground-truth">
+                <TrainingDataVerification />
+              </TabsContent>
+
+              <TabsContent value="report-upload">
+                <ReportUploadCenter />
               </TabsContent>
             </Tabs>
           </CardContent>

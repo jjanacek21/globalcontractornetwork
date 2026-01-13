@@ -105,6 +105,11 @@ export type Database = {
           normalized_address: string
           property_type: string | null
           quality_notes: string | null
+          report_parsed_data: Json | null
+          report_type: string | null
+          report_uploaded_at: string | null
+          report_uploaded_by: string | null
+          report_url: string | null
           satellite_image_url: string | null
           service_type: string
           session_duration_seconds: number | null
@@ -157,6 +162,11 @@ export type Database = {
           normalized_address: string
           property_type?: string | null
           quality_notes?: string | null
+          report_parsed_data?: Json | null
+          report_type?: string | null
+          report_uploaded_at?: string | null
+          report_uploaded_by?: string | null
+          report_url?: string | null
           satellite_image_url?: string | null
           service_type: string
           session_duration_seconds?: number | null
@@ -209,6 +219,11 @@ export type Database = {
           normalized_address?: string
           property_type?: string | null
           quality_notes?: string | null
+          report_parsed_data?: Json | null
+          report_type?: string | null
+          report_uploaded_at?: string | null
+          report_uploaded_by?: string | null
+          report_url?: string | null
           satellite_image_url?: string | null
           service_type?: string
           session_duration_seconds?: number | null
