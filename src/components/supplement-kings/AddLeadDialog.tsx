@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 interface AddLeadDialogProps {
   open: boolean;
@@ -19,6 +20,8 @@ interface AddLeadDialogProps {
 export function AddLeadDialog({ open, onOpenChange, onSuccess, contractorId }: AddLeadDialogProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customer_name: "",
@@ -46,10 +49,27 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess, contractorId }: A
         .insert({
           ...formData,
           contractor_id: contractorId,
-          date_of_loss: formData.date_of_loss || null
+          date_of_loss: formData.date_of_loss || null,
+          referral_source: referralSource || null,
+          referral_contractor_id: referralContractorId || null,
         });
 
       if (error) throw error;
+
+      // Notify contractor of new referral if applicable
+      if (referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: referralContractorId,
+            leadName: formData.customer_name,
+            leadEmail: formData.customer_email,
+            leadPhone: formData.customer_phone,
+            serviceType: formData.claim_type || 'Insurance Supplement',
+            propertyAddress: `${formData.property_address}, ${formData.property_city}, ${formData.property_state} ${formData.property_zip}`,
+            leadSource: 'Supplement Kings'
+          }
+        }).catch(err => console.error('Referral notification failed:', err));
+      }
 
       toast({
         title: "Lead submitted!",
@@ -71,6 +91,8 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess, contractorId }: A
         urgency: "standard",
         notes: ""
       });
+      setReferralSource("");
+      setReferralContractorId(null);
 
       onSuccess();
       onOpenChange(false);
@@ -247,6 +269,18 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess, contractorId }: A
                 />
               </div>
             </div>
+          </div>
+
+          {/* Referral Source */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-white border-b border-slate-700 pb-2">Referral Information</h3>
+            <ReferralSourceSelect
+              referralSource={referralSource}
+              referralContractorId={referralContractorId}
+              onReferralSourceChange={setReferralSource}
+              onContractorChange={setReferralContractorId}
+              className="[&_label]:text-slate-300 [&_input]:bg-slate-800 [&_input]:border-slate-700 [&_input]:text-white [&_button]:bg-slate-800 [&_button]:border-slate-700 [&_button]:text-white"
+            />
           </div>
 
           {/* Notes */}

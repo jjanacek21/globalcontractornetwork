@@ -19,6 +19,7 @@ import { RoofingProductsGuide } from "@/components/roofing/RoofingProductsGuide"
 import { FinancingCalculator } from "@/components/roofing/FinancingCalculator";
 import { RoofColorVisualizer } from "@/components/roofing/RoofColorVisualizer";
 import { WarrantyComparison } from "@/components/roofing/WarrantyComparison";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 const roofingPackages: RoofingPackage[] = [
   {
@@ -160,6 +161,8 @@ const Roofing = () => {
     property_address: "",
     message: ""
   });
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
   const [pendingQuote, setPendingQuote] = useState<{
     package: RoofingPackage;
     estimate: any;
@@ -220,7 +223,9 @@ const Roofing = () => {
             email: formData.email,
             phone: formData.phone,
             property_address: formData.property_address,
-            message: formData.message
+            message: formData.message,
+            referral_source: referralSource || null,
+            referral_contractor_id: referralContractorId || null,
           }
         ]);
 
@@ -242,6 +247,21 @@ const Roofing = () => {
         }
       }).catch(err => console.error('Telegram notification failed:', err));
 
+      // Notify contractor of new referral if applicable
+      if (referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: referralContractorId,
+            leadName: formData.name,
+            leadEmail: formData.email,
+            leadPhone: formData.phone,
+            serviceType: pendingQuote?.package.name || 'Roofing',
+            propertyAddress: formData.property_address,
+            leadSource: 'Roofing Services'
+          }
+        }).catch(err => console.error('Referral notification failed:', err));
+      }
+
       toast.success("Request submitted! We'll contact you soon.");
       setQuoteDialogOpen(false);
       setPendingQuote(null);
@@ -252,6 +272,8 @@ const Roofing = () => {
         property_address: "",
         message: ""
       });
+      setReferralSource("");
+      setReferralContractorId(null);
     } catch (error) {
       console.error("Error submitting request:", error);
       toast.error("Failed to submit request. Please try again.");
@@ -449,6 +471,12 @@ const Roofing = () => {
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               />
             </div>
+            <ReferralSourceSelect
+              referralSource={referralSource}
+              referralContractorId={referralContractorId}
+              onReferralSourceChange={setReferralSource}
+              onContractorChange={setReferralContractorId}
+            />
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting} className="flex-1">
                 {submitting ? "Submitting..." : "Submit Request"}

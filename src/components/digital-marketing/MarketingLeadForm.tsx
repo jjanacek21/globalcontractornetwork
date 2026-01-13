@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, Phone, Mail, MapPin } from "lucide-react";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 const serviceInterests = [
   "Google/YouTube Ads",
@@ -42,6 +43,8 @@ const budgetRanges = [
 
 export function MarketingLeadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -82,6 +85,8 @@ export function MarketingLeadForm() {
           message: formData.message || null,
           user_id: userId,
           email_normalized: emailNormalized,
+          referral_source: referralSource || null,
+          referral_contractor_id: referralContractorId || null,
         });
 
       if (error) throw error;
@@ -112,6 +117,21 @@ export function MarketingLeadForm() {
         }
       }).catch(err => console.error('Email confirmation failed:', err));
 
+      // Notify contractor of new referral if applicable
+      if (referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: referralContractorId,
+            leadName: formData.name,
+            leadEmail: formData.email,
+            leadPhone: formData.phone,
+            serviceType: formData.service_interest || 'Marketing Consultation',
+            propertyAddress: 'N/A',
+            leadSource: 'Digital Marketing'
+          }
+        }).catch(err => console.error('Referral notification failed:', err));
+      }
+
       toast.success("Thank you! We'll be in touch within 24 hours.");
       setFormData({
         name: "",
@@ -122,6 +142,8 @@ export function MarketingLeadForm() {
         budget_range: "",
         message: "",
       });
+      setReferralSource("");
+      setReferralContractorId(null);
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("Something went wrong. Please try again.");
@@ -284,6 +306,13 @@ export function MarketingLeadForm() {
                     </Select>
                   </div>
                 </div>
+
+                <ReferralSourceSelect
+                  referralSource={referralSource}
+                  referralContractorId={referralContractorId}
+                  onReferralSourceChange={setReferralSource}
+                  onContractorChange={setReferralContractorId}
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="message">Tell us about your goals</Label>

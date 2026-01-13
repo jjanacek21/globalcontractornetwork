@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { resolveUserForSubmission } from "@/lib/userLinking";
+import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
 const certificationTiers = [
   { name: "Basic", price: 599, features: ["Visual inspection", "Basic documentation", "Safety checklist", "Email report"] },
@@ -28,6 +29,8 @@ const maintenanceTiers = [
 export default function PrepYourProperty() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState("");
+  const [referralSource, setReferralSource] = useState("");
+  const [referralContractorId, setReferralContractorId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", property_address: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
@@ -54,14 +57,33 @@ export default function PrepYourProperty() {
         message: `${selectedTier} tier request: ${formData.message}`,
         user_id: userId,
         email_normalized: emailNormalized,
+        referral_source: referralSource || null,
+        referral_contractor_id: referralContractorId || null,
       });
 
       if (error) {
         toast({ title: "Error", description: "Failed to submit request", variant: "destructive" });
       } else {
+        // Notify contractor of new referral if applicable
+        if (referralContractorId) {
+          supabase.functions.invoke('notify-contractor-referral', {
+            body: {
+              contractorId: referralContractorId,
+              leadName: formData.name,
+              leadEmail: formData.email,
+              leadPhone: formData.phone,
+              serviceType: selectedTier,
+              propertyAddress: formData.property_address,
+              leadSource: 'Prep Your Property'
+            }
+          }).catch(err => console.error('Referral notification failed:', err));
+        }
+
         toast({ title: "Success", description: "We'll contact you within 24 hours!" });
         setDialogOpen(false);
         setFormData({ name: "", email: "", phone: "", property_address: "", message: "" });
+        setReferralSource("");
+        setReferralContractorId(null);
       }
     } catch (err) {
       toast({ title: "Error", description: "Failed to submit request", variant: "destructive" });
@@ -142,7 +164,7 @@ export default function PrepYourProperty() {
       </main>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Service: {selectedTier}</DialogTitle>
             <DialogDescription>Fill out the form and we'll contact you within 24 hours</DialogDescription>
@@ -164,6 +186,12 @@ export default function PrepYourProperty() {
               <Label htmlFor="property_address">Property Address</Label>
               <Input id="property_address" value={formData.property_address} onChange={(e) => setFormData({ ...formData, property_address: e.target.value })} />
             </div>
+            <ReferralSourceSelect
+              referralSource={referralSource}
+              referralContractorId={referralContractorId}
+              onReferralSourceChange={setReferralSource}
+              onContractorChange={setReferralContractorId}
+            />
             <div>
               <Label htmlFor="message">Additional Details</Label>
               <Textarea id="message" value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} />
