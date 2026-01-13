@@ -76,11 +76,11 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
 
 // Quick action chips for common requests
 const quickActions = [
-  { emoji: '🏠', label: 'Roof Quote', msg: 'Get a quote for my roof' },
-  { emoji: '🪟', label: 'Windows', msg: 'Get a quote for impact windows' },
+  { emoji: '🏠', label: 'Home Roof', msg: 'I need a residential roof quote' },
+  { emoji: '🏢', label: 'Commercial Roof', msg: 'I need a commercial roof coating quote' },
+  { emoji: '🪟', label: 'Windows', msg: 'Get a quote for impact windows for my house' },
   { emoji: '🌳', label: 'Tree Service', msg: 'Get a quote for tree removal' },
-  { emoji: '📋', label: 'Get Licensed', msg: 'How do I get my Florida contractor license?' },
-  { emoji: '🔍', label: 'Find Contractor', msg: 'Help me find a contractor' },
+  { emoji: '🔍', label: 'Find Contractor', msg: 'Help me find a verified contractor' },
   { emoji: '🚨', label: 'Emergency', msg: 'I have water damage, help!' },
 ];
 
@@ -354,6 +354,30 @@ export function GlobalAIChat() {
                       )}
                     >
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      
+                      {/* Show residential/commercial selection buttons when AI asks */}
+                      {message.role === 'assistant' && 
+                       message.content.toLowerCase().includes('residential or commercial') && (
+                        <div className="flex gap-2 mt-3">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleQuickQuestion('Residential')}
+                            className="flex-1 gap-1"
+                          >
+                            🏠 Residential
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleQuickQuestion('Commercial')}
+                            className="flex-1 gap-1"
+                          >
+                            🏢 Commercial
+                          </Button>
+                        </div>
+                      )}
+                      
                       {message.action && renderAction(message.action)}
                     </div>
                   </div>
