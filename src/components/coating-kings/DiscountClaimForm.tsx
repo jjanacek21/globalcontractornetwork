@@ -212,6 +212,21 @@ export const DiscountClaimForm = ({
         }
       }).catch(err => console.error('Email confirmation failed:', err));
 
+      // Notify contractor if selected as referral source
+      if (formData.referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: formData.referralContractorId,
+            leadName: formData.name,
+            leadEmail: formData.email,
+            leadPhone: formData.phone,
+            serviceType: `${coatingType} - Roof Coating`,
+            propertyAddress: formData.address,
+            leadSource: 'Coating Kings - Spin Wheel'
+          }
+        }).catch(err => console.error('Contractor referral notification failed:', err));
+      }
+
       toast({
         title: "Discount Claimed!",
         description: `Your ${discountPercent}% discount has been reserved. We'll see you soon!`,

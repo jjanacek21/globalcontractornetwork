@@ -246,6 +246,21 @@ export const WindowQuoteCalculator = () => {
         }
       }).catch(err => console.error('Email confirmation failed:', err));
 
+      // Notify contractor if selected as referral source
+      if (referralContractorId) {
+        supabase.functions.invoke('notify-contractor-referral', {
+          body: {
+            contractorId: referralContractorId,
+            leadName: name,
+            leadEmail: email,
+            leadPhone: phone,
+            serviceType: 'Windows & Doors',
+            propertyAddress: `${address}, ${city}, FL ${zipCode}`,
+            leadSource: 'Green Home Solutions'
+          }
+        }).catch(err => console.error('Contractor referral notification failed:', err));
+      }
+
       setShowThankYou(true);
       toast.success("Quote submitted successfully!");
     } catch (error) {

@@ -69,7 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
         referred_service_type: serviceType,
         property_address: propertyAddress || "N/A",
         referral_source_context: `Customer selected ${contractor.company_name} as referral source on ${leadSource}`,
-        status: "pending",
+        status: "submitted",
       });
 
     if (referralError) {
