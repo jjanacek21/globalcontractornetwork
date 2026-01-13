@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card3D, GlassPanel } from "@/components/crm-ui";
 import { cn } from "@/lib/utils";
+import { logTrainingSession } from "@/hooks/useTrainingDataLogger";
 
 interface MeasurementData {
   baseSqft: number;
@@ -125,6 +126,7 @@ export function EnhancedInstantEstimate({
   const [selectedFinancing, setSelectedFinancing] = useState<SelectedFinancing | null>(null);
   const [showScheduling, setShowScheduling] = useState(false);
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
+  const trainingLoggedRef = useRef(false);
 
   const currentPackage = packages.find(p => p.tier === selectedTier) || packages[0];
   
@@ -165,11 +167,50 @@ export function EnhancedInstantEstimate({
     }
   };
 
+  // Log training data when user interacts with the estimate
+  const logTrainingData = async (action: string) => {
+    if (trainingLoggedRef.current) return;
+    trainingLoggedRef.current = true;
+
+    // We need coordinates - try to get them from a geocoding request or use defaults
+    try {
+      // Attempt to get coordinates from Mapbox geocoding
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(propertyAddress)}.json?access_token=pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g&country=US&types=address&limit=1`
+      );
+      const data = await response.json();
+      
+      const coords = data.features?.[0]?.center;
+      if (coords) {
+        await logTrainingSession({
+          address: propertyAddress,
+          latitude: coords[1],
+          longitude: coords[0],
+          serviceType: 'reroof',
+          aiEstimatedSqft: measurements.baseSqft,
+          aiRoofComplexity: measurements.roofComplexity,
+          calculatedTrueSqft: measurements.trueSqft,
+          calculatedTotalWithWaste: measurements.totalWithWaste,
+          calculatedSquares: measurements.roofSquares,
+          userAdjustedSqft: manualSquares ? manualSquares * 100 : undefined,
+          userAdjustedSquares: manualSquares || undefined,
+          finalAcceptedSqft: displaySquares * 100,
+          finalAcceptedSquares: displaySquares,
+          measurementMethod: `enhanced_instant_estimate_${action}`,
+          sourceComponent: 'EnhancedInstantEstimate'
+        });
+      }
+    } catch (error) {
+      console.error("Error logging training data:", error);
+    }
+  };
+
   const handleDownloadPdf = async () => {
     if (!currentPackage) return;
 
-    // Save user adjustments if any
+    // Save user adjustments and log training data
     await saveUserAdjustment();
+    await logTrainingData('pdf_download');
 
     const comparisonPackages = packages.map(p => ({
       package: p.package,
@@ -205,8 +246,9 @@ export function EnhancedInstantEstimate({
   };
 
   const handleContinue = async (type: "zoom" | "in_person") => {
-    // Save user adjustments if any
+    // Save user adjustments and log training data
     await saveUserAdjustment();
+    await logTrainingData(`schedule_${type}`);
     
     setAppointmentType(type);
     setShowScheduling(true);

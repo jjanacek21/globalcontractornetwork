@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { MeasurementResult } from "@/lib/roofMeasurements";
 import { InlineFinancingSelector, SelectedFinancing } from "./InlineFinancingSelector";
 import { generateRoofEstimatePdf, downloadPdf } from "@/lib/generateRoofEstimatePdf";
 import { toast } from "sonner";
+import { logTrainingSession } from "@/hooks/useTrainingDataLogger";
 
 interface InstantEstimateFlowProps {
   open: boolean;
@@ -84,6 +85,7 @@ export function InstantEstimateFlow({
   const [showScheduling, setShowScheduling] = useState(false);
   const [appointmentType, setAppointmentType] = useState<"zoom" | "in_person">("zoom");
   const [selectedFinancing, setSelectedFinancing] = useState<SelectedFinancing | null>(null);
+  const trainingLoggedRef = useRef(false);
 
   const resetFlow = () => {
     setStep("measurement");
@@ -92,6 +94,32 @@ export function InstantEstimateFlow({
     setManualSquares(null);
     setIsEditingSquares(false);
     setSelectedFinancing(null);
+    trainingLoggedRef.current = false;
+  };
+
+  // Log training data when user interacts with the estimate (PDF download, scheduling, etc.)
+  const logTrainingData = async (action: string) => {
+    if (trainingLoggedRef.current || !measurementResult || !estimate) return;
+    trainingLoggedRef.current = true;
+
+    await logTrainingSession({
+      address: estimate.address,
+      latitude: measurementResult.coordinates.lat,
+      longitude: measurementResult.coordinates.lng,
+      serviceType: 'reroof',
+      aiEstimatedSqft: estimate.flatSqft,
+      aiConfidence: estimate.confidence,
+      aiRoofComplexity: estimate.roofComplexity,
+      calculatedTrueSqft: measurementResult.trueSqft,
+      calculatedTotalWithWaste: measurementResult.totalWithWaste,
+      calculatedSquares: estimate.totalSquares,
+      userAdjustedSqft: manualSquares ? manualSquares * 100 : undefined,
+      userAdjustedSquares: manualSquares || undefined,
+      finalAcceptedSqft: getDisplaySquares() * 100,
+      finalAcceptedSquares: getDisplaySquares(),
+      measurementMethod: `instant_estimate_flow_${action}`,
+      sourceComponent: 'InstantEstimateFlow'
+    });
   };
 
   const handleClose = (open: boolean) => {
@@ -151,8 +179,11 @@ export function InstantEstimateFlow({
     return 'bg-red-100 text-red-700';
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!selectedPackage || !estimate || !measurementResult) return;
+
+    // Log training data when user downloads PDF
+    await logTrainingData('pdf_download');
 
     const estimates = getDisplayEstimates();
     const pdfData = {
@@ -463,7 +494,8 @@ export function InstantEstimateFlow({
               {/* Actions - Schedule Consultation */}
               <div className="flex flex-col gap-2 pt-2">
                 <Button 
-                  onClick={() => {
+                  onClick={async () => {
+                    await logTrainingData('schedule_zoom');
                     setAppointmentType("zoom");
                     setShowScheduling(true);
                   }}
@@ -476,7 +508,8 @@ export function InstantEstimateFlow({
                 
                 <Button 
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
+                    await logTrainingData('schedule_in_person');
                     setAppointmentType("in_person");
                     setShowScheduling(true);
                   }}

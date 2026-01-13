@@ -21,6 +21,7 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import { logTrainingSession } from "@/hooks/useTrainingDataLogger";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
 
@@ -175,6 +176,7 @@ export function QuizEstimateFlow({
   const [isDrawing, setIsDrawing] = useState(false);
   const [cachedMeasurement, setCachedMeasurement] = useState<any>(null);
   const [isSkippingQuiz, setIsSkippingQuiz] = useState(false);
+  const trainingLoggedRef = useRef(false);
   const mapContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) setMapContainerNode(node);
   }, []);
@@ -198,11 +200,37 @@ export function QuizEstimateFlow({
     setIsDrawing(false);
     setCachedMeasurement(null);
     setIsSkippingQuiz(false);
+    trainingLoggedRef.current = false;
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
     }
     if (drawRef.current) drawRef.current = null;
+  };
+
+  // Log training data when user interacts with the estimate
+  const logTrainingData = async (action: string) => {
+    if (trainingLoggedRef.current || !coordinates) return;
+    trainingLoggedRef.current = true;
+
+    const displaySquares = manualSquares ?? totalSquares;
+    await logTrainingSession({
+      address,
+      latitude: coordinates.lat,
+      longitude: coordinates.lng,
+      serviceType: 'reroof',
+      aiEstimatedSqft: totalSquares * 100,
+      aiRoofComplexity: roofComplexity,
+      calculatedSquares: totalSquares,
+      userAdjustedSquares: manualSquares || undefined,
+      userAdjustedSqft: manualSquares ? manualSquares * 100 : undefined,
+      finalAcceptedSqft: displaySquares * 100,
+      finalAcceptedSquares: displaySquares,
+      userUsedManualDrawing: drawnSqft > 0,
+      manualDrawingSqft: drawnSqft || undefined,
+      measurementMethod: `quiz_estimate_flow_${action}`,
+      sourceComponent: 'QuizEstimateFlow'
+    });
   };
 
   const handleClose = (open: boolean) => {
@@ -1094,7 +1122,8 @@ export function QuizEstimateFlow({
                         <div className="flex gap-2">
                           <Button 
                             size="sm"
-                            onClick={() => {
+                            onClick={async () => {
+                              await logTrainingData('schedule_zoom');
                               setSelectedRec(rec);
                               setAppointmentType("zoom");
                               setShowScheduling(true);
@@ -1107,7 +1136,8 @@ export function QuizEstimateFlow({
                           <Button 
                             size="sm"
                             variant="outline"
-                            onClick={() => {
+                            onClick={async () => {
+                              await logTrainingData('schedule_in_person');
                               setSelectedRec(rec);
                               setAppointmentType("in_person");
                               setShowScheduling(true);

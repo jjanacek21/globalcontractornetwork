@@ -45,6 +45,7 @@ interface TrainingSessionData {
   measurementMethod?: string;
   sessionDurationSeconds?: number;
   userAgent?: string;
+  sourceComponent?: string;
 }
 
 serve(async (req) => {
