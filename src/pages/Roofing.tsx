@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Home, ArrowDown, Sparkles } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Home, ArrowDown, Sparkles, ArrowLeft, Building2 } from "lucide-react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { AIRoofingChat } from "@/components/roofing/AIRoofingChat";
 import { PackageBrowser, RoofingPackage } from "@/components/roofing/PackageBrowser";
@@ -20,11 +21,13 @@ import { FinancingCalculator } from "@/components/roofing/FinancingCalculator";
 import { RoofColorVisualizer } from "@/components/roofing/RoofColorVisualizer";
 import { WarrantyComparison } from "@/components/roofing/WarrantyComparison";
 import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
+import { RepairLeadForm } from "@/components/roofing/RepairLeadForm";
 
+// Note: pricePerSquare is kept empty to hide from UI, but backend calculations use packagePricing.ts
 const roofingPackages: RoofingPackage[] = [
   {
     name: "Bronze Roof Package",
-    pricePerSquare: "$575-$650",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Architectural shingles",
       "Synthetic underlayment for enhanced water resistance",
@@ -35,7 +38,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Silver Roof Package",
-    pricePerSquare: "$700-$725",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Architectural shingles",
       "Standard peel-and-stick underlayment",
@@ -46,7 +49,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Gold Roof Package",
-    pricePerSquare: "$800-$850",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Architectural shingles",
       "High-temperature peel-and-stick underlayment for superior protection",
@@ -58,7 +61,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "The Blue Collar Special",
-    pricePerSquare: "$860",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "5V crimp metal roof in mill finish",
       "Polyglass synthetic underlayment",
@@ -69,7 +72,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Blue Collar+",
-    pricePerSquare: "$930",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "5V crimp metal roof with Kynar-coated finish",
       "High-temperature Polyglass underlayment",
@@ -80,7 +83,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Platinum Roof Package",
-    pricePerSquare: "$1000-$1200",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "1\" Snap-lock standing seam metal roof (24-gauge, Kynar-coated)",
       "Polyglass MTS high-temp underlayment",
@@ -91,7 +94,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Tile Roof Package",
-    pricePerSquare: "$900-$1000",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Complete removal and replacement of existing tile roof",
       "Standard tile underlayment with screw-down fastening",
@@ -102,7 +105,7 @@ const roofingPackages: RoofingPackage[] = [
   },
   {
     name: "Tile+ Roof Package",
-    pricePerSquare: "$1000-$1100",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Tile removal and replacement with premium materials",
       "Polyglass TU MAX underlayment",
@@ -111,20 +114,10 @@ const roofingPackages: RoofingPackage[] = [
       "Includes 6 sheets of plywood and 30 linear feet of fascia"
     ]
   },
-  {
-    name: "Roof Refresh",
-    pricePerSquare: "$400-$600",
-    features: [
-      "Repair broken or damaged tiles and apply matching stain",
-      "Recoat metal roofs with acrylic, elastomeric, or Kynar finishes",
-      "Apply silicone or acrylic coatings to flat roofs",
-      "Surface preparation included for all coatings",
-      "5-year workmanship warranty on applicable services"
-    ]
-  },
+  // Roof Refresh removed per Phase 1 plan
   {
     name: "Ultimate Roof Package",
-    pricePerSquare: "$1360-$1850",
+    pricePerSquare: "", // Hidden from UI
     features: [
       "Premium standing seam metal roof (1.5\" with clips) or stone-coated steel (Tefute/Novatik)",
       "Polyglass XFR high-temp and fire-rated underlayment",
@@ -138,8 +131,54 @@ const roofingPackages: RoofingPackage[] = [
 
 const Roofing = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const serviceType = searchParams.get('type'); // 'repair' or 'reroof'
   const propertyType = searchParams.get('propertyType'); // 'commercial' or 'residential'
+
+  // If repair type, show simplified lead form instead of package browser
+  if (serviceType === 'repair') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Navigation */}
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/roofing-services')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Roofing Services
+              </Button>
+              <Link to="/roofing" className="flex items-center gap-3">
+                <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold">Global Contractor Network</span>
+                  <span className="text-xs text-muted-foreground">Roof Repair Request</span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <section className="py-16">
+          <div className="container">
+            <RepairLeadForm propertyType={propertyType} />
+          </div>
+        </section>
+
+        <footer className="border-t py-8 bg-muted/30">
+          <div className="container text-center">
+            <p className="text-sm text-muted-foreground">
+              © 2025 Global Contractor Network. All rights reserved.
+            </p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
   
   // Flow state
   const [selectedPackage, setSelectedPackage] = useState<RoofingPackage | null>(null);
@@ -292,11 +331,14 @@ const Roofing = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
-              <Link to="/member/dashboard">
-                <Home className="h-4 w-4 mr-1" />
-                Dashboard
-              </Link>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/roofing-services')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Services
             </Button>
             <Link to="/roofing" className="flex items-center gap-3">
               <img src={gcnLogo} alt="GCN Logo" className="h-10 w-auto" />
@@ -324,18 +366,27 @@ const Roofing = () => {
         </div>
       </header>
 
-      {/* Hero Section - Simplified */}
+      {/* Hero Section - Updated for quiz-first flow */}
       <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
+            {/* Property Type Badge */}
+            {propertyType && (
+              <Badge variant="outline" className="text-base px-4 py-2">
+                {propertyType === 'commercial' ? <Building2 className="mr-2 h-4 w-4" /> : <Home className="mr-2 h-4 w-4" />}
+                {propertyType === 'commercial' ? 'Commercial Property' : 'Residential Property'}
+              </Badge>
+            )}
+
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
               Explore Our <span className="text-primary">Roofing Packages</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Browse our comprehensive range of roofing solutions. Select any package to get an instant AI-powered estimate for your property.
+              Browse our comprehensive range of roofing solutions and compare features. 
+              Take our quick quiz to get your personalized AI-powered estimate with pricing.
             </p>
             
-            {/* Material Quiz CTA */}
+            {/* Material Quiz CTA - Primary action */}
             <Button 
               size="lg" 
               onClick={() => setMaterialQuizOpen(true)}
@@ -345,14 +396,13 @@ const Roofing = () => {
               Find Your Perfect Roofing Material
             </Button>
             
-            
             <Button 
               size="lg" 
               onClick={scrollToPackages}
               variant="outline"
               className="text-lg px-8 group"
             >
-              Browse Packages
+              Browse & Compare Features
               <ArrowDown className="ml-2 h-5 w-5 group-hover:translate-y-1 transition-transform" />
             </Button>
           </div>
@@ -405,6 +455,7 @@ const Roofing = () => {
       <EnhancedQuizFlow
         open={materialQuizOpen}
         onOpenChange={setMaterialQuizOpen}
+        propertyType={propertyType}
         onComplete={() => setMaterialQuizOpen(false)}
       />
 
