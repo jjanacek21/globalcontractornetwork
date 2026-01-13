@@ -65,6 +65,165 @@ export type Database = {
           },
         ]
       }
+      ai_training_sessions: {
+        Row: {
+          accepted_error_percent: number | null
+          address: string
+          ai_building_type: string | null
+          ai_confidence: string | null
+          ai_error_percent: number | null
+          ai_estimated_sqft: number | null
+          ai_estimated_sqft_high: number | null
+          ai_estimated_sqft_low: number | null
+          ai_methodology: string | null
+          ai_model_version: string | null
+          ai_pixel_estimate: string | null
+          ai_raw_response: Json | null
+          ai_reference_objects: string | null
+          ai_request_timestamp: string | null
+          ai_response_time_ms: number | null
+          ai_roof_complexity: string | null
+          ai_roof_shape: string | null
+          ai_segment_breakdown: string | null
+          calculated_squares: number | null
+          calculated_total_with_waste: number | null
+          calculated_true_sqft: number | null
+          created_at: string | null
+          final_accepted_sqft: number | null
+          final_accepted_squares: number | null
+          ground_truth_date: string | null
+          ground_truth_notes: string | null
+          ground_truth_source: string | null
+          ground_truth_sqft: number | null
+          ground_truth_squares: number | null
+          id: string
+          is_usable_for_training: boolean | null
+          latitude: number
+          longitude: number
+          manual_drawing_sqft: number | null
+          measurement_method: string | null
+          normalized_address: string
+          property_type: string | null
+          quality_notes: string | null
+          satellite_image_url: string | null
+          service_type: string
+          session_duration_seconds: number | null
+          session_id: string
+          user_adjusted_sqft: number | null
+          user_adjusted_squares: number | null
+          user_agent: string | null
+          user_id: string | null
+          user_selected_complexity: string | null
+          user_selected_pitch: string | null
+          user_used_manual_drawing: boolean | null
+          zoom_level: number | null
+        }
+        Insert: {
+          accepted_error_percent?: number | null
+          address: string
+          ai_building_type?: string | null
+          ai_confidence?: string | null
+          ai_error_percent?: number | null
+          ai_estimated_sqft?: number | null
+          ai_estimated_sqft_high?: number | null
+          ai_estimated_sqft_low?: number | null
+          ai_methodology?: string | null
+          ai_model_version?: string | null
+          ai_pixel_estimate?: string | null
+          ai_raw_response?: Json | null
+          ai_reference_objects?: string | null
+          ai_request_timestamp?: string | null
+          ai_response_time_ms?: number | null
+          ai_roof_complexity?: string | null
+          ai_roof_shape?: string | null
+          ai_segment_breakdown?: string | null
+          calculated_squares?: number | null
+          calculated_total_with_waste?: number | null
+          calculated_true_sqft?: number | null
+          created_at?: string | null
+          final_accepted_sqft?: number | null
+          final_accepted_squares?: number | null
+          ground_truth_date?: string | null
+          ground_truth_notes?: string | null
+          ground_truth_source?: string | null
+          ground_truth_sqft?: number | null
+          ground_truth_squares?: number | null
+          id?: string
+          is_usable_for_training?: boolean | null
+          latitude: number
+          longitude: number
+          manual_drawing_sqft?: number | null
+          measurement_method?: string | null
+          normalized_address: string
+          property_type?: string | null
+          quality_notes?: string | null
+          satellite_image_url?: string | null
+          service_type: string
+          session_duration_seconds?: number | null
+          session_id: string
+          user_adjusted_sqft?: number | null
+          user_adjusted_squares?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_selected_complexity?: string | null
+          user_selected_pitch?: string | null
+          user_used_manual_drawing?: boolean | null
+          zoom_level?: number | null
+        }
+        Update: {
+          accepted_error_percent?: number | null
+          address?: string
+          ai_building_type?: string | null
+          ai_confidence?: string | null
+          ai_error_percent?: number | null
+          ai_estimated_sqft?: number | null
+          ai_estimated_sqft_high?: number | null
+          ai_estimated_sqft_low?: number | null
+          ai_methodology?: string | null
+          ai_model_version?: string | null
+          ai_pixel_estimate?: string | null
+          ai_raw_response?: Json | null
+          ai_reference_objects?: string | null
+          ai_request_timestamp?: string | null
+          ai_response_time_ms?: number | null
+          ai_roof_complexity?: string | null
+          ai_roof_shape?: string | null
+          ai_segment_breakdown?: string | null
+          calculated_squares?: number | null
+          calculated_total_with_waste?: number | null
+          calculated_true_sqft?: number | null
+          created_at?: string | null
+          final_accepted_sqft?: number | null
+          final_accepted_squares?: number | null
+          ground_truth_date?: string | null
+          ground_truth_notes?: string | null
+          ground_truth_source?: string | null
+          ground_truth_sqft?: number | null
+          ground_truth_squares?: number | null
+          id?: string
+          is_usable_for_training?: boolean | null
+          latitude?: number
+          longitude?: number
+          manual_drawing_sqft?: number | null
+          measurement_method?: string | null
+          normalized_address?: string
+          property_type?: string | null
+          quality_notes?: string | null
+          satellite_image_url?: string | null
+          service_type?: string
+          session_duration_seconds?: number | null
+          session_id?: string
+          user_adjusted_sqft?: number | null
+          user_adjusted_squares?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+          user_selected_complexity?: string | null
+          user_selected_pitch?: string | null
+          user_used_manual_drawing?: boolean | null
+          zoom_level?: number | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           category: string | null

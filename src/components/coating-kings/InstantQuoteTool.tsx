@@ -22,9 +22,10 @@ const COATING_PRICES = {
 
 interface InstantQuoteToolProps {
   selectedCoatingType?: string;
+  propertyType?: string;
 }
 
-export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps) => {
+export const InstantQuoteTool = ({ selectedCoatingType, propertyType }: InstantQuoteToolProps) => {
   // Coating selection state
   const [roofType, setRoofType] = useState<string>("");
   const [coatingType, setCoatingType] = useState<string>("");
@@ -85,6 +86,7 @@ export const InstantQuoteTool = ({ selectedCoatingType }: InstantQuoteToolProps)
           <MeasurementWizard
             serviceType="coating"
             onMeasurementComplete={handleMeasurementComplete}
+            propertyType={propertyType}
           />
 
           {/* Property Details Card - Only show after measurement */}
