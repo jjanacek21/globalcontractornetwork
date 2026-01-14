@@ -93,7 +93,7 @@ const buildContractorEmail = (name: string, companyName?: string): string => {
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f5;">
       <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px; border-radius: 16px 16px 0 0; text-align: center;">
-          <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Application Received!</h1>
+          <h1 style="color: white; font-size: 28px; margin: 0 0 8px 0;">Application Under Review</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 16px;">Global Contractor Network</p>
         </div>
         
@@ -101,13 +101,20 @@ const buildContractorEmail = (name: string, companyName?: string): string => {
           <p style="font-size: 18px; color: #18181b; margin-bottom: 24px;">Hi ${name}${companyName ? ` from ${companyName}` : ''},</p>
           
           <p style="color: #52525b; line-height: 1.6; margin-bottom: 24px;">
-            Thank you for applying to join the Global Contractor Network! We've received your application and our team is reviewing it now.
+            Thank you for registering with Global Contractor Network! Your account is currently under review.
           </p>
           
-          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
-            <p style="color: #92400e; margin: 0; font-size: 14px;">
+          <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin-bottom: 24px;">
+            <p style="color: #1e40af; margin: 0; font-size: 14px;">
               <strong>What happens next?</strong><br>
-              Our team will review your application within 24-48 hours. You'll receive an email once your account is approved.
+              A member of our support team will reach out to you within <strong>1-24 hours</strong> to finalize your company setup and answer any questions you may have.
+            </p>
+          </div>
+          
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+            <p style="color: #166534; margin: 0 0 12px 0; font-weight: 600;">📞 Keep an eye on your inbox and phone!</p>
+            <p style="color: #15803d; margin: 0; font-size: 14px;">
+              We'll be in touch shortly to verify your credentials and get your company profile fully set up.
             </p>
           </div>
           
