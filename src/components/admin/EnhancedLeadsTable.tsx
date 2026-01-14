@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Filter, Loader2, Eye, Calendar, MapPin, Wrench } from "lucide-react";
+import { Search, Filter, Loader2, Eye, Calendar, MapPin, Wrench, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
 
 interface UnifiedLead {
   id: string;
@@ -33,6 +35,16 @@ const WORK_TYPE_MAP: Record<string, string> = {
   'Emergency Mitigation': 'Emergency Services'
 };
 
+const SOURCE_TABLE_MAP: Record<string, string> = {
+  'Coating Kings': 'coating_leads',
+  'Green Home Improvements': 'window_leads',
+  'Supplement Kings': 'supplement_leads',
+  'Permit Queens': 'permit_projects',
+  'Roofing Services': 'roofing_consultations',
+  'Contact Request': 'contact_requests',
+  'Prep Your Property': 'service_requests',
+};
+
 export default function EnhancedLeadsTable() {
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<UnifiedLead[]>([]);
@@ -41,6 +53,13 @@ export default function EnhancedLeadsTable() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [workTypeFilter, setWorkTypeFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  
+  // Dialog state
+  const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
+  const [selectedLeadRawData, setSelectedLeadRawData] = useState<any>(null);
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [leadDialogMode, setLeadDialogMode] = useState<'view' | 'edit'>('view');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const { toast } = useToast();
 
@@ -184,12 +203,48 @@ export default function EnhancedLeadsTable() {
 
   const extractCity = (address: string | null): string | null => {
     if (!address) return null;
-    // Simple extraction - assumes "City, State" format or just returns first part
     const parts = address.split(",");
     if (parts.length >= 2) {
       return parts[parts.length - 2].trim();
     }
     return parts[0]?.trim() || null;
+  };
+
+  const handleLeadClick = async (lead: UnifiedLead, mode: 'view' | 'edit' = 'view') => {
+    const tableName = SOURCE_TABLE_MAP[lead.source];
+    if (tableName) {
+      const { data } = await supabase.from(tableName as any).select('*').eq('id', lead.id).maybeSingle();
+      setSelectedLeadRawData(data);
+    }
+    setSelectedLead(lead);
+    setLeadDialogMode(mode);
+    setLeadDialogOpen(true);
+  };
+
+  const handleDeleteLead = async (lead: UnifiedLead) => {
+    const tableName = SOURCE_TABLE_MAP[lead.source];
+    if (!tableName) {
+      toast({ title: "Error", description: "Cannot delete this lead type", variant: "destructive" });
+      return;
+    }
+    
+    setDeletingId(lead.id);
+    try {
+      const { error } = await supabase
+        .from(tableName as any)
+        .delete()
+        .eq('id', lead.id);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Lead deleted successfully" });
+      fetchLeads();
+    } catch (error: any) {
+      console.error("Error deleting lead:", error);
+      toast({ title: "Error", description: error.message || "Failed to delete lead", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   // Get unique values for filters
@@ -361,9 +416,58 @@ export default function EnhancedLeadsTable() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button size="icon" variant="ghost">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="ghost"
+                        onClick={() => handleLeadClick(lead, 'view')}
+                        title="View details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost"
+                        onClick={() => handleLeadClick(lead, 'edit')}
+                        title="Edit lead"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="icon" 
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            disabled={deletingId === lead.id}
+                            title="Delete lead"
+                          >
+                            {deletingId === lead.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this lead from {lead.customerName}? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteLead(lead)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -377,6 +481,17 @@ export default function EnhancedLeadsTable() {
           Showing 100 of {filteredLeads.length} leads
         </p>
       )}
+
+      {/* Lead Details Dialog */}
+      <LeadDetailsDialog
+        open={leadDialogOpen}
+        onOpenChange={setLeadDialogOpen}
+        lead={selectedLead}
+        rawData={selectedLeadRawData}
+        mode={leadDialogMode}
+        onModeChange={setLeadDialogMode}
+        onRefresh={fetchLeads}
+      />
     </div>
   );
 }
