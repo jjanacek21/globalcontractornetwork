@@ -122,11 +122,16 @@ Deno.serve(async (req) => {
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      console.error('Delete auth user error:', deleteError);
-      return new Response(
-        JSON.stringify({ success: false, error: deleteError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // If user not found in auth, that's okay - they may have been an orphan profile
+      if (deleteError.message?.includes('not found') || (deleteError as any).code === 'user_not_found') {
+        console.log(`Auth user not found (orphan profile) - deletion successful`);
+      } else {
+        console.error('Delete auth user error:', deleteError);
+        return new Response(
+          JSON.stringify({ success: false, error: deleteError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log(`User ${userId} deleted successfully by super admin ${caller.id}`);
