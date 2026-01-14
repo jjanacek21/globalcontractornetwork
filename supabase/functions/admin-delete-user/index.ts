@@ -73,7 +73,8 @@ Deno.serve(async (req) => {
     console.log(`Starting deletion of related records for user ${userId}...`);
     
     // Lead-related tables - FK constraints now SET NULL on delete, but we clean up anyway
-    const tables = [
+    // Tables to delete records from (user-owned data)
+    const tablesToDelete = [
       { table: 'coating_leads', column: 'user_id' },
       { table: 'window_leads', column: 'user_id' },
       { table: 'contact_requests', column: 'user_id' },
@@ -93,12 +94,27 @@ Deno.serve(async (req) => {
       { table: 'favorite_contractors', column: 'user_id' },
     ];
 
-    for (const { table, column } of tables) {
+    // Tables to nullify references (preserve the records but remove user link)
+    const tablesToNullify = [
+      { table: 'customers', column: 'assigned_rep_id' },
+    ];
+
+    for (const { table, column } of tablesToDelete) {
       const { error } = await supabaseAdmin.from(table).delete().eq(column, userId);
       if (error) {
         console.log(`Note: Could not delete from ${table}: ${error.message}`);
       } else {
         console.log(`Deleted from ${table}`);
+      }
+    }
+
+    // Nullify references in tables that should preserve records
+    for (const { table, column } of tablesToNullify) {
+      const { error } = await supabaseAdmin.from(table).update({ [column]: null }).eq(column, userId);
+      if (error) {
+        console.log(`Note: Could not nullify ${column} in ${table}: ${error.message}`);
+      } else {
+        console.log(`Nullified ${column} in ${table}`);
       }
     }
     
