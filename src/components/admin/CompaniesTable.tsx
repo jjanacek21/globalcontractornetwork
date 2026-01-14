@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Search, Building2, Users, Eye, Edit, Calendar, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { CompanyDialog } from "./CompanyDialog";
+import { CompanyManagementDialog } from "./CompanyManagementDialog";
 
 interface Company {
   id: string;
@@ -24,6 +24,16 @@ interface Company {
   is_active: boolean;
   created_at: string;
   member_count?: number;
+  description?: string | null;
+  verification_status?: string | null;
+  verification_score?: number | null;
+  insurance_expiration?: string | null;
+  workers_comp_expiration?: string | null;
+  license_number?: string | null;
+  license_state?: string | null;
+  license_expiration?: string | null;
+  primary_category?: string | null;
+  years_in_business?: number | null;
 }
 
 export function CompaniesTable() {
@@ -244,7 +254,7 @@ export function CompaniesTable() {
         </Table>
       </div>
 
-      <CompanyDialog
+      <CompanyManagementDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         company={selectedCompany}
