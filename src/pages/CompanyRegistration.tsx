@@ -326,75 +326,116 @@ const CompanyRegistration = () => {
     
     setLoading(true);
     try {
-      // 1. Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: accountInfo.email,
-        password: accountInfo.password,
-        options: {
-          data: {
-            first_name: accountInfo.firstName,
-            last_name: accountInfo.lastName
-          }
+      // 1. Format licenses data (without file uploads for now - files handled separately after auth)
+      const licensesData = licenses
+        .filter(license => license.number)
+        .map(license => ({
+          number: license.number,
+          state: license.state,
+          expiration: license.expiration || null,
+          document_url: null // Will be uploaded after registration if needed
+        }));
+
+      // 2. Format references
+      const formattedReferences = references
+        .filter(ref => ref.name && (ref.email || ref.phone))
+        .map(ref => ({
+          name: ref.name,
+          email: ref.email || '',
+          phone: ref.phone || '',
+          projectDescription: ref.projectDescription || ''
+        }));
+
+      // 3. Call the register-company edge function
+      const { data, error } = await supabase.functions.invoke('register-company', {
+        body: {
+          // Account info
+          email: accountInfo.email,
+          password: accountInfo.password,
+          firstName: accountInfo.firstName,
+          lastName: accountInfo.lastName,
+          accountPhone: accountInfo.phone,
+          
+          // Company info
+          companyName: companyInfo.name,
+          address: companyInfo.address,
+          city: companyInfo.city,
+          state: companyInfo.state,
+          zip: companyInfo.zip,
+          phone: companyInfo.phone,
+          companyEmail: companyInfo.email,
+          website: companyInfo.website,
+          primaryCategory: companyInfo.primaryCategory,
+          servicesOffered: companyInfo.servicesOffered,
+          yearsInBusiness: companyInfo.yearsInBusiness,
+          yearlyRevenue: companyInfo.yearlyRevenue,
+          description: companyInfo.description,
+          
+          // Credentials
+          licenses: licensesData,
+          insurance: {
+            provider: insurance.provider || '',
+            policyNumber: insurance.policyNumber || '',
+            expiration: insurance.expiration || '',
+            documentUrl: null // Will upload after if needed
+          },
+          workersComp: {
+            provider: workersComp.provider || '',
+            expiration: workersComp.expiration || '',
+            documentUrl: null
+          },
+          certifications: certifications,
+          hasCrew: hasCrew,
+          
+          // References & Portfolio (photos will need to be uploaded separately)
+          references: formattedReferences,
+          jobPhotos: [] // Will handle photo uploads after registration
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Failed to create user account");
-
-      // Wait for session to be established
-      let session = authData.session;
-      if (!session) {
-        // If session not returned immediately, wait and get it
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const { data: sessionData } = await supabase.auth.getSession();
-        session = sessionData.session;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Registration failed");
       }
 
-      if (!session) {
-        throw new Error("Session not established. Please try logging in after registration.");
+      if (!data?.success) {
+        throw new Error(data?.error || "Registration failed");
       }
 
-      // Verify the session is properly set before database operations
-      const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-      if (!verifiedUser || verifiedUser.id !== authData.user.id) {
-        throw new Error("Authentication verification failed. Please try again.");
-      }
+      console.log("Registration successful:", data);
 
-      // 2. Upload credential documents
-      let insuranceDocUrl: string | null = null;
-      let workersCompDocUrl: string | null = null;
-      
+      // 4. Upload files now that we have a user ID
+      const userId = data.userId;
+      const companyId = data.companyId;
+
+      // Upload credential documents
       if (insurance.file) {
-        insuranceDocUrl = await uploadCredentialDocument(insurance.file, authData.user.id, 'insurance');
-      }
-      
-      if (workersComp.file) {
-        workersCompDocUrl = await uploadCredentialDocument(workersComp.file, authData.user.id, 'workers-comp');
-      }
-
-      // 3. Upload license documents and build licenses array
-      const licensesData = [];
-      for (const license of licenses) {
-        if (license.number) {
-          let docUrl: string | null = null;
-          if (license.file) {
-            docUrl = await uploadCredentialDocument(license.file, authData.user.id, `license-${license.number}`);
-          }
-          licensesData.push({
-            number: license.number,
-            state: license.state,
-            expiration: license.expiration || null,
-            document_url: docUrl
-          });
+        const insuranceDocUrl = await uploadCredentialDocument(insurance.file, userId, 'insurance');
+        if (insuranceDocUrl) {
+          await supabase.from('companies').update({ insurance_document_url: insuranceDocUrl }).eq('id', companyId);
         }
       }
 
-      // 4. Upload job photos
+      if (workersComp.file) {
+        const workersCompDocUrl = await uploadCredentialDocument(workersComp.file, userId, 'workers-comp');
+        if (workersCompDocUrl) {
+          await supabase.from('companies').update({ workers_comp_document_url: workersCompDocUrl }).eq('id', companyId);
+        }
+      }
+
+      // Upload license documents
+      for (const license of licenses) {
+        if (license.file && license.number) {
+          await uploadCredentialDocument(license.file, userId, `license-${license.number}`);
+        }
+      }
+
+      // Upload job photos
       const uploadedPhotos = [];
       for (const photo of jobPhotos) {
         if (photo.file) {
           const fileExt = photo.file.name.split('.').pop();
-          const fileName = `${authData.user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('company-photos')
@@ -414,112 +455,12 @@ const CompanyRegistration = () => {
         }
       }
 
-      // 5. Format references
-      const formattedReferences = references
-        .filter(ref => ref.name && (ref.email || ref.phone))
-        .map(ref => ({
-          name: ref.name,
-          email: ref.email,
-          phone: ref.phone,
-          projectDescription: ref.projectDescription
-        }));
-
-      // 6. Create company record
-      const firstLicense = licensesData[0] || null;
-      
-      const { data: companyData, error: companyError } = await supabase
-        .from("companies")
-        .insert({
-          name: companyInfo.name,
-          address: companyInfo.address,
-          city: companyInfo.city,
-          state: companyInfo.state,
-          zip_code: companyInfo.zip,
-          phone: companyInfo.phone,
-          email: companyInfo.email,
-          website: companyInfo.website,
-          primary_category: companyInfo.primaryCategory,
-          services_offered: companyInfo.servicesOffered,
-          years_in_business: companyInfo.yearsInBusiness ? parseInt(companyInfo.yearsInBusiness) : null,
-          yearly_revenue_range: companyInfo.yearlyRevenue,
-          description: companyInfo.description,
-          // Legacy single license fields (from first license)
-          license_number: firstLicense?.number || null,
-          license_state: firstLicense?.state || null,
-          license_expiration: firstLicense?.expiration || null,
-          // New multiple licenses field
-          licenses: licensesData.length > 0 ? licensesData : [],
-          // Insurance
-          insurance_provider: insurance.provider || null,
-          insurance_policy_number: insurance.policyNumber || null,
-          insurance_expiration: insurance.expiration || null,
-          insurance_document_url: insuranceDocUrl,
-          // Workers Comp
-          workers_comp_provider: workersComp.provider || null,
-          workers_comp_expiration: workersComp.expiration || null,
-          workers_comp_document_url: workersCompDocUrl,
-          has_crew: hasCrew,
-          // Other fields
-          certifications: certifications ? certifications.split(',').map(c => c.trim()) : [],
-          client_references: formattedReferences,
-          job_photos: uploadedPhotos,
-          verification_status: "pending",
-          created_by: authData.user.id
-        })
-        .select()
-        .single();
-
-      if (companyError) throw companyError;
-
-      // 7. Create company_members record (as company_admin)
-      const { error: memberError } = await supabase
-        .from("company_members")
-        .insert({
-          company_id: companyData.id,
-          user_id: authData.user.id,
-          role: "company_admin",
-          is_active: true
-        });
-
-      if (memberError) throw memberError;
-
-      // 8. Create company_admins record
-      const { error: adminError } = await supabase
-        .from("company_admins")
-        .insert({
-          company_id: companyData.id,
-          user_id: authData.user.id,
-          is_super_admin: true
-        });
-
-      if (adminError) console.error("Failed to create company admin record:", adminError);
-
-      // 9. Create contractor profile for company admin (so they appear in pending signups and get contractor access)
-      const { error: contractorProfileError } = await supabase
-        .from("contractor_profiles")
-        .insert({
-          user_id: authData.user.id,
-          company_name: companyInfo.name,
-          company_id: companyData.id,
-          category: companyInfo.primaryCategory,
-          description: companyInfo.description,
-          phone: companyInfo.phone,
-          email: companyInfo.email,
-          website: companyInfo.website,
-          license_number: firstLicense?.number || null,
-          license_state: firstLicense?.state || null,
-          verification_status: "pending",
-          subscription_status: "pending",
-          is_verified: false,
-          first_name: accountInfo.firstName,
-          last_name: accountInfo.lastName,
-        });
-
-      if (contractorProfileError) {
-        console.error("Failed to create contractor profile:", contractorProfileError);
+      // Update company with uploaded photos if any
+      if (uploadedPhotos.length > 0) {
+        await supabase.from('companies').update({ job_photos: uploadedPhotos }).eq('id', companyId);
       }
 
-      // 10. Notify super admin
+      // 5. Try to notify admin (non-blocking)
       try {
         await supabase.functions.invoke("notify-admin-signup", {
           body: {
@@ -529,15 +470,14 @@ const CompanyRegistration = () => {
             phone: accountInfo.phone,
             category: companyInfo.primaryCategory,
             firstName: accountInfo.firstName,
-            lastName: accountInfo.lastName,
-            verificationScore: companyData.verification_score
+            lastName: accountInfo.lastName
           }
         });
       } catch (notifyError) {
         console.error("Failed to notify admin:", notifyError);
       }
 
-      // 10. Send welcome email to the company
+      // 6. Try to send welcome email (non-blocking)
       try {
         await supabase.functions.invoke("send-welcome-email", {
           body: {
@@ -549,7 +489,6 @@ const CompanyRegistration = () => {
         });
       } catch (emailError) {
         console.error("Failed to send welcome email:", emailError);
-        // Don't block registration if email fails
       }
 
       setSuccess(true);
