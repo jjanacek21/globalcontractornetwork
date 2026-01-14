@@ -24,6 +24,7 @@ import FieldMap from "./pages/FieldMap";
 import Measurements from "./pages/Measurements";
 import Estimates from "./pages/Estimates";
 import Presentations from "./pages/Presentations";
+import GamificationDashboard from "./pages/GamificationDashboard";
 import NotFound from "./pages/NotFound";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
@@ -283,6 +284,13 @@ const GCNRoutes = () => (
             <ProtectedRoute>
               <AppLayout>
                 <Presentations />
+              </AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/crm/rewards" element={
+            <ProtectedRoute>
+              <AppLayout>
+                <GamificationDashboard />
               </AppLayout>
             </ProtectedRoute>
           } />

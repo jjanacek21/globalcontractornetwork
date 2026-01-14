@@ -6,3 +6,4 @@ export { ChallengeCard } from './ChallengeCard';
 export { ActiveChallenges } from './ActiveChallenges';
 export { StreakIndicator } from './StreakIndicator';
 export { RewardsCatalog } from './RewardsCatalog';
+export { GamificationSummaryCard } from './GamificationSummaryCard';
