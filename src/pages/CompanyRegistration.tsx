@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -512,6 +512,21 @@ const CompanyRegistration = () => {
         console.error("Failed to notify admin:", notifyError);
       }
 
+      // 10. Send welcome email to the company
+      try {
+        await supabase.functions.invoke("send-welcome-email", {
+          body: {
+            email: accountInfo.email,
+            name: `${accountInfo.firstName} ${accountInfo.lastName}`,
+            userType: "contractor",
+            companyName: companyInfo.name
+          }
+        });
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Don't block registration if email fails
+      }
+
       setSuccess(true);
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -525,6 +540,16 @@ const CompanyRegistration = () => {
     }
   };
 
+  // Auto-redirect to login after success
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        navigate('/login');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, navigate]);
+
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
@@ -534,9 +559,15 @@ const CompanyRegistration = () => {
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Company Registration Submitted!</h2>
+              <h2 className="text-2xl font-bold">Registration Submitted!</h2>
               <p className="text-muted-foreground">
-                Your company has been submitted for verification.
+                Your account is under review.
+              </p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left space-y-3">
+              <h3 className="font-semibold text-blue-900">📧 Check your email!</h3>
+              <p className="text-sm text-blue-800">
+                We've sent a confirmation email to <strong>{accountInfo.email}</strong>
               </p>
             </div>
             <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
@@ -544,28 +575,30 @@ const CompanyRegistration = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <Shield className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Our team will review your company information and credentials</span>
+                  <span>A member of our support team will reach out within <strong>1-24 hours</strong> to finalize your company setup</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Users className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>We may contact your references to verify your work</span>
+                  <span>We'll verify your credentials and answer any questions</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Star className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Once verified, you'll appear in our contractor directory with a verification badge</span>
+                  <span>Once approved, you'll have full access to the contractor portal</span>
                 </li>
               </ul>
             </div>
-            <p className="text-sm text-muted-foreground">
-              You can access your Company Admin Portal now to set up teams, add users, and manage your profile while awaiting verification.
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" asChild className="flex-1">
-                <Link to="/">Return Home</Link>
-              </Button>
-              <Button asChild className="flex-1">
-                <Link to="/company/dashboard">Go to Dashboard</Link>
-              </Button>
+            <div className="pt-2">
+              <p className="text-sm text-muted-foreground mb-4">
+                Redirecting to login in 5 seconds...
+              </p>
+              <div className="flex gap-3">
+                <Button variant="outline" asChild className="flex-1">
+                  <Link to="/">Return Home</Link>
+                </Button>
+                <Button onClick={() => navigate('/login')} className="flex-1">
+                  Go to Login Now
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
