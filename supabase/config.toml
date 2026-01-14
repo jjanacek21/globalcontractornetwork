@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.log-training-session]
 verify_jwt = false
+
+[functions.check-credential-expirations]
+verify_jwt = false
