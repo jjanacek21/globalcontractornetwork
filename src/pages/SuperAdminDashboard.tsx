@@ -12,22 +12,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Filter, Loader2, Calendar, DollarSign, Clock, Eye, Edit, Trash2, Plus, BarChart3, UsersRound, UserPlus, Bell, KeyRound, AlertTriangle, ShieldCheck, Lightbulb, GraduationCap, Brain
+  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
 import { ContractorDialog } from "@/components/admin/ContractorDialog";
 import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
-import { CompaniesTable } from "@/components/admin/CompaniesTable";
-import { UsersTable } from "@/components/admin/UsersTable";
-import { TeamsTable } from "@/components/admin/TeamsTable";
 import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
-import ContractorFeatureAccess from "@/components/admin/ContractorFeatureAccess";
-import LoginRequestsTable from "@/components/admin/LoginRequestsTable";
 import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
 import ReferralsManagement from "@/components/admin/ReferralsManagement";
 import AITrainingCenter from "@/components/admin/AITrainingCenter";
 import ResourcesManagement from "@/components/admin/ResourcesManagement";
+import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
+import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 
 interface UnifiedLead {
   id: string;
@@ -492,27 +489,14 @@ const SuperAdminDashboard = () => {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads ({filteredLeads.length})</TabsTrigger>
-                <TabsTrigger value="contractors" className="gap-2"><Building2 className="h-4 w-4" />Contractors</TabsTrigger>
-                <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>
-                <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" />CRM Users</TabsTrigger>
-                <TabsTrigger value="teams" className="gap-2"><UsersRound className="h-4 w-4" />Teams</TabsTrigger>
-                <TabsTrigger value="features" className="gap-2"><Shield className="h-4 w-4" />Feature Access</TabsTrigger>
-                <TabsTrigger value="logins" className="gap-2 relative">
-                  <KeyRound className="h-4 w-4" />
-                  Logins Requested
-                  {loginRequestCount > 0 && (
-                    <Badge className={`ml-1 h-5 min-w-[20px] p-0 flex items-center justify-center text-xs rounded-full ${escalatedCount > 0 ? 'bg-red-500' : 'bg-yellow-500'} text-white`}>
-                      {loginRequestCount}
-                    </Badge>
-                  )}
-                </TabsTrigger>
+                <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads</TabsTrigger>
+                <TabsTrigger value="contractors-companies" className="gap-2"><Building2 className="h-4 w-4" />Contractors & Companies</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
+                <TabsTrigger value="referrals" className="gap-2"><Lightbulb className="h-4 w-4" />Referrals</TabsTrigger>
+                <TabsTrigger value="resources" className="gap-2"><GraduationCap className="h-4 w-4" />Academy Resources</TabsTrigger>
                 <TabsTrigger value="ai-training" className="gap-2 bg-purple-100 data-[state=active]:bg-purple-200">
                   <Brain className="h-4 w-4" />AI Training Center
                 </TabsTrigger>
-                <TabsTrigger value="referrals" className="gap-2"><Lightbulb className="h-4 w-4" />Referrals</TabsTrigger>
-                <TabsTrigger value="resources" className="gap-2"><GraduationCap className="h-4 w-4" />Academy Resources</TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
 
@@ -520,120 +504,12 @@ const SuperAdminDashboard = () => {
                 <PendingSignupsTable />
               </TabsContent>
 
-              <TabsContent value="leads" className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                    <SelectTrigger className="w-48"><SelectValue placeholder="Filter by source" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sources</SelectItem>
-                      {uniqueSources.map(source => (<SelectItem key={source} value={source}>{source}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLeads.length === 0 ? (
-                        <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No leads found</TableCell></TableRow>
-                      ) : (
-                        filteredLeads.slice(0, 50).map((lead) => (
-                          <TableRow key={`${lead.source}-${lead.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => handleLeadClick(lead)}>
-                            <TableCell><Badge variant="outline">{lead.source}</Badge></TableCell>
-                            <TableCell className="font-medium">{lead.customerName}</TableCell>
-                            <TableCell><div className="text-sm">{lead.email && <div>{lead.email}</div>}{lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}</div></TableCell>
-                            <TableCell><Badge className={getStatusColor(lead.status)}>{lead.status || "N/A"}</Badge></TableCell>
-                            <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{lead.details}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground"><div className="flex items-center gap-1"><Calendar className="h-3 w-3" />{lead.createdAt ? format(new Date(lead.createdAt), "MMM d, yyyy") : "N/A"}</div></TableCell>
-                            <TableCell><div className="flex items-center gap-1" onClick={e => e.stopPropagation()}><Button size="icon" variant="ghost" onClick={() => handleLeadClick(lead)}><Eye className="h-4 w-4" /></Button></div></TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                {filteredLeads.length > 50 && (<p className="text-sm text-muted-foreground text-center">Showing 50 of {filteredLeads.length} leads</p>)}
+              <TabsContent value="leads">
+                <EnhancedLeadsTable />
               </TabsContent>
 
-              <TabsContent value="contractors" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                      <SelectTrigger className="w-48"><SelectValue placeholder="Filter by source" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sources</SelectItem>
-                        {contractorSources.map(source => (<SelectItem key={source} value={source}>{source}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={handleAddContractor}><Plus className="h-4 w-4 mr-2" />Add Contractor</Button>
-                </div>
-
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredContractors.length === 0 ? (
-                        <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No contractors found</TableCell></TableRow>
-                      ) : (
-                        filteredContractors.map((contractor) => (
-                          <TableRow key={`${contractor.source}-${contractor.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => handleContractorClick(contractor)}>
-                            <TableCell><Badge variant="outline">{contractor.source}</Badge></TableCell>
-                            <TableCell className="font-medium">{contractor.companyName}</TableCell>
-                            <TableCell>{contractor.contactName || "—"}</TableCell>
-                            <TableCell className="text-sm">{contractor.email || "—"}</TableCell>
-                            <TableCell className="text-sm">{contractor.phone || "—"}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground"><div className="flex items-center gap-1"><Clock className="h-3 w-3" />{contractor.createdAt ? format(new Date(contractor.createdAt), "MMM d, yyyy") : "N/A"}</div></TableCell>
-                            <TableCell><div className="flex items-center gap-1" onClick={e => e.stopPropagation()}><Button size="icon" variant="ghost" onClick={() => handleContractorClick(contractor)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" onClick={() => handleContractorClick(contractor, 'edit')}><Edit className="h-4 w-4" /></Button></div></TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="companies">
-                <CompaniesTable />
-              </TabsContent>
-
-              <TabsContent value="users">
-                <UsersTable />
-              </TabsContent>
-
-              <TabsContent value="teams">
-                <TeamsTable />
-              </TabsContent>
-
-              <TabsContent value="features">
-                <ContractorFeatureAccess />
-              </TabsContent>
-
-              <TabsContent value="logins">
-                <LoginRequestsTable />
+              <TabsContent value="contractors-companies">
+                <ContractorsCompaniesTable />
               </TabsContent>
 
               <TabsContent value="analytics">
@@ -648,12 +524,12 @@ const SuperAdminDashboard = () => {
                 <ResourcesManagement />
               </TabsContent>
 
-              <TabsContent value="superadmins">
-                <SuperAdminsTable />
-              </TabsContent>
-
               <TabsContent value="ai-training">
                 <AITrainingCenter />
+              </TabsContent>
+
+              <TabsContent value="superadmins">
+                <SuperAdminsTable />
               </TabsContent>
             </Tabs>
           </CardContent>
