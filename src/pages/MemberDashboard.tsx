@@ -42,6 +42,13 @@ interface ContractorProfile {
   category: string;
   subscription_status: string | null;
   is_verified: boolean | null;
+  company_id: string | null;
+}
+
+interface CompanyMembership {
+  companyId: string;
+  companyName: string;
+  role: string;
 }
 
 type ServiceCategory = "all" | "home" | "business" | "emergency" | "shopping" | "learning";
@@ -69,6 +76,7 @@ const MemberDashboard = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [networkMember, setNetworkMember] = useState<NetworkMember | null>(null);
   const [contractorProfile, setContractorProfile] = useState<ContractorProfile | null>(null);
+  const [companyMembership, setCompanyMembership] = useState<CompanyMembership | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<ServiceCategory>("all");
@@ -132,6 +140,27 @@ const MemberDashboard = () => {
         .maybeSingle();
 
       setIsSuperAdmin(!!superAdminData);
+
+      // Fetch company membership for company admin access
+      const { data: companyMemberData } = await supabase
+        .from("company_members")
+        .select(`
+          company_id,
+          role,
+          companies:company_id (name)
+        `)
+        .eq("user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (companyMemberData) {
+        const companyName = (companyMemberData.companies as any)?.name || "Your Company";
+        setCompanyMembership({
+          companyId: companyMemberData.company_id,
+          companyName: companyName,
+          role: companyMemberData.role
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -452,6 +481,24 @@ const MemberDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Company Admin Card */}
+            {companyMembership?.role === "company_admin" && (
+              <Card className="glass-card card-3d gradient-border stagger-item stagger-delay-5">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Company Role</p>
+                      <p className="text-xl font-bold">Administrator</p>
+                      <p className="text-xs text-muted-foreground">{companyMembership.companyName}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Settings className="h-6 w-6 text-purple-500 icon-float" style={{ animationDelay: '1.5s' }} />
+                    </div>
+                  </div>
+              </CardContent>
+            </Card>
+            )}
           </div>
         )}
 
@@ -627,6 +674,26 @@ const MemberDashboard = () => {
                     </div>
                   </div>
                 </Link>
+
+                {/* Company Admin Dashboard Link */}
+                {companyMembership?.role === "company_admin" && (
+                  <Link to="/company/dashboard" className="group">
+                    <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-purple-400/50 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                          <Settings className="h-6 w-6 text-purple-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                            Company Admin
+                          </h3>
+                          <p className="text-sm text-white/60">Manage {companyMembership.companyName}</p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-purple-300 group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </div>
+                  </Link>
+                )}
               </div>
             </div>
             </div>

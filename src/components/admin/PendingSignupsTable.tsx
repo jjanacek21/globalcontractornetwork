@@ -16,12 +16,18 @@ interface PendingContractor {
   id: string;
   user_id: string | null;
   company_name: string;
+  company_id: string | null;
   category: string;
   email: string | null;
   phone: string | null;
   description: string | null;
   created_at: string | null;
   subscription_status: string | null;
+  company?: {
+    id: string;
+    name: string;
+    verification_status: string | null;
+  } | null;
 }
 
 interface NetworkMember {
@@ -76,10 +82,17 @@ const PendingSignupsTable = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch pending contractors
+      // Fetch pending contractors with company information
       const { data: contractorsData } = await supabase
         .from("contractor_profiles")
-        .select("*")
+        .select(`
+          *,
+          company:company_id (
+            id,
+            name,
+            verification_status
+          )
+        `)
         .eq("subscription_status", "pending")
         .order("created_at", { ascending: false });
 
@@ -177,8 +190,35 @@ const PendingSignupsTable = () => {
 
       if (updateError) throw updateError;
 
-      // If company selected, add to company_members
-      if (selectedContractor.user_id && selectedCompanyId && selectedCompanyId !== "none") {
+      // If this contractor has a company_id (registered as company admin), ensure company is verified
+      if (selectedContractor.company_id) {
+        // Ensure they're set up as company admin in company_members if not already
+        const { data: existingMember } = await supabase
+          .from("company_members")
+          .select("id, role")
+          .eq("user_id", selectedContractor.user_id)
+          .eq("company_id", selectedContractor.company_id)
+          .maybeSingle();
+
+        if (!existingMember && selectedContractor.user_id) {
+          await supabase.from("company_members").insert({
+            user_id: selectedContractor.user_id,
+            company_id: selectedContractor.company_id,
+            role: "company_admin",
+            is_active: true
+          });
+        }
+
+        // Also update company verification status
+        await supabase
+          .from("companies")
+          .update({ 
+            verification_status: "verified",
+            is_active: true
+          })
+          .eq("id", selectedContractor.company_id);
+      } else if (selectedContractor.user_id && selectedCompanyId && selectedCompanyId !== "none") {
+        // If company selected from dropdown (independent contractor joining company), add to company_members
         const { error: memberError } = await supabase
           .from("company_members")
           .insert({
@@ -224,9 +264,13 @@ const PendingSignupsTable = () => {
         }
       }
 
+      const approvalMessage = selectedContractor.company_id 
+        ? `${selectedContractor.company_name} company has been approved with ${selectedFeatures.length} feature(s) enabled.`
+        : `${selectedContractor.company_name} has been approved with ${selectedFeatures.length} feature(s) enabled.`;
+
       toast({
-        title: "Contractor Approved",
-        description: `${selectedContractor.company_name} has been approved with ${selectedFeatures.length} feature(s) enabled.`
+        title: selectedContractor.company_id ? "Company Approved" : "Contractor Approved",
+        description: approvalMessage
       });
 
       setApprovalDialogOpen(false);
@@ -307,7 +351,17 @@ const PendingSignupsTable = () => {
               <TableBody>
                 {pendingContractors.map((contractor) => (
                   <TableRow key={contractor.id}>
-                    <TableCell className="font-medium">{contractor.company_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col gap-1">
+                        <span>{contractor.company_name}</span>
+                        {contractor.company && (
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 w-fit">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            Company Admin
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{contractor.category}</Badge>
                     </TableCell>

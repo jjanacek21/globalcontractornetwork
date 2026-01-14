@@ -494,7 +494,32 @@ const CompanyRegistration = () => {
 
       if (adminError) console.error("Failed to create company admin record:", adminError);
 
-      // 9. Notify super admin
+      // 9. Create contractor profile for company admin (so they appear in pending signups and get contractor access)
+      const { error: contractorProfileError } = await supabase
+        .from("contractor_profiles")
+        .insert({
+          user_id: authData.user.id,
+          company_name: companyInfo.name,
+          company_id: companyData.id,
+          category: companyInfo.primaryCategory,
+          description: companyInfo.description,
+          phone: companyInfo.phone,
+          email: companyInfo.email,
+          website: companyInfo.website,
+          license_number: firstLicense?.number || null,
+          license_state: firstLicense?.state || null,
+          verification_status: "pending",
+          subscription_status: "pending",
+          is_verified: false,
+          first_name: accountInfo.firstName,
+          last_name: accountInfo.lastName,
+        });
+
+      if (contractorProfileError) {
+        console.error("Failed to create contractor profile:", contractorProfileError);
+      }
+
+      // 10. Notify super admin
       try {
         await supabase.functions.invoke("notify-admin-signup", {
           body: {
