@@ -23,7 +23,8 @@ import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
 import ReferralsManagement from "@/components/admin/ReferralsManagement";
 import AITrainingCenter from "@/components/admin/AITrainingCenter";
 import ResourcesManagement from "@/components/admin/ResourcesManagement";
-import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
+import ContractorsTable from "@/components/admin/ContractorsTable";
+import CompaniesTable from "@/components/admin/CompaniesTable";
 import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 import GamificationManagement from "@/components/admin/GamificationManagement";
 import PropertyOwnersTable from "@/components/admin/PropertyOwnersTable";
@@ -492,7 +493,11 @@ const SuperAdminDashboard = () => {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="leads" className="gap-2"><FileText className="h-4 w-4" />Leads</TabsTrigger>
-                <TabsTrigger value="contractors-companies" className="gap-2"><Building2 className="h-4 w-4" />Contractors & Companies</TabsTrigger>
+                <TabsTrigger value="contractors" className="gap-2"><Users className="h-4 w-4" />Contractors</TabsTrigger>
+                <TabsTrigger value="companies" className="gap-2"><Building2 className="h-4 w-4" />Companies</TabsTrigger>
+                <TabsTrigger value="property-owners" className="gap-2">
+                  <Home className="h-4 w-4" />Property Owners
+                </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="h-4 w-4" />Analytics</TabsTrigger>
                 <TabsTrigger value="referrals" className="gap-2"><Lightbulb className="h-4 w-4" />Referrals</TabsTrigger>
                 <TabsTrigger value="resources" className="gap-2"><GraduationCap className="h-4 w-4" />Academy Resources</TabsTrigger>
@@ -501,9 +506,6 @@ const SuperAdminDashboard = () => {
                 </TabsTrigger>
                 <TabsTrigger value="gamification" className="gap-2">
                   <Trophy className="h-4 w-4" />Gamification
-                </TabsTrigger>
-                <TabsTrigger value="property-owners" className="gap-2">
-                  <Home className="h-4 w-4" />Property Owners
                 </TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
@@ -516,8 +518,12 @@ const SuperAdminDashboard = () => {
                 <EnhancedLeadsTable />
               </TabsContent>
 
-              <TabsContent value="contractors-companies">
-                <ContractorsCompaniesTable />
+              <TabsContent value="contractors">
+                <ContractorsTable />
+              </TabsContent>
+
+              <TabsContent value="companies">
+                <CompaniesTable />
               </TabsContent>
 
               <TabsContent value="analytics">
@@ -538,10 +544,6 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="gamification">
                 <GamificationManagement />
-              </TabsContent>
-
-              <TabsContent value="property-owners">
-                <PropertyOwnersTable />
               </TabsContent>
 
               <TabsContent value="superadmins">
