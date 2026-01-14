@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,48 @@ const JoinNetwork = () => {
     companyName: "",
     phone: "",
     category: "",
-    description: ""
+    description: "",
+    contractorType: "independent" as "independent" | "subcontractor" | "handyman",
+    selectedCompanyId: "",
+    selectedTeamId: "",
+    licenseNumber: "",
+    licenseState: "FL",
+    hasInsurance: false
   });
+
+  // Companies and Teams for selection
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch companies for sub-contractor selection
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      const { data } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      setCompanies(data || []);
+    };
+    fetchCompanies();
+  }, []);
+
+  // Fetch teams when company is selected
+  useEffect(() => {
+    const fetchTeams = async () => {
+      if (contractorForm.selectedCompanyId) {
+        const { data } = await supabase
+          .from('teams')
+          .select('id, name')
+          .eq('company_id', contractorForm.selectedCompanyId)
+          .order('name');
+        setTeams(data || []);
+      } else {
+        setTeams([]);
+      }
+    };
+    fetchTeams();
+  }, [contractorForm.selectedCompanyId]);
 
   const handleOwnerSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +182,14 @@ const JoinNetwork = () => {
           email: contractorForm.email,
           description: contractorForm.description || null,
           subscription_status: "pending",
-          is_verified: false
+          is_verified: false,
+          contractor_type: contractorForm.contractorType,
+          company_id: contractorForm.selectedCompanyId || null,
+          team_id: contractorForm.selectedTeamId || null,
+          license_number: contractorForm.licenseNumber || null,
+          license_state: contractorForm.licenseState || null,
+          first_name: contractorForm.firstName,
+          last_name: contractorForm.lastName
         });
 
         if (profileError) throw profileError;
@@ -157,26 +204,11 @@ const JoinNetwork = () => {
               category: contractorForm.category || "General Contractor",
               firstName: contractorForm.firstName,
               lastName: contractorForm.lastName,
+              contractorType: contractorForm.contractorType,
             },
           });
-          console.log("Admin notification sent successfully");
         } catch (notifyError) {
           console.error("Failed to send admin notification:", notifyError);
-        }
-
-        // Send welcome/confirmation email to contractor (non-blocking)
-        try {
-          await supabase.functions.invoke("send-welcome-email", {
-            body: {
-              email: contractorForm.email,
-              name: `${contractorForm.firstName} ${contractorForm.lastName}`,
-              userType: "contractor",
-              companyName: contractorForm.companyName
-            }
-          });
-          console.log("Contractor welcome email sent successfully");
-        } catch (emailError) {
-          console.error("Failed to send contractor welcome email:", emailError);
         }
 
         setSuccess(true);
@@ -571,6 +603,90 @@ const JoinNetwork = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="contractorType">Contractor Type *</Label>
+                    <Select 
+                      value={contractorForm.contractorType} 
+                      onValueChange={(value: "independent" | "subcontractor" | "handyman") => setContractorForm({ ...contractorForm, contractorType: value, selectedCompanyId: "", selectedTeamId: "" })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your contractor type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="independent">Independent Contractor (Solo, Gamification Access)</SelectItem>
+                        <SelectItem value="subcontractor">Sub-Contractor (Work with Companies)</SelectItem>
+                        <SelectItem value="handyman">Independent Handyman</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {contractorForm.contractorType === 'independent' && "Access gamification & referrals. Not listed in directory."}
+                      {contractorForm.contractorType === 'subcontractor' && "Can join a company/team or work independently with license."}
+                      {contractorForm.contractorType === 'handyman' && "Listed as handyman in directory when verified."}
+                    </p>
+                  </div>
+
+                  {contractorForm.contractorType === 'subcontractor' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="company">Company (Optional)</Label>
+                        <Select 
+                          value={contractorForm.selectedCompanyId} 
+                          onValueChange={(value) => setContractorForm({ ...contractorForm, selectedCompanyId: value, selectedTeamId: "" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a company or leave empty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Stay Independent</SelectItem>
+                            {companies.map(company => (
+                              <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {contractorForm.selectedCompanyId && teams.length > 0 && (
+                        <div className="space-y-2">
+                          <Label htmlFor="team">Team (Optional)</Label>
+                          <Select 
+                            value={contractorForm.selectedTeamId} 
+                            onValueChange={(value) => setContractorForm({ ...contractorForm, selectedTeamId: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a team" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No Team</SelectItem>
+                              {teams.map(team => (
+                                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {!contractorForm.selectedCompanyId && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="licenseNumber">License Number</Label>
+                            <Input
+                              id="licenseNumber"
+                              value={contractorForm.licenseNumber}
+                              onChange={(e) => setContractorForm({ ...contractorForm, licenseNumber: e.target.value })}
+                              placeholder="Required for directory listing"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="licenseState">License State</Label>
+                            <Input
+                              id="licenseState"
+                              value={contractorForm.licenseState}
+                              onChange={(e) => setContractorForm({ ...contractorForm, licenseState: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="space-y-2">
                     <Label htmlFor="category">Primary Service Category *</Label>
                     <Select 
                       value={contractorForm.category} 
@@ -590,6 +706,7 @@ const JoinNetwork = () => {
                         <SelectItem value="Windows & Doors">Windows & Doors</SelectItem>
                         <SelectItem value="Flooring">Flooring</SelectItem>
                         <SelectItem value="Kitchen & Bath">Kitchen & Bath</SelectItem>
+                        <SelectItem value="Handyman">Handyman</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>

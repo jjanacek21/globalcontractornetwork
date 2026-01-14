@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Loader2, Eye, Mail, Phone, MapPin, Calendar, User, FileText, Camera, Star } from "lucide-react";
+import { Search, Loader2, Eye, Mail, Phone, MapPin, Calendar, User, FileText, Camera, Star, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +38,7 @@ const PropertyOwnersTable = () => {
   const [selectedOwner, setSelectedOwner] = useState<OwnerDetails | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -97,6 +99,32 @@ const PropertyOwnersTable = () => {
       });
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleDelete = async (owner: PropertyOwner) => {
+    setDeleting(owner.id);
+    try {
+      // Delete from network_members first if exists
+      await supabase
+        .from('network_members')
+        .delete()
+        .eq('user_id', owner.id);
+
+      // Delete from profiles
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', owner.id);
+
+      if (error) throw error;
+      
+      toast({ title: "Success", description: "Property owner deleted successfully" });
+      fetchPropertyOwners();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -189,10 +217,37 @@ const PropertyOwnersTable = () => {
                     {owner.created_at ? format(new Date(owner.created_at), "MMM d, yyyy") : "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleViewOwner(owner)}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleViewOwner(owner)}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" disabled={deleting === owner.id}>
+                            {deleting === owner.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Property Owner</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete {getFullName(owner)}? This will remove their profile and all associated data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(owner)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

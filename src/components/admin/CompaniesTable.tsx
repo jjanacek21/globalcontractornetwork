@@ -4,8 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Search, Building2, Users, Eye, Edit, Calendar } from "lucide-react";
+import { Loader2, Plus, Search, Building2, Users, Eye, Edit, Calendar, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { CompanyDialog } from "./CompanyDialog";
 
@@ -32,6 +33,7 @@ export function CompaniesTable() {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'add'>('view');
+  const [deleting, setDeleting] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,6 +79,24 @@ export function CompaniesTable() {
     setSelectedCompany(null);
     setDialogMode('add');
     setDialogOpen(true);
+  };
+
+  const handleDelete = async (company: Company) => {
+    setDeleting(company.id);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', company.id);
+
+      if (error) throw error;
+      toast({ title: "Success", description: "Company deleted successfully" });
+      fetchCompanies();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const filteredCompanies = companies.filter(company =>
@@ -190,6 +210,31 @@ export function CompaniesTable() {
                       <Button size="icon" variant="ghost" onClick={() => handleCompanyClick(company, 'edit')}>
                         <Edit className="h-4 w-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" disabled={deleting === company.id}>
+                            {deleting === company.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete {company.name}? This will also delete all associated members, customers, and data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(company)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -210,3 +255,5 @@ export function CompaniesTable() {
     </div>
   );
 }
+
+export default CompaniesTable;

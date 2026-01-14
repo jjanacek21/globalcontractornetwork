@@ -1498,6 +1498,7 @@ export type Database = {
           client_references: Json | null
           company_id: string | null
           company_name: string
+          contractor_type: string | null
           created_at: string | null
           description: string | null
           email: string | null
@@ -1505,6 +1506,7 @@ export type Database = {
           google_business_url: string | null
           id: string
           insurance_info: Json | null
+          is_directory_eligible: boolean | null
           is_verified: boolean | null
           last_name: string | null
           license_expiration: string | null
@@ -1542,6 +1544,7 @@ export type Database = {
           client_references?: Json | null
           company_id?: string | null
           company_name: string
+          contractor_type?: string | null
           created_at?: string | null
           description?: string | null
           email?: string | null
@@ -1549,6 +1552,7 @@ export type Database = {
           google_business_url?: string | null
           id?: string
           insurance_info?: Json | null
+          is_directory_eligible?: boolean | null
           is_verified?: boolean | null
           last_name?: string | null
           license_expiration?: string | null
@@ -1586,6 +1590,7 @@ export type Database = {
           client_references?: Json | null
           company_id?: string | null
           company_name?: string
+          contractor_type?: string | null
           created_at?: string | null
           description?: string | null
           email?: string | null
@@ -1593,6 +1598,7 @@ export type Database = {
           google_business_url?: string | null
           id?: string
           insurance_info?: Json | null
+          is_directory_eligible?: boolean | null
           is_verified?: boolean | null
           last_name?: string | null
           license_expiration?: string | null
