@@ -341,6 +341,25 @@ const CompanyRegistration = () => {
       if (authError) throw authError;
       if (!authData.user) throw new Error("Failed to create user account");
 
+      // Wait for session to be established
+      let session = authData.session;
+      if (!session) {
+        // If session not returned immediately, wait and get it
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const { data: sessionData } = await supabase.auth.getSession();
+        session = sessionData.session;
+      }
+
+      if (!session) {
+        throw new Error("Session not established. Please try logging in after registration.");
+      }
+
+      // Verify the session is properly set before database operations
+      const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+      if (!verifiedUser || verifiedUser.id !== authData.user.id) {
+        throw new Error("Authentication verification failed. Please try again.");
+      }
+
       // 2. Upload credential documents
       let insuranceDocUrl: string | null = null;
       let workersCompDocUrl: string | null = null;
