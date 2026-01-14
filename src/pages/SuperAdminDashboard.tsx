@@ -26,17 +26,6 @@ import ResourcesManagement from "@/components/admin/ResourcesManagement";
 import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
 import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 import GamificationManagement from "@/components/admin/GamificationManagement";
-import { format, formatDistanceToNow } from "date-fns";
-import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
-import { ContractorDialog } from "@/components/admin/ContractorDialog";
-import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
-import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
-import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
-import ReferralsManagement from "@/components/admin/ReferralsManagement";
-import AITrainingCenter from "@/components/admin/AITrainingCenter";
-import ResourcesManagement from "@/components/admin/ResourcesManagement";
-import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
-import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 
 interface UnifiedLead {
   id: string;

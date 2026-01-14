@@ -5,14 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useAdminReferrals, Referral } from "@/hooks/useReferrals";
 import { 
-  Loader2, Clock, Phone, Calendar, Wrench, CheckCircle2, 
-  DollarSign, Eye, Edit, Search, Filter
+  Loader2, Edit, Search, Filter, Trash2
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; color: string }> = {
   submitted: { label: "Submitted", variant: "secondary", color: "bg-gray-100 text-gray-700" },
@@ -25,11 +25,14 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 
 const ReferralsManagement = () => {
   const { toast } = useToast();
-  const { referrals, loading, updateReferral, markAsPaid } = useAdminReferrals();
+  const { referrals, loading, updateReferral, markAsPaid, deleteReferral } = useAdminReferrals();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [referralToDelete, setReferralToDelete] = useState<Referral | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     status: "",
     job_amount: "",
@@ -105,6 +108,24 @@ const ReferralsManagement = () => {
     }
     
     await markAsPaid(referral.id, payoutAmount);
+  };
+
+  const handleDeleteClick = (referral: Referral) => {
+    setReferralToDelete(referral);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!referralToDelete) return;
+    
+    setDeleting(true);
+    const success = await deleteReferral(referralToDelete.id);
+    setDeleting(false);
+    
+    if (success) {
+      setDeleteDialogOpen(false);
+      setReferralToDelete(null);
+    }
   };
 
   if (loading) {
@@ -224,8 +245,17 @@ const ReferralsManagement = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(referral)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(referral)} title="Edit">
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDeleteClick(referral)} 
+                          title="Delete"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                         {referral.status === "completed" && referral.payout_amount && (
                           <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(referral)}>
@@ -313,6 +343,38 @@ const ReferralsManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Referral</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this referral? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {referralToDelete && (
+            <div className="p-4 bg-muted/50 rounded-lg my-4">
+              <p className="font-medium">{referralToDelete.referred_customer_name}</p>
+              <p className="text-sm text-muted-foreground">{referralToDelete.referred_service_type}</p>
+              <p className="text-sm text-muted-foreground">{referralToDelete.property_address}</p>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -219,6 +219,33 @@ export const useAdminReferrals = () => {
     });
   };
 
+  const deleteReferral = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("contractor_referrals")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Referral Deleted",
+        description: "Referral has been removed successfully",
+      });
+
+      await fetchAllReferrals();
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting referral:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete referral",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchAllReferrals();
   }, []);
@@ -228,6 +255,7 @@ export const useAdminReferrals = () => {
     loading,
     updateReferral,
     markAsPaid,
+    deleteReferral,
     refetch: fetchAllReferrals,
   };
 };
