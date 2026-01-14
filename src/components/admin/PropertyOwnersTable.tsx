@@ -105,19 +105,18 @@ const PropertyOwnersTable = () => {
   const handleDelete = async (owner: PropertyOwner) => {
     setDeleting(owner.id);
     try {
-      // Delete from network_members first if exists
-      await supabase
-        .from('network_members')
-        .delete()
-        .eq('user_id', owner.id);
+      // Call edge function to properly delete from auth system
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId: owner.id }
+      });
 
-      // Delete from profiles
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', owner.id);
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to delete user');
+      }
 
-      if (error) throw error;
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Failed to delete user');
+      }
       
       toast({ title: "Success", description: "Property owner deleted successfully" });
       fetchPropertyOwners();
