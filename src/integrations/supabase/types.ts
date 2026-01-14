@@ -549,53 +549,163 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          banner_image_url: string | null
+          bio_long: string | null
+          bio_short: string | null
+          certifications: Json | null
           city: string | null
+          client_references: Json | null
           created_at: string | null
           created_by: string | null
+          description: string | null
           email: string | null
           id: string
+          insurance_expiration: string | null
+          insurance_policy_number: string | null
+          insurance_provider: string | null
           is_active: boolean | null
+          job_photos: Json | null
+          license_expiration: string | null
+          license_number: string | null
+          license_state: string | null
           logo_url: string | null
+          min_contract_value_out_of_area: number | null
           name: string
+          payout_rules: Json | null
           phone: string | null
+          primary_category: string | null
+          services_offered: string[] | null
+          social_links: Json | null
           state: string | null
           updated_at: string | null
+          verification_score: number | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
+          workers_comp_expiration: string | null
+          workers_comp_provider: string | null
+          yearly_revenue_range: string | null
+          years_in_business: number | null
           zip_code: string | null
         }
         Insert: {
           address?: string | null
+          banner_image_url?: string | null
+          bio_long?: string | null
+          bio_short?: string | null
+          certifications?: Json | null
           city?: string | null
+          client_references?: Json | null
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           email?: string | null
           id?: string
+          insurance_expiration?: string | null
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
           is_active?: boolean | null
+          job_photos?: Json | null
+          license_expiration?: string | null
+          license_number?: string | null
+          license_state?: string | null
           logo_url?: string | null
+          min_contract_value_out_of_area?: number | null
           name: string
+          payout_rules?: Json | null
           phone?: string | null
+          primary_category?: string | null
+          services_offered?: string[] | null
+          social_links?: Json | null
           state?: string | null
           updated_at?: string | null
+          verification_score?: number | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
+          workers_comp_expiration?: string | null
+          workers_comp_provider?: string | null
+          yearly_revenue_range?: string | null
+          years_in_business?: number | null
           zip_code?: string | null
         }
         Update: {
           address?: string | null
+          banner_image_url?: string | null
+          bio_long?: string | null
+          bio_short?: string | null
+          certifications?: Json | null
           city?: string | null
+          client_references?: Json | null
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           email?: string | null
           id?: string
+          insurance_expiration?: string | null
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
           is_active?: boolean | null
+          job_photos?: Json | null
+          license_expiration?: string | null
+          license_number?: string | null
+          license_state?: string | null
           logo_url?: string | null
+          min_contract_value_out_of_area?: number | null
           name?: string
+          payout_rules?: Json | null
           phone?: string | null
+          primary_category?: string | null
+          services_offered?: string[] | null
+          social_links?: Json | null
           state?: string | null
           updated_at?: string | null
+          verification_score?: number | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
+          workers_comp_expiration?: string | null
+          workers_comp_provider?: string | null
+          yearly_revenue_range?: string | null
+          years_in_business?: number | null
           zip_code?: string | null
         }
         Relationships: []
+      }
+      company_admins: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          is_super_admin: boolean | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          is_super_admin?: boolean | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          is_super_admin?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_admins_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_members: {
         Row: {
@@ -657,6 +767,66 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_resources: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          external_url: string | null
+          file_url: string | null
+          id: string
+          is_public: boolean | null
+          resource_type: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          is_public?: boolean | null
+          resource_type?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          is_public?: boolean | null
+          resource_type?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_resources_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_resources_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1030,6 +1200,7 @@ export type Database = {
           bio_short: string | null
           category: string
           client_references: Json | null
+          company_id: string | null
           company_name: string
           created_at: string | null
           description: string | null
@@ -1058,6 +1229,7 @@ export type Database = {
           social_links: Json | null
           subscription_expires_at: string | null
           subscription_status: string | null
+          team_id: string | null
           title: string | null
           updated_at: string | null
           user_id: string | null
@@ -1072,6 +1244,7 @@ export type Database = {
           bio_short?: string | null
           category: string
           client_references?: Json | null
+          company_id?: string | null
           company_name: string
           created_at?: string | null
           description?: string | null
@@ -1100,6 +1273,7 @@ export type Database = {
           social_links?: Json | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
+          team_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1114,6 +1288,7 @@ export type Database = {
           bio_short?: string | null
           category?: string
           client_references?: Json | null
+          company_id?: string | null
           company_name?: string
           created_at?: string | null
           description?: string | null
@@ -1142,20 +1317,45 @@ export type Database = {
           social_links?: Json | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
+          team_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string | null
           verification_status?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contractor_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contractor_referrals: {
         Row: {
+          accepted_by_customer: boolean | null
           assigned_contractor_id: string | null
+          company_id: string | null
           completed_at: string | null
           created_at: string
+          customer_user_id: string | null
+          deposit_amount: number | null
+          deposit_paid_at: string | null
+          final_amount: number | null
+          final_paid_at: string | null
           id: string
+          invitation_accepted_at: string | null
+          invitation_email_sent_at: string | null
           job_amount: number | null
           notes: string | null
           paid_at: string | null
@@ -1169,13 +1369,23 @@ export type Database = {
           referred_service_type: string
           referring_contractor_id: string
           status: string
+          team_id: string | null
           updated_at: string
         }
         Insert: {
+          accepted_by_customer?: boolean | null
           assigned_contractor_id?: string | null
+          company_id?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_user_id?: string | null
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
+          final_amount?: number | null
+          final_paid_at?: string | null
           id?: string
+          invitation_accepted_at?: string | null
+          invitation_email_sent_at?: string | null
           job_amount?: number | null
           notes?: string | null
           paid_at?: string | null
@@ -1189,13 +1399,23 @@ export type Database = {
           referred_service_type: string
           referring_contractor_id: string
           status?: string
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
+          accepted_by_customer?: boolean | null
           assigned_contractor_id?: string | null
+          company_id?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_user_id?: string | null
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
+          final_amount?: number | null
+          final_paid_at?: string | null
           id?: string
+          invitation_accepted_at?: string | null
+          invitation_email_sent_at?: string | null
           job_amount?: number | null
           notes?: string | null
           paid_at?: string | null
@@ -1209,6 +1429,7 @@ export type Database = {
           referred_service_type?: string
           referring_contractor_id?: string
           status?: string
+          team_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1220,10 +1441,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contractor_referrals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contractor_referrals_referring_contractor_id_fkey"
             columns: ["referring_contractor_id"]
             isOneToOne: false
             referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_referrals_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -5248,6 +5483,8 @@ export type Database = {
           id: string
           manager_id: string | null
           name: string
+          service_counties: string[] | null
+          service_zip_codes: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -5257,6 +5494,8 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name: string
+          service_counties?: string[] | null
+          service_zip_codes?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -5266,6 +5505,8 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name?: string
+          service_counties?: string[] | null
+          service_zip_codes?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -5644,6 +5885,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_company_verification_score: {
+        Args: { company_row: Database["public"]["Tables"]["companies"]["Row"] }
+        Returns: number
+      }
       get_company_role: {
         Args: { _company_id: string }
         Returns: Database["public"]["Enums"]["company_role"]
