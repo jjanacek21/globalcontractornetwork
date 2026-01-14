@@ -55,14 +55,23 @@ interface Company {
   name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
   city: string | null;
   state: string | null;
+  zip_code: string | null;
+  website: string | null;
+  description: string | null;
   verification_status: string | null;
   verification_score: number | null;
   is_active: boolean | null;
   created_at: string | null;
   insurance_expiration: string | null;
   workers_comp_expiration: string | null;
+  license_number: string | null;
+  license_state: string | null;
+  license_expiration: string | null;
+  primary_category: string | null;
+  years_in_business: number | null;
   credential_warnings: CredentialWarnings | null;
 }
 
@@ -544,8 +553,11 @@ export default function ContractorsCompaniesTable() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost">
+                    <Button size="icon" variant="ghost" onClick={() => handleCompanyClick(company, 'view')}>
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleCompanyClick(company, 'edit')}>
+                      <Edit className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
@@ -617,6 +629,39 @@ export default function ContractorsCompaniesTable() {
                     <Button size="icon" variant="ghost" onClick={() => handleEditContractor(contractor)}>
                       <Shield className="h-4 w-4" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="text-destructive hover:text-destructive"
+                          disabled={deletingId === contractor.id}
+                        >
+                          {deletingId === contractor.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Contractor</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{contractor.company_name}</strong> from the network? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteContractor(contractor)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
@@ -676,6 +721,16 @@ export default function ContractorsCompaniesTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Company Management Dialog */}
+      <CompanyManagementDialog
+        open={companyDialogOpen}
+        onOpenChange={setCompanyDialogOpen}
+        company={selectedCompany}
+        mode={companyDialogMode}
+        onModeChange={setCompanyDialogMode}
+        onRefresh={fetchData}
+      />
     </div>
   );
 }
