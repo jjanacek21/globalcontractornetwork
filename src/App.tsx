@@ -66,6 +66,8 @@ import EmergencyMitigation from "./pages/EmergencyMitigation";
 import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
+import CompanyRegistration from "./pages/CompanyRegistration";
+import CompanyAdminDashboard from "./pages/CompanyAdminDashboard";
 import TrainingAcademy from "./pages/TrainingAcademy";
 import AcademyResources from "./pages/AcademyResources";
 import ResourceDetail from "./pages/ResourceDetail";
@@ -105,6 +107,12 @@ const GCNRoutes = () => (
     <Route path="/" element={<LandingPage />} />
     <Route path="/services" element={<Index />} />
     <Route path="/join" element={<JoinNetwork />} />
+    <Route path="/register-company" element={<CompanyRegistration />} />
+    <Route path="/company/dashboard" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CompanyAdminDashboard />
+      </ProtectedRoute>
+    } />
     <Route path="/network-login" element={<NetworkLogin />} />
     <Route path="/login" element={<NetworkLogin />} />
     <Route path="/homeowner/dashboard" element={<HomeownerDashboard />} />
