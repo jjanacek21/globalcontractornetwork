@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Loader2, Upload, Shield, Users, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, CheckCircle2, Loader2, Upload, Shield, Users, Star, Plus, X, FileText, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -73,6 +74,17 @@ interface JobPhoto {
   previewUrl?: string;
 }
 
+interface License {
+  number: string;
+  state: string;
+  expiration: string;
+  file: File | null;
+  fileName?: string;
+}
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+
 const CompanyRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -97,18 +109,29 @@ const CompanyRegistration = () => {
     description: "",
   });
 
-  // Step 2: Credentials
-  const [credentials, setCredentials] = useState({
-    licenseNumber: "",
-    licenseState: "FL",
-    licenseExpiration: "",
-    insuranceProvider: "",
-    insurancePolicyNumber: "",
-    insuranceExpiration: "",
-    workersCompProvider: "",
-    workersCompExpiration: "",
-    certifications: "",
+  // Step 2: Credentials - Multiple Licenses
+  const [licenses, setLicenses] = useState<License[]>([
+    { number: "", state: "FL", expiration: "", file: null }
+  ]);
+  
+  const [insurance, setInsurance] = useState({
+    provider: "",
+    policyNumber: "",
+    expiration: "",
+    file: null as File | null,
+    fileName: ""
   });
+  
+  const [hasCrew, setHasCrew] = useState(false);
+  
+  const [workersComp, setWorkersComp] = useState({
+    provider: "",
+    expiration: "",
+    file: null as File | null,
+    fileName: ""
+  });
+  
+  const [certifications, setCertifications] = useState("");
 
   // Step 3: References
   const [references, setReferences] = useState<Reference[]>([
@@ -135,6 +158,53 @@ const CompanyRegistration = () => {
     confirmPassword: "",
     phone: "",
   });
+
+  // License handlers
+  const addLicense = () => {
+    if (licenses.length < 5) {
+      setLicenses([...licenses, { number: "", state: "FL", expiration: "", file: null }]);
+    }
+  };
+
+  const removeLicense = (index: number) => {
+    if (licenses.length > 1) {
+      setLicenses(licenses.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateLicense = (index: number, field: keyof License, value: string | File | null) => {
+    setLicenses(prev => {
+      const updated = [...prev];
+      if (field === 'file' && value instanceof File) {
+        updated[index] = { ...updated[index], file: value, fileName: value.name };
+      } else if (field !== 'file') {
+        updated[index] = { ...updated[index], [field]: value };
+      }
+      return updated;
+    });
+  };
+
+  const handleCredentialFileUpload = (file: File | null, type: 'license' | 'insurance' | 'workersComp', licenseIndex?: number) => {
+    if (!file) return;
+    
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File Too Large", description: "Maximum file size is 10MB", variant: "destructive" });
+      return;
+    }
+    
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast({ title: "Invalid File Type", description: "Please upload PDF, JPG, or PNG files only", variant: "destructive" });
+      return;
+    }
+    
+    if (type === 'license' && licenseIndex !== undefined) {
+      updateLicense(licenseIndex, 'file', file);
+    } else if (type === 'insurance') {
+      setInsurance(prev => ({ ...prev, file, fileName: file.name }));
+    } else if (type === 'workersComp') {
+      setWorkersComp(prev => ({ ...prev, file, fileName: file.name }));
+    }
+  };
 
   const handleServiceToggle = (service: string) => {
     setCompanyInfo(prev => ({
@@ -179,13 +249,28 @@ const CompanyRegistration = () => {
         }
         return true;
       case 2:
-        // Credentials are optional but encouraged
+        // Insurance is REQUIRED
+        if (!insurance.provider || !insurance.expiration) {
+          toast({ 
+            title: "Insurance Required", 
+            description: "Please provide insurance provider and expiration date to register", 
+            variant: "destructive" 
+          });
+          return false;
+        }
+        // Workers comp is REQUIRED if hasCrew is checked
+        if (hasCrew && (!workersComp.provider || !workersComp.expiration)) {
+          toast({ 
+            title: "Workers Comp Required", 
+            description: "Since your company has crew, please provide workers compensation information", 
+            variant: "destructive" 
+          });
+          return false;
+        }
         return true;
       case 3:
-        // At least one complete reference recommended
         return true;
       case 4:
-        // Photos optional but encouraged
         return true;
       case 5:
         if (!accountInfo.firstName || !accountInfo.lastName || !accountInfo.email || !accountInfo.password) {
@@ -216,6 +301,26 @@ const CompanyRegistration = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  const uploadCredentialDocument = async (file: File, userId: string, docType: string): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${docType}-${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('company-documents')
+      .upload(fileName, file);
+    
+    if (error) {
+      console.error(`Error uploading ${docType}:`, error);
+      return null;
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('company-documents')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(5)) return;
     
@@ -236,7 +341,36 @@ const CompanyRegistration = () => {
       if (authError) throw authError;
       if (!authData.user) throw new Error("Failed to create user account");
 
-      // 2. Upload job photos
+      // 2. Upload credential documents
+      let insuranceDocUrl: string | null = null;
+      let workersCompDocUrl: string | null = null;
+      
+      if (insurance.file) {
+        insuranceDocUrl = await uploadCredentialDocument(insurance.file, authData.user.id, 'insurance');
+      }
+      
+      if (workersComp.file) {
+        workersCompDocUrl = await uploadCredentialDocument(workersComp.file, authData.user.id, 'workers-comp');
+      }
+
+      // 3. Upload license documents and build licenses array
+      const licensesData = [];
+      for (const license of licenses) {
+        if (license.number) {
+          let docUrl: string | null = null;
+          if (license.file) {
+            docUrl = await uploadCredentialDocument(license.file, authData.user.id, `license-${license.number}`);
+          }
+          licensesData.push({
+            number: license.number,
+            state: license.state,
+            expiration: license.expiration || null,
+            document_url: docUrl
+          });
+        }
+      }
+
+      // 4. Upload job photos
       const uploadedPhotos = [];
       for (const photo of jobPhotos) {
         if (photo.file) {
@@ -261,7 +395,7 @@ const CompanyRegistration = () => {
         }
       }
 
-      // 3. Format references
+      // 5. Format references
       const formattedReferences = references
         .filter(ref => ref.name && (ref.email || ref.phone))
         .map(ref => ({
@@ -271,7 +405,9 @@ const CompanyRegistration = () => {
           projectDescription: ref.projectDescription
         }));
 
-      // 4. Create company record
+      // 6. Create company record
+      const firstLicense = licensesData[0] || null;
+      
       const { data: companyData, error: companyError } = await supabase
         .from("companies")
         .insert({
@@ -288,15 +424,24 @@ const CompanyRegistration = () => {
           years_in_business: companyInfo.yearsInBusiness ? parseInt(companyInfo.yearsInBusiness) : null,
           yearly_revenue_range: companyInfo.yearlyRevenue,
           description: companyInfo.description,
-          license_number: credentials.licenseNumber || null,
-          license_state: credentials.licenseState || null,
-          license_expiration: credentials.licenseExpiration || null,
-          insurance_provider: credentials.insuranceProvider || null,
-          insurance_policy_number: credentials.insurancePolicyNumber || null,
-          insurance_expiration: credentials.insuranceExpiration || null,
-          workers_comp_provider: credentials.workersCompProvider || null,
-          workers_comp_expiration: credentials.workersCompExpiration || null,
-          certifications: credentials.certifications ? credentials.certifications.split(',').map(c => c.trim()) : [],
+          // Legacy single license fields (from first license)
+          license_number: firstLicense?.number || null,
+          license_state: firstLicense?.state || null,
+          license_expiration: firstLicense?.expiration || null,
+          // New multiple licenses field
+          licenses: licensesData.length > 0 ? licensesData : [],
+          // Insurance
+          insurance_provider: insurance.provider || null,
+          insurance_policy_number: insurance.policyNumber || null,
+          insurance_expiration: insurance.expiration || null,
+          insurance_document_url: insuranceDocUrl,
+          // Workers Comp
+          workers_comp_provider: workersComp.provider || null,
+          workers_comp_expiration: workersComp.expiration || null,
+          workers_comp_document_url: workersCompDocUrl,
+          has_crew: hasCrew,
+          // Other fields
+          certifications: certifications ? certifications.split(',').map(c => c.trim()) : [],
           client_references: formattedReferences,
           job_photos: uploadedPhotos,
           verification_status: "pending",
@@ -307,7 +452,7 @@ const CompanyRegistration = () => {
 
       if (companyError) throw companyError;
 
-      // 5. Create company_members record (as company_admin)
+      // 7. Create company_members record (as company_admin)
       const { error: memberError } = await supabase
         .from("company_members")
         .insert({
@@ -319,7 +464,7 @@ const CompanyRegistration = () => {
 
       if (memberError) throw memberError;
 
-      // 6. Create company_admins record
+      // 8. Create company_admins record
       const { error: adminError } = await supabase
         .from("company_admins")
         .insert({
@@ -330,7 +475,7 @@ const CompanyRegistration = () => {
 
       if (adminError) console.error("Failed to create company admin record:", adminError);
 
-      // 7. Notify super admin
+      // 9. Notify super admin
       try {
         await supabase.functions.invoke("notify-admin-signup", {
           body: {
@@ -608,107 +753,253 @@ const CompanyRegistration = () => {
             {/* Step 2: Credentials */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  <p className="font-medium mb-1">Why provide credentials?</p>
-                  <p className="text-muted-foreground">
-                    Providing license, insurance, and workers comp information helps you get verified faster and improves your contractor rating. This information is verified and increases trust with property owners.
+                <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
+                  <p className="font-medium mb-1 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                    Why provide credentials?
                   </p>
+                  <ul className="text-muted-foreground space-y-1 list-disc pl-4">
+                    <li><strong>Insurance is REQUIRED</strong> to register as a business on GCN</li>
+                    <li><strong>Workers Compensation is REQUIRED</strong> if your company has crew performing work on-site</li>
+                    <li><strong>Contractor licenses are optional</strong> - you can use qualifiers if unlicensed, but having licenses improves your verification score</li>
+                    <li>Uploading document copies speeds up the verification process</li>
+                  </ul>
                 </div>
 
+                {/* Contractor Licenses Section */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold">Contractor License</h3>
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">License Number</Label>
-                      <Input
-                        id="licenseNumber"
-                        value={credentials.licenseNumber}
-                        onChange={(e) => setCredentials({ ...credentials, licenseNumber: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseState">State</Label>
-                      <Select value={credentials.licenseState} onValueChange={(v) => setCredentials({ ...credentials, licenseState: v })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="licenseExpiration">Expiration Date</Label>
-                      <Input
-                        id="licenseExpiration"
-                        type="date"
-                        value={credentials.licenseExpiration}
-                        onChange={(e) => setCredentials({ ...credentials, licenseExpiration: e.target.value })}
-                      />
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Contractor License (Optional - helps verification score)</h3>
+                    {licenses.length < 5 && (
+                      <Button type="button" variant="outline" size="sm" onClick={addLicense}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add License
+                      </Button>
+                    )}
                   </div>
+                  
+                  {licenses.map((license, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">License {index + 1}</span>
+                        {licenses.length > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => removeLicense(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid sm:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label>License Number</Label>
+                          <Input
+                            value={license.number}
+                            onChange={(e) => updateLicense(index, 'number', e.target.value)}
+                            placeholder="e.g., CBC1234567"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>State</Label>
+                          <Select value={license.state} onValueChange={(v) => updateLicense(index, 'state', v)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Expiration Date</Label>
+                          <Input
+                            type="date"
+                            value={license.expiration}
+                            onChange={(e) => updateLicense(index, 'expiration', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Upload License (Optional)</Label>
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer flex-1">
+                              <div className={`border-2 border-dashed rounded-lg p-2 text-center hover:bg-muted/50 transition-colors ${license.fileName ? 'border-green-500 bg-green-50' : ''}`}>
+                                {license.fileName ? (
+                                  <div className="flex items-center gap-2 text-sm text-green-700">
+                                    <FileText className="h-4 w-4" />
+                                    <span className="truncate">{license.fileName}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Upload className="h-4 w-4" />
+                                    <span>Upload</span>
+                                  </div>
+                                )}
+                              </div>
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                onChange={(e) => handleCredentialFileUpload(e.target.files?.[0] || null, 'license', index)}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Insurance</h3>
+                {/* Insurance Section - REQUIRED */}
+                <div className="space-y-4 border-t pt-6">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    Insurance <span className="text-red-500">*</span>
+                    <span className="text-xs font-normal text-muted-foreground">(Required to register)</span>
+                  </h3>
                   <div className="grid sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="insuranceProvider">Provider</Label>
+                      <Label htmlFor="insuranceProvider">Provider *</Label>
                       <Input
                         id="insuranceProvider"
-                        value={credentials.insuranceProvider}
-                        onChange={(e) => setCredentials({ ...credentials, insuranceProvider: e.target.value })}
+                        value={insurance.provider}
+                        onChange={(e) => setInsurance({ ...insurance, provider: e.target.value })}
+                        placeholder="e.g., State Farm"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
                       <Input
                         id="insurancePolicyNumber"
-                        value={credentials.insurancePolicyNumber}
-                        onChange={(e) => setCredentials({ ...credentials, insurancePolicyNumber: e.target.value })}
+                        value={insurance.policyNumber}
+                        onChange={(e) => setInsurance({ ...insurance, policyNumber: e.target.value })}
+                        placeholder="e.g., POL-123456"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="insuranceExpiration">Expiration Date</Label>
+                      <Label htmlFor="insuranceExpiration">Expiration Date *</Label>
                       <Input
                         id="insuranceExpiration"
                         type="date"
-                        value={credentials.insuranceExpiration}
-                        onChange={(e) => setCredentials({ ...credentials, insuranceExpiration: e.target.value })}
+                        value={insurance.expiration}
+                        onChange={(e) => setInsurance({ ...insurance, expiration: e.target.value })}
+                        required
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Upload Insurance Certificate (Optional - speeds verification)</Label>
+                    <label className="cursor-pointer block">
+                      <div className={`border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors ${insurance.fileName ? 'border-green-500 bg-green-50' : ''}`}>
+                        {insurance.fileName ? (
+                          <div className="flex items-center justify-center gap-2 text-green-700">
+                            <FileText className="h-5 w-5" />
+                            <span>{insurance.fileName}</span>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            <Upload className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm">Click to upload or drag and drop</p>
+                            <p className="text-xs">PDF, JPG, PNG (max 10MB)</p>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleCredentialFileUpload(e.target.files?.[0] || null, 'insurance')}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
+                {/* Workers Compensation Section */}
+                <div className="space-y-4 border-t pt-6">
                   <h3 className="font-semibold">Workers Compensation</h3>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="workersCompProvider">Provider</Label>
-                      <Input
-                        id="workersCompProvider"
-                        value={credentials.workersCompProvider}
-                        onChange={(e) => setCredentials({ ...credentials, workersCompProvider: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="workersCompExpiration">Expiration Date</Label>
-                      <Input
-                        id="workersCompExpiration"
-                        type="date"
-                        value={credentials.workersCompExpiration}
-                        onChange={(e) => setCredentials({ ...credentials, workersCompExpiration: e.target.value })}
-                      />
+                  
+                  <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                    <Checkbox 
+                      id="hasCrew" 
+                      checked={hasCrew}
+                      onCheckedChange={(checked) => setHasCrew(!!checked)}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="hasCrew" className="font-medium cursor-pointer">
+                        My company has crew that performs work on-site
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        If checked, workers compensation is required to register
+                      </p>
                     </div>
                   </div>
+                  
+                  {(hasCrew || workersComp.provider || workersComp.expiration) && (
+                    <>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="workersCompProvider">
+                            Provider {hasCrew && <span className="text-red-500">*</span>}
+                          </Label>
+                          <Input
+                            id="workersCompProvider"
+                            value={workersComp.provider}
+                            onChange={(e) => setWorkersComp({ ...workersComp, provider: e.target.value })}
+                            placeholder="e.g., AIG"
+                            required={hasCrew}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="workersCompExpiration">
+                            Expiration Date {hasCrew && <span className="text-red-500">*</span>}
+                          </Label>
+                          <Input
+                            id="workersCompExpiration"
+                            type="date"
+                            value={workersComp.expiration}
+                            onChange={(e) => setWorkersComp({ ...workersComp, expiration: e.target.value })}
+                            required={hasCrew}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Upload Workers Comp Certificate (Optional)</Label>
+                        <label className="cursor-pointer block">
+                          <div className={`border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors ${workersComp.fileName ? 'border-green-500 bg-green-50' : ''}`}>
+                            {workersComp.fileName ? (
+                              <div className="flex items-center justify-center gap-2 text-green-700">
+                                <FileText className="h-5 w-5" />
+                                <span>{workersComp.fileName}</span>
+                              </div>
+                            ) : (
+                              <div className="text-muted-foreground">
+                                <Upload className="h-8 w-8 mx-auto mb-2" />
+                                <p className="text-sm">Click to upload or drag and drop</p>
+                                <p className="text-xs">PDF, JPG, PNG (max 10MB)</p>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="hidden"
+                            onChange={(e) => handleCredentialFileUpload(e.target.files?.[0] || null, 'workersComp')}
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 border-t pt-6">
                   <Label htmlFor="certifications">Other Certifications</Label>
                   <Input
                     id="certifications"
-                    value={credentials.certifications}
-                    onChange={(e) => setCredentials({ ...credentials, certifications: e.target.value })}
+                    value={certifications}
+                    onChange={(e) => setCertifications(e.target.value)}
                     placeholder="e.g., OSHA, EPA, GAF Master Elite (comma separated)"
                   />
                 </div>
@@ -865,7 +1156,7 @@ const CompanyRegistration = () => {
                       onChange={(e) => setAccountInfo({ ...accountInfo, phone: e.target.value })}
                     />
                   </div>
-                  <div />
+                  <div className="space-y-2" />
                   <div className="space-y-2">
                     <Label htmlFor="password">Password *</Label>
                     <Input
@@ -874,7 +1165,6 @@ const CompanyRegistration = () => {
                       value={accountInfo.password}
                       onChange={(e) => setAccountInfo({ ...accountInfo, password: e.target.value })}
                       required
-                      minLength={6}
                     />
                   </div>
                   <div className="space-y-2">
@@ -892,16 +1182,16 @@ const CompanyRegistration = () => {
             )}
 
             {/* Navigation */}
-            <div className="flex justify-between pt-4 border-t">
-              <Button 
-                variant="outline" 
+            <div className="flex justify-between pt-6 border-t">
+              <Button
+                variant="outline"
                 onClick={prevStep}
                 disabled={currentStep === 1}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
-              
+
               {currentStep < STEPS.length ? (
                 <Button onClick={nextStep}>
                   Next

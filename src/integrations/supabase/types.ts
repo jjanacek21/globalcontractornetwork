@@ -65,6 +65,66 @@ export type Database = {
           },
         ]
       }
+      admin_notifications: {
+        Row: {
+          company_id: string | null
+          contractor_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string | null
+          metadata: Json | null
+          read_at: string | null
+          read_by: string | null
+          severity: string
+          title: string
+          type: string
+        }
+        Insert: {
+          company_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          severity?: string
+          title: string
+          type: string
+        }
+        Update: {
+          company_id?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          severity?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_notifications_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_training_sessions: {
         Row: {
           accepted_error_percent: number | null
@@ -557,9 +617,12 @@ export type Database = {
           client_references: Json | null
           created_at: string | null
           created_by: string | null
+          credential_warnings: Json | null
           description: string | null
           email: string | null
+          has_crew: boolean | null
           id: string
+          insurance_document_url: string | null
           insurance_expiration: string | null
           insurance_policy_number: string | null
           insurance_provider: string | null
@@ -568,6 +631,7 @@ export type Database = {
           license_expiration: string | null
           license_number: string | null
           license_state: string | null
+          licenses: Json | null
           logo_url: string | null
           min_contract_value_out_of_area: number | null
           name: string
@@ -583,6 +647,7 @@ export type Database = {
           verified_at: string | null
           verified_by: string | null
           website: string | null
+          workers_comp_document_url: string | null
           workers_comp_expiration: string | null
           workers_comp_provider: string | null
           yearly_revenue_range: string | null
@@ -599,9 +664,12 @@ export type Database = {
           client_references?: Json | null
           created_at?: string | null
           created_by?: string | null
+          credential_warnings?: Json | null
           description?: string | null
           email?: string | null
+          has_crew?: boolean | null
           id?: string
+          insurance_document_url?: string | null
           insurance_expiration?: string | null
           insurance_policy_number?: string | null
           insurance_provider?: string | null
@@ -610,6 +678,7 @@ export type Database = {
           license_expiration?: string | null
           license_number?: string | null
           license_state?: string | null
+          licenses?: Json | null
           logo_url?: string | null
           min_contract_value_out_of_area?: number | null
           name: string
@@ -625,6 +694,7 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           website?: string | null
+          workers_comp_document_url?: string | null
           workers_comp_expiration?: string | null
           workers_comp_provider?: string | null
           yearly_revenue_range?: string | null
@@ -641,9 +711,12 @@ export type Database = {
           client_references?: Json | null
           created_at?: string | null
           created_by?: string | null
+          credential_warnings?: Json | null
           description?: string | null
           email?: string | null
+          has_crew?: boolean | null
           id?: string
+          insurance_document_url?: string | null
           insurance_expiration?: string | null
           insurance_policy_number?: string | null
           insurance_provider?: string | null
@@ -652,6 +725,7 @@ export type Database = {
           license_expiration?: string | null
           license_number?: string | null
           license_state?: string | null
+          licenses?: Json | null
           logo_url?: string | null
           min_contract_value_out_of_area?: number | null
           name?: string
@@ -667,6 +741,7 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           website?: string | null
+          workers_comp_document_url?: string | null
           workers_comp_expiration?: string | null
           workers_comp_provider?: string | null
           yearly_revenue_range?: string | null

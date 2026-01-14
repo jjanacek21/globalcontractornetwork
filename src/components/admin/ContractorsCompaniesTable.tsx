@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Filter, Loader2, Eye, Edit, Shield, Building2, Users, MapPin, CheckCircle2 } from "lucide-react";
+import { Search, Filter, Loader2, Eye, Edit, Shield, Building2, Users, MapPin, CheckCircle2, AlertTriangle, AlertCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 interface ContractorProfile {
@@ -30,6 +31,23 @@ interface ContractorProfile {
   company?: { name: string } | null;
 }
 
+interface CredentialWarnings {
+  insurance_expired?: boolean;
+  insurance_days_expired?: number;
+  insurance_expiring_soon?: boolean;
+  insurance_days_remaining?: number;
+  insurance_expiring_14?: boolean;
+  insurance_expiring_30?: boolean;
+  workers_comp_expired?: boolean;
+  workers_comp_days_expired?: number;
+  workers_comp_expiring_soon?: boolean;
+  workers_comp_days_remaining?: number;
+  workers_comp_expiring_14?: boolean;
+  workers_comp_expiring_30?: boolean;
+  licenses_expired?: string[];
+  licenses_expiring?: string[];
+}
+
 interface Company {
   id: string;
   name: string;
@@ -41,6 +59,9 @@ interface Company {
   verification_score: number | null;
   is_active: boolean | null;
   created_at: string | null;
+  insurance_expiration: string | null;
+  workers_comp_expiration: string | null;
+  credential_warnings: CredentialWarnings | null;
 }
 
 interface FeatureAccess {
@@ -69,6 +90,7 @@ export default function ContractorsCompaniesTable() {
   const [viewFilter, setViewFilter] = useState<"all" | "contractors" | "companies">("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [credentialFilter, setCredentialFilter] = useState("all");
   
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -100,7 +122,10 @@ export default function ContractorsCompaniesTable() {
       if (companiesRes.error) throw companiesRes.error;
 
       setContractors(contractorsRes.data || []);
-      setCompanies(companiesRes.data || []);
+      setCompanies((companiesRes.data || []).map(c => ({
+        ...c,
+        credential_warnings: c.credential_warnings as CredentialWarnings | null
+      })));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({ title: "Error", description: "Failed to load data", variant: "destructive" });
@@ -184,6 +209,54 @@ export default function ContractorsCompaniesTable() {
     }
   };
 
+  const getCredentialStatus = (company: Company) => {
+    const warnings = company.credential_warnings;
+    if (!warnings) return null;
+
+    const issues = [];
+    
+    if (warnings.insurance_expired) {
+      issues.push({ type: "expired", label: "Insurance Expired", severity: "critical" });
+    } else if (warnings.insurance_expiring_soon) {
+      issues.push({ type: "expiring", label: `Insurance ${warnings.insurance_days_remaining}d`, severity: "critical" });
+    } else if (warnings.insurance_expiring_14) {
+      issues.push({ type: "warning", label: "Insurance <14d", severity: "warning" });
+    } else if (warnings.insurance_expiring_30) {
+      issues.push({ type: "info", label: "Insurance <30d", severity: "info" });
+    }
+
+    if (warnings.workers_comp_expired) {
+      issues.push({ type: "expired", label: "Workers Comp Expired", severity: "critical" });
+    } else if (warnings.workers_comp_expiring_soon) {
+      issues.push({ type: "expiring", label: `Workers Comp ${warnings.workers_comp_days_remaining}d`, severity: "critical" });
+    } else if (warnings.workers_comp_expiring_14) {
+      issues.push({ type: "warning", label: "Workers Comp <14d", severity: "warning" });
+    } else if (warnings.workers_comp_expiring_30) {
+      issues.push({ type: "info", label: "Workers Comp <30d", severity: "info" });
+    }
+
+    if (warnings.licenses_expired && warnings.licenses_expired.length > 0) {
+      issues.push({ type: "expired", label: `${warnings.licenses_expired.length} License(s) Expired`, severity: "warning" });
+    }
+    if (warnings.licenses_expiring && warnings.licenses_expiring.length > 0) {
+      issues.push({ type: "warning", label: `${warnings.licenses_expiring.length} License(s) Expiring`, severity: "info" });
+    }
+
+    return issues;
+  };
+
+  const hasCredentialIssues = (company: Company) => {
+    const issues = getCredentialStatus(company);
+    return issues && issues.length > 0;
+  };
+
+  const hasExpiredCredentials = (company: Company) => {
+    const warnings = company.credential_warnings;
+    if (!warnings) return false;
+    return warnings.insurance_expired || warnings.workers_comp_expired || 
+           (warnings.licenses_expired && warnings.licenses_expired.length > 0);
+  };
+
   // Get unique locations for filter
   const allLocations = [...new Set([
     ...contractors.flatMap(c => c.service_area || []),
@@ -212,7 +285,11 @@ export default function ContractorsCompaniesTable() {
       c.verification_status === statusFilter;
     const matchesLocation = locationFilter === "all" || 
       c.state === locationFilter;
-    return matchesSearch && matchesStatus && matchesLocation;
+    const matchesCredential = credentialFilter === "all" ||
+      (credentialFilter === "expired" && hasExpiredCredentials(c)) ||
+      (credentialFilter === "expiring" && hasCredentialIssues(c) && !hasExpiredCredentials(c)) ||
+      (credentialFilter === "valid" && !hasCredentialIssues(c));
+    return matchesSearch && matchesStatus && matchesLocation && matchesCredential;
   });
 
   const getStatusBadge = (status: string | null) => {
@@ -230,6 +307,43 @@ export default function ContractorsCompaniesTable() {
     }
   };
 
+  const CredentialBadges = ({ company }: { company: Company }) => {
+    const issues = getCredentialStatus(company);
+    if (!issues || issues.length === 0) {
+      return <Badge className="bg-green-100 text-green-800">✓ Valid</Badge>;
+    }
+
+    return (
+      <TooltipProvider>
+        <div className="flex flex-wrap gap-1">
+          {issues.map((issue, idx) => (
+            <Tooltip key={idx}>
+              <TooltipTrigger>
+                <Badge 
+                  className={
+                    issue.severity === "critical" 
+                      ? "bg-red-100 text-red-800" 
+                      : issue.severity === "warning"
+                      ? "bg-orange-100 text-orange-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }
+                >
+                  {issue.severity === "critical" && <AlertTriangle className="h-3 w-3 mr-1" />}
+                  {issue.severity === "warning" && <AlertCircle className="h-3 w-3 mr-1" />}
+                  {issue.severity === "info" && <Clock className="h-3 w-3 mr-1" />}
+                  {issue.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{issue.label}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      </TooltipProvider>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -238,8 +352,30 @@ export default function ContractorsCompaniesTable() {
     );
   }
 
+  // Count companies with expired credentials
+  const expiredCount = companies.filter(c => hasExpiredCredentials(c)).length;
+  const expiringCount = companies.filter(c => hasCredentialIssues(c) && !hasExpiredCredentials(c)).length;
+
   return (
     <div className="space-y-4">
+      {/* Stats Bar */}
+      {(expiredCount > 0 || expiringCount > 0) && (
+        <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+          {expiredCount > 0 && (
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">{expiredCount} with expired credentials</span>
+            </div>
+          )}
+          {expiringCount > 0 && (
+            <div className="flex items-center gap-2 text-orange-600">
+              <Clock className="h-4 w-4" />
+              <span className="font-medium">{expiringCount} with expiring credentials</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-64">
@@ -276,6 +412,28 @@ export default function ContractorsCompaniesTable() {
           </SelectContent>
         </Select>
 
+        <Select value={credentialFilter} onValueChange={setCredentialFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Credentials" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Credentials</SelectItem>
+            <SelectItem value="expired">
+              <span className="flex items-center gap-2">
+                <AlertTriangle className="h-3 w-3 text-red-500" />
+                Expired
+              </span>
+            </SelectItem>
+            <SelectItem value="expiring">
+              <span className="flex items-center gap-2">
+                <Clock className="h-3 w-3 text-orange-500" />
+                Expiring Soon
+              </span>
+            </SelectItem>
+            <SelectItem value="valid">Valid</SelectItem>
+          </SelectContent>
+        </Select>
+
         {allLocations.length > 0 && (
           <Select value={locationFilter} onValueChange={setLocationFilter}>
             <SelectTrigger className="w-40">
@@ -301,6 +459,7 @@ export default function ContractorsCompaniesTable() {
               <TableHead>Contact</TableHead>
               <TableHead>Category/Trade</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Credentials</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead>Actions</TableHead>
@@ -309,14 +468,24 @@ export default function ContractorsCompaniesTable() {
           <TableBody>
             {/* Show Companies first if not filtered out */}
             {(viewFilter === "all" || viewFilter === "companies") && filteredCompanies.map(company => (
-              <TableRow key={`company-${company.id}`}>
+              <TableRow 
+                key={`company-${company.id}`}
+                className={hasExpiredCredentials(company) ? "bg-red-50" : ""}
+              >
                 <TableCell>
                   <Badge variant="outline" className="gap-1">
                     <Building2 className="h-3 w-3" />
                     Company
                   </Badge>
                 </TableCell>
-                <TableCell className="font-medium">{company.name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {hasExpiredCredentials(company) && (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="font-medium">{company.name}</span>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="text-sm">
                     {company.email && <div>{company.email}</div>}
@@ -325,6 +494,9 @@ export default function ContractorsCompaniesTable() {
                 </TableCell>
                 <TableCell>—</TableCell>
                 <TableCell>{getStatusBadge(company.verification_status)}</TableCell>
+                <TableCell>
+                  <CredentialBadges company={company} />
+                </TableCell>
                 <TableCell>
                   {company.city && company.state ? (
                     <div className="flex items-center gap-1 text-sm">
@@ -380,6 +552,7 @@ export default function ContractorsCompaniesTable() {
                   <Badge variant="outline">{contractor.category}</Badge>
                 </TableCell>
                 <TableCell>{getStatusBadge(contractor.verification_status || contractor.subscription_status)}</TableCell>
+                <TableCell>—</TableCell>
                 <TableCell>
                   {contractor.service_area && contractor.service_area.length > 0 ? (
                     <div className="flex items-center gap-1 text-sm">
@@ -417,7 +590,7 @@ export default function ContractorsCompaniesTable() {
 
             {filteredContractors.length === 0 && filteredCompanies.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No contractors or companies found matching your filters
                 </TableCell>
               </TableRow>
