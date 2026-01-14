@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle, Trophy
+  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle, Trophy, Home
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -26,6 +26,7 @@ import ResourcesManagement from "@/components/admin/ResourcesManagement";
 import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
 import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 import GamificationManagement from "@/components/admin/GamificationManagement";
+import PropertyOwnersTable from "@/components/admin/PropertyOwnersTable";
 
 interface UnifiedLead {
   id: string;
@@ -501,6 +502,9 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="gamification" className="gap-2">
                   <Trophy className="h-4 w-4" />Gamification
                 </TabsTrigger>
+                <TabsTrigger value="property-owners" className="gap-2">
+                  <Home className="h-4 w-4" />Property Owners
+                </TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
 
@@ -534,6 +538,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="gamification">
                 <GamificationManagement />
+              </TabsContent>
+
+              <TabsContent value="property-owners">
+                <PropertyOwnersTable />
               </TabsContent>
 
               <TabsContent value="superadmins">
