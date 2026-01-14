@@ -71,11 +71,34 @@ Deno.serve(async (req) => {
 
     // Delete related records first to avoid foreign key constraints
     // These may fail if tables don't exist or user has no records - that's ok
-    await supabaseAdmin.from('network_members').delete().eq('user_id', userId);
-    await supabaseAdmin.from('company_members').delete().eq('user_id', userId);
+    console.log(`Deleting related records for user ${userId}...`);
+    
+    // Lead-related tables
+    await supabaseAdmin.from('coating_leads').delete().eq('user_id', userId);
+    await supabaseAdmin.from('window_leads').delete().eq('user_id', userId);
+    await supabaseAdmin.from('contact_requests').delete().eq('user_id', userId);
+    await supabaseAdmin.from('service_requests').delete().eq('user_id', userId);
+    await supabaseAdmin.from('marketing_leads').delete().eq('user_id', userId);
+    await supabaseAdmin.from('roofing_consultations').delete().eq('user_id', userId);
+    await supabaseAdmin.from('roofing_quiz_responses').delete().eq('user_id', userId);
+    
+    // Homeowner-related tables
     await supabaseAdmin.from('homeowner_notifications').delete().eq('user_id', userId);
     await supabaseAdmin.from('homeowner_photos').delete().eq('user_id', userId);
     await supabaseAdmin.from('homeowner_appointments').delete().eq('homeowner_id', userId);
+    
+    // Network and company membership
+    await supabaseAdmin.from('network_members').delete().eq('user_id', userId);
+    await supabaseAdmin.from('company_members').delete().eq('user_id', userId);
+    
+    // User roles
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+    
+    // Gamification
+    await supabaseAdmin.from('user_gamification').delete().eq('user_id', userId);
+    await supabaseAdmin.from('user_badges').delete().eq('user_id', userId);
+    
+    console.log(`Related records deleted, now deleting auth user...`);
 
     // Delete from auth.users (this should cascade to profiles via trigger)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
