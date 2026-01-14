@@ -299,6 +299,57 @@ export type Database = {
         }
         Relationships: []
       }
+      badges: {
+        Row: {
+          category: string
+          code: string
+          created_at: string | null
+          criteria_type: string
+          criteria_value: number | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_hidden: boolean | null
+          name: string
+          points_awarded: number | null
+          tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string | null
+          criteria_type: string
+          criteria_value?: number | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_hidden?: boolean | null
+          name: string
+          points_awarded?: number | null
+          tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string | null
+          criteria_type?: string
+          criteria_value?: number | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_hidden?: boolean | null
+          name?: string
+          points_awarded?: number | null
+          tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           category: string | null
@@ -476,6 +527,129 @@ export type Database = {
             columns: ["trade_id"]
             isOneToOne: false
             referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          company_id: string | null
+          completed: boolean | null
+          completed_at: string | null
+          id: string
+          joined_at: string | null
+          progress: number | null
+          reward_claimed: boolean | null
+          team_id: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          company_id?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          id?: string
+          joined_at?: string | null
+          progress?: number | null
+          reward_claimed?: boolean | null
+          team_id?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          company_id?: string | null
+          completed?: boolean | null
+          completed_at?: string | null
+          id?: string
+          joined_at?: string | null
+          progress?: number | null
+          reward_claimed?: boolean | null
+          team_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          badge_reward_id: string | null
+          bonus_payout_percent: number | null
+          challenge_type: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          ends_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          points_reward: number | null
+          starts_at: string
+          target_metric: string
+          target_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          badge_reward_id?: string | null
+          bonus_payout_percent?: number | null
+          challenge_type: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ends_at: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_reward?: number | null
+          starts_at: string
+          target_metric: string
+          target_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          badge_reward_id?: string | null
+          bonus_payout_percent?: number | null
+          challenge_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_reward?: number | null
+          starts_at?: string
+          target_metric?: string
+          target_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenges_badge_reward_id_fkey"
+            columns: ["badge_reward_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
             referencedColumns: ["id"]
           },
         ]
@@ -777,6 +951,53 @@ export type Database = {
             foreignKeyName: "company_admins_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_gamification: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          monthly_referrals: number | null
+          rank_overall: number | null
+          successful_referrals: number | null
+          tier: string | null
+          total_points: number | null
+          total_referrals: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          monthly_referrals?: number | null
+          rank_overall?: number | null
+          successful_referrals?: number | null
+          tier?: string | null
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          monthly_referrals?: number | null
+          rank_overall?: number | null
+          successful_referrals?: number | null
+          tier?: string | null
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_gamification_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
@@ -3883,25 +4104,37 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          expires_at: string | null
           id: string
           member_id: string
           points: number
+          redeemed: boolean | null
+          reference_id: string | null
+          reference_type: string | null
           transaction_type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          expires_at?: string | null
           id?: string
           member_id: string
           points: number
+          redeemed?: boolean | null
+          reference_id?: string | null
+          reference_type?: string | null
           transaction_type: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          expires_at?: string | null
           id?: string
           member_id?: string
           points?: number
+          redeemed?: boolean | null
+          reference_id?: string | null
+          reference_type?: string | null
           transaction_type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
@@ -4257,6 +4490,89 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reward_redemptions: {
+        Row: {
+          expires_at: string | null
+          id: string
+          points_spent: number
+          redeemed_at: string | null
+          reward_id: string
+          status: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          id?: string
+          points_spent: number
+          redeemed_at?: string | null
+          reward_id: string
+          status?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          id?: string
+          points_spent?: number
+          redeemed_at?: string | null
+          reward_id?: string
+          status?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rewards_catalog: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_available: boolean | null
+          name: string
+          points_cost: number
+          quantity_available: number | null
+          reward_type: string
+          reward_value: string | null
+          updated_at: string | null
+          valid_days: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          name: string
+          points_cost: number
+          quantity_available?: number | null
+          reward_type: string
+          reward_value?: string | null
+          updated_at?: string | null
+          valid_days?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          points_cost?: number
+          quantity_available?: number | null
+          reward_type?: string
+          reward_value?: string | null
+          updated_at?: string | null
+          valid_days?: number | null
+        }
+        Relationships: []
       }
       roof_analysis_cache: {
         Row: {
@@ -5550,6 +5866,50 @@ export type Database = {
         }
         Relationships: []
       }
+      team_gamification: {
+        Row: {
+          created_at: string | null
+          id: string
+          monthly_referrals: number | null
+          rank_in_company: number | null
+          successful_referrals: number | null
+          team_id: string
+          total_points: number | null
+          total_referrals: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          monthly_referrals?: number | null
+          rank_in_company?: number | null
+          successful_referrals?: number | null
+          team_id: string
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          monthly_referrals?: number | null
+          rank_in_company?: number | null
+          successful_referrals?: number | null
+          team_id?: string
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_gamification_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           company_id: string
@@ -5641,6 +6001,98 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          displayed: boolean | null
+          earned_at: string | null
+          id: string
+          notified: boolean | null
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          displayed?: boolean | null
+          earned_at?: string | null
+          id?: string
+          notified?: boolean | null
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          displayed?: boolean | null
+          earned_at?: string | null
+          id?: string
+          notified?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_gamification: {
+        Row: {
+          available_points: number | null
+          created_at: string | null
+          current_level: string | null
+          current_streak: number | null
+          daily_streak: number | null
+          id: string
+          last_active_at: string | null
+          last_streak_action_at: string | null
+          longest_streak: number | null
+          monthly_points: number | null
+          monthly_referrals: number | null
+          successful_referrals: number | null
+          total_points: number | null
+          total_referrals: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          available_points?: number | null
+          created_at?: string | null
+          current_level?: string | null
+          current_streak?: number | null
+          daily_streak?: number | null
+          id?: string
+          last_active_at?: string | null
+          last_streak_action_at?: string | null
+          longest_streak?: number | null
+          monthly_points?: number | null
+          monthly_referrals?: number | null
+          successful_referrals?: number | null
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          available_points?: number | null
+          created_at?: string | null
+          current_level?: string | null
+          current_streak?: number | null
+          daily_streak?: number | null
+          id?: string
+          last_active_at?: string | null
+          last_streak_action_at?: string | null
+          longest_streak?: number | null
+          monthly_points?: number | null
+          monthly_referrals?: number | null
+          successful_referrals?: number | null
+          total_points?: number | null
+          total_referrals?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -5960,10 +6412,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_company_tier: { Args: { referrals: number }; Returns: string }
       calculate_company_verification_score: {
         Args: { company_row: Database["public"]["Tables"]["companies"]["Row"] }
         Returns: number
       }
+      calculate_user_level: { Args: { points: number }; Returns: string }
       get_company_role: {
         Args: { _company_id: string }
         Returns: Database["public"]["Enums"]["company_role"]
