@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface GamificationSummaryCardProps {
   userId: string | null;
+  onViewAll?: () => void;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -19,8 +20,9 @@ const LEVEL_COLORS: Record<string, string> = {
   legend: "bg-gradient-to-r from-amber-500 to-orange-500",
 };
 
-export function GamificationSummaryCard({ userId }: GamificationSummaryCardProps) {
+export function GamificationSummaryCard({ userId, onViewAll }: GamificationSummaryCardProps) {
   const { stats, badges, loading } = useGamification(userId || undefined);
+  const defaultPath = "/contractor/rewards";
 
   if (loading) {
     return (
@@ -65,11 +67,18 @@ export function GamificationSummaryCard({ userId }: GamificationSummaryCardProps
           <Trophy className="h-4 w-4 text-amber-500" />
           Your Progress
         </CardTitle>
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/crm/rewards" className="text-xs">
-            View All <ChevronRight className="h-3 w-3 ml-1" />
-          </Link>
-        </Button>
+        {onViewAll ? (
+          <Button variant="ghost" size="sm" onClick={onViewAll}>
+            <span className="text-xs">View All</span>
+            <ChevronRight className="h-3 w-3 ml-1" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" asChild>
+            <Link to={defaultPath} className="text-xs">
+              View All <ChevronRight className="h-3 w-3 ml-1" />
+            </Link>
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Level & Points */}

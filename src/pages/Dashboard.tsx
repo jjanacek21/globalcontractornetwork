@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, DollarSign, TrendingUp, ClipboardCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GamificationSummaryCard } from "@/components/gamification/GamificationSummaryCard";
 
 interface Stats {
   totalLeads: number;
@@ -20,17 +19,6 @@ const Dashboard = () => {
     conversionRate: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    checkAuth();
-  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -162,7 +150,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="shadow-card lg:col-span-2">
           <CardHeader>
             <CardTitle>Pipeline Overview</CardTitle>
           </CardHeader>
@@ -207,8 +195,6 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-
-        <GamificationSummaryCard userId={userId} />
       </div>
     </div>
   );
