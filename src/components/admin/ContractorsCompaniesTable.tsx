@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Filter, Loader2, Eye, Edit, Shield, Building2, Users, MapPin, CheckCircle2, AlertTriangle, AlertCircle, Clock } from "lucide-react";
+import { Search, Filter, Loader2, Eye, Edit, Shield, Building2, Users, MapPin, CheckCircle2, AlertTriangle, AlertCircle, Clock, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { CompanyManagementDialog } from "./CompanyManagementDialog";
 
 interface ContractorProfile {
   id: string;
@@ -79,7 +81,8 @@ const AVAILABLE_FEATURES = [
   "academy_resources",
   "referral_system",
   "presentations",
-  "lead_pipeline"
+  "lead_pipeline",
+  "rewards_dashboard"
 ];
 
 export default function ContractorsCompaniesTable() {
@@ -97,7 +100,12 @@ export default function ContractorsCompaniesTable() {
   const [selectedContractor, setSelectedContractor] = useState<ContractorProfile | null>(null);
   const [contractorFeatures, setContractorFeatures] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
+  // Company dialog state
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyDialogMode, setCompanyDialogMode] = useState<'view' | 'edit'>('view');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -206,6 +214,32 @@ export default function ContractorsCompaniesTable() {
     } catch (error) {
       console.error("Error approving contractor:", error);
       toast({ title: "Error", description: "Failed to approve contractor", variant: "destructive" });
+    }
+  };
+
+  const handleCompanyClick = (company: Company, mode: 'view' | 'edit' = 'view') => {
+    setSelectedCompany(company);
+    setCompanyDialogMode(mode);
+    setCompanyDialogOpen(true);
+  };
+
+  const handleDeleteContractor = async (contractor: ContractorProfile) => {
+    setDeletingId(contractor.id);
+    try {
+      const { error } = await supabase
+        .from("contractor_profiles")
+        .delete()
+        .eq("id", contractor.id);
+
+      if (error) throw error;
+      
+      toast({ title: "Success", description: "Contractor deleted successfully" });
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting contractor:", error);
+      toast({ title: "Error", description: error.message || "Failed to delete contractor", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
     }
   };
 

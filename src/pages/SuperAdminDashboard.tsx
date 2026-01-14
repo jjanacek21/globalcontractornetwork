@@ -12,8 +12,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle
+  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle, Trophy
 } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
+import { ContractorDialog } from "@/components/admin/ContractorDialog";
+import { LeadAnalytics } from "@/components/admin/LeadAnalytics";
+import PendingSignupsTable from "@/components/admin/PendingSignupsTable";
+import SuperAdminsTable from "@/components/admin/SuperAdminsTable";
+import ReferralsManagement from "@/components/admin/ReferralsManagement";
+import AITrainingCenter from "@/components/admin/AITrainingCenter";
+import ResourcesManagement from "@/components/admin/ResourcesManagement";
+import ContractorsCompaniesTable from "@/components/admin/ContractorsCompaniesTable";
+import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
+import GamificationManagement from "@/components/admin/GamificationManagement";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
 import { ContractorDialog } from "@/components/admin/ContractorDialog";
@@ -497,6 +509,9 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="ai-training" className="gap-2 bg-purple-100 data-[state=active]:bg-purple-200">
                   <Brain className="h-4 w-4" />AI Training Center
                 </TabsTrigger>
+                <TabsTrigger value="gamification" className="gap-2">
+                  <Trophy className="h-4 w-4" />Gamification
+                </TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
               </TabsList>
 
@@ -526,6 +541,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="ai-training">
                 <AITrainingCenter />
+              </TabsContent>
+
+              <TabsContent value="gamification">
+                <GamificationManagement />
               </TabsContent>
 
               <TabsContent value="superadmins">
