@@ -526,6 +526,10 @@ const SuperAdminDashboard = () => {
                 <CompaniesTable />
               </TabsContent>
 
+              <TabsContent value="property-owners">
+                <PropertyOwnersTable />
+              </TabsContent>
+
               <TabsContent value="analytics">
                 <LeadAnalytics leads={leads} />
               </TabsContent>
