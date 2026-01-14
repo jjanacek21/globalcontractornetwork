@@ -25,6 +25,7 @@ import Measurements from "./pages/Measurements";
 import Estimates from "./pages/Estimates";
 import Presentations from "./pages/Presentations";
 import GamificationDashboard from "./pages/GamificationDashboard";
+import ContractorRewards from "./pages/ContractorRewards";
 import NotFound from "./pages/NotFound";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
@@ -287,13 +288,6 @@ const GCNRoutes = () => (
               </AppLayout>
             </ProtectedRoute>
           } />
-          <Route path="/crm/rewards" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <GamificationDashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
           
           {/* Training Academy / Resource Library Routes */}
           <Route path="/academy" element={<TrainingAcademy />} />
@@ -318,7 +312,12 @@ const GCNRoutes = () => (
           <Route path="/contractor/dashboard" element={
             <ProtectedRoute redirectTo="/contractor">
               <ContractorDashboard />
-          </ProtectedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/contractor/rewards" element={
+            <ProtectedRoute redirectTo="/contractor">
+              <ContractorRewards />
+            </ProtectedRoute>
           } />
           
           {/* Social Network Routes */}

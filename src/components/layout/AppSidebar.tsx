@@ -8,7 +8,6 @@ import {
   Building2,
   Map,
   Kanban,
-  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,7 +29,6 @@ const navigation = [
   { title: "Measurements", url: "/crm/measurements", icon: Ruler },
   { title: "Estimates", url: "/crm/estimates", icon: FileText },
   { title: "Presentations", url: "/crm/presentations", icon: Presentation },
-  { title: "Rewards", url: "/crm/rewards", icon: Trophy },
 ];
 
 export function AppSidebar() {

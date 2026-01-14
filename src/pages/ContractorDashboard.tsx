@@ -23,15 +23,18 @@ import {
   CheckCircle2,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  Trophy
 } from 'lucide-react';
 import { useContractorProfile, SocialLinks } from '@/hooks/useContractorProfile';
+import { useContractorFeatures } from '@/hooks/useContractorFeatures';
 import { ProfileImageUpload } from '@/components/contractor/ProfileImageUpload';
 import { GalleryManager } from '@/components/contractor/GalleryManager';
 import { SocialLinksEditor } from '@/components/contractor/SocialLinksEditor';
 import { ServicesEditor } from '@/components/contractor/ServicesEditor';
 import { ReferencesEditor } from '@/components/contractor/ReferencesEditor';
 import { ReferralEarningsCard } from '@/components/contractor/ReferralEarningsCard';
+import { GamificationSummaryCard } from '@/components/gamification/GamificationSummaryCard';
 
 export default function ContractorDashboard() {
   const navigate = useNavigate();
@@ -49,6 +52,9 @@ export default function ContractorDashboard() {
     addClientReference,
     removeClientReference
   } = useContractorProfile(userId);
+
+  const { hasFeature, loading: featuresLoading } = useContractorFeatures();
+  const hasRewardsAccess = hasFeature('rewards_dashboard');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -127,7 +133,7 @@ export default function ContractorDashboard() {
     return (value as string[]) || [];
   };
 
-  if (loading) {
+  if (loading || featuresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -191,8 +197,16 @@ export default function ContractorDashboard() {
           <Badge variant="outline">{profile.category}</Badge>
         </div>
 
-        {/* Referral Earnings Card */}
-        <ReferralEarningsCard contractorId={profile.id} />
+        {/* Referral Earnings and Rewards Cards */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ReferralEarningsCard contractorId={profile.id} />
+          {hasRewardsAccess && (
+            <GamificationSummaryCard 
+              userId={userId} 
+              onViewAll={() => navigate('/contractor/rewards')}
+            />
+          )}
+        </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
