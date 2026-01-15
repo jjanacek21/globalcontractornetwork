@@ -85,6 +85,29 @@ interface License {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
 
+interface FileUpload {
+  data: string;
+  filename: string;
+  contentType: string;
+}
+
+// Helper function to convert File to base64 for edge function upload
+const fileToBase64 = (file: File): Promise<FileUpload> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      resolve({
+        data: base64,
+        filename: file.name,
+        contentType: file.type
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 const CompanyRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -326,17 +349,53 @@ const CompanyRegistration = () => {
     
     setLoading(true);
     try {
-      // 1. Format licenses data (without file uploads for now - files handled separately after auth)
+      // 1. Convert files to base64 for edge function upload
+      let insuranceDocument: FileUpload | null = null;
+      let workersCompDocument: FileUpload | null = null;
+      const licenseDocuments: (FileUpload & { licenseNumber: string })[] = [];
+      const jobPhotoFiles: (FileUpload & { caption: string; projectType: string })[] = [];
+
+      // Convert insurance document
+      if (insurance.file) {
+        insuranceDocument = await fileToBase64(insurance.file);
+      }
+
+      // Convert workers comp document
+      if (workersComp.file) {
+        workersCompDocument = await fileToBase64(workersComp.file);
+      }
+
+      // Convert license documents
+      for (const license of licenses) {
+        if (license.file && license.number) {
+          const fileData = await fileToBase64(license.file);
+          licenseDocuments.push({ ...fileData, licenseNumber: license.number });
+        }
+      }
+
+      // Convert job photos
+      for (const photo of jobPhotos) {
+        if (photo.file) {
+          const fileData = await fileToBase64(photo.file);
+          jobPhotoFiles.push({
+            ...fileData,
+            caption: photo.caption || '',
+            projectType: photo.projectType || companyInfo.primaryCategory
+          });
+        }
+      }
+
+      // 2. Format licenses data
       const licensesData = licenses
         .filter(license => license.number)
         .map(license => ({
           number: license.number,
           state: license.state,
           expiration: license.expiration || null,
-          document_url: null // Will be uploaded after registration if needed
+          document_url: null
         }));
 
-      // 2. Format references
+      // 3. Format references
       const formattedReferences = references
         .filter(ref => ref.name && (ref.email || ref.phone))
         .map(ref => ({
@@ -346,7 +405,7 @@ const CompanyRegistration = () => {
           projectDescription: ref.projectDescription || ''
         }));
 
-      // 3. Call the register-company edge function
+      // 4. Call the register-company edge function with all data including files
       const { data, error } = await supabase.functions.invoke('register-company', {
         body: {
           // Account info
@@ -376,20 +435,23 @@ const CompanyRegistration = () => {
           insurance: {
             provider: insurance.provider || '',
             policyNumber: insurance.policyNumber || '',
-            expiration: insurance.expiration || '',
-            documentUrl: null // Will upload after if needed
+            expiration: insurance.expiration || ''
           },
           workersComp: {
             provider: workersComp.provider || '',
-            expiration: workersComp.expiration || '',
-            documentUrl: null
+            expiration: workersComp.expiration || ''
           },
           certifications: certifications,
           hasCrew: hasCrew,
           
-          // References & Portfolio (photos will need to be uploaded separately)
+          // References
           references: formattedReferences,
-          jobPhotos: [] // Will handle photo uploads after registration
+          
+          // Base64 encoded files for server-side upload
+          insuranceDocument,
+          workersCompDocument,
+          licenseDocuments,
+          jobPhotoFiles
         }
       });
 
@@ -403,93 +465,6 @@ const CompanyRegistration = () => {
       }
 
       console.log("Registration successful:", data);
-
-      // 4. Upload files now that we have a user ID
-      const userId = data.userId;
-      const companyId = data.companyId;
-
-      // Upload credential documents
-      if (insurance.file) {
-        const insuranceDocUrl = await uploadCredentialDocument(insurance.file, userId, 'insurance');
-        if (insuranceDocUrl) {
-          await supabase.from('companies').update({ insurance_document_url: insuranceDocUrl }).eq('id', companyId);
-        }
-      }
-
-      if (workersComp.file) {
-        const workersCompDocUrl = await uploadCredentialDocument(workersComp.file, userId, 'workers-comp');
-        if (workersCompDocUrl) {
-          await supabase.from('companies').update({ workers_comp_document_url: workersCompDocUrl }).eq('id', companyId);
-        }
-      }
-
-      // Upload license documents
-      for (const license of licenses) {
-        if (license.file && license.number) {
-          await uploadCredentialDocument(license.file, userId, `license-${license.number}`);
-        }
-      }
-
-      // Upload job photos
-      const uploadedPhotos = [];
-      for (const photo of jobPhotos) {
-        if (photo.file) {
-          const fileExt = photo.file.name.split('.').pop();
-          const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('company-photos')
-            .upload(fileName, photo.file);
-
-          if (!uploadError && uploadData) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('company-photos')
-              .getPublicUrl(fileName);
-            
-            uploadedPhotos.push({
-              url: publicUrl,
-              caption: photo.caption,
-              projectType: photo.projectType
-            });
-          }
-        }
-      }
-
-      // Update company with uploaded photos if any
-      if (uploadedPhotos.length > 0) {
-        await supabase.from('companies').update({ job_photos: uploadedPhotos }).eq('id', companyId);
-      }
-
-      // 5. Try to notify admin (non-blocking)
-      try {
-        await supabase.functions.invoke("notify-admin-signup", {
-          body: {
-            type: "company_registration",
-            companyName: companyInfo.name,
-            email: accountInfo.email,
-            phone: accountInfo.phone,
-            category: companyInfo.primaryCategory,
-            firstName: accountInfo.firstName,
-            lastName: accountInfo.lastName
-          }
-        });
-      } catch (notifyError) {
-        console.error("Failed to notify admin:", notifyError);
-      }
-
-      // 6. Try to send welcome email (non-blocking)
-      try {
-        await supabase.functions.invoke("send-welcome-email", {
-          body: {
-            email: accountInfo.email,
-            name: `${accountInfo.firstName} ${accountInfo.lastName}`,
-            userType: "contractor",
-            companyName: companyInfo.name
-          }
-        });
-      } catch (emailError) {
-        console.error("Failed to send welcome email:", emailError);
-      }
 
       setSuccess(true);
     } catch (error: any) {
