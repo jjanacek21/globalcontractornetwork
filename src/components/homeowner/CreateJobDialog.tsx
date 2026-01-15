@@ -52,19 +52,17 @@ const SERVICE_CATEGORIES = [
 ];
 
 const URGENCY_OPTIONS = [
-  { value: 'low', label: 'Not Urgent - Within a month or more' },
-  { value: 'medium', label: 'Moderate - Within 2 weeks' },
-  { value: 'high', label: 'Urgent - Within a week' },
+  { value: 'flexible', label: 'Flexible - No rush' },
+  { value: 'standard', label: 'Standard - Within a month' },
+  { value: 'urgent', label: 'Urgent - Within a week' },
   { value: 'emergency', label: 'Emergency - ASAP' }
 ];
 
 const TIMELINE_OPTIONS = [
-  'Flexible',
-  'Within 1 week',
-  'Within 2 weeks',
-  'Within 1 month',
-  'Within 3 months',
-  'Planning for future'
+  { value: 'flexible', label: 'Flexible - No specific timeline' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'asap', label: 'ASAP' }
 ];
 
 export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: CreateJobDialogProps) {
@@ -77,7 +75,7 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
     budget_min: '',
     budget_max: '',
     timeline: '',
-    urgency: 'medium'
+    urgency: 'standard'
   });
 
   const handleClose = () => {
@@ -90,7 +88,7 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
       budget_min: '',
       budget_max: '',
       timeline: '',
-      urgency: 'medium'
+      urgency: 'standard'
     });
     onOpenChange(false);
   };
@@ -253,7 +251,7 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
                   </SelectTrigger>
                   <SelectContent>
                     {TIMELINE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
