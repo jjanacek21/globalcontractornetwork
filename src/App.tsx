@@ -27,6 +27,7 @@ import Presentations from "./pages/Presentations";
 import GamificationDashboard from "./pages/GamificationDashboard";
 import ContractorRewards from "./pages/ContractorRewards";
 import NotFound from "./pages/NotFound";
+import JobBoard from "./pages/JobBoard";
 import ContractorDirectory from "./pages/ContractorDirectory";
 import PrepYourProperty from "./pages/PrepYourProperty";
 import Roofing from "./pages/Roofing";
@@ -317,6 +318,11 @@ const GCNRoutes = () => (
           <Route path="/contractor/rewards" element={
             <ProtectedRoute redirectTo="/contractor">
               <ContractorRewards />
+            </ProtectedRoute>
+          } />
+          <Route path="/job-board" element={
+            <ProtectedRoute redirectTo="/network-login">
+              <JobBoard />
             </ProtectedRoute>
           } />
           

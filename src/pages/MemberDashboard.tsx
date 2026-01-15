@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList
+  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -694,6 +694,24 @@ const MemberDashboard = () => {
                     </div>
                   </Link>
                 )}
+
+                {/* Job Marketplace */}
+                <Link to="/job-board" className="group">
+                  <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-400/50 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                        <Briefcase className="h-6 w-6 text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-white group-hover:text-green-300 transition-colors">
+                          Job Marketplace
+                        </h3>
+                        <p className="text-sm text-white/60">Browse homeowner job requests</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-green-300 group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </div>
+                </Link>
               </div>
             </div>
             </div>
