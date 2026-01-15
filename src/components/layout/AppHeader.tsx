@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { LogOut, User } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { LogOut, User, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,7 @@ import {
 export function AppHeader() {
   const navigate = useNavigate();
   const [userEmail, setUserEmail] = useState<string>("");
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -54,6 +57,23 @@ export function AppHeader() {
                 <p className="text-xs text-muted-foreground">{userEmail}</p>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer" onSelect={(e) => e.preventDefault()}>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {theme === "dark" ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
+                  <span>Dark Mode</span>
+                </div>
+                <Switch
+                  checked={theme === "dark"}
+                  onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                />
+              </div>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />

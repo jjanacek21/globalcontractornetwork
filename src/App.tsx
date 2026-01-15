@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isCoatingKingsDomain } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AnimatePresence } from "framer-motion";
 
 // Social Pages (lazy loaded)
 const SocialFeed = lazy(() => import("./pages/social/SocialFeed"));
@@ -87,6 +89,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { GlobalAIChat } from "./components/ai/GlobalAIChat";
+const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 
 const queryClient = new QueryClient();
 
@@ -408,6 +411,13 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
+          {/* Design System */}
+          <Route path="/design-system" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <DesignSystem />
+            </Suspense>
+          } />
+          
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -415,15 +425,19 @@ const GCNRoutes = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <GlobalAIChat />
-        {isCoatingKingsDomain() ? <CoatingKingsRoutes /> : <GCNRoutes />}
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <GlobalAIChat />
+          <AnimatePresence mode="wait">
+            {isCoatingKingsDomain() ? <CoatingKingsRoutes /> : <GCNRoutes />}
+          </AnimatePresence>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
