@@ -140,14 +140,20 @@ export function usePermitRequest(permitId?: string) {
   const createPermit = async (data: Partial<PermitRequest>): Promise<string | null> => {
     setSaving(true);
     try {
-      // Get contractor profile ID
+      // Get current user and contractor profile ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const { data: profile } = await supabase
         .from('contractor_profiles')
         .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       const insertData = {
+        user_id: user.id,
         property_address: data.property_address || '',
         customer_name: data.customer_name || data.owner_name || '',
         customer_email: data.customer_email || data.owner_email,
@@ -165,11 +171,12 @@ export function usePermitRequest(permitId?: string) {
         owner_phone: data.owner_phone,
         expedited: data.expedited || false,
         complexity_tier: data.complexity_tier || 'basic',
+        contractor_profile_id: profile?.id || null,
       };
 
       const { data: newPermit, error } = await supabase
         .from('permit_projects')
-        .insert(insertData)
+        .insert([insertData])
         .select()
         .single();
 
