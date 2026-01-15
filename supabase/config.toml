@@ -83,3 +83,15 @@ verify_jwt = false
 
 [functions.register-company]
 verify_jwt = false
+
+[functions.permit-intake-ai]
+verify_jwt = false
+
+[functions.permit-gap-detector-ai]
+verify_jwt = false
+
+[functions.permit-packet-generator-ai]
+verify_jwt = false
+
+[functions.permit-notification-sender]
+verify_jwt = false

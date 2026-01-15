@@ -3395,6 +3395,89 @@ export type Database = {
           },
         ]
       }
+      jurisdiction_rules: {
+        Row: {
+          base_price: number | null
+          building_dept_id: string | null
+          common_rejection_reasons_json: Json | null
+          complexity_multiplier: Json | null
+          created_at: string | null
+          fee_rules: string | null
+          hvhz_required: boolean | null
+          id: string
+          is_active: boolean | null
+          jurisdiction_county: string
+          jurisdiction_name: string
+          noa_required: boolean | null
+          notes: string | null
+          permit_type: string
+          portal_url: string | null
+          required_documents_json: Json | null
+          required_fields_json: Json | null
+          special_requirements_json: Json | null
+          submission_method: string | null
+          typical_turnaround_days: number | null
+          updated_at: string | null
+          wind_mitigation_required: boolean | null
+        }
+        Insert: {
+          base_price?: number | null
+          building_dept_id?: string | null
+          common_rejection_reasons_json?: Json | null
+          complexity_multiplier?: Json | null
+          created_at?: string | null
+          fee_rules?: string | null
+          hvhz_required?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_county: string
+          jurisdiction_name: string
+          noa_required?: boolean | null
+          notes?: string | null
+          permit_type: string
+          portal_url?: string | null
+          required_documents_json?: Json | null
+          required_fields_json?: Json | null
+          special_requirements_json?: Json | null
+          submission_method?: string | null
+          typical_turnaround_days?: number | null
+          updated_at?: string | null
+          wind_mitigation_required?: boolean | null
+        }
+        Update: {
+          base_price?: number | null
+          building_dept_id?: string | null
+          common_rejection_reasons_json?: Json | null
+          complexity_multiplier?: Json | null
+          created_at?: string | null
+          fee_rules?: string | null
+          hvhz_required?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_county?: string
+          jurisdiction_name?: string
+          noa_required?: boolean | null
+          notes?: string | null
+          permit_type?: string
+          portal_url?: string | null
+          required_documents_json?: Json | null
+          required_fields_json?: Json | null
+          special_requirements_json?: Json | null
+          submission_method?: string | null
+          typical_turnaround_days?: number | null
+          updated_at?: string | null
+          wind_mitigation_required?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jurisdiction_rules_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_communication_history: {
         Row: {
           created_at: string | null
@@ -3909,6 +3992,39 @@ export type Database = {
           },
         ]
       }
+      permit_addon_fees: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_percentage: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_percentage?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_percentage?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
       permit_admins: {
         Row: {
           created_at: string | null
@@ -4055,33 +4171,206 @@ export type Database = {
           },
         ]
       }
+      permit_messages: {
+        Row: {
+          attachments_json: Json | null
+          content: string
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          is_read: boolean | null
+          message_type: string | null
+          permit_request_id: string | null
+          sender_name: string | null
+          sender_role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attachments_json?: Json | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          is_read?: boolean | null
+          message_type?: string | null
+          permit_request_id?: string | null
+          sender_name?: string | null
+          sender_role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attachments_json?: Json | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          is_read?: boolean | null
+          message_type?: string | null
+          permit_request_id?: string | null
+          sender_name?: string | null
+          sender_role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_messages_permit_request_id_fkey"
+            columns: ["permit_request_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_notifications: {
+        Row: {
+          channel: string
+          contractor_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_body: string | null
+          message_title: string | null
+          message_type: string
+          permit_request_id: string | null
+          sent_at: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          channel?: string
+          contractor_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_title?: string | null
+          message_type: string
+          permit_request_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string
+          contractor_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_title?: string | null
+          message_type?: string
+          permit_request_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_notifications_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_notifications_permit_request_id_fkey"
+            columns: ["permit_request_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_pricing_tiers: {
+        Row: {
+          base_price: number
+          code: string
+          created_at: string | null
+          criteria_json: Json | null
+          description: string | null
+          features_json: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          turnaround_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_price: number
+          code: string
+          created_at?: string | null
+          criteria_json?: Json | null
+          description?: string | null
+          features_json?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          turnaround_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number
+          code?: string
+          created_at?: string | null
+          criteria_json?: Json | null
+          description?: string | null
+          features_json?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          turnaround_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       permit_project_documents: {
         Row: {
+          ai_analysis_json: Json | null
           created_at: string
           document_type: string
+          extracted_text: string | null
           file_name: string
           file_path: string
           file_size: number | null
           id: string
           project_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          validation_notes: string | null
+          validation_status: string | null
         }
         Insert: {
+          ai_analysis_json?: Json | null
           created_at?: string
           document_type: string
+          extracted_text?: string | null
           file_name: string
           file_path: string
           file_size?: number | null
           id?: string
           project_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          validation_notes?: string | null
+          validation_status?: string | null
         }
         Update: {
+          ai_analysis_json?: Json | null
           created_at?: string
           document_type?: string
+          extracted_text?: string | null
           file_name?: string
           file_path?: string
           file_size?: number | null
           id?: string
           project_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          validation_notes?: string | null
+          validation_status?: string | null
         }
         Relationships: [
           {
@@ -4095,98 +4384,190 @@ export type Database = {
       }
       permit_projects: {
         Row: {
+          after_hours: boolean | null
+          ai_analysis_json: Json | null
           architectural_approval: boolean | null
           architectural_approval_required: boolean | null
+          assigned_expediter_id: string | null
+          building_dept_id: string | null
           city: string | null
+          completion_percentage: number | null
+          complexity_tier: string | null
           contractor_id: string | null
+          contractor_profile_id: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          expedited: boolean | null
+          fee_actual: number | null
+          fee_estimate: number | null
           has_hurricane_straps: boolean | null
           hoa_approval: boolean | null
           id: string
           inspection_requested: string | null
           inspection_requested_at: string | null
+          jurisdiction_county: string | null
+          license_numbers_json: Json | null
+          missing_items_json: Json | null
           notes: string | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          packet_url: string | null
+          parcel_id: string | null
+          payment_link: string | null
+          payment_status: string | null
+          permit_type: string | null
+          pipeline_status: string | null
           property_address: string
           revision_notes: string | null
           revision_requested: boolean | null
           roof_accessories: string | null
           roof_color: string | null
           roof_type: string | null
+          scope_description: string | null
           service_type: string
           state: string | null
           status: string
+          stripe_session_id: string | null
+          structured_scope_json: Json | null
           underlayment_type: string | null
           updated_at: string
           user_id: string
+          valuation: number | null
           zip_code: string | null
         }
         Insert: {
+          after_hours?: boolean | null
+          ai_analysis_json?: Json | null
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
+          assigned_expediter_id?: string | null
+          building_dept_id?: string | null
           city?: string | null
+          completion_percentage?: number | null
+          complexity_tier?: string | null
           contractor_id?: string | null
+          contractor_profile_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          expedited?: boolean | null
+          fee_actual?: number | null
+          fee_estimate?: number | null
           has_hurricane_straps?: boolean | null
           hoa_approval?: boolean | null
           id?: string
           inspection_requested?: string | null
           inspection_requested_at?: string | null
+          jurisdiction_county?: string | null
+          license_numbers_json?: Json | null
+          missing_items_json?: Json | null
           notes?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          packet_url?: string | null
+          parcel_id?: string | null
+          payment_link?: string | null
+          payment_status?: string | null
+          permit_type?: string | null
+          pipeline_status?: string | null
           property_address: string
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
           roof_color?: string | null
           roof_type?: string | null
+          scope_description?: string | null
           service_type: string
           state?: string | null
           status?: string
+          stripe_session_id?: string | null
+          structured_scope_json?: Json | null
           underlayment_type?: string | null
           updated_at?: string
           user_id: string
+          valuation?: number | null
           zip_code?: string | null
         }
         Update: {
+          after_hours?: boolean | null
+          ai_analysis_json?: Json | null
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
+          assigned_expediter_id?: string | null
+          building_dept_id?: string | null
           city?: string | null
+          completion_percentage?: number | null
+          complexity_tier?: string | null
           contractor_id?: string | null
+          contractor_profile_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          expedited?: boolean | null
+          fee_actual?: number | null
+          fee_estimate?: number | null
           has_hurricane_straps?: boolean | null
           hoa_approval?: boolean | null
           id?: string
           inspection_requested?: string | null
           inspection_requested_at?: string | null
+          jurisdiction_county?: string | null
+          license_numbers_json?: Json | null
+          missing_items_json?: Json | null
           notes?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          packet_url?: string | null
+          parcel_id?: string | null
+          payment_link?: string | null
+          payment_status?: string | null
+          permit_type?: string | null
+          pipeline_status?: string | null
           property_address?: string
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
           roof_color?: string | null
           roof_type?: string | null
+          scope_description?: string | null
           service_type?: string
           state?: string | null
           status?: string
+          stripe_session_id?: string | null
+          structured_scope_json?: Json | null
           underlayment_type?: string | null
           updated_at?: string
           user_id?: string
+          valuation?: number | null
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "permit_projects_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "permit_projects_contractor_id_fkey"
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "permit_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_projects_contractor_profile_id_fkey"
+            columns: ["contractor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4231,6 +4612,44 @@ export type Database = {
             columns: ["building_dept_id"]
             isOneToOne: false
             referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_status_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          new_status: string
+          note: string | null
+          permit_request_id: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          new_status: string
+          note?: string | null
+          permit_request_id?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          new_status?: string
+          note?: string | null
+          permit_request_id?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_status_events_permit_request_id_fkey"
+            columns: ["permit_request_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -6599,6 +7018,12 @@ export type Database = {
         | "social_media"
         | "advertisement"
         | "other"
+      doc_validation_status:
+        | "pending"
+        | "valid"
+        | "invalid"
+        | "needs_signature"
+        | "needs_review"
       inspection_recommendation:
         | "repair"
         | "partial_replacement"
@@ -6633,6 +7058,36 @@ export type Database = {
         | "closed_lost"
         | "no_deal"
       lead_type: "retail" | "insurance"
+      permit_payment_status:
+        | "unpaid"
+        | "pending"
+        | "paid"
+        | "refunded"
+        | "failed"
+      permit_pipeline_status:
+        | "intake"
+        | "data_capture"
+        | "docs_needed"
+        | "packet_assembly"
+        | "compliance_check"
+        | "awaiting_payment"
+        | "ready_to_submit"
+        | "under_review"
+        | "corrections_needed"
+        | "approved_ready_to_pay"
+        | "issued_closed"
+      permit_type_enum:
+        | "roofing"
+        | "windows_doors"
+        | "fence"
+        | "solar"
+        | "hvac"
+        | "electrical"
+        | "plumbing"
+        | "pool"
+        | "demolition"
+        | "addition"
+        | "other"
       pipeline_stage:
         | "lead"
         | "inspection"
@@ -6808,6 +7263,13 @@ export const Constants = {
         "advertisement",
         "other",
       ],
+      doc_validation_status: [
+        "pending",
+        "valid",
+        "invalid",
+        "needs_signature",
+        "needs_review",
+      ],
       inspection_recommendation: [
         "repair",
         "partial_replacement",
@@ -6845,6 +7307,39 @@ export const Constants = {
         "no_deal",
       ],
       lead_type: ["retail", "insurance"],
+      permit_payment_status: [
+        "unpaid",
+        "pending",
+        "paid",
+        "refunded",
+        "failed",
+      ],
+      permit_pipeline_status: [
+        "intake",
+        "data_capture",
+        "docs_needed",
+        "packet_assembly",
+        "compliance_check",
+        "awaiting_payment",
+        "ready_to_submit",
+        "under_review",
+        "corrections_needed",
+        "approved_ready_to_pay",
+        "issued_closed",
+      ],
+      permit_type_enum: [
+        "roofing",
+        "windows_doors",
+        "fence",
+        "solar",
+        "hvac",
+        "electrical",
+        "plumbing",
+        "pool",
+        "demolition",
+        "addition",
+        "other",
+      ],
       pipeline_stage: [
         "lead",
         "inspection",
