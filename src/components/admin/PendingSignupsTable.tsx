@@ -262,6 +262,25 @@ const PendingSignupsTable = () => {
             console.error("Error sending notification:", emailError);
           }
         }
+
+        // If this is a company registration, send company approval email
+        if (selectedContractor.company_id && selectedContractor.email) {
+          try {
+            await supabase.functions.invoke("notify-company-approved", {
+              body: {
+                companyId: selectedContractor.company_id,
+                companyName: selectedContractor.company_name,
+                adminEmail: selectedContractor.email,
+                adminName: `${selectedContractor.company?.name || selectedContractor.company_name}`,
+                approvedFeatures: selectedFeatures.map(f => 
+                  AVAILABLE_FEATURES.find(af => af.key === f)?.label || f
+                )
+              }
+            });
+          } catch (emailError) {
+            console.error("Error sending company approval notification:", emailError);
+          }
+        }
       }
 
       const approvalMessage = selectedContractor.company_id 
