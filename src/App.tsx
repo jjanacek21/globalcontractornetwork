@@ -51,6 +51,8 @@ import CoatingKingsAdminDashboard from "./pages/CoatingKingsAdminDashboard";
 import PermitQueens from "./pages/PermitQueens";
 import PermitQueensAuth from "./pages/PermitQueensAuth";
 import PermitQueensDashboard from "./pages/PermitQueensDashboard";
+import PermitQueensNewRequest from "./pages/PermitQueensNewRequest";
+import PermitQueensRequestDetail from "./pages/PermitQueensRequestDetail";
 import SupplementKings from "./pages/SupplementKings";
 import SupplementKingsContractorAuth from "./pages/SupplementKingsContractorAuth";
 import SupplementKingsContractorDashboard from "./pages/SupplementKingsContractorDashboard";
@@ -190,6 +192,16 @@ const GCNRoutes = () => (
           <Route path="/permit-queens/dashboard" element={
             <ProtectedRoute redirectTo="/permit-queens/auth">
               <PermitQueensDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/new-request" element={
+            <ProtectedRoute redirectTo="/permit-queens/auth">
+              <PermitQueensNewRequest />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/request/:id" element={
+            <ProtectedRoute redirectTo="/permit-queens/auth">
+              <PermitQueensRequestDetail />
             </ProtectedRoute>
           } />
           <Route path="/permit-queens/admin/auth" element={<PermitQueensAdminAuth />} />

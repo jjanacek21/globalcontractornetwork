@@ -157,11 +157,11 @@ export default function PermitQueensDashboard() {
             </p>
           </div>
           <Button 
-            onClick={() => setAddDialogOpen(true)}
+            onClick={() => navigate('/permit-queens/new-request')}
             className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Project
+            New Permit Request
           </Button>
         </div>
 
