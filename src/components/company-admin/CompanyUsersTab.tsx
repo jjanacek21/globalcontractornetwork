@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Users, UserPlus } from "lucide-react";
+import { Plus, Edit, Trash2, Users, UserPlus, Loader2 } from "lucide-react";
 
 interface CompanyUsersTabProps {
   companyId: string;
@@ -102,28 +102,68 @@ export const CompanyUsersTab = ({ companyId }: CompanyUsersTabProps) => {
 
   const handleCreateUser = async () => {
     try {
-      // Create user account via edge function
-      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+      setLoading(true);
+      
+      // Get current user info for "invited by" name
+      const { data: { user } } = await supabase.auth.getUser();
+      let invitedByName = 'Your company admin';
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          invitedByName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Your company admin';
+        }
+      }
+
+      // Get company name
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', companyId)
+        .single();
+
+      // Get team name if selected
+      let teamName = '';
+      if (formData.team_id) {
+        const selectedTeam = teams.find(t => t.id === formData.team_id);
+        teamName = selectedTeam?.name || '';
+      }
+
+      // Call the invitation edge function
+      const { data, error } = await supabase.functions.invoke("invite-company-member", {
         body: {
           email: formData.email,
-          password: formData.password || undefined,
           firstName: formData.firstName,
           lastName: formData.lastName,
           companyId,
+          companyName: company?.name || "Your Company",
           role: formData.role,
           teamId: formData.team_id || null,
-          jobTitle: formData.job_title || null
+          teamName,
+          jobTitle: formData.job_title || null,
+          invitedByName
         }
       });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to send invitation');
       
-      toast({ title: "User Created", description: "New user has been created and invited" });
+      toast({ 
+        title: "Invitation Sent!", 
+        description: `An invitation email has been sent to ${formData.email}` 
+      });
       setDialogOpen(false);
       resetForm();
       fetchMembers();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -318,8 +358,16 @@ export const CompanyUsersTab = ({ companyId }: CompanyUsersTabProps) => {
               <Button 
                 onClick={editingMember ? handleUpdateMember : handleCreateUser} 
                 className="w-full"
+                disabled={loading}
               >
-                {editingMember ? "Update User" : "Create User"}
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {editingMember ? "Updating..." : "Sending Invitation..."}
+                  </>
+                ) : (
+                  editingMember ? "Update User" : "Send Invitation"
+                )}
               </Button>
             </div>
           </DialogContent>
