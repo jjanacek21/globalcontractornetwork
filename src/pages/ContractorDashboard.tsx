@@ -24,8 +24,10 @@ import {
   MapPin,
   Phone,
   Mail,
-  Trophy
+  Trophy,
+  Briefcase
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useContractorProfile, SocialLinks } from '@/hooks/useContractorProfile';
 import { useContractorFeatures } from '@/hooks/useContractorFeatures';
 import { ProfileImageUpload } from '@/components/contractor/ProfileImageUpload';
@@ -207,6 +209,24 @@ export default function ContractorDashboard() {
             />
           )}
         </div>
+
+        {/* Job Marketplace Quick Access */}
+        <Link to="/job-board" className="block group">
+          <Card className="border-green-500/20 hover:border-green-500/40 transition-all bg-gradient-to-r from-green-500/5 to-green-600/10">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Briefcase className="h-6 w-6 text-green-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold group-hover:text-green-500 transition-colors">Job Marketplace</h3>
+                  <p className="text-sm text-muted-foreground">Browse and respond to homeowner job requests</p>
+                </div>
+                <ArrowLeft className="h-5 w-5 text-muted-foreground rotate-180 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
