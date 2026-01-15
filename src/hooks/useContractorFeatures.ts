@@ -17,6 +17,7 @@ export const AVAILABLE_FEATURES = [
   { key: 'learning_platform', label: 'Learning Platform', description: 'Training courses access', path: '/learning' },
   { key: 'store_discounts', label: 'Store Discounts', description: 'Wholesale pricing on merchandise', path: '/store' },
   { key: 'rewards_dashboard', label: 'Rewards Dashboard', description: 'Gamification, badges, leaderboards & rewards', path: '/contractor/rewards' },
+  { key: 'job_marketplace', label: 'Job Marketplace', description: 'Browse and respond to homeowner job requests', path: '/job-board' },
 ] as const;
 
 export type FeatureKey = typeof AVAILABLE_FEATURES[number]['key'];

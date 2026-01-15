@@ -3068,6 +3068,135 @@ export type Database = {
           },
         ]
       }
+      job_requests: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          city: string | null
+          created_at: string | null
+          description: string | null
+          documents: Json | null
+          expires_at: string | null
+          homeowner_id: string
+          id: string
+          lat: number | null
+          lng: number | null
+          max_responses: number | null
+          photos: Json | null
+          property_address: string
+          service_category: string
+          state: string | null
+          status: string | null
+          timeline: string | null
+          title: string
+          updated_at: string | null
+          urgency: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          documents?: Json | null
+          expires_at?: string | null
+          homeowner_id: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          max_responses?: number | null
+          photos?: Json | null
+          property_address: string
+          service_category: string
+          state?: string | null
+          status?: string | null
+          timeline?: string | null
+          title: string
+          updated_at?: string | null
+          urgency?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          city?: string | null
+          created_at?: string | null
+          description?: string | null
+          documents?: Json | null
+          expires_at?: string | null
+          homeowner_id?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          max_responses?: number | null
+          photos?: Json | null
+          property_address?: string
+          service_category?: string
+          state?: string | null
+          status?: string | null
+          timeline?: string | null
+          title?: string
+          updated_at?: string | null
+          urgency?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      job_responses: {
+        Row: {
+          available_start_date: string | null
+          contractor_id: string
+          created_at: string | null
+          estimated_duration: string | null
+          id: string
+          job_id: string
+          message: string | null
+          proposed_amount: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_start_date?: string | null
+          contractor_id: string
+          created_at?: string | null
+          estimated_duration?: string | null
+          id?: string
+          job_id: string
+          message?: string | null
+          proposed_amount?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_start_date?: string | null
+          contractor_id?: string
+          created_at?: string | null
+          estimated_duration?: string | null
+          id?: string
+          job_id?: string
+          message?: string | null
+          proposed_amount?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_responses_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_responses_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_tasks: {
         Row: {
           assigned_to: string | null
