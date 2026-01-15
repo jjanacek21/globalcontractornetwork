@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, ArrowRight, ArrowLeft, Check, Upload, X, Image } from 'lucide-react';
 import { AddressAutocomplete } from './AddressAutocomplete';
 
 interface CreateJobDialogProps {
@@ -32,6 +32,7 @@ interface CreateJobDialogProps {
     budget_max?: number;
     timeline?: string;
     urgency: string;
+    photos?: File[];
   }) => Promise<any>;
   creating: boolean;
 }
@@ -66,6 +67,9 @@ const TIMELINE_OPTIONS = [
   { value: 'asap', label: 'ASAP' }
 ];
 
+const MAX_PHOTOS = 5;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: CreateJobDialogProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -78,6 +82,9 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
     timeline: '',
     urgency: 'standard'
   });
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = () => {
     setStep(1);
@@ -91,7 +98,51 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
       timeline: '',
       urgency: 'standard'
     });
+    setPhotos([]);
+    setPhotoPreviewUrls([]);
     onOpenChange(false);
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remainingSlots = MAX_PHOTOS - photos.length;
+    
+    const validFiles = files
+      .filter(file => {
+        if (!file.type.startsWith('image/')) {
+          return false;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, remainingSlots);
+
+    if (validFiles.length > 0) {
+      const newPhotos = [...photos, ...validFiles];
+      setPhotos(newPhotos);
+      
+      // Create preview URLs
+      const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+      setPhotoPreviewUrls([...photoPreviewUrls, ...newPreviewUrls]);
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    const newPhotos = photos.filter((_, i) => i !== index);
+    const newPreviewUrls = photoPreviewUrls.filter((_, i) => i !== index);
+    
+    // Revoke the URL to prevent memory leaks
+    URL.revokeObjectURL(photoPreviewUrls[index]);
+    
+    setPhotos(newPhotos);
+    setPhotoPreviewUrls(newPreviewUrls);
   };
 
   const handleSubmit = async () => {
@@ -103,7 +154,8 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
       budget_min: formData.budget_min ? parseFloat(formData.budget_min) : undefined,
       budget_max: formData.budget_max ? parseFloat(formData.budget_max) : undefined,
       timeline: formData.timeline || undefined,
-      urgency: formData.urgency
+      urgency: formData.urgency,
+      photos: photos.length > 0 ? photos : undefined
     });
 
     if (result) {
@@ -117,13 +169,13 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Post a New Job</DialogTitle>
           <DialogDescription>
             {step === 1 && 'Describe what you need done'}
             {step === 2 && 'Where is the work needed?'}
-            {step === 3 && 'Set your budget and timeline'}
+            {step === 3 && 'Set your budget and add photos'}
           </DialogDescription>
         </DialogHeader>
 
@@ -258,6 +310,61 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
                 </Select>
               </div>
 
+              {/* Photo Upload Section */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Photos (Optional - up to {MAX_PHOTOS})
+                </Label>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg,image/webp"
+                  multiple
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+
+                {/* Photo previews */}
+                {photoPreviewUrls.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2">
+                    {photoPreviewUrls.map((url, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <img
+                          src={url}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {photos.length < MAX_PHOTOS && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {photos.length === 0 ? 'Add Photos' : `Add More (${MAX_PHOTOS - photos.length} remaining)`}
+                  </Button>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Upload photos of the area that needs work. Max 5MB per photo.
+                </p>
+              </div>
+
               {/* Summary */}
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <h4 className="font-medium text-sm">Job Summary</h4>
@@ -268,6 +375,9 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
                   {formData.budget_min || formData.budget_max ? (
                     <p><strong>Budget:</strong> ${formData.budget_min || '0'} - ${formData.budget_max || 'No max'}</p>
                   ) : null}
+                  {photos.length > 0 && (
+                    <p><strong>Photos:</strong> {photos.length} attached</p>
+                  )}
                 </div>
               </div>
             </>
