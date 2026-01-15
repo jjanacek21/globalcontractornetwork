@@ -67,14 +67,14 @@ ${existingData ? `Existing Data: ${JSON.stringify(existingData)}` : ''}
 
 Extract all relevant structured data, determine complexity tier, and identify any missing information.`;
 
-    const response = await fetch('https://api.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -85,6 +85,18 @@ Extract all relevant structured data, determine complexity tier, and identify an
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded. Please try again later.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted. Please contact support.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const errorText = await response.text();
       console.error('AI API Error:', errorText);
       throw new Error(`AI API error: ${response.status}`);
