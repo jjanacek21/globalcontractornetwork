@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateMatchScore, calculateDistance, type MatchScore } from '@/lib/contractor-matching';
 
@@ -57,6 +57,11 @@ export function useJobBoard() {
   const [contractorLocation, setContractorLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [filters, setFilters] = useState<JobFilters>({});
   const [hasAccess, setHasAccess] = useState(false);
+  
+  // Track initialization state
+  const hasInitialized = useRef(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const isFetching = useRef(false);
 
   // Check if contractor has marketplace access
   const checkAccess = useCallback(async () => {
@@ -91,8 +96,24 @@ export function useJobBoard() {
     }
   }, []);
 
-  // Fetch open jobs
+  // Fetch open jobs - stable reference using refs for profile/location
+  const contractorProfileRef = useRef(contractorProfile);
+  const contractorLocationRef = useRef(contractorLocation);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    contractorProfileRef.current = contractorProfile;
+  }, [contractorProfile]);
+  
+  useEffect(() => {
+    contractorLocationRef.current = contractorLocation;
+  }, [contractorLocation]);
+
   const fetchJobs = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (isFetching.current) return;
+    isFetching.current = true;
+    
     setLoading(true);
     setError(null);
 
@@ -149,6 +170,10 @@ export function useJobBoard() {
         countMap.set(r.job_id, (countMap.get(r.job_id) || 0) + 1);
       });
 
+      // Use refs for stable access to profile/location
+      const profile = contractorProfileRef.current;
+      const location = contractorLocationRef.current;
+
       // Calculate match scores and distances
       const enrichedJobs = (jobsData || []).map(job => {
         const enriched: JobRequest = {
@@ -159,20 +184,20 @@ export function useJobBoard() {
         };
 
         // Calculate match score if we have contractor profile
-        if (contractorProfile) {
+        if (profile) {
           enriched.match_score = calculateMatchScore(
             job,
-            contractorProfile,
-            contractorLocation?.lat,
-            contractorLocation?.lng
+            profile,
+            location?.lat,
+            location?.lng
           );
         }
 
         // Calculate distance if we have locations
-        if (job.lat && job.lng && contractorLocation) {
+        if (job.lat && job.lng && location) {
           enriched.distance = calculateDistance(
-            contractorLocation.lat,
-            contractorLocation.lng,
+            location.lat,
+            location.lng,
             job.lat,
             job.lng
           );
@@ -183,7 +208,7 @@ export function useJobBoard() {
 
       // Filter by distance if specified
       let filteredJobs = enrichedJobs;
-      if (filters.maxDistance && contractorLocation) {
+      if (filters.maxDistance && location) {
         filteredJobs = enrichedJobs.filter(j => 
           j.distance === undefined || j.distance <= filters.maxDistance!
         );
@@ -202,8 +227,9 @@ export function useJobBoard() {
       setError('Failed to load jobs');
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
-  }, [filters, contractorProfile, contractorLocation]);
+  }, [filters]); // Only depends on filters now
 
   // Get contractor's current location
   const getContractorLocation = useCallback(() => {
@@ -266,26 +292,36 @@ export function useJobBoard() {
     return !!data;
   };
 
-  // Initialize
+  // Single initialization effect - runs once on mount
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+    
     const init = async () => {
       const access = await checkAccess();
+      setAccessChecked(true);
       if (access) {
         getContractorLocation();
-        await fetchJobs();
       } else {
         setLoading(false);
       }
     };
     init();
-  }, [checkAccess, fetchJobs, getContractorLocation]);
+  }, []); // Empty deps - only runs once
 
-  // Refetch when filters change
+  // Fetch jobs when access is confirmed and profile is ready
   useEffect(() => {
-    if (hasAccess) {
+    if (accessChecked && hasAccess && contractorProfile) {
       fetchJobs();
     }
-  }, [filters, hasAccess, fetchJobs]);
+  }, [accessChecked, hasAccess, contractorProfile?.id, fetchJobs]);
+
+  // Refetch when filters change (only after initial load)
+  useEffect(() => {
+    if (accessChecked && hasAccess && contractorProfile && Object.keys(filters).length > 0) {
+      fetchJobs();
+    }
+  }, [filters]); // Only trigger on filter changes
 
   return {
     jobs,
