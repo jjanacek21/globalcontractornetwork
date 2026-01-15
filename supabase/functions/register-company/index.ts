@@ -363,6 +363,19 @@ serve(async (req) => {
         );
       }
 
+      // Upload license documents
+      if (body.licenseDocuments && body.licenseDocuments.length > 0) {
+        for (const licenseDoc of body.licenseDocuments) {
+          const licDoc = licenseDoc as FileUpload & { licenseNumber?: string };
+          await uploadBase64File(
+            supabaseAdmin,
+            'company-documents',
+            `${companyId}/licenses/${licDoc.licenseNumber || 'license'}-${licDoc.filename}`,
+            licDoc
+          );
+        }
+      }
+
       if (body.jobPhotoFiles && body.jobPhotoFiles.length > 0) {
         for (let i = 0; i < body.jobPhotoFiles.length; i++) {
           const photo = body.jobPhotoFiles[i];
