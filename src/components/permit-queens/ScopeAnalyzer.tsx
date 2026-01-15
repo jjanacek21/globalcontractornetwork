@@ -55,22 +55,45 @@ export function ScopeAnalyzer({
       });
 
       if (error) throw error;
+      
+      // Check for success flag from edge function
+      if (!data?.success) {
+        throw new Error(data?.error || 'Analysis failed');
+      }
 
-      if (data) {
+      const result = data.data; // Edge function wraps response in { success, data }
+      
+      if (result) {
+        // Map AI response fields to ExtractedData interface
+        const structuredScope = result.structuredScope || {};
+        
+        // Extract project details from structured scope
+        const projectDetails = Object.entries(structuredScope)
+          .filter(([key]) => !['roof_squares', 'roof_type', 'squareFootage', 'materialType', 'size_sqft', 'linear_feet', 'material'].includes(key))
+          .map(([key, value]) => `${key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}: ${value}`);
+
         onExtractedDataChange({
-          projectSquareFootage: data.extractedData?.squareFootage,
-          materialType: data.extractedData?.materialType,
-          projectDetails: data.extractedData?.projectDetails || [],
-          estimatedComplexity: data.complexity || 'standard',
-          requiredDocuments: data.requiredDocuments || [],
-          suggestedValuation: data.estimatedValuation,
-          additionalNotes: data.additionalNotes,
+          projectSquareFootage: structuredScope.roof_squares || structuredScope.squareFootage || structuredScope.size_sqft || structuredScope.linear_feet,
+          materialType: structuredScope.roof_type || structuredScope.materialType || structuredScope.material,
+          projectDetails: projectDetails.length > 0 ? projectDetails : undefined,
+          estimatedComplexity: result.complexityTier || 'standard',
+          requiredDocuments: result.missingFields || [],
+          suggestedValuation: result.suggestedValuation,
+          additionalNotes: result.summary,
         });
         toast.success('AI analysis complete!');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI analysis error:', error);
-      toast.error('Failed to analyze scope. Please try again.');
+      
+      // Handle specific error cases
+      if (error?.message?.includes('429') || error?.message?.includes('Rate limit')) {
+        toast.error('AI service is busy. Please wait a moment and try again.');
+      } else if (error?.message?.includes('402') || error?.message?.includes('credits')) {
+        toast.error('AI credits exhausted. Please contact support.');
+      } else {
+        toast.error('Failed to analyze scope. Please try again.');
+      }
     } finally {
       setAnalyzing(false);
     }
