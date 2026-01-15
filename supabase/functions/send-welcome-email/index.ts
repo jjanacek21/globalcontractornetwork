@@ -190,6 +190,10 @@ const handler = async (req: Request): Promise<Response> => {
       ? buildHomeownerEmail(name)
       : buildContractorEmail(name, companyName);
 
+    // Note: Until domain is verified, emails can only go to jared@globalcontractor.network
+    const ADMIN_EMAIL = "jared@globalcontractor.network";
+    const isTestMode = email !== ADMIN_EMAIL;
+    
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -198,15 +202,20 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Global Contractor Network <onboarding@resend.dev>",
-        to: [email],
-        subject,
-        html,
+        to: [ADMIN_EMAIL],
+        subject: isTestMode ? `[FOR: ${email}] ${subject}` : subject,
+        html: isTestMode 
+          ? `<div style="background: #fef3c7; padding: 16px; margin-bottom: 20px; border-radius: 8px;">
+              <strong>⚠️ Test Mode:</strong> This email was meant for <strong>${email}</strong>. 
+              Verify your domain at resend.com/domains to send to external recipients.
+            </div>${html}`
+          : html,
       }),
     });
 
     const result = await emailResponse.json();
 
-    console.log("Welcome email sent successfully:", result);
+    console.log("Welcome email sent:", result, isTestMode ? `(intended for: ${email})` : "");
 
     return new Response(
       JSON.stringify({ success: true, data: result }),
