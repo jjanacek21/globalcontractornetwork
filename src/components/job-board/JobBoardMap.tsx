@@ -1,12 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, MapPin, AlertCircle, RefreshCw } from 'lucide-react';
 import type { JobRequest } from '@/hooks/useJobBoard';
-
-// Mapbox access token - using env variable
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 
 interface JobBoardMapProps {
   jobs: JobRequest[];
@@ -26,75 +24,159 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [gettingLocation, setGettingLocation] = useState(true);
+
+  // Get user's current location
+  const getUserLocation = useCallback(() => {
+    setGettingLocation(true);
+    
+    if (!navigator.geolocation) {
+      setGettingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        setUserLocation(location);
+        setGettingLocation(false);
+      },
+      (error) => {
+        console.log('Geolocation error:', error.message);
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000, // 5 minutes
+      }
+    );
+  }, []);
+
+  // Get user location on mount
+  useEffect(() => {
+    getUserLocation();
+  }, [getUserLocation]);
 
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
+    if (gettingLocation) return; // Wait for location attempt
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    
+    if (!token) {
+      setMapError('Mapbox token not configured');
+      return;
+    }
 
-    const initialCenter: [number, number] = contractorLocation
-      ? [contractorLocation.lng, contractorLocation.lat]
-      : [-81.5158, 27.6648]; // Default to Florida center
+    mapboxgl.accessToken = token;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: initialCenter,
-      zoom: 9,
-    });
+    // Use user location, contractor location, or default to Florida
+    const initialCenter: [number, number] = userLocation
+      ? [userLocation.lng, userLocation.lat]
+      : contractorLocation
+        ? [contractorLocation.lng, contractorLocation.lat]
+        : [-81.5158, 27.6648]; // Florida center
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    const initialZoom = userLocation || contractorLocation ? 11 : 7;
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: initialCenter,
+        zoom: initialZoom,
+      });
+
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(
+        new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+          showUserHeading: true,
+        }),
+        'top-right'
+      );
+
+      map.current.on('load', () => {
+        setMapLoaded(true);
+        setMapError(null);
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+        const errorStatus = (e.error as { status?: number })?.status;
+        if (errorStatus === 401) {
+          setMapError('Invalid Mapbox token. Please check your configuration.');
+        } else {
+          setMapError('Failed to load map. Please try again.');
+        }
+      });
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      setMapError('Failed to initialize map');
+    }
 
     return () => {
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [gettingLocation, userLocation, contractorLocation]);
 
-  // Update contractor location marker
+  // Add user location marker
   useEffect(() => {
-    if (!map.current || !mapLoaded || !contractorLocation) return;
+    if (!map.current || !mapLoaded) return;
 
-    // Add contractor location marker (blue)
+    // Remove existing user marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+
+    const location = userLocation || contractorLocation;
+    if (!location) return;
+
+    // Create user location marker (blue pulsing dot)
     const el = document.createElement('div');
-    el.className = 'contractor-marker';
-    el.style.width = '20px';
-    el.style.height = '20px';
-    el.style.backgroundColor = '#3b82f6';
-    el.style.borderRadius = '50%';
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    el.className = 'user-location-marker';
+    el.innerHTML = `
+      <div style="
+        width: 20px;
+        height: 20px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #3b82f6, 0 2px 6px rgba(0,0,0,0.3);
+        animation: pulse 2s infinite;
+      "></div>
+    `;
 
-    new mapboxgl.Marker(el)
-      .setLngLat([contractorLocation.lng, contractorLocation.lat])
-      .setPopup(new mapboxgl.Popup().setHTML('<strong>Your Location</strong>'))
+    userMarkerRef.current = new mapboxgl.Marker(el)
+      .setLngLat([location.lng, location.lat])
+      .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML('<strong>Your Location</strong>'))
       .addTo(map.current);
-
-    // Center map on contractor location
-    map.current.flyTo({
-      center: [contractorLocation.lng, contractorLocation.lat],
-      zoom: 10,
-    });
-  }, [contractorLocation, mapLoaded]);
+  }, [userLocation, contractorLocation, mapLoaded]);
 
   // Update job markers
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
+    // Clear existing job markers
+    markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
     // Add job markers
-    const jobsWithLocation = jobs.filter(job => job.lat && job.lng);
+    const jobsWithLocation = jobs.filter((job) => job.lat && job.lng);
 
-    jobsWithLocation.forEach(job => {
+    jobsWithLocation.forEach((job) => {
       if (!job.lat || !job.lng) return;
 
       const color = getBudgetColor(job.budget_min, job.budget_max);
@@ -102,38 +184,53 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
       // Create custom marker element
       const el = document.createElement('div');
       el.className = 'job-marker';
-      el.style.width = '30px';
-      el.style.height = '30px';
-      el.style.backgroundColor = color;
-      el.style.borderRadius = '50%';
-      el.style.border = '3px solid white';
-      el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      el.style.cursor = 'pointer';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.color = 'white';
-      el.style.fontSize = '12px';
-      el.style.fontWeight = 'bold';
+      el.style.cssText = `
+        width: 36px;
+        height: 36px;
+        background-color: ${color};
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        transition: transform 0.2s;
+      `;
 
-      // Show match score if available
+      // Show match score or $ icon
       if (job.match_score) {
         el.textContent = `${job.match_score.total}`;
+      } else {
+        el.innerHTML = '<span style="font-size: 16px;">$</span>';
       }
 
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-        <div style="max-width: 200px;">
-          <h4 style="font-weight: 600; margin-bottom: 4px;">${job.title}</h4>
-          <p style="color: #666; font-size: 12px; margin-bottom: 4px;">${job.service_category}</p>
-          <p style="color: #22c55e; font-weight: 500; font-size: 14px;">
-            ${job.budget_min && job.budget_max 
-              ? `$${job.budget_min.toLocaleString()} - $${job.budget_max.toLocaleString()}`
-              : job.budget_max 
-                ? `Up to $${job.budget_max.toLocaleString()}`
-                : 'Budget TBD'
+      // Hover effect
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'scale(1.2)';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = 'scale(1)';
+      });
+
+      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
+        <div style="max-width: 220px; padding: 4px;">
+          <h4 style="font-weight: 600; margin-bottom: 6px; color: #1f2937;">${job.title}</h4>
+          <p style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">${job.service_category}</p>
+          <p style="color: #16a34a; font-weight: 600; font-size: 14px; margin-bottom: 8px;">
+            ${
+              job.budget_min && job.budget_max
+                ? `$${job.budget_min.toLocaleString()} - $${job.budget_max.toLocaleString()}`
+                : job.budget_max
+                  ? `Up to $${job.budget_max.toLocaleString()}`
+                  : 'Budget TBD'
             }
           </p>
-          ${job.match_score ? `<p style="font-size: 12px; color: #666;">Match: ${job.match_score.total}%</p>` : ''}
+          ${job.match_score ? `<p style="font-size: 11px; color: #6b7280;">Match Score: ${job.match_score.total}%</p>` : ''}
+          <p style="font-size: 11px; color: #3b82f6; margin-top: 4px; cursor: pointer;">Click for details →</p>
         </div>
       `);
 
@@ -149,37 +246,69 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to show all jobs
-    if (jobsWithLocation.length > 0) {
+    // Fit bounds to show all jobs if there are any
+    if (jobsWithLocation.length > 0 && map.current) {
       const bounds = new mapboxgl.LngLatBounds();
-      
-      jobsWithLocation.forEach(job => {
+
+      jobsWithLocation.forEach((job) => {
         if (job.lat && job.lng) {
           bounds.extend([job.lng, job.lat]);
         }
       });
 
-      if (contractorLocation) {
-        bounds.extend([contractorLocation.lng, contractorLocation.lat]);
+      const location = userLocation || contractorLocation;
+      if (location) {
+        bounds.extend([location.lng, location.lat]);
       }
 
-      map.current.fitBounds(bounds, { padding: 50 });
+      map.current.fitBounds(bounds, { padding: 60, maxZoom: 12 });
     }
-  }, [jobs, mapLoaded, onJobClick, contractorLocation]);
+  }, [jobs, mapLoaded, onJobClick, userLocation, contractorLocation]);
+
+  // Error state
+  if (mapError) {
+    return (
+      <Card className="overflow-hidden h-[600px] relative flex items-center justify-center bg-muted/30">
+        <div className="text-center p-6">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h3 className="font-semibold text-lg mb-2">Map Failed to Load</h3>
+          <p className="text-muted-foreground mb-4">{mapError}</p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setMapError(null);
+              setMapLoaded(false);
+              map.current?.remove();
+              map.current = null;
+              getUserLocation();
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="overflow-hidden h-[600px] relative">
       <div ref={mapContainer} className="w-full h-full" />
-      
+
       {/* Loading State */}
-      {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      {(!mapLoaded || gettingLocation) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-20">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {gettingLocation ? 'Getting your location...' : 'Loading map...'}
+            </p>
+          </div>
         </div>
       )}
-      
+
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg z-10">
+      <div className="absolute bottom-4 left-4 bg-card p-3 rounded-lg shadow-lg z-10 border">
         <p className="text-xs font-semibold mb-2">Budget Range</p>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -204,6 +333,18 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
           </div>
         </div>
       </div>
+
+      {/* Job count badge */}
+      {mapLoaded && (
+        <div className="absolute top-4 left-4 bg-card px-3 py-1.5 rounded-full shadow-lg z-10 border">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">
+              {jobs.filter((j) => j.lat && j.lng).length} jobs on map
+            </span>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

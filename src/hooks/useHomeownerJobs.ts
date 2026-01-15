@@ -21,6 +21,7 @@ export interface JobRequest {
   lng?: number | null;
   city?: string | null;
   state?: string | null;
+  photos?: string[];
   response_count?: number;
 }
 
@@ -52,8 +53,19 @@ export function useHomeownerJobs(userId: string | null) {
             .select('*', { count: 'exact', head: true })
             .eq('job_id', job.id);
           
+          // Parse photos from JSON if it exists
+          let photos: string[] = [];
+          if (job.photos) {
+            try {
+              photos = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos as string);
+            } catch {
+              photos = [];
+            }
+          }
+          
           return {
             ...job,
+            photos,
             response_count: count || 0
           } as JobRequest;
         })
@@ -72,6 +84,38 @@ export function useHomeownerJobs(userId: string | null) {
     fetchJobs();
   }, [fetchJobs]);
 
+  const uploadPhotos = async (photos: File[], jobId: string): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+
+    for (const photo of photos) {
+      const fileExt = photo.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${jobId}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('job-photos')
+        .upload(fileName, photo, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Error uploading photo:', error);
+        continue;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('job-photos')
+        .getPublicUrl(data.path);
+
+      if (urlData?.publicUrl) {
+        uploadedUrls.push(urlData.publicUrl);
+      }
+    }
+
+    return uploadedUrls;
+  };
+
   const createJob = async (jobData: {
     title: string;
     description?: string;
@@ -81,6 +125,7 @@ export function useHomeownerJobs(userId: string | null) {
     budget_max?: number;
     timeline?: string;
     urgency: string;
+    photos?: File[];
   }) => {
     if (!userId) {
       toast.error('You must be logged in to create a job');
@@ -92,6 +137,7 @@ export function useHomeownerJobs(userId: string | null) {
       // Geocode the address to get coordinates
       const geoResult = await geocodeAddress(jobData.property_address);
       
+      // First create the job to get the ID
       const { data, error } = await supabase
         .from('job_requests')
         .insert({
@@ -108,12 +154,30 @@ export function useHomeownerJobs(userId: string | null) {
           lat: geoResult?.lat || null,
           lng: geoResult?.lng || null,
           city: geoResult?.city || null,
-          state: geoResult?.state || null
+          state: geoResult?.state || null,
+          photos: [] // Start with empty photos
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Upload photos if provided
+      if (jobData.photos && jobData.photos.length > 0 && data) {
+        const photoUrls = await uploadPhotos(jobData.photos, data.id);
+        
+        if (photoUrls.length > 0) {
+          // Update the job with photo URLs
+          const { error: updateError } = await supabase
+            .from('job_requests')
+            .update({ photos: photoUrls })
+            .eq('id', data.id);
+
+          if (updateError) {
+            console.error('Error updating job with photos:', updateError);
+          }
+        }
+      }
 
       toast.success('Job posted successfully!');
       await fetchJobs();
@@ -147,6 +211,22 @@ export function useHomeownerJobs(userId: string | null) {
 
   const deleteJob = async (jobId: string) => {
     try {
+      // First, delete photos from storage
+      const job = jobs.find(j => j.id === jobId);
+      if (job?.photos && job.photos.length > 0) {
+        const filePaths = job.photos.map(url => {
+          // Extract path from URL
+          const match = url.match(/job-photos\/(.+)$/);
+          return match ? match[1] : null;
+        }).filter(Boolean) as string[];
+
+        if (filePaths.length > 0) {
+          await supabase.storage
+            .from('job-photos')
+            .remove(filePaths);
+        }
+      }
+
       const { error } = await supabase
         .from('job_requests')
         .delete()
