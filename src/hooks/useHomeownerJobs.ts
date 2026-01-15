@@ -163,6 +163,57 @@ export function useHomeownerJobs(userId: string | null) {
     }
   };
 
+  const geocodeExistingJobs = async () => {
+    try {
+      // Fetch jobs missing coordinates
+      const { data: jobsToGeocode, error: fetchError } = await supabase
+        .from('job_requests')
+        .select('id, property_address')
+        .is('lat', null)
+        .not('property_address', 'is', null);
+
+      if (fetchError) throw fetchError;
+      if (!jobsToGeocode || jobsToGeocode.length === 0) {
+        toast.info('All jobs already have coordinates');
+        return 0;
+      }
+
+      let updatedCount = 0;
+
+      for (const job of jobsToGeocode) {
+        const geoResult = await geocodeAddress(job.property_address);
+        
+        if (geoResult) {
+          const { error: updateError } = await supabase
+            .from('job_requests')
+            .update({
+              lat: geoResult.lat,
+              lng: geoResult.lng,
+              city: geoResult.city || null,
+              state: geoResult.state || null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.id);
+
+          if (!updateError) {
+            updatedCount++;
+          }
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      toast.success(`Geocoded ${updatedCount} of ${jobsToGeocode.length} jobs`);
+      await fetchJobs();
+      return updatedCount;
+    } catch (error) {
+      console.error('Error geocoding existing jobs:', error);
+      toast.error('Failed to geocode existing jobs');
+      return 0;
+    }
+  };
+
   return {
     jobs,
     loading,
@@ -170,6 +221,7 @@ export function useHomeownerJobs(userId: string | null) {
     createJob,
     updateJobStatus,
     deleteJob,
-    refresh: fetchJobs
+    refresh: fetchJobs,
+    geocodeExistingJobs
   };
 }

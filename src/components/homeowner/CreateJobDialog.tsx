@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { AddressAutocomplete } from './AddressAutocomplete';
 
 interface CreateJobDialogProps {
   open: boolean;
@@ -185,11 +186,11 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
             <>
               <div className="space-y-2">
                 <Label htmlFor="property_address">Property Address *</Label>
-                <Input
+                <AddressAutocomplete
                   id="property_address"
-                  placeholder="Enter the full address"
                   value={formData.property_address}
-                  onChange={(e) => setFormData({ ...formData, property_address: e.target.value })}
+                  onChange={(address) => setFormData({ ...formData, property_address: address })}
+                  placeholder="Start typing to search addresses..."
                 />
               </div>
 

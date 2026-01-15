@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 import type { JobRequest } from '@/hooks/useJobBoard';
 
 // Mapbox access token - using env variable
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibG92YWJsZWFpIiwiYSI6ImNtMnRhZWs5ZzAwNHcya3NjMGQ5Z3YxemkifQ.tq96a3nNJOxAjdQPKhKD2g';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 
 interface JobBoardMapProps {
   jobs: JobRequest[];
@@ -167,8 +168,15 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
   }, [jobs, mapLoaded, onJobClick, contractorLocation]);
 
   return (
-    <Card className="overflow-hidden h-[600px]">
+    <Card className="overflow-hidden h-[600px] relative">
       <div ref={mapContainer} className="w-full h-full" />
+      
+      {/* Loading State */}
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
       
       {/* Legend */}
       <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg z-10">
