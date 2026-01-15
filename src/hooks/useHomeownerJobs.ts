@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { geocodeAddress } from '@/lib/geocoding';
 
 export interface JobRequest {
   id: string;
@@ -16,6 +17,10 @@ export interface JobRequest {
   status: string | null;
   created_at: string | null;
   updated_at: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  city?: string | null;
+  state?: string | null;
   response_count?: number;
 }
 
@@ -84,6 +89,9 @@ export function useHomeownerJobs(userId: string | null) {
 
     setCreating(true);
     try {
+      // Geocode the address to get coordinates
+      const geoResult = await geocodeAddress(jobData.property_address);
+      
       const { data, error } = await supabase
         .from('job_requests')
         .insert({
@@ -96,7 +104,11 @@ export function useHomeownerJobs(userId: string | null) {
           budget_max: jobData.budget_max || null,
           timeline: jobData.timeline || null,
           urgency: jobData.urgency,
-          status: 'open'
+          status: 'open',
+          lat: geoResult?.lat || null,
+          lng: geoResult?.lng || null,
+          city: geoResult?.city || null,
+          state: geoResult?.state || null
         })
         .select()
         .single();
