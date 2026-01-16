@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
 import { PacketPreview } from '@/components/permit-queens/PacketPreview';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { PricingGrid } from '@/components/permit-queens/PricingCard';
+import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
@@ -231,6 +232,17 @@ export default function PermitQueensNewRequest() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Jurisdiction Rules Panel - Shows after address & permit type selected */}
+              {formData.jurisdiction_county && formData.permit_type && (
+                <JurisdictionRulesPanel
+                  county={formData.jurisdiction_county}
+                  city={formData.jurisdiction_city}
+                  permitType={formData.permit_type}
+                  isHVHZ={formData.isHVHZ}
+                  showDocuments={false}
+                />
+              )}
             </div>
           )}
 
@@ -273,15 +285,31 @@ export default function PermitQueensNewRequest() {
 
           {/* Step 3: Documents & Packet */}
           {currentStep === 3 && (
-            <PacketPreview
-              permitType={formData.permit_type}
-              jurisdiction={formData.jurisdiction_county}
-              isHVHZ={formData.isHVHZ}
-              uploadedDocuments={[]}
-              selectedProducts={[]}
-              formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
-              onGeneratePacket={() => toast.success('Packet generation started!')}
-            />
+            <div className="space-y-6">
+              {/* Required Documents from Jurisdiction Rules */}
+              {formData.jurisdiction_county && (
+                <JurisdictionRulesPanel
+                  county={formData.jurisdiction_county}
+                  city={formData.jurisdiction_city}
+                  permitType={formData.permit_type || undefined}
+                  isHVHZ={formData.isHVHZ}
+                  showGotchas={false}
+                  showRequirements={false}
+                  showDocuments={true}
+                  compact={true}
+                />
+              )}
+              
+              <PacketPreview
+                permitType={formData.permit_type}
+                jurisdiction={formData.jurisdiction_county}
+                isHVHZ={formData.isHVHZ}
+                uploadedDocuments={[]}
+                selectedProducts={[]}
+                formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
+                onGeneratePacket={() => toast.success('Packet generation started!')}
+              />
+            </div>
           )}
 
           {/* Step 4: Review */}
