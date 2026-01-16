@@ -4637,6 +4637,7 @@ export type Database = {
           roof_color: string | null
           roof_type: string | null
           scope_description: string | null
+          selected_products: Json | null
           service_type: string
           state: string | null
           status: string
@@ -4692,6 +4693,7 @@ export type Database = {
           roof_color?: string | null
           roof_type?: string | null
           scope_description?: string | null
+          selected_products?: Json | null
           service_type: string
           state?: string | null
           status?: string
@@ -4747,6 +4749,7 @@ export type Database = {
           roof_color?: string | null
           roof_type?: string | null
           scope_description?: string | null
+          selected_products?: Json | null
           service_type?: string
           state?: string | null
           status?: string
@@ -5707,6 +5710,62 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      roofr_reports: {
+        Row: {
+          created_at: string | null
+          eaves_length: number | null
+          facets: number | null
+          hips_length: number | null
+          id: string
+          pdf_path: string | null
+          permit_project_id: string | null
+          predominant_pitch: string | null
+          raw_data: Json | null
+          ridges_length: number | null
+          roofr_project_id: string | null
+          total_area_sqft: number | null
+          valleys_length: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          eaves_length?: number | null
+          facets?: number | null
+          hips_length?: number | null
+          id?: string
+          pdf_path?: string | null
+          permit_project_id?: string | null
+          predominant_pitch?: string | null
+          raw_data?: Json | null
+          ridges_length?: number | null
+          roofr_project_id?: string | null
+          total_area_sqft?: number | null
+          valleys_length?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          eaves_length?: number | null
+          facets?: number | null
+          hips_length?: number | null
+          id?: string
+          pdf_path?: string | null
+          permit_project_id?: string | null
+          predominant_pitch?: string | null
+          raw_data?: Json | null
+          ridges_length?: number | null
+          roofr_project_id?: string | null
+          total_area_sqft?: number | null
+          valleys_length?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roofr_reports_permit_project_id_fkey"
+            columns: ["permit_project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_categories: {
         Row: {
