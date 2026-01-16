@@ -4992,6 +4992,7 @@ export type Database = {
       }
       product_approvals: {
         Row: {
+          applicable_trades: string[] | null
           approval_date: string | null
           created_at: string | null
           expiration_date: string | null
@@ -5009,10 +5010,12 @@ export type Database = {
           product_line: string | null
           product_name: string
           specifications: Json | null
+          uil_number: string | null
           updated_at: string | null
           wind_speed_rating: number | null
         }
         Insert: {
+          applicable_trades?: string[] | null
           approval_date?: string | null
           created_at?: string | null
           expiration_date?: string | null
@@ -5030,10 +5033,12 @@ export type Database = {
           product_line?: string | null
           product_name: string
           specifications?: Json | null
+          uil_number?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
         }
         Update: {
+          applicable_trades?: string[] | null
           approval_date?: string | null
           created_at?: string | null
           expiration_date?: string | null
@@ -5051,6 +5056,7 @@ export type Database = {
           product_line?: string | null
           product_name?: string
           specifications?: Json | null
+          uil_number?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
         }
