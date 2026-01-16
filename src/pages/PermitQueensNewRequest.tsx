@@ -11,7 +11,11 @@ import { ScopeAnalyzer } from '@/components/permit-queens/ScopeAnalyzer';
 import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { PricingGrid } from '@/components/permit-queens/PricingCard';
+import { ProductSelector } from '@/components/permit-queens/ProductSelector';
+import { PacketPreview } from '@/components/permit-queens/PacketPreview';
+import { SignatureTracker } from '@/components/permit-queens/SignatureTracker';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
+import { SelectedProduct } from '@/hooks/useProductApprovals';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -100,11 +104,16 @@ export default function PermitQueensNewRequest() {
   });
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [missingDocuments, setMissingDocuments] = useState<MissingDocument[]>([]);
   const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Determine if project is in HVHZ based on jurisdiction
+  const isHVHZ = formData.jurisdiction_county.toLowerCase().includes('broward') || 
+                 formData.jurisdiction_county.toLowerCase().includes('miami');
 
   // Default tiers if none loaded from DB
   const defaultTiers: PricingTier[] = [
