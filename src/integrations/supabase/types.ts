@@ -398,6 +398,62 @@ export type Database = {
         }
         Relationships: []
       }
+      building_department_rules: {
+        Row: {
+          building_department_id: string | null
+          city: string | null
+          county: string
+          created_at: string | null
+          document_required: string | null
+          id: string
+          is_active: boolean | null
+          permit_types: string[] | null
+          priority: number | null
+          rule_action: string | null
+          rule_description: string
+          rule_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          building_department_id?: string | null
+          city?: string | null
+          county: string
+          created_at?: string | null
+          document_required?: string | null
+          id?: string
+          is_active?: boolean | null
+          permit_types?: string[] | null
+          priority?: number | null
+          rule_action?: string | null
+          rule_description: string
+          rule_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          building_department_id?: string | null
+          city?: string | null
+          county?: string
+          created_at?: string | null
+          document_required?: string | null
+          id?: string
+          is_active?: boolean | null
+          permit_types?: string[] | null
+          priority?: number | null
+          rule_action?: string | null
+          rule_description?: string
+          rule_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_department_rules_building_department_id_fkey"
+            columns: ["building_department_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       canvassing_logs: {
         Row: {
           address: string | null
@@ -4612,6 +4668,7 @@ export type Database = {
           expedited: boolean | null
           fee_actual: number | null
           fee_estimate: number | null
+          generated_forms: Json | null
           has_hurricane_straps: boolean | null
           hoa_approval: boolean | null
           id: string
@@ -4624,6 +4681,7 @@ export type Database = {
           owner_email: string | null
           owner_name: string | null
           owner_phone: string | null
+          packet_status: string | null
           packet_url: string | null
           parcel_id: string | null
           payment_link: string | null
@@ -4643,6 +4701,7 @@ export type Database = {
           status: string
           stripe_session_id: string | null
           structured_scope_json: Json | null
+          trade_data: Json | null
           underlayment_type: string | null
           updated_at: string
           user_id: string
@@ -4668,6 +4727,7 @@ export type Database = {
           expedited?: boolean | null
           fee_actual?: number | null
           fee_estimate?: number | null
+          generated_forms?: Json | null
           has_hurricane_straps?: boolean | null
           hoa_approval?: boolean | null
           id?: string
@@ -4680,6 +4740,7 @@ export type Database = {
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          packet_status?: string | null
           packet_url?: string | null
           parcel_id?: string | null
           payment_link?: string | null
@@ -4699,6 +4760,7 @@ export type Database = {
           status?: string
           stripe_session_id?: string | null
           structured_scope_json?: Json | null
+          trade_data?: Json | null
           underlayment_type?: string | null
           updated_at?: string
           user_id: string
@@ -4724,6 +4786,7 @@ export type Database = {
           expedited?: boolean | null
           fee_actual?: number | null
           fee_estimate?: number | null
+          generated_forms?: Json | null
           has_hurricane_straps?: boolean | null
           hoa_approval?: boolean | null
           id?: string
@@ -4736,6 +4799,7 @@ export type Database = {
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          packet_status?: string | null
           packet_url?: string | null
           parcel_id?: string | null
           payment_link?: string | null
@@ -4755,6 +4819,7 @@ export type Database = {
           status?: string
           stripe_session_id?: string | null
           structured_scope_json?: Json | null
+          trade_data?: Json | null
           underlayment_type?: string | null
           updated_at?: string
           user_id?: string
