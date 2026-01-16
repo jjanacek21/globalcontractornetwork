@@ -4272,15 +4272,72 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_field_mappings: {
+        Row: {
+          created_at: string | null
+          default_value: string | null
+          field_type: string | null
+          id: string
+          is_required: boolean | null
+          notes: string | null
+          our_field: string
+          page_number: number | null
+          pdf_field: string
+          template_id: string | null
+          transform_function: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_value?: string | null
+          field_type?: string | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          our_field: string
+          page_number?: number | null
+          pdf_field: string
+          template_id?: string | null
+          transform_function?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_value?: string | null
+          field_type?: string | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          our_field?: string
+          page_number?: number | null
+          pdf_field?: string
+          template_id?: string | null
+          transform_function?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_field_mappings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "permit_form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_form_templates: {
         Row: {
+          category: string | null
+          common_errors: string[] | null
           created_at: string | null
           field_mapping: Json | null
           file_path: string
           form_name: string
           form_type: string
           form_version: string | null
+          hvhz_only: boolean | null
           id: string
+          instructions: string | null
           is_fillable: boolean | null
           jurisdiction_id: string | null
           jurisdiction_name: string
@@ -4288,16 +4345,22 @@ export type Database = {
           page_count: number | null
           requires_notary: boolean | null
           requires_signature: boolean | null
+          signature_locations: Json | null
+          trade_types: string[] | null
           updated_at: string | null
         }
         Insert: {
+          category?: string | null
+          common_errors?: string[] | null
           created_at?: string | null
           field_mapping?: Json | null
           file_path: string
           form_name: string
           form_type: string
           form_version?: string | null
+          hvhz_only?: boolean | null
           id?: string
+          instructions?: string | null
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name: string
@@ -4305,16 +4368,22 @@ export type Database = {
           page_count?: number | null
           requires_notary?: boolean | null
           requires_signature?: boolean | null
+          signature_locations?: Json | null
+          trade_types?: string[] | null
           updated_at?: string | null
         }
         Update: {
+          category?: string | null
+          common_errors?: string[] | null
           created_at?: string | null
           field_mapping?: Json | null
           file_path?: string
           form_name?: string
           form_type?: string
           form_version?: string | null
+          hvhz_only?: boolean | null
           id?: string
+          instructions?: string | null
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name?: string
@@ -4322,6 +4391,8 @@ export type Database = {
           page_count?: number | null
           requires_notary?: boolean | null
           requires_signature?: boolean | null
+          signature_locations?: Json | null
+          trade_types?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4850,6 +4921,68 @@ export type Database = {
           },
         ]
       }
+      permit_rejections: {
+        Row: {
+          admin_notes: string | null
+          admin_reviewed: boolean | null
+          ai_extracted_rule: string | null
+          ai_suggested_action: string | null
+          created_at: string | null
+          id: string
+          jurisdiction_city: string | null
+          jurisdiction_county: string
+          permit_project_id: string | null
+          rejection_category: string | null
+          rejection_reason: string
+          resolution_notes: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          trade: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          admin_reviewed?: boolean | null
+          ai_extracted_rule?: string | null
+          ai_suggested_action?: string | null
+          created_at?: string | null
+          id?: string
+          jurisdiction_city?: string | null
+          jurisdiction_county: string
+          permit_project_id?: string | null
+          rejection_category?: string | null
+          rejection_reason: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          trade: string
+        }
+        Update: {
+          admin_notes?: string | null
+          admin_reviewed?: boolean | null
+          ai_extracted_rule?: string | null
+          ai_suggested_action?: string | null
+          created_at?: string | null
+          id?: string
+          jurisdiction_city?: string | null
+          jurisdiction_county?: string
+          permit_project_id?: string | null
+          rejection_category?: string | null
+          rejection_reason?: string
+          resolution_notes?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          trade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_rejections_permit_project_id_fkey"
+            columns: ["permit_project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_required_documents: {
         Row: {
           building_dept_id: string | null
@@ -4894,6 +5027,60 @@ export type Database = {
           },
         ]
       }
+      permit_resources: {
+        Row: {
+          content_html: string | null
+          created_at: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          is_published: boolean | null
+          jurisdiction_city: string | null
+          jurisdiction_county: string | null
+          resource_type: string
+          sort_order: number | null
+          tags: string[] | null
+          title: string
+          trade: string | null
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          content_html?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          jurisdiction_city?: string | null
+          jurisdiction_county?: string | null
+          resource_type: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title: string
+          trade?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          content_html?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          jurisdiction_city?: string | null
+          jurisdiction_county?: string | null
+          resource_type?: string
+          sort_order?: number | null
+          tags?: string[] | null
+          title?: string
+          trade?: string | null
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       permit_status_events: {
         Row: {
           created_at: string | null
@@ -4931,6 +5118,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      permit_types: {
+        Row: {
+          base_fee: number | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          engineering_threshold: number | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          requires_engineer: boolean | null
+          requires_noc: boolean | null
+          sort_order: number | null
+          subtype: string | null
+          trade: string
+        }
+        Insert: {
+          base_fee?: number | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          engineering_threshold?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          requires_engineer?: boolean | null
+          requires_noc?: boolean | null
+          sort_order?: number | null
+          subtype?: string | null
+          trade: string
+        }
+        Update: {
+          base_fee?: number | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          engineering_threshold?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          requires_engineer?: boolean | null
+          requires_noc?: boolean | null
+          sort_order?: number | null
+          subtype?: string | null
+          trade?: string
+        }
+        Relationships: []
       }
       points_transactions: {
         Row: {
@@ -6917,6 +7152,56 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trade_requirements: {
+        Row: {
+          conditional_documents: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          jurisdiction_id: string | null
+          notes: string | null
+          photo_requirements: string[] | null
+          required_documents: string[] | null
+          revision_triggers: string[] | null
+          trade: string
+          updated_at: string | null
+        }
+        Insert: {
+          conditional_documents?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_id?: string | null
+          notes?: string | null
+          photo_requirements?: string[] | null
+          required_documents?: string[] | null
+          revision_triggers?: string[] | null
+          trade: string
+          updated_at?: string | null
+        }
+        Update: {
+          conditional_documents?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_id?: string | null
+          notes?: string | null
+          photo_requirements?: string[] | null
+          required_documents?: string[] | null
+          revision_triggers?: string[] | null
+          trade?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_requirements_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
             referencedColumns: ["id"]
           },
         ]
