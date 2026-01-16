@@ -8,13 +8,13 @@ export function PermitQueensFooter() {
         <div className="grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <span className="text-lg font-bold text-white">Permit Queens</span>
             </div>
             <p className="text-sm text-slate-400 mb-4">
-              Florida's premier permit expediting service. We handle the paperwork so you can focus on your projects.
+              Florida's AI-powered permit intelligence engine. Complete permit packets for every South Florida building department.
             </p>
             <div className="space-y-2 text-sm text-slate-400">
               <div className="flex items-center gap-2">
@@ -35,21 +35,21 @@ export function PermitQueensFooter() {
           <div>
             <h4 className="font-semibold text-white mb-4">Services</h4>
             <ul className="space-y-2 text-sm text-slate-400">
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Permit Application</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Virtual Notarization</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">NOC Recording</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Contractor Registration</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Engineer Reviews</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Permit Application</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Virtual Notarization</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">NOC Recording</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Contractor Registration</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Engineer Reviews</li>
             </ul>
           </div>
           
           <div>
             <h4 className="font-semibold text-white mb-4">Coverage Areas</h4>
             <ul className="space-y-2 text-sm text-slate-400">
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Broward County</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Miami-Dade County</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Palm Beach County</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">All Florida Cities</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Broward County</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Miami-Dade County</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Palm Beach County</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">All Florida Cities</li>
             </ul>
           </div>
           
@@ -57,13 +57,13 @@ export function PermitQueensFooter() {
             <h4 className="font-semibold text-white mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm text-slate-400">
               <li>
-                <Link to="/" className="hover:text-amber-500 transition-colors">Home</Link>
+                <Link to="/" className="hover:text-emerald-400 transition-colors">Home</Link>
               </li>
               <li>
-                <Link to="/permit-queens/auth" className="hover:text-amber-500 transition-colors">Client Portal</Link>
+                <Link to="/permit-queens/auth" className="hover:text-emerald-400 transition-colors">Client Portal</Link>
               </li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Resource Library</li>
-              <li className="hover:text-amber-500 cursor-pointer transition-colors">Contact Us</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Resource Library</li>
+              <li className="hover:text-emerald-400 cursor-pointer transition-colors">Contact Us</li>
             </ul>
           </div>
         </div>

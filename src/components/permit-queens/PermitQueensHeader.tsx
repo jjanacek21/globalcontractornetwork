@@ -42,12 +42,12 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             Dashboard
           </Button>
           <Link to="/permit-queens" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Crown className="h-6 w-6 text-white" />
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold text-white">Permit Queens</span>
-              <span className="text-xs text-slate-400">Florida Permit Expediting</span>
+              <span className="text-xs text-slate-400">AI Permit Intelligence</span>
             </div>
           </Link>
         </div>
@@ -58,8 +58,8 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             <button
               key={link.href}
               onClick={() => scrollToSection(link.href)}
-              className={`text-sm font-medium transition-colors hover:text-amber-500 ${
-                activeSection === link.href ? "text-amber-500" : "text-slate-300"
+              className={`text-sm font-medium transition-colors hover:text-emerald-400 ${
+                activeSection === link.href ? "text-emerald-400" : "text-slate-300"
               }`}
             >
               {link.label}
@@ -70,13 +70,13 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
-            className="hidden md:inline-flex border-amber-500/50 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
+            className="hidden md:inline-flex border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
             onClick={() => navigate("/permit-queens/auth")}
           >
             Client Login
           </Button>
           <Button 
-            className="hidden md:inline-flex bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+            className="hidden md:inline-flex bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
             onClick={() => scrollToSection("#contact")}
           >
             Get Started
@@ -102,7 +102,7 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-left px-4 py-2 text-sm text-slate-300 hover:text-amber-500 hover:bg-slate-800 rounded-md transition-colors"
+                className="text-left px-4 py-2 text-sm text-slate-300 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
               >
                 {link.label}
               </button>
@@ -110,13 +110,13 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             <div className="flex flex-col gap-2 mt-4 px-4">
               <Button 
                 variant="outline" 
-                className="w-full border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                className="w-full border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
                 onClick={() => navigate("/permit-queens/auth")}
               >
                 Client Login
               </Button>
               <Button 
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-600"
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600"
                 onClick={() => scrollToSection("#contact")}
               >
                 Get Started

@@ -110,32 +110,32 @@ const PermitQueens = () => {
 
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-slate-950 to-orange-600/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-slate-950 to-teal-600/10" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC4yIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZoLTJ2LTRoMnY0em0wLTZoLTJ2LTRoMnY0em0wLTZoLTJWNmgydjEwem0tNiAyNGgtMnYtNGgydjR6bTAtNmgtMnYtNGgydjR6bTAtNmgtMnYtNGgydjR6bTAtNmgtMlY2aDJ2MTB6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
         
         <div className="container relative">
           <div className="mx-auto max-w-4xl text-center space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-500">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
               <Crown className="h-4 w-4" />
-              <span>Florida's Trusted Permit Expediting Service</span>
+              <span>Florida's AI-Powered Permit Intelligence</span>
             </div>
             
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">
-              Speed Up Your{" "}
-              <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-                Florida Permits
+              AI-Powered{" "}
+              <span className="bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
+                Permit Packets
               </span>
             </h1>
             
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              We handle the paperwork so you can focus on your projects. From permit applications to NOC recording, 
-              Permit Queens takes the hassle out of Florida building permits.
+              Complete permit packets for every South Florida building department. Our AI knows what's required, 
+              what's allowed, and builds submission-ready packages in minutes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
                 onClick={() => scrollToSection("#lookup")}
               >
                 Look Up Your Building Department
@@ -144,7 +144,7 @@ const PermitQueens = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-slate-700 text-slate-300 hover:border-amber-500 hover:text-amber-500"
+                className="border-slate-700 text-slate-300 hover:border-emerald-500 hover:text-emerald-400"
                 onClick={() => scrollToSection("#services")}
               >
                 View Services
@@ -154,15 +154,15 @@ const PermitQueens = () => {
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-8 pt-12 max-w-2xl mx-auto">
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-amber-500">500+</div>
+                <div className="text-3xl md:text-4xl font-bold text-emerald-400">500+</div>
                 <div className="text-sm text-slate-500">Permits Processed</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-amber-500">50+</div>
+                <div className="text-3xl md:text-4xl font-bold text-emerald-400">50+</div>
                 <div className="text-sm text-slate-500">Florida Cities</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-amber-500">48hr</div>
+                <div className="text-3xl md:text-4xl font-bold text-emerald-400">48hr</div>
                 <div className="text-sm text-slate-500">Avg. Turnaround</div>
               </div>
             </div>
@@ -177,7 +177,7 @@ const PermitQueens = () => {
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
                 Why Contractors Choose{" "}
-                <span className="text-amber-500">Permit Queens</span>
+                <span className="text-emerald-400">Permit Queens</span>
               </h2>
               <p className="text-slate-400 mb-8">
                 Navigating Florida's building permit process can be time-consuming and confusing. 
@@ -193,7 +193,7 @@ const PermitQueens = () => {
                   "Expert knowledge of local requirements"
                 ].map((item, index) => (
                   <li key={index} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
                     <span className="text-slate-300">{item}</span>
                   </li>
                 ))}
@@ -202,22 +202,22 @@ const PermitQueens = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <Card className="bg-slate-800/50 border-slate-700 p-6">
-                <Clock className="h-8 w-8 text-amber-500 mb-4" />
+                <Clock className="h-8 w-8 text-emerald-500 mb-4" />
                 <h3 className="font-semibold text-white mb-2">Fast Turnaround</h3>
                 <p className="text-sm text-slate-400">Most permits submitted within 48 hours</p>
               </Card>
               <Card className="bg-slate-800/50 border-slate-700 p-6">
-                <Shield className="h-8 w-8 text-amber-500 mb-4" />
+                <Shield className="h-8 w-8 text-emerald-500 mb-4" />
                 <h3 className="font-semibold text-white mb-2">100% Accurate</h3>
                 <p className="text-sm text-slate-400">No rejections due to paperwork errors</p>
               </Card>
               <Card className="bg-slate-800/50 border-slate-700 p-6">
-                <Users className="h-8 w-8 text-amber-500 mb-4" />
+                <Users className="h-8 w-8 text-emerald-500 mb-4" />
                 <h3 className="font-semibold text-white mb-2">Expert Team</h3>
                 <p className="text-sm text-slate-400">Years of Florida permitting experience</p>
               </Card>
               <Card className="bg-slate-800/50 border-slate-700 p-6">
-                <MapPin className="h-8 w-8 text-amber-500 mb-4" />
+                <MapPin className="h-8 w-8 text-emerald-500 mb-4" />
                 <h3 className="font-semibold text-white mb-2">All Florida</h3>
                 <p className="text-sm text-slate-400">Coverage across all FL municipalities</p>
               </Card>
@@ -240,10 +240,10 @@ const PermitQueens = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service, index) => (
-              <Card key={index} className="bg-slate-800/50 border-slate-700 hover:border-amber-500/50 transition-colors">
+              <Card key={index} className="bg-slate-800/50 border-slate-700 hover:border-emerald-500/50 transition-colors">
                 <CardContent className="p-6">
-                  <div className="h-12 w-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
-                    <service.icon className="h-6 w-6 text-amber-500" />
+                  <div className="h-12 w-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
+                    <service.icon className="h-6 w-6 text-emerald-500" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">{service.title}</h3>
                   <p className="text-slate-400 text-sm">{service.description}</p>
@@ -285,7 +285,7 @@ const PermitQueens = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {howItWorks.map((step, index) => (
               <div key={index} className="relative">
-                <div className="text-6xl font-bold text-amber-500/20 absolute -top-4 -left-2">
+                <div className="text-6xl font-bold text-emerald-500/20 absolute -top-4 -left-2">
                   {step.step}
                 </div>
                 <div className="relative pt-8">
@@ -315,8 +315,8 @@ const PermitQueens = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {industries.map((industry, index) => (
-              <Card key={index} className="bg-slate-800/50 border-slate-700 hover:border-amber-500/50 transition-colors text-center p-6">
-                <industry.icon className="h-8 w-8 text-amber-500 mx-auto mb-3" />
+              <Card key={index} className="bg-slate-800/50 border-slate-700 hover:border-emerald-500/50 transition-colors text-center p-6">
+                <industry.icon className="h-8 w-8 text-emerald-500 mx-auto mb-3" />
                 <h3 className="font-semibold text-white mb-1">{industry.name}</h3>
                 <p className="text-xs text-slate-500">{industry.description}</p>
               </Card>
@@ -342,7 +342,7 @@ const PermitQueens = () => {
               <Card key={index} className="bg-slate-800/50 border-slate-700">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <MapPin className="h-5 w-5 text-amber-500" />
+                    <MapPin className="h-5 w-5 text-emerald-500" />
                     <h3 className="text-lg font-semibold text-white">{county.name}</h3>
                   </div>
                   <p className="text-sm text-slate-400">{county.cities}</p>
@@ -357,7 +357,7 @@ const PermitQueens = () => {
       <section id="resources" className="py-20 bg-slate-900/50">
         <div className="container">
           <div className="max-w-4xl mx-auto text-center">
-            <BookOpen className="h-16 w-16 text-amber-500 mx-auto mb-6" />
+            <BookOpen className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Resource Library
             </h2>
@@ -367,7 +367,7 @@ const PermitQueens = () => {
             </p>
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
             >
               Coming Soon
             </Button>
@@ -378,7 +378,7 @@ const PermitQueens = () => {
       {/* CTA Section */}
       <section id="contact" className="py-20">
         <div className="container">
-          <div className="mx-auto max-w-4xl rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30 p-12 text-center">
+          <div className="mx-auto max-w-4xl rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border border-emerald-500/30 p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Ready to Expedite Your Permits?
             </h2>
@@ -389,7 +389,7 @@ const PermitQueens = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
                 onClick={() => window.location.href = "/permit-queens/auth"}
               >
                 Start Your First Permit
@@ -397,7 +397,7 @@ const PermitQueens = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-slate-600 text-slate-300 hover:border-amber-500 hover:text-amber-500"
+                className="border-slate-600 text-slate-300 hover:border-emerald-500 hover:text-emerald-400"
                 onClick={() => window.location.href = "/permit-queens/admin/auth"}
               >
                 Admin Login
