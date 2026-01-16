@@ -1364,6 +1364,92 @@ export type Database = {
           },
         ]
       }
+      contractor_form_data: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string | null
+          contractor_profile_id: string | null
+          created_at: string | null
+          email: string | null
+          fax: string | null
+          id: string
+          insurance_company: string | null
+          insurance_expiration: string | null
+          insurance_policy_number: string | null
+          license_number: string | null
+          license_state: string | null
+          license_type: string | null
+          phone: string | null
+          qualifier_name: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string | null
+          workers_comp_expiration: string | null
+          workers_comp_policy: string | null
+          workers_comp_provider: string | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          contractor_profile_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          fax?: string | null
+          id?: string
+          insurance_company?: string | null
+          insurance_expiration?: string | null
+          insurance_policy_number?: string | null
+          license_number?: string | null
+          license_state?: string | null
+          license_type?: string | null
+          phone?: string | null
+          qualifier_name?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workers_comp_expiration?: string | null
+          workers_comp_policy?: string | null
+          workers_comp_provider?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          contractor_profile_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          fax?: string | null
+          id?: string
+          insurance_company?: string | null
+          insurance_expiration?: string | null
+          insurance_policy_number?: string | null
+          license_number?: string | null
+          license_state?: string | null
+          license_type?: string | null
+          phone?: string | null
+          qualifier_name?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workers_comp_expiration?: string | null
+          workers_comp_policy?: string | null
+          workers_comp_provider?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_form_data_contractor_profile_id_fkey"
+            columns: ["contractor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_jobs: {
         Row: {
           collected_amount: number | null
@@ -4130,6 +4216,68 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_form_templates: {
+        Row: {
+          created_at: string | null
+          field_mapping: Json | null
+          file_path: string
+          form_name: string
+          form_type: string
+          form_version: string | null
+          id: string
+          is_fillable: boolean | null
+          jurisdiction_id: string | null
+          jurisdiction_name: string
+          notes: string | null
+          page_count: number | null
+          requires_notary: boolean | null
+          requires_signature: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_mapping?: Json | null
+          file_path: string
+          form_name: string
+          form_type: string
+          form_version?: string | null
+          id?: string
+          is_fillable?: boolean | null
+          jurisdiction_id?: string | null
+          jurisdiction_name: string
+          notes?: string | null
+          page_count?: number | null
+          requires_notary?: boolean | null
+          requires_signature?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_mapping?: Json | null
+          file_path?: string
+          form_name?: string
+          form_type?: string
+          form_version?: string | null
+          id?: string
+          is_fillable?: boolean | null
+          jurisdiction_id?: string | null
+          jurisdiction_name?: string
+          notes?: string | null
+          page_count?: number | null
+          requires_notary?: boolean | null
+          requires_signature?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_form_templates_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "jurisdiction_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_local_codes: {
         Row: {
           building_dept_id: string | null
@@ -4274,6 +4422,68 @@ export type Database = {
           },
           {
             foreignKeyName: "permit_notifications_permit_request_id_fkey"
+            columns: ["permit_request_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_packets: {
+        Row: {
+          ai_notes: string | null
+          cover_sheet_html: string | null
+          created_at: string | null
+          document_count: number | null
+          document_index: Json | null
+          documents_included: Json | null
+          file_path: string | null
+          generated_by: string | null
+          id: string
+          packet_type: string | null
+          permit_request_id: string | null
+          status: string | null
+          submitted_at: string | null
+          total_pages: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_notes?: string | null
+          cover_sheet_html?: string | null
+          created_at?: string | null
+          document_count?: number | null
+          document_index?: Json | null
+          documents_included?: Json | null
+          file_path?: string | null
+          generated_by?: string | null
+          id?: string
+          packet_type?: string | null
+          permit_request_id?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          total_pages?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_notes?: string | null
+          cover_sheet_html?: string | null
+          created_at?: string | null
+          document_count?: number | null
+          document_index?: Json | null
+          documents_included?: Json | null
+          file_path?: string | null
+          generated_by?: string | null
+          id?: string
+          packet_type?: string | null
+          permit_request_id?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          total_pages?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_packets_permit_request_id_fkey"
             columns: ["permit_request_id"]
             isOneToOne: false
             referencedRelation: "permit_projects"
@@ -4776,6 +4986,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_approvals: {
+        Row: {
+          approval_date: string | null
+          created_at: string | null
+          expiration_date: string | null
+          file_path: string | null
+          file_url: string | null
+          fl_product_approval: string | null
+          hvhz_approved: boolean | null
+          id: string
+          is_active: boolean | null
+          jurisdiction_scope: string[] | null
+          manufacturer: string
+          metadata: Json | null
+          noa_number: string | null
+          product_category: string
+          product_line: string | null
+          product_name: string
+          specifications: Json | null
+          updated_at: string | null
+          wind_speed_rating: number | null
+        }
+        Insert: {
+          approval_date?: string | null
+          created_at?: string | null
+          expiration_date?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          fl_product_approval?: string | null
+          hvhz_approved?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_scope?: string[] | null
+          manufacturer: string
+          metadata?: Json | null
+          noa_number?: string | null
+          product_category: string
+          product_line?: string | null
+          product_name: string
+          specifications?: Json | null
+          updated_at?: string | null
+          wind_speed_rating?: number | null
+        }
+        Update: {
+          approval_date?: string | null
+          created_at?: string | null
+          expiration_date?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          fl_product_approval?: string | null
+          hvhz_approved?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          jurisdiction_scope?: string[] | null
+          manufacturer?: string
+          metadata?: Json | null
+          noa_number?: string | null
+          product_category?: string
+          product_line?: string | null
+          product_name?: string
+          specifications?: Json | null
+          updated_at?: string | null
+          wind_speed_rating?: number | null
+        }
+        Relationships: []
       }
       product_categories: {
         Row: {
