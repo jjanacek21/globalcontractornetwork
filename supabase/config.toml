@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.permit-notification-sender]
 verify_jwt = false
+
+[functions.permit-packet-assembler]
+verify_jwt = false
