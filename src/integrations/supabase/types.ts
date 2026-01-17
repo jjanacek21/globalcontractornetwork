@@ -4194,42 +4194,63 @@ export type Database = {
           city: string | null
           county: string
           created_at: string | null
+          email: string | null
+          fax: string | null
           hours: string | null
           id: string
+          is_hvhz: boolean | null
           jurisdiction_type: string
           name: string
+          notes: string | null
           phone: string | null
           portal_url: string | null
+          processing_time: string | null
+          submission_method: string | null
           updated_at: string | null
           website: string | null
+          zip_codes: string[] | null
         }
         Insert: {
           address?: string | null
           city?: string | null
           county: string
           created_at?: string | null
+          email?: string | null
+          fax?: string | null
           hours?: string | null
           id?: string
+          is_hvhz?: boolean | null
           jurisdiction_type?: string
           name: string
+          notes?: string | null
           phone?: string | null
           portal_url?: string | null
+          processing_time?: string | null
+          submission_method?: string | null
           updated_at?: string | null
           website?: string | null
+          zip_codes?: string[] | null
         }
         Update: {
           address?: string | null
           city?: string | null
           county?: string
           created_at?: string | null
+          email?: string | null
+          fax?: string | null
           hours?: string | null
           id?: string
+          is_hvhz?: boolean | null
           jurisdiction_type?: string
           name?: string
+          notes?: string | null
           phone?: string | null
           portal_url?: string | null
+          processing_time?: string | null
+          submission_method?: string | null
           updated_at?: string | null
           website?: string | null
+          zip_codes?: string[] | null
         }
         Relationships: []
       }
@@ -4271,6 +4292,69 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      permit_department_documents: {
+        Row: {
+          building_dept_id: string
+          created_at: string | null
+          document_name: string
+          document_url: string | null
+          field_mapping: Json | null
+          id: string
+          is_required: boolean | null
+          is_smart_doc: boolean | null
+          notes: string | null
+          sort_order: number | null
+          template_id: string | null
+          trade_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          building_dept_id: string
+          created_at?: string | null
+          document_name: string
+          document_url?: string | null
+          field_mapping?: Json | null
+          id?: string
+          is_required?: boolean | null
+          is_smart_doc?: boolean | null
+          notes?: string | null
+          sort_order?: number | null
+          template_id?: string | null
+          trade_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          building_dept_id?: string
+          created_at?: string | null
+          document_name?: string
+          document_url?: string | null
+          field_mapping?: Json | null
+          id?: string
+          is_required?: boolean | null
+          is_smart_doc?: boolean | null
+          notes?: string | null
+          sort_order?: number | null
+          template_id?: string | null
+          trade_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_department_documents_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_department_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "permit_form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permit_field_mappings: {
         Row: {
@@ -5020,6 +5104,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "permit_required_documents_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_required_info: {
+        Row: {
+          ai_extractable: boolean | null
+          building_dept_id: string
+          created_at: string | null
+          example_value: string | null
+          field_key: string | null
+          id: string
+          info_description: string | null
+          info_name: string
+          info_type: string
+          is_required: boolean | null
+          sort_order: number | null
+          trade_type: string
+        }
+        Insert: {
+          ai_extractable?: boolean | null
+          building_dept_id: string
+          created_at?: string | null
+          example_value?: string | null
+          field_key?: string | null
+          id?: string
+          info_description?: string | null
+          info_name: string
+          info_type: string
+          is_required?: boolean | null
+          sort_order?: number | null
+          trade_type: string
+        }
+        Update: {
+          ai_extractable?: boolean | null
+          building_dept_id?: string
+          created_at?: string | null
+          example_value?: string | null
+          field_key?: string | null
+          id?: string
+          info_description?: string | null
+          info_name?: string
+          info_type?: string
+          is_required?: boolean | null
+          sort_order?: number | null
+          trade_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_required_info_building_dept_id_fkey"
             columns: ["building_dept_id"]
             isOneToOne: false
             referencedRelation: "permit_building_departments"
