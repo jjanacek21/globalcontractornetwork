@@ -49,7 +49,7 @@ const CATEGORY_CONFIG: Record<string, {
 }> = {
   roof_covering: {
     label: 'Roof Covering',
-    dbCategories: ['Shingles', 'Metal Panel', 'Roof Tile', 'Stone Coated Steel', 'Metal Tile Panels'],
+    dbCategories: ['Shingles', 'shingles', 'Metal Roofing', 'Metal Panel', 'Roof Tile', 'tiles', 'Stone Coated Steel', 'Metal Tile Panels', 'roof_covering'],
     icon: Home,
     color: 'bg-green-500',
     required: true,
@@ -63,16 +63,16 @@ const CATEGORY_CONFIG: Record<string, {
     color: 'bg-purple-500',
     required: false,
     allowMultiple: true,
-    description: 'For flat or low-slope roof sections'
+    description: 'For flat or low-slope roof sections (TPO, EPDM, modified bitumen, torch-down)'
   },
   underlayment: {
     label: 'Underlayment',
-    dbCategories: ['Underlayment', 'Self-Adhered Underlayment', 'Synthetic Underlayment'],
+    dbCategories: ['Underlayment', 'underlayment', 'Self-Adhered Underlayment', 'Synthetic Underlayment'],
     icon: Layers,
     color: 'bg-blue-500',
     required: true,
     allowMultiple: true,
-    description: 'Protective layer under roof covering'
+    description: 'Protective layer under roof covering (synthetic, peel & stick, felt)'
   },
   deck_fasteners: {
     label: 'Deck Fasteners',
