@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, Building2, Shield, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { useJurisdictionDetector, JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
   id: string;
   place_name: string;
   center: [number, number];
-  context?: Array<{ id: string; text: string }>;
+  context?: Array<{ id: string; text: string; short_code?: string }>;
 }
 
 interface PermitAddressInputProps {
@@ -48,7 +49,7 @@ export function PermitAddressInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search
+  // Debounced search using edge function
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -62,15 +63,20 @@ export function PermitAddressInput({
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibG92YWJsZS1kZXYiLCJhIjoiY2x2ZjBqYzJrMDFkZTJxb2Rnd2VycHVuayJ9.demo';
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(value)}.json?` +
-          `access_token=${mapboxToken}&country=us&types=address&limit=5&proximity=-80.2,26.1`
-        );
+        const { data, error } = await supabase.functions.invoke('geocode-address', {
+          body: {
+            query: value,
+            limit: 5,
+            types: 'address',
+            country: 'us',
+            proximity: '-80.2,26.1', // Florida proximity
+          },
+        });
         
-        if (response.ok) {
-          const data = await response.json();
-          setSearchResults(data.features || []);
+        if (error) {
+          console.error('Geocoding error:', error);
+        } else if (data?.features) {
+          setSearchResults(data.features);
           setShowResults(true);
         }
       } catch (error) {
@@ -157,7 +163,7 @@ export function PermitAddressInput({
                 {jurisdictionInfo.buildingDepartment && (
                   <div className="flex items-center gap-2 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>{jurisdictionInfo.buildingDepartment.department_name}</span>
+                    <span>{jurisdictionInfo.buildingDepartment.name || jurisdictionInfo.buildingDepartment.department_name}</span>
                   </div>
                 )}
 

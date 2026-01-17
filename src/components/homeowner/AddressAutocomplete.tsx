@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { MapPin, Loader2 } from 'lucide-react';
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SearchResult {
   place_name: string;
@@ -46,13 +45,19 @@ export function AddressAutocomplete({
     debounceRef.current = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(value)}.json?access_token=${MAPBOX_TOKEN}&country=US&types=address&limit=5`
-        );
+        const { data, error } = await supabase.functions.invoke('geocode-address', {
+          body: {
+            query: value,
+            limit: 5,
+            types: 'address',
+            country: 'us',
+          },
+        });
         
-        if (response.ok) {
-          const data = await response.json();
-          setResults(data.features || []);
+        if (error) {
+          console.error('Address search error:', error);
+        } else if (data?.features) {
+          setResults(data.features);
           setShowResults(true);
         }
       } catch (error) {

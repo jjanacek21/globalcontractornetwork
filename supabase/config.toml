@@ -98,3 +98,12 @@ verify_jwt = false
 
 [functions.permit-packet-assembler]
 verify_jwt = false
+
+[functions.geocode-address]
+verify_jwt = false
+
+[functions.permit-form-extractor]
+verify_jwt = false
+
+[functions.permit-form-filler]
+verify_jwt = false
