@@ -3,18 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
-  Check, AlertTriangle, X, Search, Plus, FileText, Calendar, Shield, ShieldCheck,
-  ChevronDown, ChevronRight, Hammer, Layers, Home, CircleDot
+  Plus, Shield, Hammer, Layers, Home, CircleDot, Check
 } from 'lucide-react';
 import { useProductApprovals, ProductApproval } from '@/hooks/useProductApprovals';
-import { format } from 'date-fns';
+import { SearchableProductCombobox } from './SearchableProductCombobox';
+import { ApprovalInfoCard } from './ApprovalInfoCard';
 
 // Extended category type for multi-material selection
 export type MaterialCategory = 
@@ -29,7 +24,7 @@ export interface MultiSelectedProduct {
   id: string;
   product: ProductApproval;
   category: MaterialCategory;
-  area?: string; // e.g., "main roof", "flat section"
+  area?: string;
   quantity?: number;
   notes?: string;
 }
@@ -115,14 +110,8 @@ export function MultiMaterialSelector({
   onProductsChange,
   onRoofTypeChange
 }: MultiMaterialSelectorProps) {
-  const { products, loading, getManufacturers, isExpired, isExpiringSoon, getCategories } = useProductApprovals();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('roof_covering');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['roof_covering', 'underlayment']));
-
-  const manufacturers = useMemo(() => getManufacturers(), [products]);
-  const dbCategories = useMemo(() => getCategories(), [products]);
+  const { products, loading, isExpired, isExpiringSoon } = useProductApprovals();
+  const [showAddDropdown, setShowAddDropdown] = useState<Record<string, boolean>>({});
 
   // Get products for a specific material category
   const getProductsForCategory = (category: MaterialCategory) => {
@@ -137,84 +126,39 @@ export function MultiMaterialSelector({
     );
   };
 
-  // Filter products based on search and manufacturer
-  const filterProducts = (categoryProducts: ProductApproval[]) => {
-    let filtered = categoryProducts;
-
-    if (selectedManufacturer !== 'all') {
-      filtered = filtered.filter(p => p.manufacturer === selectedManufacturer);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.product_name.toLowerCase().includes(query) ||
-        p.manufacturer.toLowerCase().includes(query) ||
-        p.noa_number?.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered;
-  };
-
   // Get selected products for a category
   const getSelectedForCategory = (category: MaterialCategory) => {
     return selectedProducts.filter(p => p.category === category);
   };
 
-  // Add or toggle a product selection
-  const toggleProduct = (product: ProductApproval, category: MaterialCategory, area?: string) => {
+  // Add a product selection
+  const addProduct = (product: ProductApproval, category: MaterialCategory) => {
     const config = CATEGORY_CONFIG[category];
-    const existingIndex = selectedProducts.findIndex(p => p.id === product.id && p.category === category);
-    
-    if (existingIndex >= 0) {
-      // Remove if already selected
-      onProductsChange(selectedProducts.filter((_, i) => i !== existingIndex));
-    } else {
-      const newProduct: MultiSelectedProduct = {
-        id: product.id,
-        product,
-        category,
-        area,
-      };
+    const newProduct: MultiSelectedProduct = {
+      id: product.id,
+      product,
+      category,
+    };
 
-      if (config?.allowMultiple) {
-        // Add to existing selections
+    if (config?.allowMultiple) {
+      // Check if already selected
+      const exists = selectedProducts.some(p => p.id === product.id && p.category === category);
+      if (!exists) {
         onProductsChange([...selectedProducts, newProduct]);
-      } else {
-        // Replace existing selection for this category
-        const filtered = selectedProducts.filter(p => p.category !== category);
-        onProductsChange([...filtered, newProduct]);
       }
+    } else {
+      // Replace existing selection for this category
+      const filtered = selectedProducts.filter(p => p.category !== category);
+      onProductsChange([...filtered, newProduct]);
     }
+    
+    // Hide the add dropdown after selection
+    setShowAddDropdown(prev => ({ ...prev, [category]: false }));
   };
 
   // Remove a specific product
   const removeProduct = (productId: string, category: MaterialCategory) => {
     onProductsChange(selectedProducts.filter(p => !(p.id === productId && p.category === category)));
-  };
-
-  const getProductStatus = (product: ProductApproval) => {
-    if (isExpired(product)) {
-      return { status: 'expired', icon: X, color: 'destructive', label: 'Expired' };
-    }
-    if (isExpiringSoon(product)) {
-      return { status: 'expiring', icon: AlertTriangle, color: 'warning', label: 'Expiring Soon' };
-    }
-    if (isHVHZ && !product.hvhz_approved) {
-      return { status: 'not_hvhz', icon: AlertTriangle, color: 'warning', label: 'Not HVHZ Approved' };
-    }
-    return { status: 'valid', icon: Check, color: 'success', label: 'Valid' };
-  };
-
-  const toggleCategoryExpanded = (category: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
-    } else {
-      newExpanded.add(category);
-    }
-    setExpandedCategories(newExpanded);
   };
 
   // Determine which categories to show based on roof type
@@ -230,144 +174,125 @@ export function MultiMaterialSelector({
     return categories; // Mixed shows all
   }, [roofType]);
 
-  const renderProductCard = (product: ProductApproval, category: MaterialCategory) => {
-    const status = getProductStatus(product);
-    const isSelected = selectedProducts.some(p => p.id === product.id && p.category === category);
-    const StatusIcon = status.icon;
-    const isDisabled = status.status === 'expired';
-
-    return (
-      <div
-        key={`${product.id}-${category}`}
-        className={`p-3 border rounded-lg cursor-pointer transition-all ${
-          isSelected 
-            ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
-            : 'border-border hover:border-primary/50 hover:bg-muted/30'
-        } ${isDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-        onClick={() => !isDisabled && toggleProduct(product, category)}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-sm truncate">{product.product_name}</span>
-              {isSelected && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
-            </div>
-            <p className="text-xs text-muted-foreground mb-2">{product.manufacturer}</p>
-            
-            <div className="flex flex-wrap gap-1">
-              {product.noa_number && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  <FileText className="h-2.5 w-2.5 mr-0.5" />
-                  {product.noa_number}
-                </Badge>
-              )}
-              {product.hvhz_approved && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600 border-blue-500/20">
-                  <ShieldCheck className="h-2.5 w-2.5 mr-0.5" />
-                  HVHZ
-                </Badge>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-end gap-1">
-            <Badge 
-              variant={status.status === 'valid' ? 'default' : status.status === 'expired' ? 'destructive' : 'secondary'}
-              className={`text-[10px] px-1.5 py-0 ${status.status === 'valid' ? 'bg-green-500/10 text-green-600 border-green-500/20' : ''}`}
-            >
-              <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
-              {status.label}
-            </Badge>
-            {product.expiration_date && (
-              <span className="text-[10px] text-muted-foreground flex items-center">
-                <Calendar className="h-2.5 w-2.5 mr-0.5" />
-                {format(new Date(product.expiration_date), 'MM/yy')}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderCategorySection = (category: MaterialCategory) => {
     const config = CATEGORY_CONFIG[category];
     const categoryProducts = getProductsForCategory(category);
-    const filteredProducts = filterProducts(categoryProducts);
     const selected = getSelectedForCategory(category);
-    const isExpanded = expandedCategories.has(category);
     const Icon = config.icon;
+    const showingAddDropdown = showAddDropdown[category];
+    
+    // Filter out already selected products from the dropdown
+    const availableProducts = categoryProducts.filter(
+      p => !selected.some(s => s.id === p.id)
+    );
 
     return (
-      <Collapsible key={category} open={isExpanded} onOpenChange={() => toggleCategoryExpanded(category)}>
-        <CollapsibleTrigger asChild>
-          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center`}>
-                <Icon className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{config.label}</span>
-                  {config.required && <Badge variant="outline" className="text-[10px]">Required</Badge>}
-                  {config.allowMultiple && <Badge variant="secondary" className="text-[10px]">Multi-select</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground">{config.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant={selected.length > 0 ? 'default' : 'secondary'}>
-                {selected.length} selected
-              </Badge>
-              <span className="text-xs text-muted-foreground">({filteredProducts.length} available)</span>
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </div>
+      <div key={category} className="space-y-3">
+        {/* Category Header */}
+        <div className="flex items-center gap-3">
+          <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center`}>
+            <Icon className="h-4 w-4 text-white" />
           </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="pt-3 space-y-3">
-            {/* Selected products for this category */}
-            {selected.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Selected:</Label>
-                <div className="flex flex-wrap gap-2">
-                  {selected.map(sel => (
-                    <Badge 
-                      key={sel.id} 
-                      variant="default"
-                      className="pl-2 pr-1 py-1 flex items-center gap-1"
-                    >
-                      <span className="text-xs">{sel.product.product_name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-destructive/20"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeProduct(sel.id, category);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">{config.label}</Label>
+              {config.required && <span className="text-destructive">*</span>}
+              {config.allowMultiple && (
+                <Badge variant="secondary" className="text-[10px]">Multi-select</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{config.description}</p>
+          </div>
+          <Badge variant={selected.length > 0 ? 'default' : 'secondary'} className="shrink-0">
+            {selected.length} selected
+          </Badge>
+        </div>
 
-            {/* Product grid */}
-            {filteredProducts.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {filteredProducts.map(product => renderProductCard(product, category))}
+        {/* Main dropdown (show when no selection or single-select) */}
+        {(selected.length === 0 || (!config.allowMultiple && selected.length === 0)) && (
+          <SearchableProductCombobox
+            products={categoryProducts}
+            selectedProduct={null}
+            onSelect={(product) => product && addProduct(product, category)}
+            placeholder={`Search ${config.label.toLowerCase()}...`}
+            label={config.label}
+            isHVHZ={isHVHZ}
+            required={config.required}
+            isExpired={isExpired}
+            isExpiringSoon={isExpiringSoon}
+          />
+        )}
+
+        {/* Selected products as ApprovalInfoCards */}
+        {selected.length > 0 && (
+          <div className="space-y-2">
+            {selected.map(sel => (
+              <ApprovalInfoCard
+                key={`${sel.id}-${category}`}
+                product={sel.product}
+                isHVHZ={isHVHZ}
+                onRemove={() => removeProduct(sel.id, category)}
+                showRemoveButton={true}
+                isExpired={isExpired}
+                isExpiringSoon={isExpiringSoon}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Add Another button for multi-select categories */}
+        {config.allowMultiple && selected.length > 0 && (
+          <div className="space-y-2">
+            {showingAddDropdown ? (
+              <div className="space-y-2">
+                <SearchableProductCombobox
+                  products={availableProducts}
+                  selectedProduct={null}
+                  onSelect={(product) => product && addProduct(product, category)}
+                  placeholder={`Search ${config.label.toLowerCase()}...`}
+                  label={config.label}
+                  isHVHZ={isHVHZ}
+                  isExpired={isExpired}
+                  isExpiringSoon={isExpiringSoon}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAddDropdown(prev => ({ ...prev, [category]: false }))}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
               </div>
             ) : (
-              <div className="py-4 text-center text-muted-foreground text-sm">
-                No products found for this category
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddDropdown(prev => ({ ...prev, [category]: true }))}
+                className="text-xs gap-1.5"
+                disabled={availableProducts.length === 0}
+              >
+                <Plus className="h-3 w-3" />
+                Add another {config.label.toLowerCase()}
+              </Button>
             )}
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        )}
+
+        {/* Single-select: show dropdown to change selection */}
+        {!config.allowMultiple && selected.length > 0 && (
+          <div className="pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeProduct(selected[0].id, category)}
+              className="text-xs text-muted-foreground"
+            >
+              Change selection
+            </Button>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -474,45 +399,16 @@ export function MultiMaterialSelector({
         </CardContent>
       </Card>
 
-      {/* Product Browser */}
+      {/* Material Selection - Dropdown Based */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Material Selection</CardTitle>
           <CardDescription>
-            Select products with valid Florida product approvals for each category
+            Search and select products with valid Florida product approvals for each category
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products or NOA..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Manufacturer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Manufacturers</SelectItem>
-                {manufacturers.map(mfr => (
-                  <SelectItem key={mfr} value={mfr}>{mfr}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          {/* Category Sections */}
-          <div className="space-y-3">
-            {visibleCategories.map(category => renderCategorySection(category))}
-          </div>
+        <CardContent className="space-y-6">
+          {visibleCategories.map(category => renderCategorySection(category))}
         </CardContent>
       </Card>
     </div>
