@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, Thermometer, CheckCircle2, AlertTriangle, Shield, X } from 'lucide-react';
+import { Zap, Thermometer, CheckCircle2, Shield } from 'lucide-react';
 import { useTradeProducts, TradeProduct } from '@/hooks/useTradeProducts';
 import { cn } from '@/lib/utils';
+import { SearchableProductCombobox } from './SearchableProductCombobox';
+import { ApprovalInfoCard } from './ApprovalInfoCard';
+import { ProductApproval } from '@/hooks/useProductApprovals';
 
 export interface HVACFormData {
   workType: 'replace' | 'new_install' | 'ductwork' | 'repair' | '';
@@ -51,6 +54,26 @@ const LOCATIONS = [
   { id: 'closet', label: 'Interior', description: 'Closet or garage' },
 ];
 
+// Convert TradeProduct to ProductApproval format for the combobox
+function tradeProductToApproval(product: TradeProduct): ProductApproval {
+  return {
+    id: product.id,
+    manufacturer: product.manufacturer,
+    product_name: product.product_name,
+    product_category: product.product_category,
+    product_line: null,
+    noa_number: product.noa_number,
+    fl_product_approval: null,
+    uil_number: null,
+    expiration_date: product.expiration_date,
+    hvhz_approved: product.hvhz_approved,
+    wind_speed_rating: null,
+    file_path: null,
+    file_url: product.file_url,
+    is_active: true,
+  };
+}
+
 export function HVACQuestions({
   isHVHZ,
   formData,
@@ -75,14 +98,15 @@ export function HVACQuestions({
     onComplete(isComplete);
   };
 
-  const getProductStatus = (product: TradeProduct) => {
-    if (isExpired(product)) {
-      return { status: 'expired', color: 'text-destructive', icon: AlertTriangle };
-    }
-    if (isExpiringSoon(product)) {
-      return { status: 'expiring', color: 'text-amber-600', icon: AlertTriangle };
-    }
-    return { status: 'valid', color: 'text-green-600', icon: CheckCircle2 };
+  // Wrap isExpired/isExpiringSoon to work with ProductApproval
+  const isProductExpired = (product: ProductApproval) => {
+    const tradeProduct = products.find(p => p.id === product.id);
+    return tradeProduct ? isExpired(tradeProduct) : false;
+  };
+
+  const isProductExpiringSoon = (product: ProductApproval) => {
+    const tradeProduct = products.find(p => p.id === product.id);
+    return tradeProduct ? isExpiringSoon(tradeProduct) : false;
   };
 
   const acUnits = products.filter(p => 
@@ -91,74 +115,9 @@ export function HVACQuestions({
   );
   const airHandlers = products.filter(p => p.product_category === 'Air Handler');
 
-  const renderProductSelector = (
-    productList: TradeProduct[],
-    selectedProduct: TradeProduct | null,
-    onSelect: (product: TradeProduct | null) => void,
-    label: string
-  ) => {
-    if (productList.length === 0) {
-      return (
-        <div className="text-sm text-muted-foreground italic p-4 border rounded-lg">
-          No {label.toLowerCase()} products available{isHVHZ ? ' for HVHZ' : ''}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-2">
-        {selectedProduct ? (
-          <Card className="border-primary bg-primary/5">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium text-sm">{selectedProduct.product_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedProduct.manufacturer} • {selectedProduct.noa_number}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => onSelect(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-            {productList.map((product) => {
-              const statusInfo = getProductStatus(product);
-              const StatusIcon = statusInfo.icon;
-              
-              return (
-                <button
-                  key={product.id}
-                  onClick={() => onSelect(product)}
-                  className={cn(
-                    "w-full p-3 text-left border rounded-lg transition-all hover:border-primary/50",
-                    statusInfo.status === 'expired' && "opacity-50 cursor-not-allowed"
-                  )}
-                  disabled={statusInfo.status === 'expired'}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{product.product_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {product.manufacturer} • {product.noa_number}
-                      </p>
-                    </div>
-                    <StatusIcon className={cn("h-4 w-4", statusInfo.color)} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Convert to ProductApproval format for combobox
+  const acUnitsAsApprovals = acUnits.map(tradeProductToApproval);
+  const airHandlersAsApprovals = airHandlers.map(tradeProductToApproval);
 
   return (
     <div className="space-y-6">
@@ -322,7 +281,7 @@ export function HVACQuestions({
           <CardHeader>
             <CardTitle className="text-lg">Equipment Selection</CardTitle>
             <CardDescription>
-              Select approved HVAC equipment
+              Search and select approved HVAC equipment
               {isHVHZ && <Badge variant="destructive" className="ml-2">HVHZ Only</Badge>}
             </CardDescription>
           </CardHeader>
@@ -333,28 +292,71 @@ export function HVACQuestions({
               </div>
             ) : (
               <>
-                <div className="space-y-2">
+                {/* AC Unit / Heat Pump */}
+                <div className="space-y-3">
                   <Label className="text-sm font-medium">
                     {formData.equipmentType === 'heat_pump' ? 'Heat Pump' : 'AC Unit'} 
                     <span className="text-destructive"> *</span>
                   </Label>
-                  {renderProductSelector(
-                    acUnits,
-                    formData.selectedUnit,
-                    (p) => updateField('selectedUnit', p),
-                    formData.equipmentType === 'heat_pump' ? 'Heat Pump' : 'AC Unit'
+                  
+                  {formData.selectedUnit ? (
+                    <ApprovalInfoCard
+                      product={tradeProductToApproval(formData.selectedUnit)}
+                      isHVHZ={isHVHZ}
+                      onRemove={() => updateField('selectedUnit', null)}
+                      isExpired={isProductExpired}
+                      isExpiringSoon={isProductExpiringSoon}
+                    />
+                  ) : (
+                    <SearchableProductCombobox
+                      products={acUnitsAsApprovals}
+                      selectedProduct={null}
+                      onSelect={(product) => {
+                        if (product) {
+                          const tradeProduct = acUnits.find(p => p.id === product.id);
+                          if (tradeProduct) updateField('selectedUnit', tradeProduct);
+                        }
+                      }}
+                      placeholder={`Search ${formData.equipmentType === 'heat_pump' ? 'heat pumps' : 'AC units'}...`}
+                      label={formData.equipmentType === 'heat_pump' ? 'Heat Pump' : 'AC Unit'}
+                      isHVHZ={isHVHZ}
+                      required
+                      isExpired={isProductExpired}
+                      isExpiringSoon={isProductExpiringSoon}
+                    />
                   )}
                 </div>
 
-                <div className="space-y-2">
+                {/* Air Handler */}
+                <div className="space-y-3">
                   <Label className="text-sm font-medium">
                     Air Handler <span className="text-muted-foreground">(optional)</span>
                   </Label>
-                  {renderProductSelector(
-                    airHandlers,
-                    formData.selectedAirHandler,
-                    (p) => updateField('selectedAirHandler', p),
-                    'Air Handler'
+                  
+                  {formData.selectedAirHandler ? (
+                    <ApprovalInfoCard
+                      product={tradeProductToApproval(formData.selectedAirHandler)}
+                      isHVHZ={isHVHZ}
+                      onRemove={() => updateField('selectedAirHandler', null)}
+                      isExpired={isProductExpired}
+                      isExpiringSoon={isProductExpiringSoon}
+                    />
+                  ) : (
+                    <SearchableProductCombobox
+                      products={airHandlersAsApprovals}
+                      selectedProduct={null}
+                      onSelect={(product) => {
+                        if (product) {
+                          const tradeProduct = airHandlers.find(p => p.id === product.id);
+                          if (tradeProduct) updateField('selectedAirHandler', tradeProduct);
+                        }
+                      }}
+                      placeholder="Search air handlers..."
+                      label="Air Handler"
+                      isHVHZ={isHVHZ}
+                      isExpired={isProductExpired}
+                      isExpiringSoon={isProductExpiringSoon}
+                    />
                   )}
                 </div>
               </>

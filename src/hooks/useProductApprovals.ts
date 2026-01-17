@@ -9,12 +9,19 @@ export interface ProductApproval {
   product_line: string | null;
   noa_number: string | null;
   fl_product_approval: string | null;
+  uil_number: string | null;
   expiration_date: string | null;
   hvhz_approved: boolean;
   wind_speed_rating: number | null;
   file_path: string | null;
   file_url: string | null;
   is_active: boolean;
+}
+
+export interface ApprovalDisplay {
+  type: 'NOA' | 'FL Product Approval' | null;
+  number: string | null;
+  pdfUrl: string | null;
 }
 
 export interface SelectedProduct {
@@ -100,6 +107,50 @@ export function useProductApprovals() {
     return { valid: true, product };
   };
 
+  // Get approval display info based on HVHZ status
+  const getApprovalDisplay = (product: ProductApproval, isHVHZ: boolean): ApprovalDisplay => {
+    if (isHVHZ && product.noa_number) {
+      return {
+        type: 'NOA',
+        number: product.noa_number,
+        pdfUrl: product.file_url,
+      };
+    }
+    if (product.fl_product_approval) {
+      return {
+        type: 'FL Product Approval',
+        number: product.fl_product_approval,
+        pdfUrl: product.file_url,
+      };
+    }
+    if (product.noa_number) {
+      return {
+        type: 'NOA',
+        number: product.noa_number,
+        pdfUrl: product.file_url,
+      };
+    }
+    return { type: null, number: null, pdfUrl: null };
+  };
+
+  // Group products by manufacturer
+  const getProductsByManufacturer = (categoryProducts: ProductApproval[]) => {
+    const groups: Record<string, ProductApproval[]> = {};
+    
+    categoryProducts.forEach(product => {
+      const mfr = product.manufacturer || 'Other';
+      if (!groups[mfr]) groups[mfr] = [];
+      groups[mfr].push(product);
+    });
+
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([manufacturer, products]) => ({
+        manufacturer,
+        products: products.sort((a, b) => a.product_name.localeCompare(b.product_name))
+      }));
+  };
+
   return {
     products,
     loading,
@@ -111,6 +162,8 @@ export function useProductApprovals() {
     isExpired,
     isExpiringSoon,
     verifyProductForJurisdiction,
+    getApprovalDisplay,
+    getProductsByManufacturer,
     refetch: fetchProducts,
   };
 }
