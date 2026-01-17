@@ -1,0 +1,268 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  Download, 
+  FileText, 
+  CheckCircle2, 
+  Loader2, 
+  PenTool, 
+  AlertTriangle,
+  ExternalLink,
+  Package,
+  Sparkles
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface PacketDocument {
+  id: string;
+  name: string;
+  type: string;
+  status: 'filled' | 'pending' | 'signature_needed' | 'complete';
+  pages: number;
+  url?: string;
+}
+
+interface PacketDownloaderProps {
+  permitProjectId: string;
+  formData: Record<string, any>;
+  tradeData: Record<string, any>;
+  jurisdiction: string;
+  permitType: string;
+  isHVHZ: boolean;
+  onPacketReady?: (packetUrl: string) => void;
+}
+
+export function PacketDownloader({
+  permitProjectId,
+  formData,
+  tradeData,
+  jurisdiction,
+  permitType,
+  isHVHZ,
+  onPacketReady,
+}: PacketDownloaderProps) {
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState('');
+  const [documents, setDocuments] = useState<PacketDocument[]>([]);
+  const [packetUrl, setPacketUrl] = useState<string | null>(null);
+  const [signaturesPending, setSignaturesPending] = useState<string[]>([]);
+
+  const generatePacket = async () => {
+    setGenerating(true);
+    setProgress(0);
+    setStage('Initializing...');
+
+    try {
+      // Stage 1: Fetch required templates
+      setStage('Loading jurisdiction templates...');
+      setProgress(10);
+      
+      const { data: templates } = await supabase
+        .from('permit_form_templates')
+        .select('*')
+        .or(`jurisdiction_name.ilike.%${jurisdiction}%,jurisdiction_name.eq.Florida`);
+
+      // Stage 2: Fill forms via edge function
+      setStage('Auto-filling permit forms...');
+      setProgress(30);
+
+      const { data: packetData, error: packetError } = await supabase.functions.invoke('permit-packet-assembler', {
+        body: {
+          permitRequestId: permitProjectId,
+          includeNOC: true,
+          includeProductApprovals: true,
+          formData: {
+            ...formData,
+            permit_type: permitType,
+            isHVHZ,
+          },
+          tradeData,
+        },
+      });
+
+      if (packetError) throw packetError;
+
+      // Stage 3: Process results
+      setStage('Assembling document index...');
+      setProgress(60);
+
+      const docs: PacketDocument[] = packetData?.documentIndex?.map((doc: any) => ({
+        id: doc.type,
+        name: doc.name,
+        type: doc.type,
+        status: doc.status === 'included' ? 'filled' : 
+                doc.status === 'needs_signature' ? 'signature_needed' : 'pending',
+        pages: doc.pageCount || 1,
+        url: doc.url,
+      })) || [];
+
+      setDocuments(docs);
+      
+      // Check for signatures needed
+      const sigDocs = docs.filter(d => d.status === 'signature_needed');
+      setSignaturesPending(sigDocs.map(d => d.name));
+
+      // Stage 4: Generate merged packet
+      setStage('Generating downloadable packet...');
+      setProgress(85);
+
+      if (packetData?.packetId) {
+        // Fetch the generated packet URL
+        const { data: packet } = await supabase
+          .from('permit_packets')
+          .select('*')
+          .eq('id', packetData.packetId)
+          .single();
+
+        const packetRecord = packet as { packet_pdf_url?: string } | null;
+        if (packetRecord?.packet_pdf_url) {
+          setPacketUrl(packetRecord.packet_pdf_url);
+          onPacketReady?.(packetRecord.packet_pdf_url);
+        }
+      }
+
+      setProgress(100);
+      setStage('Complete!');
+      toast.success('Permit packet generated successfully!');
+
+    } catch (error) {
+      console.error('Packet generation error:', error);
+      toast.error('Failed to generate packet');
+      setStage('Error occurred');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const downloadPacket = () => {
+    if (packetUrl) {
+      window.open(packetUrl, '_blank');
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'filled':
+      case 'complete':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'signature_needed':
+        return <PenTool className="h-4 w-4 text-orange-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Permit Packet Generator
+        </CardTitle>
+        <CardDescription>
+          Generate a complete, submission-ready permit packet with all forms auto-filled
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Generation Status */}
+        {generating && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm font-medium">{stage}</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        {/* Document List */}
+        {documents.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Documents in Packet</h4>
+            <div className="border rounded-lg divide-y">
+              {documents.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(doc.status)}
+                    <div>
+                      <p className="text-sm font-medium">{doc.name}</p>
+                      <p className="text-xs text-muted-foreground">{doc.pages} page(s)</p>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={doc.status === 'filled' ? 'default' : 'secondary'}
+                    className={doc.status === 'signature_needed' ? 'bg-orange-500/10 text-orange-600' : ''}
+                  >
+                    {doc.status === 'filled' && <Sparkles className="h-3 w-3 mr-1" />}
+                    {doc.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Signature Warning */}
+        {signaturesPending.length > 0 && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">Signatures Required</AlertTitle>
+            <AlertDescription className="text-orange-700">
+              The following documents need signatures before submission:
+              <ul className="list-disc list-inside mt-2">
+                {signaturesPending.map(doc => (
+                  <li key={doc}>{doc}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-3">
+          {!packetUrl ? (
+            <Button 
+              onClick={generatePacket} 
+              disabled={generating}
+              className="flex-1"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Permit Packet
+                </>
+              )}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={downloadPacket} className="flex-1">
+                <Download className="h-4 w-4 mr-2" />
+                Download Packet
+              </Button>
+              <Button variant="outline" onClick={generatePacket}>
+                Regenerate
+              </Button>
+            </>
+          )}
+        </div>
+
+        {packetUrl && (
+          <p className="text-sm text-center text-muted-foreground">
+            Download your packet, sign where indicated, and submit to the building department.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
