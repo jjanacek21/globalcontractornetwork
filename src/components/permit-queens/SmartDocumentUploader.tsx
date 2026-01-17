@@ -128,11 +128,10 @@ export function SmartDocumentUploader({
         // If we have a project ID, save to database
         if (permitProjectId) {
           await supabase.from('permit_project_documents').insert({
-            permit_project_id: permitProjectId,
+            project_id: permitProjectId,
             document_type: selectedType || 'other',
             file_name: file.name,
             file_path: filePath,
-            status: isPreSigned ? 'signed' : 'uploaded',
           });
         }
 
