@@ -13,6 +13,7 @@ import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel'
 import { PricingGrid } from '@/components/permit-queens/PricingCard';
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
+import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,6 +82,8 @@ export default function PermitQueensNewRequest() {
 
   const [tradeData, setTradeData] = useState<TradeQuestionsData>({});
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<MultiSelectedProduct[]>([]);
+  const [roofType, setRoofType] = useState<'steep' | 'flat' | 'mixed'>('steep');
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [missingFields, setMissingFields] = useState<any[]>([]);
   const [missingDocuments, setMissingDocuments] = useState<any[]>([]);
@@ -268,6 +271,17 @@ export default function PermitQueensNewRequest() {
                 onComplete={setTradeQuestionsComplete}
               />
               
+              {/* Multi-Material Selector for Roofing */}
+              {formData.permit_type === 'roofing' && (
+                <MultiMaterialSelector
+                  isHVHZ={formData.isHVHZ}
+                  roofType={roofType}
+                  selectedProducts={selectedMaterials}
+                  onProductsChange={setSelectedMaterials}
+                  onRoofTypeChange={setRoofType}
+                />
+              )}
+              
               <Card>
                 <CardHeader>
                   <CardTitle>Property Owner</CardTitle>
@@ -323,7 +337,11 @@ export default function PermitQueensNewRequest() {
                 jurisdiction={formData.jurisdiction_county}
                 isHVHZ={formData.isHVHZ}
                 uploadedDocuments={uploadedDocuments}
-                selectedProducts={[]}
+                selectedProducts={selectedMaterials.map(m => ({
+                  id: m.id,
+                  product: m.product,
+                  category: m.category as 'underlayment' | 'roof_covering' | 'fasteners' | 'other'
+                }))}
                 formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
                 onGeneratePacket={() => toast.success('Packet generation started!')}
               />
