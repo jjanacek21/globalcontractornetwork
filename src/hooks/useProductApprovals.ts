@@ -20,7 +20,8 @@ export interface ProductApproval {
 export interface SelectedProduct {
   id: string;
   product: ProductApproval;
-  category: 'underlayment' | 'roof_covering' | 'fasteners' | 'other';
+  category: 'underlayment' | 'roof_covering' | 'flat_roofing' | 'deck_fasteners' | 'cap_tabs' | 'roofing_fasteners' | 'fasteners' | 'other';
+  area?: string;
   quantity?: number;
   notes?: string;
 }
