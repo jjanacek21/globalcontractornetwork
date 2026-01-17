@@ -5,13 +5,17 @@ export interface BuildingDepartment {
   id: string;
   county: string;
   city: string | null;
-  department_name: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
   portal_url: string | null;
-  is_hvhz: boolean;
-  required_forms: any[];
-  submission_notes: string | null;
-  contact_phone: string | null;
-  contact_email: string | null;
+  hours: string | null;
+  jurisdiction_type: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Alias for backwards compatibility
+  department_name?: string;
 }
 
 export function useBuildingDepartments() {
@@ -26,15 +30,21 @@ export function useBuildingDepartments() {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      // Cast to 'any' since building_departments may not be in generated types yet
-      const { data, error: fetchError } = await (supabase as any)
-        .from('building_departments')
+      const { data, error: fetchError } = await supabase
+        .from('permit_building_departments')
         .select('*')
         .order('county', { ascending: true })
         .order('city', { ascending: true, nullsFirst: true });
 
       if (fetchError) throw fetchError;
-      setDepartments((data || []) as BuildingDepartment[]);
+      
+      // Add backwards-compatible department_name alias
+      const depts = (data || []).map(d => ({
+        ...d,
+        department_name: d.name,
+      })) as BuildingDepartment[];
+      
+      setDepartments(depts);
     } catch (err) {
       console.error('Error fetching building departments:', err);
       setError('Failed to load building departments');
@@ -44,11 +54,15 @@ export function useBuildingDepartments() {
   };
 
   const getByCounty = (county: string) => {
-    return departments.filter(d => d.county === county);
+    return departments.filter(d => 
+      d.county?.toLowerCase() === county.toLowerCase()
+    );
   };
 
   const getByCity = (city: string) => {
-    return departments.find(d => d.city?.toLowerCase() === city.toLowerCase());
+    return departments.find(d => 
+      d.city?.toLowerCase() === city.toLowerCase()
+    );
   };
 
   const getCounties = () => {
@@ -57,23 +71,22 @@ export function useBuildingDepartments() {
 
   const getCitiesByCounty = (county: string) => {
     return departments
-      .filter(d => d.county === county && d.city)
+      .filter(d => d.county?.toLowerCase() === county.toLowerCase() && d.city)
       .map(d => d.city as string)
       .sort();
   };
 
   const detectJurisdiction = (address: string) => {
-    // Simple detection based on address keywords
     const addressLower = address.toLowerCase();
     
-    // Check for city matches
+    // Check for city matches first
     for (const dept of departments) {
       if (dept.city && addressLower.includes(dept.city.toLowerCase())) {
         return dept;
       }
     }
 
-    // Fall back to county detection
+    // County-level matching
     if (addressLower.includes('broward') || 
         addressLower.includes('fort lauderdale') ||
         addressLower.includes('hollywood') ||

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useBuildingDepartments, BuildingDepartment } from './useBuildingDepartments';
 
 export interface JurisdictionInfo {
@@ -32,7 +31,6 @@ export function useJurisdictionDetector() {
   const detectFromAddress = (address: string): JurisdictionInfo => {
     const normalizedAddress = address.toLowerCase();
     
-    // Extract city and state from address
     let detectedCity = '';
     let detectedCounty = '';
     let isHVHZ = false;
@@ -40,12 +38,14 @@ export function useJurisdictionDetector() {
 
     // Check for city matches
     for (const dept of departments) {
-      const cityLower = dept.city.toLowerCase();
-      if (normalizedAddress.includes(cityLower)) {
-        detectedCity = dept.city;
-        detectedCounty = dept.county;
-        buildingDepartment = dept;
-        break;
+      if (dept.city) {
+        const cityLower = dept.city.toLowerCase();
+        if (normalizedAddress.includes(cityLower)) {
+          detectedCity = dept.city;
+          detectedCounty = dept.county;
+          buildingDepartment = dept;
+          break;
+        }
       }
     }
 
@@ -55,11 +55,10 @@ export function useJurisdictionDetector() {
         const countyLower = dept.county.toLowerCase();
         if (normalizedAddress.includes(countyLower)) {
           detectedCounty = dept.county;
-          // Get first department in that county
           const depts = getByCounty(dept.county);
           if (depts.length > 0) {
             buildingDepartment = depts[0];
-            detectedCity = depts[0].city;
+            detectedCity = depts[0].city || '';
           }
           break;
         }
@@ -81,7 +80,6 @@ export function useJurisdictionDetector() {
   };
 
   const detectFromCoordinates = async (lat: number, lng: number): Promise<JurisdictionInfo> => {
-    // For now, return empty result - could integrate with reverse geocoding
     return {
       county: '',
       city: '',

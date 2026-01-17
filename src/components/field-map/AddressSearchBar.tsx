@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import mapboxgl from "mapbox-gl";
 
 interface AddressSearchBarProps {
@@ -18,6 +19,7 @@ export function AddressSearchBar({ map, onSelectLocation }: AddressSearchBarProp
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [loading, setLoading] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -31,17 +33,27 @@ export function AddressSearchBar({ map, onSelectLocation }: AddressSearchBarProp
     }
 
     searchTimeout.current = setTimeout(async () => {
+      setLoading(true);
       try {
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-            query
-          )}.json?access_token=${mapboxgl.accessToken}&limit=5&types=address`
-        );
-        const data = await response.json();
-        setResults(data.features || []);
-        setShowResults(true);
+        const { data, error } = await supabase.functions.invoke('geocode-address', {
+          body: {
+            query,
+            limit: 5,
+            types: 'address',
+            country: 'us',
+          },
+        });
+
+        if (error) {
+          console.error('Geocoding error:', error);
+        } else if (data?.features) {
+          setResults(data.features);
+          setShowResults(true);
+        }
       } catch (error) {
         console.error("Error searching address:", error);
+      } finally {
+        setLoading(false);
       }
     }, 300);
 
@@ -72,7 +84,11 @@ export function AddressSearchBar({ map, onSelectLocation }: AddressSearchBarProp
     <div className="absolute top-4 left-4 right-4 z-10">
       <div className="relative max-w-md">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {loading ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          )}
           <Input
             type="text"
             placeholder="Search address..."
