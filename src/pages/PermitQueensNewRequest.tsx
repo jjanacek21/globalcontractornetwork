@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
@@ -89,6 +90,76 @@ export default function PermitQueensNewRequest() {
   const [missingDocuments, setMissingDocuments] = useState<any[]>([]);
   const [complianceIssues, setComplianceIssues] = useState<any[]>([]);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Validation functions
+  const validateField = useCallback((field: string, value: any): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    
+    switch(field) {
+      case 'property_address':
+        if (!value?.trim()) errors.property_address = 'Property address is required';
+        break;
+      case 'owner_name':
+        if (!value?.trim()) errors.owner_name = 'Owner name is required';
+        break;
+      case 'owner_email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          errors.owner_email = 'Invalid email format';
+        }
+        break;
+      case 'owner_phone':
+        if (value && !/^[\d\s\-\(\)\+]*$/.test(value)) {
+          errors.owner_phone = 'Invalid phone format';
+        }
+        break;
+      case 'valuation':
+        if (value && value < 0) errors.valuation = 'Valuation must be positive';
+        break;
+    }
+    return errors;
+  }, []);
+
+  const handleBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const fieldValue = formData[field as keyof FormData];
+    const fieldErrors = validateField(field, fieldValue);
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      // Remove old error for this field
+      delete newErrors[field];
+      // Add new error if exists
+      return { ...newErrors, ...fieldErrors };
+    });
+  };
+
+  const handleFieldChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (touched[field]) {
+      const fieldErrors = validateField(field, value);
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return { ...newErrors, ...fieldErrors };
+      });
+    }
+  };
+
+  const getStepValidationMessage = (): string | null => {
+    if (currentStep === 1) {
+      if (!formData.property_address?.trim()) return 'Enter property address to continue';
+      if (!formData.permit_type) return 'Select a permit type to continue';
+    }
+    if (currentStep === 2) {
+      if (!formData.owner_name?.trim()) return 'Enter owner name to continue';
+      if (!tradeQuestionsComplete) return 'Complete project details to continue';
+    }
+    return null;
+  };
 
   const defaultTiers: PricingTier[] = [
     { id: '1', name: 'Basic', code: 'basic', description: 'Standard processing', base_price: 149, features_json: ['Document review', '5-7 business days'], turnaround_days: 7, criteria_json: {} },
@@ -263,6 +334,97 @@ export default function PermitQueensNewRequest() {
           {/* Step 2: Trade-Specific Questions */}
           {currentStep === 2 && formData.permit_type && (
             <div className="space-y-6">
+              {/* Property Owner - FIRST */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Home className="h-5 w-5" />
+                    Property Owner
+                  </CardTitle>
+                  <CardDescription>Enter the property owner's information</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      Owner Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input 
+                      value={formData.owner_name} 
+                      onChange={(e) => handleFieldChange('owner_name', e.target.value)} 
+                      onBlur={() => handleBlur('owner_name')}
+                      placeholder="John Smith"
+                      className={cn(
+                        touched.owner_name && validationErrors.owner_name && "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                    {touched.owner_name && validationErrors.owner_name && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {validationErrors.owner_name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Owner Email</Label>
+                    <Input 
+                      type="email" 
+                      value={formData.owner_email} 
+                      onChange={(e) => handleFieldChange('owner_email', e.target.value)}
+                      onBlur={() => handleBlur('owner_email')}
+                      placeholder="john@example.com"
+                      className={cn(
+                        touched.owner_email && validationErrors.owner_email && "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                    {touched.owner_email && validationErrors.owner_email && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {validationErrors.owner_email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Owner Phone</Label>
+                    <Input 
+                      type="tel" 
+                      value={formData.owner_phone} 
+                      onChange={(e) => handleFieldChange('owner_phone', e.target.value)}
+                      onBlur={() => handleBlur('owner_phone')}
+                      placeholder="(954) 555-1234"
+                      className={cn(
+                        touched.owner_phone && validationErrors.owner_phone && "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                    {touched.owner_phone && validationErrors.owner_phone && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {validationErrors.owner_phone}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valuation ($)</Label>
+                    <Input 
+                      type="number" 
+                      value={formData.valuation || ''} 
+                      onChange={(e) => handleFieldChange('valuation', parseFloat(e.target.value) || 0)}
+                      onBlur={() => handleBlur('valuation')}
+                      placeholder="15000"
+                      className={cn(
+                        touched.valuation && validationErrors.valuation && "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                    {touched.valuation && validationErrors.valuation && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {validationErrors.valuation}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trade Questions - SECOND */}
               <TradeQuestions
                 trade={formData.permit_type}
                 isHVHZ={formData.isHVHZ}
@@ -271,7 +433,7 @@ export default function PermitQueensNewRequest() {
                 onComplete={setTradeQuestionsComplete}
               />
               
-              {/* Multi-Material Selector for Roofing */}
+              {/* Multi-Material Selector for Roofing - THIRD */}
               {formData.permit_type === 'roofing' && (
                 <MultiMaterialSelector
                   isHVHZ={formData.isHVHZ}
@@ -281,30 +443,6 @@ export default function PermitQueensNewRequest() {
                   onRoofTypeChange={setRoofType}
                 />
               )}
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Property Owner</CardTitle>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Owner Name *</Label>
-                    <Input value={formData.owner_name} onChange={(e) => setFormData(prev => ({ ...prev, owner_name: e.target.value }))} placeholder="John Smith" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Owner Email</Label>
-                    <Input type="email" value={formData.owner_email} onChange={(e) => setFormData(prev => ({ ...prev, owner_email: e.target.value }))} placeholder="john@example.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Owner Phone</Label>
-                    <Input type="tel" value={formData.owner_phone} onChange={(e) => setFormData(prev => ({ ...prev, owner_phone: e.target.value }))} placeholder="(954) 555-1234" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valuation ($)</Label>
-                    <Input type="number" value={formData.valuation || ''} onChange={(e) => setFormData(prev => ({ ...prev, valuation: parseFloat(e.target.value) || 0 }))} placeholder="15000" />
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
 
@@ -374,13 +512,41 @@ export default function PermitQueensNewRequest() {
             </div>
           )}
 
+          {/* Validation Message */}
+          {getStepValidationMessage() && !canProceed() && (
+            <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 dark:text-amber-400">
+                {getStepValidationMessage()}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between mt-8">
-            <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}><ArrowLeft className="h-4 w-4 mr-2" />Previous</Button>
+            <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
             {currentStep < 4 ? (
-              <Button onClick={nextStep} disabled={!canProceed()}>Next<ArrowRight className="h-4 w-4 ml-2" /></Button>
+              <Button onClick={nextStep} disabled={!canProceed()}>
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={saving}>{saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Submitting...</> : <>Submit Request<ArrowRight className="h-4 w-4 ml-2" /></>}</Button>
+              <Button onClick={handleSubmit} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    Submit Request
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
             )}
           </div>
         </div>
