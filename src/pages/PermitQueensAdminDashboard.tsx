@@ -214,6 +214,10 @@ export default function PermitQueensAdminDashboard() {
                 </p>
               </div>
             </div>
+            <Button variant="outline" onClick={() => navigate("/permit-queens/admin/building-departments")} className="border-slate-700 text-slate-300">
+              <Building2 className="h-4 w-4 mr-2" />
+              Building Depts
+            </Button>
             <Button variant="outline" onClick={handleSignOut} className="border-slate-700 text-slate-300">
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
