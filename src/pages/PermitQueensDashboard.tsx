@@ -103,8 +103,8 @@ export default function PermitQueensDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+      <div className="min-h-screen hero-gradient-bg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(45,90%,55%)]" />
       </div>
     );
   }
@@ -119,149 +119,158 @@ export default function PermitQueensDashboard() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950">
-      {/* Header */}
-      <header className="border-b border-amber-500/20 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Crown className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Permit Queens</h1>
-              <p className="text-xs text-zinc-400">Client Portal</p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSignOut}
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Welcome back, {firstName}!
-            </h2>
-            <p className="text-zinc-400">
-              Track your permits and project status from your dashboard.
-            </p>
-          </div>
-          <Button 
-            onClick={() => navigate('/permit-queens/new-request')}
-            className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Permit Request
-          </Button>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-zinc-900/50 border-amber-500/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Pending Permits</p>
-                  <p className="text-3xl font-bold text-white">{pendingCount}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-amber-500" />
-                </div>
+    <div className="min-h-screen hero-gradient-bg relative">
+      {/* Grid Pattern Overlay */}
+      <div className="grid-pattern-dark absolute inset-0" />
+      
+      {/* Gold Orbs */}
+      <div className="gold-orb gold-orb-1" />
+      <div className="gold-orb gold-orb-2" />
+      
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="border-b border-white/10 bg-[hsl(0,0%,5%)] backdrop-blur-lg sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="icon-container-gold !w-10 !h-10 !rounded-full">
+                <Crown className="h-5 w-5" />
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-zinc-900/50 border-green-500/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Completed</p>
-                  <p className="text-3xl font-bold text-white">{completedCount}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-zinc-900/50 border-red-500/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Action Required</p>
-                  <p className="text-3xl font-bold text-white">{actionRequiredCount}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                  <AlertCircle className="h-6 w-6 text-red-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Projects Table */}
-        <Card className="bg-zinc-900/50 border-amber-500/20 mb-8">
-          <CardHeader>
-            <CardTitle className="text-white">Your Projects</CardTitle>
-            <CardDescription className="text-zinc-400">
-              View and manage your permit applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto" />
-              </div>
-            ) : (
-              <ProjectsTable 
-                projects={projects} 
-                onRefresh={fetchProjects}
-                onViewProject={setSelectedProject}
-                onAction={(projectId, action) => {
-                  setActionProjectId(projectId);
-                  setActionType(action);
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Contact Support */}
-        <Card className="bg-zinc-900/50 border-amber-500/20">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-amber-500" />
-              Need Help?
-            </CardTitle>
-            <CardDescription className="text-zinc-400">
-              Contact our team for assistance with your permits
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
-              <Phone className="h-5 w-5 text-amber-500" />
               <div>
-                <p className="text-sm text-zinc-400">Phone</p>
-                <p className="text-white font-medium">(561) 555-PERM</p>
+                <h1 className="text-lg font-bold text-white">Permit Queens</h1>
+                <p className="text-xs text-white/50">Client Portal</p>
               </div>
             </div>
-            <Button className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
-              Request Callback
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleSignOut}
+              className="text-white hover:text-[hsl(45,90%,55%)] hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-8">
+          {/* Welcome Section */}
+          <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Welcome back, {firstName}!
+              </h2>
+              <p className="text-white/60">
+                Track your permits and project status from your dashboard.
+              </p>
+            </div>
+            <Button 
+              onClick={() => navigate('/permit-queens/new-request')}
+              className="btn-gold"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Permit Request
+            </Button>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card className="premium-card-dark">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60">Pending Permits</p>
+                    <p className="text-3xl font-bold text-white">{pendingCount}</p>
+                  </div>
+                  <div className="icon-container-gold">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="premium-card-dark">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60">Completed</p>
+                    <p className="text-3xl font-bold text-white">{completedCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-[hsl(142,70%,45%)]/20 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-[hsl(142,70%,45%)]" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="premium-card-dark">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60">Action Required</p>
+                    <p className="text-3xl font-bold text-white">{actionRequiredCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-lg bg-[hsl(0,70%,50%)]/20 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-[hsl(0,70%,50%)]" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Projects Table */}
+          <Card className="premium-card-dark mb-8">
+            <CardHeader>
+              <CardTitle className="text-white">Your Projects</CardTitle>
+              <CardDescription className="text-white/50">
+                View and manage your permit applications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(45,90%,55%)] mx-auto" />
+                </div>
+              ) : (
+                <ProjectsTable 
+                  projects={projects} 
+                  onRefresh={fetchProjects}
+                  onViewProject={setSelectedProject}
+                  onAction={(projectId, action) => {
+                    setActionProjectId(projectId);
+                    setActionType(action);
+                  }}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Contact Support */}
+          <Card className="premium-card-dark">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-[hsl(45,90%,55%)]" />
+                Need Help?
+              </CardTitle>
+              <CardDescription className="text-white/50">
+                Contact our team for assistance with your permits
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                <Phone className="h-5 w-5 text-[hsl(45,90%,55%)]" />
+                <div>
+                  <p className="text-sm text-white/50">Phone</p>
+                  <p className="text-white font-medium">(561) 555-PERM</p>
+                </div>
+              </div>
+              <Button className="btn-gold">
+                Request Callback
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
 
       {/* Add Project Dialog */}
       <AddProjectDialog
