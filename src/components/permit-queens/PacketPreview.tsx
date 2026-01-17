@@ -23,6 +23,7 @@ import {
   Shield
 } from 'lucide-react';
 import { SelectedProduct } from '@/hooks/useProductApprovals';
+import { FormPreviewDialog } from './FormPreviewDialog';
 
 interface DocumentStatus {
   id: string;
@@ -62,6 +63,28 @@ export function PacketPreview({
   generating = false,
 }: PacketPreviewProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(['forms', 'noas']);
+  const [previewDialog, setPreviewDialog] = useState<{
+    open: boolean;
+    documentId: string;
+    documentName: string;
+    documentType: 'permit_app' | 'noc' | 'hvhz_disclosure' | 'roof_wall_affidavit' | 'hoa_affidavit';
+  }>({
+    open: false,
+    documentId: '',
+    documentName: '',
+    documentType: 'permit_app',
+  });
+
+  const handlePreviewClick = (doc: DocumentStatus) => {
+    if (['auto_filled', 'auto_sourced'].includes(doc.status) && doc.type === 'form') {
+      setPreviewDialog({
+        open: true,
+        documentId: doc.id,
+        documentName: doc.name,
+        documentType: doc.id as 'permit_app' | 'noc' | 'hvhz_disclosure' | 'roof_wall_affidavit' | 'hoa_affidavit',
+      });
+    }
+  };
 
   // Generate document checklist based on permit type and jurisdiction
   const generateDocumentChecklist = (): DocumentStatus[] => {
@@ -282,7 +305,13 @@ export function PacketPreview({
                 <div className="flex items-center gap-2">
                   {getStatusBadge(doc.status)}
                   {['auto_filled', 'auto_sourced', 'uploaded', 'complete'].includes(doc.status) && (
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={() => handlePreviewClick(doc)}
+                      title="Preview document"
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
                   )}
@@ -395,6 +424,18 @@ export function PacketPreview({
           </p>
         )}
       </CardContent>
+
+      {/* Form Preview Dialog */}
+      <FormPreviewDialog
+        open={previewDialog.open}
+        onOpenChange={(open) => setPreviewDialog(prev => ({ ...prev, open }))}
+        documentId={previewDialog.documentId}
+        documentName={previewDialog.documentName}
+        documentType={previewDialog.documentType}
+        formData={formData}
+        jurisdiction={jurisdiction}
+        permitType={permitType}
+      />
     </Card>
   );
 }

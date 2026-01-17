@@ -122,6 +122,12 @@ export function ProductSelector({ isHVHZ, selectedProducts, onProductsChange }: 
                   HVHZ
                 </Badge>
               )}
+              {product.file_url && (
+                <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                  <FileText className="h-3 w-3 mr-1" />
+                  NOA Doc
+                </Badge>
+              )}
             </div>
           </div>
           
@@ -164,11 +170,24 @@ export function ProductSelector({ isHVHZ, selectedProducts, onProductsChange }: 
           <div>
             <p className="font-medium">{selected.product.product_name}</p>
             <p className="text-sm text-muted-foreground">{selected.product.manufacturer}</p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               {selected.product.noa_number && (
                 <Badge variant="outline" className="text-xs">
                   NOA: {selected.product.noa_number}
                 </Badge>
+              )}
+              {selected.product.file_url && (
+                <a 
+                  href={selected.product.file_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 cursor-pointer">
+                    <FileText className="h-3 w-3 mr-1" />
+                    View NOA PDF
+                  </Badge>
+                </a>
               )}
               <Badge 
                 variant={status.status === 'valid' ? 'default' : 'secondary'}
