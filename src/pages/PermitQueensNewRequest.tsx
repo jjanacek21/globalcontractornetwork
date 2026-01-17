@@ -12,11 +12,21 @@ import { PacketPreview } from '@/components/permit-queens/PacketPreview';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { PricingGrid } from '@/components/permit-queens/PricingCard';
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
+import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  status: 'uploaded' | 'processing' | 'signed' | 'needs_fields';
+  isPreSigned?: boolean;
+}
 
 const WIZARD_STEPS = [
   { number: 1, title: 'Location & Trade', description: 'Property address & permit type' },
@@ -70,6 +80,7 @@ export default function PermitQueensNewRequest() {
   });
 
   const [tradeData, setTradeData] = useState<TradeQuestionsData>({});
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [missingFields, setMissingFields] = useState<any[]>([]);
   const [missingDocuments, setMissingDocuments] = useState<any[]>([]);
@@ -300,11 +311,18 @@ export default function PermitQueensNewRequest() {
                 />
               )}
               
+              {/* Smart Document Uploader */}
+              <SmartDocumentUploader
+                jurisdiction={formData.jurisdiction_county}
+                permitType={formData.permit_type || ''}
+                onDocumentsChange={setUploadedDocuments}
+              />
+              
               <PacketPreview
                 permitType={formData.permit_type}
                 jurisdiction={formData.jurisdiction_county}
                 isHVHZ={formData.isHVHZ}
-                uploadedDocuments={[]}
+                uploadedDocuments={uploadedDocuments}
                 selectedProducts={[]}
                 formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
                 onGeneratePacket={() => toast.success('Packet generation started!')}
