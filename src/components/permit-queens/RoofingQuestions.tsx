@@ -82,9 +82,7 @@ export function RoofingQuestions({
       data.workType !== '' &&
       data.roofSize > 0 &&
       data.pitch !== '' &&
-      data.stories !== '' &&
-      (data.selectedUnderlayment !== null || data.workType === 'coating') &&
-      (data.selectedCovering !== null || data.workType === 'coating');
+      data.stories !== '';
     onComplete(isComplete);
   };
 
@@ -354,109 +352,6 @@ export function RoofingQuestions({
           </div>
         </CardContent>
       </Card>
-
-      {/* Product Selection Section */}
-      {formData.workType && formData.workType !== 'coating' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Layers className="h-5 w-5" />
-              Product Selection
-            </CardTitle>
-            <CardDescription>
-              Select approved products for your project
-              {isHVHZ && <Badge variant="destructive" className="ml-2">HVHZ Products Only</Badge>}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading products...
-              </div>
-            ) : (
-              <>
-                {/* Underlayment */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Underlayment <span className="text-destructive">*</span>
-                  </Label>
-                  {renderProductSelector(
-                    'Underlayment',
-                    formData.selectedUnderlayment,
-                    (p) => updateField('selectedUnderlayment', p),
-                    true
-                  )}
-                </div>
-
-                {/* Roof Covering based on selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Layers className="h-4 w-4" />
-                    Roof Covering <span className="text-destructive">*</span>
-                  </Label>
-                  {formData.existingMaterial === 'tile' || formData.newMaterial === 'tile' ? (
-                    renderProductSelector(
-                      'Roof Tile',
-                      formData.selectedCovering,
-                      (p) => updateField('selectedCovering', p),
-                      true
-                    )
-                  ) : formData.existingMaterial === 'metal' || formData.newMaterial === 'metal' ? (
-                    renderProductSelector(
-                      'Metal Roofing',
-                      formData.selectedCovering,
-                      (p) => updateField('selectedCovering', p),
-                      true
-                    )
-                  ) : (
-                    renderProductSelector(
-                      'Shingles',
-                      formData.selectedCovering,
-                      (p) => updateField('selectedCovering', p),
-                      true
-                    )
-                  )}
-                </div>
-
-                {/* Fasteners (optional) */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    Fasteners <span className="text-muted-foreground">(optional)</span>
-                  </Label>
-                  {renderProductSelector(
-                    'Fasteners',
-                    formData.selectedFasteners,
-                    (p) => updateField('selectedFasteners', p),
-                    false
-                  )}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Selected Products Summary */}
-      {(formData.selectedUnderlayment || formData.selectedCovering) && (
-        <Alert className="border-green-500/50 bg-green-500/10">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 dark:text-green-200">
-            <strong>NOAs will be auto-sourced:</strong>
-            <ul className="mt-1 space-y-1 text-sm">
-              {formData.selectedUnderlayment && (
-                <li>• {formData.selectedUnderlayment.noa_number} - {formData.selectedUnderlayment.product_name}</li>
-              )}
-              {formData.selectedCovering && (
-                <li>• {formData.selectedCovering.noa_number} - {formData.selectedCovering.product_name}</li>
-              )}
-              {formData.selectedFasteners && (
-                <li>• {formData.selectedFasteners.noa_number || formData.selectedFasteners.fl_product_approval} - {formData.selectedFasteners.product_name}</li>
-              )}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }
