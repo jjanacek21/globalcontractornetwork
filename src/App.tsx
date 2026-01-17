@@ -55,6 +55,7 @@ import PermitQueensAuth from "./pages/PermitQueensAuth";
 import PermitQueensDashboard from "./pages/PermitQueensDashboard";
 import PermitQueensNewRequest from "./pages/PermitQueensNewRequest";
 import PermitQueensRequestDetail from "./pages/PermitQueensRequestDetail";
+import PermitQueensAdminBuildingDepts from "./pages/PermitQueensAdminBuildingDepts";
 import SupplementKings from "./pages/SupplementKings";
 import SupplementKingsContractorAuth from "./pages/SupplementKingsContractorAuth";
 import SupplementKingsContractorDashboard from "./pages/SupplementKingsContractorDashboard";
@@ -211,6 +212,11 @@ const GCNRoutes = () => (
           <Route path="/permit-queens/admin/dashboard" element={
             <ProtectedRoute redirectTo="/permit-queens/admin/auth">
               <PermitQueensAdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/admin/building-departments" element={
+            <ProtectedRoute redirectTo="/permit-queens/admin/auth">
+              <PermitQueensAdminBuildingDepts />
             </ProtectedRoute>
           } />
           
