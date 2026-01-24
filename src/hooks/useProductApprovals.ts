@@ -16,6 +16,7 @@ export interface ProductApproval {
   file_path: string | null;
   file_url: string | null;
   is_active: boolean;
+  premium_tier?: number;
 }
 
 export interface ApprovalDisplay {

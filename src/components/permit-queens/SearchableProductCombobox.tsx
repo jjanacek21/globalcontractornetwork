@@ -19,22 +19,37 @@ import {
 import { ProductApproval } from '@/hooks/useProductApprovals';
 import { format } from 'date-fns';
 
+interface ExtendedProductApproval extends ProductApproval {
+  premium_tier?: number;
+}
+
 interface SearchableProductComboboxProps {
-  products: ProductApproval[];
-  selectedProduct: ProductApproval | null;
-  onSelect: (product: ProductApproval | null) => void;
+  products: ExtendedProductApproval[];
+  selectedProduct: ExtendedProductApproval | null;
+  onSelect: (product: ExtendedProductApproval | null) => void;
   placeholder?: string;
   label: string;
   isHVHZ: boolean;
   required?: boolean;
   disabled?: boolean;
-  isExpired?: (product: ProductApproval) => boolean;
-  isExpiringSoon?: (product: ProductApproval) => boolean;
+  isExpired?: (product: ExtendedProductApproval) => boolean;
+  isExpiringSoon?: (product: ExtendedProductApproval) => boolean;
 }
 
 interface ManufacturerGroup {
   manufacturer: string;
-  products: ProductApproval[];
+  products: ExtendedProductApproval[];
+}
+
+// Get premium tier display symbol
+function getPremiumTierDisplay(tier?: number): { symbol: string; color: string } {
+  switch (tier) {
+    case 4: return { symbol: '$$$$', color: 'text-amber-500' };
+    case 3: return { symbol: '$$$', color: 'text-amber-400' };
+    case 2: return { symbol: '$$', color: 'text-muted-foreground' };
+    case 1: return { symbol: '$', color: 'text-green-600' };
+    default: return { symbol: '$$', color: 'text-muted-foreground' };
+  }
 }
 
 export function SearchableProductCombobox({
@@ -135,9 +150,12 @@ export function SearchableProductCombobox({
             <div className="flex items-center gap-2 text-left flex-1 min-w-0">
               <Search className="h-4 w-4 shrink-0 opacity-50" />
               {selectedProduct ? (
-                <div className="truncate">
+                <div className="truncate flex items-center gap-2">
                   <span className="font-medium">{selectedProduct.product_name}</span>
-                  <span className="text-muted-foreground ml-1">— {selectedProduct.manufacturer}</span>
+                  <span className={cn("font-bold shrink-0", getPremiumTierDisplay(selectedProduct.premium_tier).color)}>
+                    {getPremiumTierDisplay(selectedProduct.premium_tier).symbol}
+                  </span>
+                  <span className="text-muted-foreground">— {selectedProduct.manufacturer}</span>
                 </div>
               ) : (
                 <span>{placeholder}</span>
@@ -172,6 +190,7 @@ export function SearchableProductCombobox({
                     const status = getProductStatus(product);
                     const isDisabled = status.status === 'expired';
                     const isSelected = selectedProduct?.id === product.id;
+                    const tierDisplay = getPremiumTierDisplay(product.premium_tier);
                     
                     return (
                       <CommandItem
@@ -192,7 +211,12 @@ export function SearchableProductCombobox({
                             )}
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{product.product_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium truncate">{product.product_name}</p>
+                              <span className={cn("text-xs font-bold shrink-0", tierDisplay.color)}>
+                                {tierDisplay.symbol}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               {product.noa_number && (
                                 <span className="flex items-center gap-0.5">
