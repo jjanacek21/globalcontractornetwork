@@ -15,6 +15,9 @@ export interface ProductApproval {
   wind_speed_rating: number | null;
   file_path: string | null;
   file_url: string | null;
+  noa_pdf_url?: string | null;
+  fl_approval_pdf_url?: string | null;
+  ul_listing_url?: string | null;
   is_active: boolean;
   premium_tier?: number;
 }

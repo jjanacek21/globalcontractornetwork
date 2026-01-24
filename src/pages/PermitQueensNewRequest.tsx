@@ -475,11 +475,77 @@ export default function PermitQueensNewRequest() {
                 jurisdiction={formData.jurisdiction_county}
                 isHVHZ={formData.isHVHZ}
                 uploadedDocuments={uploadedDocuments}
-                selectedProducts={selectedMaterials.map(m => ({
-                  id: m.id,
-                  product: m.product,
-                  category: m.category as 'underlayment' | 'roof_covering' | 'fasteners' | 'other'
-                }))}
+                selectedProducts={[
+                  // Roofing materials
+                  ...selectedMaterials.map(m => ({
+                    id: m.id,
+                    product: m.product,
+                    category: m.category as 'underlayment' | 'roof_covering' | 'fasteners' | 'other'
+                  })),
+                  // Window/door products from trade data
+                  ...(formData.permit_type === 'windows_doors' && tradeData.windows_doors ? [
+                    ...(tradeData.windows_doors.selectedWindowProduct ? [{
+                      id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
+                      product: {
+                        id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
+                        manufacturer: tradeData.windows_doors.selectedWindowProduct.manufacturer || '',
+                        product_name: tradeData.windows_doors.selectedWindowProduct.product_name || 'Selected Window',
+                        product_category: 'Windows',
+                        product_line: null,
+                        noa_number: tradeData.windows_doors.selectedWindowProduct.noa_number || null,
+                        fl_product_approval: tradeData.windows_doors.selectedWindowProduct.fl_product_approval || null,
+                        uil_number: null,
+                        expiration_date: null,
+                        hvhz_approved: formData.isHVHZ,
+                        wind_speed_rating: null,
+                        file_path: null,
+                        file_url: tradeData.windows_doors.selectedWindowProduct.file_url || null,
+                        is_active: true
+                      },
+                      category: 'other' as const
+                    }] : []),
+                    ...(tradeData.windows_doors.selectedDoorProduct ? [{
+                      id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
+                      product: {
+                        id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
+                        manufacturer: tradeData.windows_doors.selectedDoorProduct.manufacturer || '',
+                        product_name: tradeData.windows_doors.selectedDoorProduct.product_name || 'Selected Door',
+                        product_category: 'Doors',
+                        product_line: null,
+                        noa_number: tradeData.windows_doors.selectedDoorProduct.noa_number || null,
+                        fl_product_approval: tradeData.windows_doors.selectedDoorProduct.fl_product_approval || null,
+                        uil_number: null,
+                        expiration_date: null,
+                        hvhz_approved: formData.isHVHZ,
+                        wind_speed_rating: null,
+                        file_path: null,
+                        file_url: tradeData.windows_doors.selectedDoorProduct.file_url || null,
+                        is_active: true
+                      },
+                      category: 'other' as const
+                    }] : []),
+                    ...(tradeData.windows_doors.selectedSlidingDoorProduct ? [{
+                      id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
+                      product: {
+                        id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
+                        manufacturer: tradeData.windows_doors.selectedSlidingDoorProduct.manufacturer || '',
+                        product_name: tradeData.windows_doors.selectedSlidingDoorProduct.product_name || 'Selected Sliding Door',
+                        product_category: 'Sliding Doors',
+                        product_line: null,
+                        noa_number: tradeData.windows_doors.selectedSlidingDoorProduct.noa_number || null,
+                        fl_product_approval: tradeData.windows_doors.selectedSlidingDoorProduct.fl_product_approval || null,
+                        uil_number: null,
+                        expiration_date: null,
+                        hvhz_approved: formData.isHVHZ,
+                        wind_speed_rating: null,
+                        file_path: null,
+                        file_url: tradeData.windows_doors.selectedSlidingDoorProduct.file_url || null,
+                        is_active: true
+                      },
+                      category: 'other' as const
+                    }] : [])
+                  ] : [])
+                ]}
                 formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
                 onGeneratePacket={() => toast.success('Packet generation started!')}
               />

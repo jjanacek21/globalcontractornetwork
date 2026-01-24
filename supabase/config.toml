@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.permit-form-filler]
 verify_jwt = false
+
+[functions.source-product-approvals]
+verify_jwt = false

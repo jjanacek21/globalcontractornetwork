@@ -152,13 +152,18 @@ export function PacketPreview({
 
     // Product NOAs
     selectedProducts.forEach(sp => {
+      const hasDocument = sp.product.file_url || sp.product.noa_pdf_url || sp.product.fl_approval_pdf_url;
+      const noaNumber = sp.product.noa_number;
+      
       documents.push({
         id: `noa_${sp.id}`,
         name: `${sp.product.product_name} NOA`,
         type: 'noa',
-        status: sp.product.noa_number ? 'auto_sourced' : 'pending_upload',
+        status: hasDocument ? 'auto_sourced' : (noaNumber ? 'pending_upload' : 'pending_upload'),
         pages: 4,
-        source: sp.product.noa_number ? `NOA ${sp.product.noa_number}` : undefined,
+        source: hasDocument 
+          ? (noaNumber ? `NOA ${noaNumber}` : 'FL Product Approval') 
+          : (noaNumber ? `NOA ${noaNumber} (No PDF)` : undefined),
       });
     });
 
@@ -305,15 +310,36 @@ export function PacketPreview({
                 <div className="flex items-center gap-2">
                   {getStatusBadge(doc.status)}
                   {['auto_filled', 'auto_sourced', 'uploaded', 'complete'].includes(doc.status) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0"
-                      onClick={() => handlePreviewClick(doc)}
-                      title="Preview document"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <>
+                      {/* For NOA documents with a URL, link to the PDF */}
+                      {doc.type === 'noa' && selectedProducts.find(sp => `noa_${sp.id}` === doc.id)?.product.file_url ? (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          asChild
+                        >
+                          <a 
+                            href={selectedProducts.find(sp => `noa_${sp.id}` === doc.id)?.product.file_url || '#'} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            title="View NOA document"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handlePreviewClick(doc)}
+                          title="Preview document"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
