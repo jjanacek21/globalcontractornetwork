@@ -17,6 +17,7 @@ export interface TradeProduct {
   file_path: string | null;
   file_url: string | null;
   is_active: boolean;
+  premium_tier?: number;
 }
 
 export type TradeType = 'roofing' | 'hvac' | 'electrical' | 'plumbing' | 'windows_doors' | 'general_construction';
@@ -81,11 +82,12 @@ export function useTradeProducts(trade: TradeType, isHVHZ: boolean = false) {
 
       if (fetchError) throw fetchError;
       
-      // Map data to include applicable_trades
+      // Map data to include applicable_trades and premium_tier
       const mappedProducts = (data || []).map(p => ({
         ...p,
         applicable_trades: (p as any).applicable_trades || [trade],
         uil_number: (p as any).uil_number || null,
+        premium_tier: (p as any).premium_tier || 2,
       })) as TradeProduct[];
       
       setProducts(mappedProducts);

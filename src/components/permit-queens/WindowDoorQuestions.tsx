@@ -35,7 +35,7 @@ const FRAME_MATERIALS = [
   { id: 'fiberglass', label: 'Fiberglass' },
 ];
 
-function tradeProductToApproval(product: TradeProduct): ProductApproval {
+function tradeProductToApproval(product: TradeProduct): ProductApproval & { premium_tier?: number } {
   return {
     id: product.id,
     manufacturer: product.manufacturer,
@@ -51,6 +51,7 @@ function tradeProductToApproval(product: TradeProduct): ProductApproval {
     file_path: null,
     file_url: product.file_url,
     is_active: true,
+    premium_tier: product.premium_tier,
   };
 }
 

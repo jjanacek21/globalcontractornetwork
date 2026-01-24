@@ -5443,6 +5443,7 @@ export type Database = {
           manufacturer: string
           metadata: Json | null
           noa_number: string | null
+          premium_tier: number | null
           product_category: string
           product_line: string | null
           product_name: string
@@ -5466,6 +5467,7 @@ export type Database = {
           manufacturer: string
           metadata?: Json | null
           noa_number?: string | null
+          premium_tier?: number | null
           product_category: string
           product_line?: string | null
           product_name: string
@@ -5489,6 +5491,7 @@ export type Database = {
           manufacturer?: string
           metadata?: Json | null
           noa_number?: string | null
+          premium_tier?: number | null
           product_category?: string
           product_line?: string | null
           product_name?: string

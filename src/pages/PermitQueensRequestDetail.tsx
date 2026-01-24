@@ -11,6 +11,7 @@ import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
 import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatScopeOfWork } from '@/lib/scopeFormatter';
 
 const DOCUMENT_REQUIREMENTS = [
   { type: 'noc', label: 'Notice of Commencement', required: true, description: 'Required for most permits' },
@@ -282,7 +283,7 @@ export default function PermitQueensRequestDetail() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground whitespace-pre-wrap">
-                      {permit.scope_description || 'No scope description provided.'}
+                      {formatScopeOfWork(permit.scope_description, permit.permit_type)}
                     </p>
                   </CardContent>
                 </Card>
