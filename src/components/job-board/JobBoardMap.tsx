@@ -29,11 +29,10 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
   const [mapError, setMapError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [gettingLocation, setGettingLocation] = useState(true);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
-  // Get user's current location
-  const getUserLocation = useCallback(() => {
-    setGettingLocation(true);
-    
+  // Get user's current location - only on mount
+  useEffect(() => {
     if (!navigator.geolocation) {
       setGettingLocation(false);
       return;
@@ -41,11 +40,10 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const location = {
+        setUserLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        };
-        setUserLocation(location);
+        });
         setGettingLocation(false);
       },
       (error) => {
@@ -58,17 +56,12 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
         maximumAge: 300000, // 5 minutes
       }
     );
-  }, []);
+  }, []); // Empty deps - only runs once on mount
 
-  // Get user location on mount
+  // Initialize map ONCE - separate from location updates
   useEffect(() => {
-    getUserLocation();
-  }, [getUserLocation]);
-
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
-    if (gettingLocation) return; // Wait for location attempt
+    if (!mapContainer.current || map.current || mapInitialized) return;
+    if (gettingLocation) return; // Wait for location attempt to complete
 
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
     
@@ -79,14 +72,12 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
 
     mapboxgl.accessToken = token;
 
-    // Use user location, contractor location, or default to Florida
-    const initialCenter: [number, number] = userLocation
-      ? [userLocation.lng, userLocation.lat]
-      : contractorLocation
-        ? [contractorLocation.lng, contractorLocation.lat]
-        : [-81.5158, 27.6648]; // Florida center
-
-    const initialZoom = userLocation || contractorLocation ? 11 : 7;
+    // Use best available location for initial center
+    const location = userLocation || contractorLocation;
+    const initialCenter: [number, number] = location
+      ? [location.lng, location.lat]
+      : [-81.5158, 27.6648]; // Florida center default
+    const initialZoom = location ? 11 : 7;
 
     try {
       map.current = new mapboxgl.Map({
@@ -120,18 +111,25 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
           setMapError('Failed to load map. Please try again.');
         }
       });
+
+      setMapInitialized(true);
     } catch (error) {
       console.error('Map initialization error:', error);
       setMapError('Failed to initialize map');
     }
 
     return () => {
-      map.current?.remove();
-      map.current = null;
+      // Cleanup only on unmount
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+        setMapInitialized(false);
+        setMapLoaded(false);
+      }
     };
-  }, [gettingLocation, userLocation, contractorLocation]);
+  }, [gettingLocation]); // Only depends on gettingLocation completing
 
-  // Add user location marker
+  // Update user location marker when location changes (doesn't re-init map)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -165,7 +163,7 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
       .addTo(map.current);
   }, [userLocation, contractorLocation, mapLoaded]);
 
-  // Update job markers
+  // Update job markers when jobs change (doesn't re-init map)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -173,12 +171,16 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
-    // Add job markers
-    const jobsWithLocation = jobs.filter((job) => job.lat && job.lng);
+    // Filter jobs with valid numeric coordinates
+    const jobsWithLocation = jobs.filter((job) => {
+      const lat = typeof job.lat === 'number' ? job.lat : null;
+      const lng = typeof job.lng === 'number' ? job.lng : null;
+      return lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng);
+    });
 
     jobsWithLocation.forEach((job) => {
-      if (!job.lat || !job.lng) return;
-
+      const lat = job.lat as number;
+      const lng = job.lng as number;
       const color = getBudgetColor(job.budget_min, job.budget_max);
 
       // Create custom marker element
@@ -235,7 +237,7 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
       `);
 
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([job.lng, job.lat])
+        .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map.current!);
 
@@ -246,14 +248,12 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to show all jobs if there are any
+    // Fit bounds to show all jobs if there are any with valid coordinates
     if (jobsWithLocation.length > 0 && map.current) {
       const bounds = new mapboxgl.LngLatBounds();
 
       jobsWithLocation.forEach((job) => {
-        if (job.lat && job.lng) {
-          bounds.extend([job.lng, job.lat]);
-        }
+        bounds.extend([job.lng as number, job.lat as number]);
       });
 
       const location = userLocation || contractorLocation;
@@ -261,9 +261,45 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
         bounds.extend([location.lng, location.lat]);
       }
 
-      map.current.fitBounds(bounds, { padding: 60, maxZoom: 12 });
+      // Only fit bounds if we have multiple points or significant distance
+      if (jobsWithLocation.length > 1 || location) {
+        map.current.fitBounds(bounds, { padding: 60, maxZoom: 12 });
+      }
     }
   }, [jobs, mapLoaded, onJobClick, userLocation, contractorLocation]);
+
+  // Retry function for errors
+  const handleRetry = useCallback(() => {
+    setMapError(null);
+    setMapLoaded(false);
+    setMapInitialized(false);
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+    }
+    // Re-trigger location fetch
+    setGettingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setGettingLocation(false);
+        },
+        () => setGettingLocation(false),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setGettingLocation(false);
+    }
+  }, []);
+
+  // Count jobs with valid coordinates
+  const mappableJobsCount = jobs.filter(j => 
+    typeof j.lat === 'number' && typeof j.lng === 'number' && !isNaN(j.lat) && !isNaN(j.lng)
+  ).length;
 
   // Error state
   if (mapError) {
@@ -273,19 +309,31 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h3 className="font-semibold text-lg mb-2">Map Failed to Load</h3>
           <p className="text-muted-foreground mb-4">{mapError}</p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setMapError(null);
-              setMapLoaded(false);
-              map.current?.remove();
-              map.current = null;
-              getUserLocation();
-            }}
-          >
+          <Button variant="outline" onClick={handleRetry}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  // Show message when jobs exist but none have coordinates
+  if (mapLoaded && jobs.length > 0 && mappableJobsCount === 0) {
+    return (
+      <Card className="overflow-hidden h-[600px] relative">
+        <div ref={mapContainer} className="w-full h-full" />
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-20">
+          <div className="text-center p-6">
+            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">No Mappable Jobs</h3>
+            <p className="text-muted-foreground">
+              {jobs.length} job{jobs.length !== 1 ? 's' : ''} available but missing location data.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Switch to List View to see all jobs.
+            </p>
+          </div>
         </div>
       </Card>
     );
@@ -340,7 +388,7 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">
-              {jobs.filter((j) => j.lat && j.lng).length} jobs on map
+              {mappableJobsCount} job{mappableJobsCount !== 1 ? 's' : ''} on map
             </span>
           </div>
         </div>

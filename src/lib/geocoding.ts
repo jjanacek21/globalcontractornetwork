@@ -1,4 +1,5 @@
-const MAPBOX_TOKEN = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
+// Use environment variable for Mapbox token, with fallback for backwards compatibility
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 
 interface GeocodingResult {
   lat: number;
