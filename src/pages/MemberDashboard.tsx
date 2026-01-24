@@ -182,7 +182,6 @@ const MemberDashboard = () => {
     "Training Academy", 
     "Estimating/Supplementing",
     "Permit Expediting",
-    "CRM Portal",
     "Digital Marketing, Management & Design",
     "Job Marketplace"
   ];
@@ -253,28 +252,12 @@ const MemberDashboard = () => {
       category: "home" as ServiceCategory
     },
     {
-      icon: ShoppingBag,
-      title: "GCN Merch Store",
-      description: "Apparel, gear & tools for contractors",
-      link: "/store",
-      color: "bg-purple-500/10 text-purple-600",
-      category: "shopping" as ServiceCategory
-    },
-    {
       icon: GraduationCap,
       title: "Training Academy",
       description: "Certifications & business courses for pros",
       link: "/learning",
       color: "bg-indigo-500/10 text-indigo-600",
       category: "learning" as ServiceCategory
-    },
-    {
-      icon: Building2,
-      title: "CRM Portal",
-      description: "Manage leads, contacts, and customer relationships",
-      link: "/crm/auth",
-      color: "bg-cyan-500/10 text-cyan-600",
-      category: "business" as ServiceCategory
     },
     {
       icon: Megaphone,
@@ -287,8 +270,8 @@ const MemberDashboard = () => {
     {
       icon: Users,
       title: "Contractor Social Hub",
-      description: "Connect with contractors, share updates & network",
-      link: "/social/feed",
+      description: "Coming soon - Connect with contractors & network",
+      link: "/social",
       color: "bg-indigo-600/10 text-indigo-600",
       category: "business" as ServiceCategory
     },

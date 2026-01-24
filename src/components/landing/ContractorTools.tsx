@@ -66,14 +66,6 @@ const tools = [
     badge: null
   },
   {
-    icon: ShoppingBag,
-    title: "Merch Store",
-    description: "Equipment, branded gear, and supplies. Everything your team needs to look professional.",
-    link: "/store",
-    color: "from-red-500 to-red-600",
-    badge: null
-  },
-  {
     icon: Users,
     title: "Contractor Social Hub",
     description: "Network with other contractors. Share knowledge, find partners, and grow together.",

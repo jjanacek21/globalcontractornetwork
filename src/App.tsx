@@ -8,12 +8,8 @@ import { isCoatingKingsDomain } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AnimatePresence } from "framer-motion";
 
-// Social Pages (lazy loaded)
-const SocialFeed = lazy(() => import("./pages/social/SocialFeed"));
-const SocialProfile = lazy(() => import("./pages/social/SocialProfile"));
-const SocialMessages = lazy(() => import("./pages/social/SocialMessages"));
-const SocialNotifications = lazy(() => import("./pages/social/SocialNotifications"));
-const SocialAccessPending = lazy(() => import("./pages/social/SocialAccessPending"));
+// Social Coming Soon Page
+const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -347,35 +343,10 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
-          {/* Social Network Routes */}
-          <Route path="/social/feed" element={
+          {/* Social Network - Coming Soon */}
+          <Route path="/social/*" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialFeed />
-            </Suspense>
-          } />
-          <Route path="/social/profile" element={
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialProfile />
-            </Suspense>
-          } />
-          <Route path="/social/profile/:id" element={
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialProfile />
-            </Suspense>
-          } />
-          <Route path="/social/messages" element={
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialMessages />
-            </Suspense>
-          } />
-          <Route path="/social/notifications" element={
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialNotifications />
-            </Suspense>
-          } />
-          <Route path="/social/pending" element={
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-              <SocialAccessPending />
+              <SocialComingSoon />
             </Suspense>
           } />
           
