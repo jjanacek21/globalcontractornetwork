@@ -33,6 +33,10 @@ interface CreateJobDialogProps {
     timeline?: string;
     urgency: string;
     photos?: File[];
+    lat?: number;
+    lng?: number;
+    city?: string;
+    state?: string;
   }) => Promise<any>;
   creating: boolean;
 }
@@ -82,6 +86,7 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
     timeline: '',
     urgency: 'standard'
   });
+  const [coords, setCoords] = useState<{ lat: number; lng: number; city?: string; state?: string } | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +103,7 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
       timeline: '',
       urgency: 'standard'
     });
+    setCoords(null);
     setPhotos([]);
     setPhotoPreviewUrls([]);
     onOpenChange(false);
@@ -155,7 +161,12 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
       budget_max: formData.budget_max ? parseFloat(formData.budget_max) : undefined,
       timeline: formData.timeline || undefined,
       urgency: formData.urgency,
-      photos: photos.length > 0 ? photos : undefined
+      photos: photos.length > 0 ? photos : undefined,
+      // Pass pre-geocoded coordinates from address selection
+      lat: coords?.lat,
+      lng: coords?.lng,
+      city: coords?.city,
+      state: coords?.state,
     });
 
     if (result) {
@@ -242,8 +253,17 @@ export function CreateJobDialog({ open, onOpenChange, onSubmit, creating }: Crea
                   id="property_address"
                   value={formData.property_address}
                   onChange={(address) => setFormData({ ...formData, property_address: address })}
+                  onSelect={(address, coordinates) => {
+                    setFormData({ ...formData, property_address: address });
+                    setCoords(coordinates);
+                  }}
                   placeholder="Start typing to search addresses..."
                 />
+                {coords && (
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Location verified{coords.city ? ` in ${coords.city}` : ''}{coords.state ? `, ${coords.state}` : ''}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

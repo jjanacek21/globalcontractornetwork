@@ -126,6 +126,11 @@ export function useHomeownerJobs(userId: string | null) {
     timeline?: string;
     urgency: string;
     photos?: File[];
+    // Pre-geocoded coordinates (optional - if not provided, will geocode)
+    lat?: number;
+    lng?: number;
+    city?: string;
+    state?: string;
   }) => {
     if (!userId) {
       toast.error('You must be logged in to create a job');
@@ -134,8 +139,19 @@ export function useHomeownerJobs(userId: string | null) {
 
     setCreating(true);
     try {
-      // Geocode the address to get coordinates
-      const geoResult = await geocodeAddress(jobData.property_address);
+      // Use pre-geocoded coordinates if available, otherwise geocode
+      let lat = jobData.lat;
+      let lng = jobData.lng;
+      let city = jobData.city;
+      let state = jobData.state;
+
+      if (lat === undefined || lng === undefined) {
+        const geoResult = await geocodeAddress(jobData.property_address);
+        lat = geoResult?.lat ?? undefined;
+        lng = geoResult?.lng ?? undefined;
+        city = city || geoResult?.city;
+        state = state || geoResult?.state;
+      }
       
       // First create the job to get the ID
       const { data, error } = await supabase
@@ -151,10 +167,10 @@ export function useHomeownerJobs(userId: string | null) {
           timeline: jobData.timeline || null,
           urgency: jobData.urgency,
           status: 'open',
-          lat: geoResult?.lat || null,
-          lng: geoResult?.lng || null,
-          city: geoResult?.city || null,
-          state: geoResult?.state || null,
+          lat: lat ?? null,
+          lng: lng ?? null,
+          city: city || null,
+          state: state || null,
           photos: [] // Start with empty photos
         })
         .select()
