@@ -25,10 +25,8 @@ const footerLinks = {
     { name: "Blog", href: "/blog" },
     { name: "Franchise Info", href: "/franchise" },
     { name: "Marketing Consulting", href: "/consulting" },
-    { name: "Merchandise Store", href: "/store" },
   ],
   support: [
-    { name: "CRM Portal", href: "/crm/auth" },
     { name: "Learning Platform", href: "/learning" },
     { name: "Contractor Network", href: "/contractor" },
     { name: "Member Portal", href: "/join" },

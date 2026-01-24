@@ -58,9 +58,7 @@ const Index = () => {
     { icon: Search, title: "Directory Listings", description: "Get found by local property owners", link: "/directory" },
     { icon: Crown, title: "Permit Marketplace", description: "Qualifiers & expediters on demand", link: "/permit-queens" },
     { icon: DollarSign, title: "Supplement Support", description: "Xactimate-ready claim maximization", link: "/supplement-kings" },
-    { icon: LayoutDashboard, title: "CRM & Lead Manager", description: "Track leads, jobs, and revenue", link: "/contractor" },
     { icon: GraduationCap, title: "Training Library", description: "Certifications and skill courses", link: "/learning" },
-    { icon: ShoppingBag, title: "Equipment Store", description: "Tools, merch, and supplies", link: "/store" },
     { icon: Bot, title: "AI Assistant", description: "White-label virtual contractor", link: "/roofing" },
     { icon: Users, title: "Subcontractor Hub", description: "Find and vet subs fast", link: "/directory" },
     { icon: Megaphone, title: "Marketing Services", description: "Web design, SEO, and ads", link: "/digital-marketing" },
@@ -113,8 +111,8 @@ const Index = () => {
             <Link to="/contractor" className="text-sm font-medium text-white/80 hover:text-[hsl(45,90%,55%)] transition-colors">
               For Contractors
             </Link>
-            <Link to="/store" className="text-sm font-medium text-white/80 hover:text-[hsl(45,90%,55%)] transition-colors">
-              Store
+            <Link to="/learning" className="text-sm font-medium text-white/80 hover:text-[hsl(45,90%,55%)] transition-colors">
+              Academy
             </Link>
             <Link to="/blog" className="text-sm font-medium text-white/80 hover:text-[hsl(45,90%,55%)] transition-colors">
               Blog
