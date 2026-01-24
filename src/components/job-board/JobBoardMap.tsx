@@ -63,7 +63,9 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
     if (!mapContainer.current || map.current || mapInitialized) return;
     if (gettingLocation) return; // Wait for location attempt to complete
 
-    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    // Use environment variable with hardcoded fallback for reliability
+    const token = import.meta.env.VITE_MAPBOX_TOKEN || 
+      'pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g';
     
     if (!token) {
       setMapError('Mapbox token not configured');
