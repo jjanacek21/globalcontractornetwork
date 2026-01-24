@@ -48,6 +48,7 @@ export function ProductApprovalsManagement() {
     failed: number;
     total: number;
   } | null>(null);
+  const [sourceStatusFilter, setSourceStatusFilter] = useState<string>('all');
 
   const categories = getCategories();
   const manufacturers = getManufacturers();
@@ -57,6 +58,8 @@ export function ProductApprovalsManagement() {
   const withNoaPdf = products.filter(p => p.file_url || p.noa_pdf_url).length;
   const withFlApproval = products.filter(p => p.fl_product_approval).length;
   const withNoaNumber = products.filter(p => p.noa_number).length;
+  const foundByAI = products.filter(p => (p as any).source_status === 'found').length;
+  const notFound = products.filter(p => (p as any).source_status === 'not_found').length;
   const missingDocs = products.filter(p => !p.file_url && !p.noa_pdf_url && !p.fl_approval_pdf_url).length;
 
   const filteredProducts = products.filter(product => {
@@ -88,6 +91,14 @@ export function ProductApprovalsManagement() {
     }
     if (documentFilter === 'hvhz_only' && !product.hvhz_approved) {
       return false;
+    }
+    
+    // Source status filter
+    if (sourceStatusFilter !== 'all') {
+      const productStatus = (product as any).source_status || 'pending';
+      if (sourceStatusFilter === 'found' && productStatus !== 'found') return false;
+      if (sourceStatusFilter === 'not_found' && productStatus !== 'not_found') return false;
+      if (sourceStatusFilter === 'pending' && productStatus !== 'pending' && productStatus !== null) return false;
     }
     
     return true;
@@ -250,7 +261,7 @@ export function ProductApprovalsManagement() {
               <div className="flex-1">
                 <p className="font-medium">AI Document Sourcing in Progress</p>
                 <p className="text-sm text-muted-foreground">
-                  Searching Florida Building Product Approval database...
+                  Searching manufacturer websites for NOA PDFs using Firecrawl + AI...
                 </p>
                 <Progress value={aiProgress} className="mt-2" />
               </div>
@@ -282,7 +293,7 @@ export function ProductApprovalsManagement() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-3xl font-bold">{totalProducts}</p>
@@ -311,6 +322,18 @@ export function ProductApprovalsManagement() {
           <CardContent className="py-4 text-center">
             <p className="text-3xl font-bold text-orange-600">{missingDocs}</p>
             <p className="text-sm text-muted-foreground">Missing Docs</p>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-500/20">
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold text-emerald-600">{foundByAI}</p>
+            <p className="text-sm text-muted-foreground">AI Found</p>
+          </CardContent>
+        </Card>
+        <Card className="border-red-500/20">
+          <CardContent className="py-4 text-center">
+            <p className="text-3xl font-bold text-red-600">{notFound}</p>
+            <p className="text-sm text-muted-foreground">Not Found</p>
           </CardContent>
         </Card>
       </div>
@@ -349,6 +372,17 @@ export function ProductApprovalsManagement() {
                 <SelectItem value="missing_pdf">Missing PDF</SelectItem>
                 <SelectItem value="has_noa">Has NOA #</SelectItem>
                 <SelectItem value="hvhz_only">HVHZ Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sourceStatusFilter} onValueChange={setSourceStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Source Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="found">AI Found</SelectItem>
+                <SelectItem value="not_found">Not Found</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
               </SelectContent>
             </Select>
           </div>

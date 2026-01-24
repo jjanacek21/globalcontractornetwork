@@ -5441,6 +5441,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           jurisdiction_scope: string[] | null
+          last_source_attempt: string | null
           manufacturer: string
           metadata: Json | null
           noa_number: string | null
@@ -5449,6 +5450,8 @@ export type Database = {
           product_category: string
           product_line: string | null
           product_name: string
+          source_status: string | null
+          source_website: string | null
           specifications: Json | null
           uil_number: string | null
           ul_listing_url: string | null
@@ -5468,6 +5471,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
+          last_source_attempt?: string | null
           manufacturer: string
           metadata?: Json | null
           noa_number?: string | null
@@ -5476,6 +5480,8 @@ export type Database = {
           product_category: string
           product_line?: string | null
           product_name: string
+          source_status?: string | null
+          source_website?: string | null
           specifications?: Json | null
           uil_number?: string | null
           ul_listing_url?: string | null
@@ -5495,6 +5501,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
+          last_source_attempt?: string | null
           manufacturer?: string
           metadata?: Json | null
           noa_number?: string | null
@@ -5503,6 +5510,8 @@ export type Database = {
           product_category?: string
           product_line?: string | null
           product_name?: string
+          source_status?: string | null
+          source_website?: string | null
           specifications?: Json | null
           uil_number?: string | null
           ul_listing_url?: string | null
