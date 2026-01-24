@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,9 +10,21 @@ const corsHeaders = {
 
 interface PacketRequest {
   permitRequestId: string;
-  includeDocuments?: string[]; // Document types to include
+  includeDocuments?: string[];
   generateCoverSheet?: boolean;
   generateNOC?: boolean;
+  selectedProducts?: Array<{
+    id: string;
+    manufacturer: string;
+    product_name: string;
+    noa_number?: string;
+    file_url?: string;
+  }>;
+  uploadedDocuments?: Array<{
+    type: string;
+    name: string;
+    url: string;
+  }>;
 }
 
 interface DocumentInfo {
@@ -22,13 +35,216 @@ interface DocumentInfo {
   status: 'included' | 'generated' | 'missing' | 'needs_signature';
 }
 
+async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[]): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([612, 792]); // Letter size
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  let y = 750;
+  const leftMargin = 50;
+  const lineHeight = 15;
+  
+  // Title
+  page.drawText('PERMIT APPLICATION PACKET', {
+    x: leftMargin,
+    y,
+    size: 20,
+    font: helveticaBold,
+    color: rgb(0.1, 0.2, 0.4),
+  });
+  y -= 35;
+  
+  // Horizontal line
+  page.drawLine({
+    start: { x: leftMargin, y },
+    end: { x: 562, y },
+    thickness: 2,
+    color: rgb(0.1, 0.2, 0.4),
+  });
+  y -= 30;
+  
+  // Property Information Section
+  page.drawText('PROPERTY INFORMATION', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: helveticaBold,
+  });
+  y -= 20;
+  
+  const propertyInfo = [
+    ['Address:', permit.property_address || 'N/A'],
+    ['City/County:', `${permit.city || ''}, ${permit.county || permit.jurisdiction_county || 'N/A'}`],
+    ['Permit Type:', (permit.permit_type || permit.service_type || 'N/A').replace(/_/g, ' ').toUpperCase()],
+  ];
+  
+  for (const [label, value] of propertyInfo) {
+    page.drawText(label, { x: leftMargin, y, size: 10, font: helveticaBold });
+    page.drawText(String(value), { x: leftMargin + 100, y, size: 10, font: helvetica });
+    y -= lineHeight;
+  }
+  y -= 15;
+  
+  // Owner Information Section
+  page.drawText('OWNER INFORMATION', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: helveticaBold,
+  });
+  y -= 20;
+  
+  const ownerInfo = [
+    ['Owner:', permit.owner_name || permit.customer_name || 'N/A'],
+    ['Phone:', permit.owner_phone || permit.customer_phone || 'N/A'],
+    ['Email:', permit.owner_email || permit.customer_email || 'N/A'],
+  ];
+  
+  for (const [label, value] of ownerInfo) {
+    page.drawText(label, { x: leftMargin, y, size: 10, font: helveticaBold });
+    page.drawText(String(value), { x: leftMargin + 100, y, size: 10, font: helvetica });
+    y -= lineHeight;
+  }
+  y -= 15;
+  
+  // Scope of Work Section
+  page.drawText('SCOPE OF WORK', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: helveticaBold,
+  });
+  y -= 20;
+  
+  const scope = permit.scope_of_work || permit.scope_description || 'See attached documents';
+  const scopeText = typeof scope === 'string' ? scope.slice(0, 200) : 'See attached documents';
+  page.drawText(scopeText, { x: leftMargin, y, size: 10, font: helvetica, maxWidth: 500 });
+  y -= 30;
+  
+  // Valuation
+  const valuation = permit.estimated_value || permit.valuation || 0;
+  page.drawText('Estimated Value:', { x: leftMargin, y, size: 10, font: helveticaBold });
+  page.drawText(`$${valuation.toLocaleString()}`, { x: leftMargin + 100, y, size: 10, font: helvetica });
+  y -= 30;
+  
+  // Document Checklist Section
+  page.drawText('DOCUMENT CHECKLIST', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: helveticaBold,
+  });
+  y -= 20;
+  
+  for (const doc of documentIndex) {
+    const checkmark = doc.status === 'included' || doc.status === 'generated' ? '✓' : 
+                      doc.status === 'needs_signature' ? '✎' : '○';
+    const statusColor = doc.status === 'included' || doc.status === 'generated' ? rgb(0.2, 0.6, 0.2) :
+                        doc.status === 'needs_signature' ? rgb(0.8, 0.5, 0.1) : rgb(0.5, 0.5, 0.5);
+    
+    page.drawText(checkmark, { x: leftMargin, y, size: 12, font: helvetica, color: statusColor });
+    page.drawText(doc.name, { x: leftMargin + 20, y, size: 10, font: helvetica });
+    
+    if (doc.status === 'needs_signature') {
+      page.drawText('(signature required)', { x: 400, y, size: 8, font: helvetica, color: rgb(0.8, 0.5, 0.1) });
+    }
+    y -= lineHeight;
+    
+    if (y < 80) break; // Don't go below footer
+  }
+  
+  // Footer
+  page.drawText(`Generated: ${new Date().toLocaleDateString()} | Total Documents: ${documentIndex.length}`, {
+    x: leftMargin,
+    y: 40,
+    size: 9,
+    font: helvetica,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+  
+  page.drawText('Permit Queens - Florida Building Permit Expediting', {
+    x: leftMargin,
+    y: 25,
+    size: 9,
+    font: helvetica,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+  
+  return await pdfDoc.save();
+}
+
+async function mergePdfDocuments(
+  coverSheetBytes: Uint8Array,
+  documentUrls: string[],
+  supabase: any
+): Promise<Uint8Array> {
+  const mergedPdf = await PDFDocument.create();
+  
+  // Add cover sheet
+  try {
+    const coverPdf = await PDFDocument.load(coverSheetBytes);
+    const coverPages = await mergedPdf.copyPages(coverPdf, coverPdf.getPageIndices());
+    coverPages.forEach(page => mergedPdf.addPage(page));
+  } catch (e) {
+    console.warn('Could not add cover sheet:', e);
+  }
+  
+  // Add uploaded documents
+  for (const url of documentUrls) {
+    if (!url) continue;
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('pdf')) {
+        console.log(`Skipping non-PDF: ${url}`);
+        continue;
+      }
+      
+      const pdfBytes = await response.arrayBuffer();
+      const srcPdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+      const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+      pages.forEach(page => mergedPdf.addPage(page));
+    } catch (e) {
+      console.warn(`Could not add document from ${url}:`, e);
+    }
+  }
+  
+  // Add page numbers
+  const pages = mergedPdf.getPages();
+  const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica);
+  
+  pages.forEach((page, i) => {
+    const { width } = page.getSize();
+    page.drawText(`Page ${i + 1} of ${pages.length}`, {
+      x: width - 100,
+      y: 15,
+      size: 9,
+      font: helvetica,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+  });
+  
+  return await mergedPdf.save();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { permitRequestId, includeDocuments, generateCoverSheet = true, generateNOC = true } = await req.json() as PacketRequest;
+    const { 
+      permitRequestId, 
+      includeDocuments, 
+      generateCoverSheet = true, 
+      generateNOC = true,
+      selectedProducts = [],
+      uploadedDocuments = []
+    } = await req.json() as PacketRequest;
     
     if (!permitRequestId) {
       throw new Error('permitRequestId is required');
@@ -55,8 +271,8 @@ serve(async (req) => {
       throw new Error('Permit request not found');
     }
     
-    // Fetch uploaded documents
-    const { data: documents, error: docsError } = await supabase
+    // Fetch uploaded documents from DB
+    const { data: dbDocuments, error: docsError } = await supabase
       .from('permit_documents')
       .select('*')
       .eq('permit_project_id', permitRequestId);
@@ -65,21 +281,18 @@ serve(async (req) => {
       console.error('Error fetching documents:', docsError);
     }
     
-    // Fetch jurisdiction rules if available
-    const { data: jurisdictionRules } = await supabase
-      .from('jurisdiction_rules')
-      .select('*')
-      .eq('county', permit.county)
-      .eq('permit_type', permit.permit_type)
-      .eq('is_active', true)
-      .maybeSingle();
+    // Fetch product approvals for selected products
+    const productIds = selectedProducts.map(p => p.id).filter(Boolean);
+    let productApprovals: any[] = [];
     
-    // Fetch product approvals for materials mentioned
-    const { data: productApprovals } = await supabase
-      .from('product_approvals')
-      .select('*')
-      .eq('is_active', true)
-      .limit(20);
+    if (productIds.length > 0) {
+      const { data } = await supabase
+        .from('product_approvals')
+        .select('*')
+        .in('id', productIds)
+        .eq('is_active', true);
+      productApprovals = data || [];
+    }
     
     // Define packet structure
     const PACKET_STRUCTURE = [
@@ -98,6 +311,7 @@ serve(async (req) => {
     // Map uploaded documents to packet structure
     const documentIndex: DocumentInfo[] = [];
     let totalPages = 0;
+    const pdfUrls: string[] = [];
     
     for (const item of PACKET_STRUCTURE) {
       if (item.generated) {
@@ -109,16 +323,22 @@ serve(async (req) => {
         });
         totalPages += item.pages || 1;
       } else if (item.uploaded) {
-        const uploadedDoc = documents?.find(d => d.document_type === item.type);
-        if (uploadedDoc) {
+        // Check DB documents first
+        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
+        // Then check passed uploadedDocuments
+        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        
+        if (dbDoc || passedDoc) {
+          const url = dbDoc?.file_path || dbDoc?.file_url || passedDoc?.url;
           documentIndex.push({
             type: item.type,
             name: item.name,
-            pages: 1, // Default, could be extracted from PDF
-            url: uploadedDoc.file_path,
+            pages: 1,
+            url: url,
             status: 'included'
           });
           totalPages += 1;
+          if (url) pdfUrls.push(url);
         } else {
           documentIndex.push({
             type: item.type,
@@ -127,24 +347,35 @@ serve(async (req) => {
             status: 'missing'
           });
         }
-      } else if (item.lookup && productApprovals?.length) {
-        // Add product approval documents
-        for (const approval of productApprovals.slice(0, 3)) {
-          if (approval.file_path || approval.file_url) {
+      } else if (item.lookup) {
+        // Add product approval documents from selected products
+        for (const sp of selectedProducts) {
+          const approval = productApprovals.find(a => a.id === sp.id);
+          const fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
+          
+          if (fileUrl) {
             documentIndex.push({
               type: 'product_approval',
-              name: `${approval.manufacturer} ${approval.product_name} - NOA ${approval.noa_number}`,
-              pages: 2, // Typical NOA length
-              url: approval.file_path || approval.file_url,
+              name: `${sp.manufacturer} ${sp.product_name}${sp.noa_number ? ` - NOA ${sp.noa_number}` : ''}`,
+              pages: 2,
+              url: fileUrl,
               status: 'included'
             });
             totalPages += 2;
+            pdfUrls.push(fileUrl);
+          } else if (sp.noa_number) {
+            documentIndex.push({
+              type: 'product_approval',
+              name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number}`,
+              pages: 0,
+              status: 'missing'
+            });
           }
         }
       }
     }
     
-    // Use AI to generate cover sheet content and submission notes
+    // Generate cover sheet content with AI or fallback
     let coverSheetHtml = '';
     let submissionNotes: string[] = [];
     let aiNotes = '';
@@ -162,18 +393,15 @@ Use clean, professional formatting. Include all required information.`;
       const userPrompt = `Generate a cover sheet and submission notes for this permit packet:
 
 PERMIT DETAILS:
-- Property: ${permit.property_address}, ${permit.city}, FL ${permit.zip}
-- Permit Type: ${permit.permit_type}
-- Owner: ${permit.owner_name}
-- Scope: ${permit.scope_of_work || 'Not specified'}
-- Valuation: $${permit.estimated_value || 'TBD'}
-- County: ${permit.county}
+- Property: ${permit.property_address}, ${permit.city || ''}, FL ${permit.zip_code || ''}
+- Permit Type: ${permit.permit_type || permit.service_type}
+- Owner: ${permit.owner_name || permit.customer_name}
+- Scope: ${permit.scope_of_work || permit.scope_description || 'Not specified'}
+- Valuation: $${permit.estimated_value || permit.valuation || 'TBD'}
+- County: ${permit.county || permit.jurisdiction_county}
 
 DOCUMENTS INCLUDED:
 ${documentIndex.map(d => `- ${d.name}: ${d.status}`).join('\n')}
-
-JURISDICTION REQUIREMENTS:
-${jurisdictionRules ? JSON.stringify(jurisdictionRules, null, 2) : 'Standard Florida Building Code requirements apply'}
 
 Respond with JSON:
 {
@@ -219,17 +447,13 @@ Respond with JSON:
               console.warn('Could not parse AI response:', e);
             }
           }
-        } else if (response.status === 429) {
-          console.warn('Rate limited, using fallback');
-        } else if (response.status === 402) {
-          console.warn('AI credits exhausted, using fallback');
         }
       } catch (aiError) {
         console.warn('AI generation failed:', aiError);
       }
     }
     
-    // Fallback cover sheet if AI failed
+    // Fallback cover sheet HTML
     if (!coverSheetHtml) {
       coverSheetHtml = `
         <html>
@@ -251,22 +475,22 @@ Respond with JSON:
           <h2>Property Information</h2>
           <div class="info-section">
             <span class="label">Address:</span> ${permit.property_address}<br>
-            <span class="label">City:</span> ${permit.city}, FL ${permit.zip}<br>
-            <span class="label">County:</span> ${permit.county}<br>
+            <span class="label">City:</span> ${permit.city || 'N/A'}, FL ${permit.zip_code || ''}<br>
+            <span class="label">County:</span> ${permit.county || permit.jurisdiction_county}<br>
           </div>
           
           <h2>Owner Information</h2>
           <div class="info-section">
-            <span class="label">Owner:</span> ${permit.owner_name}<br>
-            <span class="label">Phone:</span> ${permit.owner_phone || 'N/A'}<br>
-            <span class="label">Email:</span> ${permit.owner_email || 'N/A'}<br>
+            <span class="label">Owner:</span> ${permit.owner_name || permit.customer_name}<br>
+            <span class="label">Phone:</span> ${permit.owner_phone || permit.customer_phone || 'N/A'}<br>
+            <span class="label">Email:</span> ${permit.owner_email || permit.customer_email || 'N/A'}<br>
           </div>
           
           <h2>Scope of Work</h2>
           <div class="info-section">
-            <span class="label">Permit Type:</span> ${permit.permit_type}<br>
-            <span class="label">Description:</span> ${permit.scope_of_work || 'See attached documents'}<br>
-            <span class="label">Valuation:</span> $${(permit.estimated_value || 0).toLocaleString()}<br>
+            <span class="label">Permit Type:</span> ${permit.permit_type || permit.service_type}<br>
+            <span class="label">Description:</span> ${permit.scope_of_work || permit.scope_description || 'See attached documents'}<br>
+            <span class="label">Valuation:</span> $${(permit.estimated_value || permit.valuation || 0).toLocaleString()}<br>
           </div>
           
           <h2>Document Checklist</h2>
@@ -295,7 +519,40 @@ Respond with JSON:
       ? Math.round((includedDocs.length / requiredDocs.length) * 100) 
       : 100;
     
-    // Save packet to database
+    // Generate PDF packet
+    let packetPdfUrl: string | null = null;
+    
+    try {
+      // Generate cover sheet PDF
+      const coverSheetBytes = await generateCoverSheetPdf(permit, documentIndex);
+      
+      // Merge all documents
+      const mergedPdfBytes = await mergePdfDocuments(coverSheetBytes, pdfUrls, supabase);
+      
+      // Upload to storage
+      const packetPath = `packets/${permitRequestId}/${Date.now()}-permit-packet.pdf`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('permit-documents')
+        .upload(packetPath, mergedPdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+      
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('permit-documents')
+          .getPublicUrl(packetPath);
+        
+        packetPdfUrl = publicUrl;
+      } else {
+        console.warn('Could not upload packet PDF:', uploadError);
+      }
+    } catch (pdfError) {
+      console.warn('PDF generation failed:', pdfError);
+    }
+    
+    // Get user ID from auth header
     const authHeader = req.headers.get('Authorization');
     let userId = null;
     
@@ -304,6 +561,7 @@ Respond with JSON:
       userId = user?.id;
     }
     
+    // Save packet to database
     const { data: packet, error: packetError } = await supabase
       .from('permit_packets')
       .insert({
@@ -316,13 +574,25 @@ Respond with JSON:
         document_index: documentIndex.map((d, i) => ({ order: i + 1, ...d })),
         ai_notes: aiNotes,
         generated_by: userId,
-        status: completionPercentage === 100 ? 'ready' : 'draft'
+        status: completionPercentage === 100 ? 'ready' : 'draft',
+        file_path: packetPdfUrl,
       })
       .select()
       .single();
     
     if (packetError) {
       console.error('Error saving packet:', packetError);
+    }
+    
+    // Update permit project with packet URL
+    if (packetPdfUrl) {
+      await supabase
+        .from('permit_projects')
+        .update({ 
+          packet_url: packetPdfUrl,
+          packet_status: completionPercentage === 100 ? 'ready' : 'draft',
+        })
+        .eq('id', permitRequestId);
     }
     
     return new Response(JSON.stringify({ 
@@ -338,7 +608,8 @@ Respond with JSON:
         completionPercentage,
         missingDocuments: documentIndex.filter(d => d.status === 'missing').map(d => d.name),
         needsSignature: documentIndex.filter(d => d.status === 'needs_signature').map(d => d.name),
-        status: completionPercentage === 100 ? 'ready' : 'incomplete'
+        status: completionPercentage === 100 ? 'ready' : 'incomplete',
+        packetPdfUrl,
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

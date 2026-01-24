@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Crown, Download, FileText, MessageSquare, CreditCard, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Crown, Download, FileText, MessageSquare, CreditCard, Loader2, RefreshCw, Package } from 'lucide-react';
 import { StatusTimeline, getStatusLabel, getStatusColor } from '@/components/permit-queens/StatusTimeline';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
+import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
 import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -57,12 +58,101 @@ export default function PermitQueensRequestDetail() {
   const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Packet state
+  const [packet, setPacket] = useState<PacketData | null>(null);
+  const [loadingPacket, setLoadingPacket] = useState(true);
+  const [generatingPacket, setGeneratingPacket] = useState(false);
 
   useEffect(() => {
     if (permit && documents) {
       runGapAnalysis();
+      fetchPacket();
     }
   }, [permit, documents]);
+
+  const fetchPacket = async () => {
+    if (!permit?.id) return;
+    setLoadingPacket(true);
+    
+    try {
+      const { data } = await supabase
+        .from('permit_packets')
+        .select('*')
+        .eq('permit_request_id', permit.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (data) {
+        const docIndex = (data.document_index || data.documents_included || []) as any[];
+        setPacket({
+          packetId: data.id,
+          documentIndex: docIndex,
+          coverSheetHtml: data.cover_sheet_html || '',
+          aiNotes: data.ai_notes || '',
+          totalPages: data.total_pages || 0,
+          documentCount: data.document_count,
+          completionPercentage: docIndex.length > 0 
+            ? Math.round((docIndex.filter((d: any) => d.status === 'included' || d.status === 'generated').length / docIndex.length) * 100)
+            : 0,
+          missingDocuments: docIndex.filter((d: any) => d.status === 'missing').map((d: any) => d.name),
+          needsSignature: docIndex.filter((d: any) => d.status === 'needs_signature').map((d: any) => d.name),
+          status: (data.status === 'ready' || data.status === 'incomplete' ? data.status : 'draft') as 'ready' | 'incomplete' | 'draft',
+          packetPdfUrl: data.file_path,
+          submissionNotes: [],
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching packet:', error);
+    } finally {
+      setLoadingPacket(false);
+    }
+  };
+
+  const handleRegeneratePacket = async () => {
+    if (!permit?.id) return;
+    setGeneratingPacket(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('permit-packet-assembler', {
+        body: { 
+          permitRequestId: permit.id, 
+          generateCoverSheet: true,
+          uploadedDocuments: documents.map(d => ({
+            type: d.document_type,
+            name: d.document_name,
+            url: d.file_url,
+          })),
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        setPacket({
+          packetId: data.data.packetId,
+          documentIndex: data.data.documentIndex || [],
+          coverSheetHtml: data.data.coverSheetHtml || '',
+          submissionNotes: data.data.submissionNotes || [],
+          aiNotes: data.data.aiNotes || '',
+          totalPages: data.data.totalPages || 0,
+          documentCount: data.data.documentCount,
+          completionPercentage: data.data.completionPercentage || 0,
+          missingDocuments: data.data.missingDocuments || [],
+          needsSignature: data.data.needsSignature || [],
+          status: data.data.status || 'draft',
+          packetPdfUrl: data.data.packetPdfUrl,
+        });
+        toast.success('Packet regenerated!');
+      }
+    } catch (error) {
+      console.error('Error regenerating packet:', error);
+      toast.error('Failed to regenerate packet');
+    } finally {
+      setGeneratingPacket(false);
+    }
+  };
 
   const runGapAnalysis = async () => {
     if (!permit) return;
@@ -374,26 +464,38 @@ export default function PermitQueensRequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Download Packet */}
-            {permit.pipeline_status === 'packet_ready' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Permit Packet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Your permit packet is ready for download.
-                  </p>
-                  <Button className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Packet
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            {/* Permit Packet Viewer - Show always */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Permit Packet
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingPacket ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading packet...</p>
+                  </div>
+                ) : packet ? (
+                  <PacketViewer
+                    packet={packet}
+                    onRegenerate={handleRegeneratePacket}
+                    generating={generatingPacket}
+                  />
+                ) : (
+                  <div className="text-center py-4">
+                    <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-4">No packet generated yet</p>
+                    <Button onClick={handleRegeneratePacket} variant="outline" disabled={generatingPacket}>
+                      {generatingPacket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Generate Packet
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Request Info */}
             <Card>

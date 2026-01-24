@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
 import { PacketPreview } from '@/components/permit-queens/PacketPreview';
+import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { PricingGrid } from '@/components/permit-queens/PricingCard';
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
@@ -90,6 +91,12 @@ export default function PermitQueensNewRequest() {
   const [missingDocuments, setMissingDocuments] = useState<any[]>([]);
   const [complianceIssues, setComplianceIssues] = useState<any[]>([]);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Packet generation state
+  const [generatedPacket, setGeneratedPacket] = useState<PacketData | null>(null);
+  const [generatingPacket, setGeneratingPacket] = useState(false);
+  const [generationStage, setGenerationStage] = useState('');
+  const [tempPermitId, setTempPermitId] = useState<string | null>(null);
   
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -229,8 +236,123 @@ export default function PermitQueensNewRequest() {
     }
   };
 
+  const handleGeneratePacket = async () => {
+    setGeneratingPacket(true);
+    setGenerationStage('Creating permit project...');
+    
+    try {
+      let permitId = tempPermitId;
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please log in to generate a packet');
+        setGeneratingPacket(false);
+        return;
+      }
+      
+      // Create temporary permit project if not already created
+      if (!permitId) {
+        const { data: tempPermit, error: permitError } = await supabase
+          .from('permit_projects')
+          .insert({
+            property_address: formData.property_address,
+            customer_name: formData.owner_name,
+            owner_name: formData.owner_name,
+            owner_email: formData.owner_email,
+            owner_phone: formData.owner_phone,
+            service_type: formData.permit_type || 'roofing',
+            permit_type: formData.permit_type,
+            jurisdiction_county: formData.jurisdiction_county,
+            city: formData.jurisdiction_city,
+            scope_description: JSON.stringify(tradeData),
+            valuation: formData.valuation,
+            complexity_tier: formData.complexity_tier,
+            pipeline_status: 'intake',
+            status: 'pending',
+            user_id: user.id,
+          })
+          .select()
+          .single();
+        
+        if (permitError) throw permitError;
+        permitId = tempPermit.id;
+        setTempPermitId(permitId);
+      }
+      
+      setGenerationStage('Generating permit packet...');
+      
+      const { data, error } = await supabase.functions.invoke('permit-packet-assembler', {
+        body: {
+          permitRequestId: permitId,
+          generateCoverSheet: true,
+          generateNOC: true,
+          selectedProducts: selectedMaterials.map(m => ({
+            id: m.product.id,
+            manufacturer: m.product.manufacturer,
+            product_name: m.product.product_name,
+            noa_number: m.product.noa_number,
+            file_url: m.product.file_url,
+          })),
+          uploadedDocuments: uploadedDocuments.map(d => ({
+            type: d.type,
+            name: d.name,
+            url: d.url,
+          })),
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        setGeneratedPacket({
+          packetId: data.data.packetId,
+          documentIndex: data.data.documentIndex || [],
+          coverSheetHtml: data.data.coverSheetHtml || '',
+          submissionNotes: data.data.submissionNotes || [],
+          aiNotes: data.data.aiNotes || '',
+          totalPages: data.data.totalPages || 0,
+          documentCount: data.data.documentCount,
+          completionPercentage: data.data.completionPercentage || 0,
+          missingDocuments: data.data.missingDocuments || [],
+          needsSignature: data.data.needsSignature || [],
+          status: data.data.status || 'draft',
+          packetPdfUrl: data.data.packetPdfUrl,
+        });
+        setCompletionPercentage(data.data.completionPercentage || 0);
+        setGenerationStage('Complete!');
+        toast.success('Permit packet generated!');
+      } else {
+        throw new Error(data?.error || 'Unknown error');
+      }
+      
+    } catch (error) {
+      console.error('Packet generation error:', error);
+      toast.error('Failed to generate packet');
+      setGenerationStage('');
+    } finally {
+      setGeneratingPacket(false);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      // If we already created a temp permit, update it instead of creating new
+      if (tempPermitId) {
+        const { error: updateError } = await supabase
+          .from('permit_projects')
+          .update({
+            complexity_tier: formData.complexity_tier,
+            pipeline_status: 'intake',
+          })
+          .eq('id', tempPermitId);
+        
+        if (updateError) throw updateError;
+        toast.success('Permit request submitted!');
+        navigate(`/permit-queens/request/${tempPermitId}`);
+        return;
+      }
+      
       const permitId = await createPermit({
         property_address: formData.property_address,
         owner_name: formData.owner_name,
@@ -547,8 +669,17 @@ export default function PermitQueensNewRequest() {
                   ] : [])
                 ]}
                 formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
-                onGeneratePacket={() => toast.success('Packet generation started!')}
+                onGeneratePacket={handleGeneratePacket}
+                generating={generatingPacket}
               />
+              
+              {/* Show generation stage */}
+              {generatingPacket && generationStage && (
+                <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription>{generationStage}</AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
 
@@ -564,6 +695,27 @@ export default function PermitQueensNewRequest() {
                   <div><p className="text-sm text-muted-foreground">Owner</p><p className="font-medium">{formData.owner_name}</p></div>
                 </CardContent>
               </Card>
+
+              {/* Generated Packet Viewer */}
+              {generatedPacket ? (
+                <PacketViewer
+                  packet={generatedPacket}
+                  onRegenerate={handleGeneratePacket}
+                  onEdit={() => setCurrentStep(3)}
+                  generating={generatingPacket}
+                />
+              ) : (
+                <Card className="border-dashed">
+                  <CardContent className="py-8 text-center">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No packet generated yet</p>
+                    <Button onClick={handleGeneratePacket} disabled={generatingPacket}>
+                      {generatingPacket ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                      Generate Packet Now
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
 
               {analyzingGaps ? (
                 <Card><CardContent className="py-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" /><p>Analyzing...</p></CardContent></Card>
