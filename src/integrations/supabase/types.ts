@@ -5435,6 +5435,7 @@ export type Database = {
           expiration_date: string | null
           file_path: string | null
           file_url: string | null
+          fl_approval_pdf_url: string | null
           fl_product_approval: string | null
           hvhz_approved: boolean | null
           id: string
@@ -5443,12 +5444,14 @@ export type Database = {
           manufacturer: string
           metadata: Json | null
           noa_number: string | null
+          noa_pdf_url: string | null
           premium_tier: number | null
           product_category: string
           product_line: string | null
           product_name: string
           specifications: Json | null
           uil_number: string | null
+          ul_listing_url: string | null
           updated_at: string | null
           wind_speed_rating: number | null
         }
@@ -5459,6 +5462,7 @@ export type Database = {
           expiration_date?: string | null
           file_path?: string | null
           file_url?: string | null
+          fl_approval_pdf_url?: string | null
           fl_product_approval?: string | null
           hvhz_approved?: boolean | null
           id?: string
@@ -5467,12 +5471,14 @@ export type Database = {
           manufacturer: string
           metadata?: Json | null
           noa_number?: string | null
+          noa_pdf_url?: string | null
           premium_tier?: number | null
           product_category: string
           product_line?: string | null
           product_name: string
           specifications?: Json | null
           uil_number?: string | null
+          ul_listing_url?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
         }
@@ -5483,6 +5489,7 @@ export type Database = {
           expiration_date?: string | null
           file_path?: string | null
           file_url?: string | null
+          fl_approval_pdf_url?: string | null
           fl_product_approval?: string | null
           hvhz_approved?: boolean | null
           id?: string
@@ -5491,12 +5498,14 @@ export type Database = {
           manufacturer?: string
           metadata?: Json | null
           noa_number?: string | null
+          noa_pdf_url?: string | null
           premium_tier?: number | null
           product_category?: string
           product_line?: string | null
           product_name?: string
           specifications?: Json | null
           uil_number?: string | null
+          ul_listing_url?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
         }

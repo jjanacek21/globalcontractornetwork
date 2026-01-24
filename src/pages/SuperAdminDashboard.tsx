@@ -29,6 +29,7 @@ import EnhancedLeadsTable from "@/components/admin/EnhancedLeadsTable";
 import GamificationManagement from "@/components/admin/GamificationManagement";
 import PropertyOwnersTable from "@/components/admin/PropertyOwnersTable";
 import BuildingDepartmentsTab from "@/components/admin/BuildingDepartmentsTab";
+import { ProductApprovalsManagement } from "@/components/admin/ProductApprovalsManagement";
 
 interface UnifiedLead {
   id: string;
@@ -510,6 +511,7 @@ const SuperAdminDashboard = () => {
                 </TabsTrigger>
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
                 <TabsTrigger value="building-depts" className="gap-2"><MapPin className="h-4 w-4" />Building Depts</TabsTrigger>
+                <TabsTrigger value="product-approvals" className="gap-2"><Shield className="h-4 w-4" />Product Approvals</TabsTrigger>
               </TabsList>
 
               <TabsContent value="pending">
@@ -558,6 +560,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="building-depts">
                 <BuildingDepartmentsTab />
+              </TabsContent>
+
+              <TabsContent value="product-approvals">
+                <ProductApprovalsManagement />
               </TabsContent>
             </Tabs>
           </CardContent>

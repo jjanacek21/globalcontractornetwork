@@ -80,6 +80,15 @@ export function SmartDocumentUploader({
     setUploading(true);
     const newDocs: UploadedDocument[] = [];
 
+    // Get current user for proper path structure
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      toast.error('Please log in to upload documents');
+      setUploading(false);
+      return;
+    }
+
     for (const file of files) {
       try {
         // Validate file type
@@ -95,15 +104,18 @@ export function SmartDocumentUploader({
           continue;
         }
 
-        // Upload to storage
+        // Upload to storage with user ID as first folder for RLS compliance
         const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-        const filePath = `permits/${permitProjectId || 'temp'}/${fileName}`;
+        const filePath = `${user.id}/permits/${permitProjectId || 'temp'}/${fileName}`;
         
         const { error: uploadError } = await supabase.storage
           .from('permit-documents')
           .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw uploadError;
+        }
 
         // Get public URL
         const { data: { publicUrl } } = supabase.storage
