@@ -225,15 +225,14 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Get products that need document sourcing (with NOA numbers, no file URL yet)
+    // Get products that need document sourcing - prioritize those without URLs or with broken ones
     const { data: products, error: fetchError } = await supabase
       .from('product_approvals')
       .select('id, manufacturer, product_name, product_category, noa_number, fl_product_approval, file_url, noa_pdf_url, fl_approval_pdf_url, source_status')
       .eq('is_active', true)
-      .or('source_status.is.null,source_status.eq.pending,source_status.eq.not_found')
-      .is('file_url', null)
-      .not('noa_number', 'is', null)
-      .limit(25); // Smaller batches to avoid timeouts
+      .or('source_status.is.null,source_status.eq.pending')
+      .or('noa_number.not.is.null,fl_product_approval.not.is.null')
+      .limit(20); // Smaller batches to avoid timeouts
 
     if (fetchError) {
       console.error('Error fetching products:', fetchError);
@@ -248,7 +247,14 @@ Deno.serve(async (req) => {
 
     for (const product of products || []) {
       try {
+        // Skip if no approval numbers at all
+        if (!product.noa_number && !product.fl_product_approval) {
+          console.log(`Skipping ${product.product_name} - no approval numbers`);
+          continue;
+        }
+
         console.log(`\n--- Processing: ${product.manufacturer} - ${product.product_name} ---`);
+        console.log(`   NOA: ${product.noa_number || 'none'}, FL: ${product.fl_product_approval || 'none'}`);
         
         // Mark as searching
         await supabase
@@ -264,6 +270,8 @@ Deno.serve(async (req) => {
           product.noa_number,
           product.fl_product_approval
         );
+        
+        console.log(`   Search found: NOA=${!!searchResults.noa_url}, FL=${!!searchResults.fl_url}`);
 
         let finalNoaUrl = searchResults.noa_url;
         let finalFlUrl = searchResults.fl_url;
