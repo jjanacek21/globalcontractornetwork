@@ -4880,49 +4880,79 @@ export type Database = {
       }
       permit_packet_training: {
         Row: {
+          admin_notes: string | null
+          admin_verified: boolean | null
           city: string | null
           county: string
           created_at: string | null
           example_description: string | null
+          extracted_documents: Json | null
           extracted_fields: Json | null
+          file_url: string | null
           id: string
           is_hvhz: boolean | null
           material_type: string | null
           packet_structure: Json
           page_count: number | null
+          processed_at: string | null
+          processing_status: string | null
           quality_score: number | null
+          raw_text_content: string | null
           source_file_name: string | null
           trade_type: string
+          training_usage_count: number | null
+          uploaded_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
+          admin_notes?: string | null
+          admin_verified?: boolean | null
           city?: string | null
           county: string
           created_at?: string | null
           example_description?: string | null
+          extracted_documents?: Json | null
           extracted_fields?: Json | null
+          file_url?: string | null
           id?: string
           is_hvhz?: boolean | null
           material_type?: string | null
           packet_structure: Json
           page_count?: number | null
+          processed_at?: string | null
+          processing_status?: string | null
           quality_score?: number | null
+          raw_text_content?: string | null
           source_file_name?: string | null
           trade_type: string
+          training_usage_count?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
+          admin_notes?: string | null
+          admin_verified?: boolean | null
           city?: string | null
           county?: string
           created_at?: string | null
           example_description?: string | null
+          extracted_documents?: Json | null
           extracted_fields?: Json | null
+          file_url?: string | null
           id?: string
           is_hvhz?: boolean | null
           material_type?: string | null
           packet_structure?: Json
           page_count?: number | null
+          processed_at?: string | null
+          processing_status?: string | null
           quality_score?: number | null
+          raw_text_content?: string | null
           source_file_name?: string | null
           trade_type?: string
+          training_usage_count?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: []
       }
@@ -5568,6 +5598,50 @@ export type Database = {
             columns: ["permit_request_id"]
             isOneToOne: false
             referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_training_files: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          ocr_text: string | null
+          page_count: number | null
+          training_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          ocr_text?: string | null
+          page_count?: number | null
+          training_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          ocr_text?: string | null
+          page_count?: number | null
+          training_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_training_files_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "permit_packet_training"
             referencedColumns: ["id"]
           },
         ]

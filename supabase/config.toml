@@ -1,5 +1,8 @@
 project_id = "ujalvgknnbsxqpujxvwk"
 
+[functions.permit-packet-analyzer]
+verify_jwt = false
+
 [functions.ai-quote-generator]
 verify_jwt = false
 

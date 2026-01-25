@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Loader2, FileText, Clock, CheckCircle, AlertCircle, 
-  DollarSign, RefreshCw, Eye, MessageSquare, Crown
+  DollarSign, RefreshCw, Eye, MessageSquare, Crown, Brain, BookOpen
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { PermitDetailDialog } from "./PermitDetailDialog";
+import PermitTrainingUploader from "./PermitTrainingUploader";
+import TrainingSamplesTable from "./TrainingSamplesTable";
 import { toast } from "sonner";
 
 interface PermitProject {
@@ -67,6 +70,8 @@ export default function PermitExpeditingTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedPermit, setSelectedPermit] = useState<PermitProject | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("queue");
+  const [trainingRefresh, setTrainingRefresh] = useState(0);
 
   useEffect(() => {
     fetchPermits();
@@ -140,9 +145,21 @@ export default function PermitExpeditingTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsTrigger value="queue" className="flex items-center gap-2">
+          <Crown className="h-4 w-4" />
+          Permit Queue
+        </TabsTrigger>
+        <TabsTrigger value="training" className="flex items-center gap-2">
+          <Brain className="h-4 w-4" />
+          AI Training
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="queue" className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -338,6 +355,14 @@ export default function PermitExpeditingTab() {
         permit={selectedPermit}
         onRefresh={fetchPermits}
       />
-    </div>
+      </TabsContent>
+
+      <TabsContent value="training" className="space-y-6">
+        <PermitTrainingUploader 
+          onUploadComplete={() => setTrainingRefresh(prev => prev + 1)} 
+        />
+        <TrainingSamplesTable refreshTrigger={trainingRefresh} />
+      </TabsContent>
+    </Tabs>
   );
 }
