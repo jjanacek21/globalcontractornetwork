@@ -341,9 +341,9 @@ export default function PermitQueensRequestDetail() {
         </Card>
 
         {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Left Column - Details */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="details">Details</TabsTrigger>
@@ -513,40 +513,6 @@ export default function PermitQueensRequestDetail() {
               </CardContent>
             </Card>
 
-            {/* Permit Packet Viewer - Show always */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Permit Packet
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingPacket ? (
-                  <div className="text-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    <p className="text-sm text-muted-foreground mt-2">Loading packet...</p>
-                  </div>
-                ) : packet ? (
-                  <PacketViewer
-                    packet={packet}
-                    onRegenerate={handleRegeneratePacket}
-                    onDocumentClick={handleDocumentClick}
-                    generating={generatingPacket}
-                  />
-                ) : (
-                  <div className="text-center py-4">
-                    <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-4">No packet generated yet</p>
-                    <Button onClick={handleRegeneratePacket} variant="outline" disabled={generatingPacket}>
-                      {generatingPacket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Generate Packet
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Request Info */}
             <Card>
               <CardHeader>
@@ -568,6 +534,42 @@ export default function PermitQueensRequestDetail() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Full-Width Centered Permit Packet Section */}
+        <div className="max-w-5xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Generated Permit Packet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingPacket ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground mt-2">Loading packet...</p>
+                </div>
+              ) : packet ? (
+                <PacketViewer
+                  packet={packet}
+                  onRegenerate={handleRegeneratePacket}
+                  onDocumentClick={handleDocumentClick}
+                  generating={generatingPacket}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4">No packet generated yet</p>
+                  <Button onClick={handleRegeneratePacket} variant="outline" size="lg" disabled={generatingPacket}>
+                    {generatingPacket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Generate Packet
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </main>
 
