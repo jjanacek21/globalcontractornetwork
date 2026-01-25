@@ -19,6 +19,7 @@ interface PacketRequest {
     product_name: string;
     noa_number?: string;
     file_url?: string;
+    category?: string;  // Product category for filtering (underlayment, shingle, etc.)
   }>;
   uploadedDocuments?: Array<{
     type: string;
@@ -705,11 +706,13 @@ Respond with JSON:
       `;
     }
     
-    // Calculate completion percentage
-    const requiredDocs = documentIndex.filter(d => d.status !== 'generated');
-    const includedDocs = requiredDocs.filter(d => d.status === 'included' || d.status === 'needs_signature');
+    // Calculate completion percentage (include auto_sourced as complete)
+    const requiredDocs = documentIndex.filter(d => d.source !== 'generated');
+    const completeDocs = requiredDocs.filter(d => 
+      d.status === 'included' || d.status === 'auto_sourced' || d.status === 'needs_signature'
+    );
     const completionPercentage = requiredDocs.length > 0 
-      ? Math.round((includedDocs.length / requiredDocs.length) * 100) 
+      ? Math.round((completeDocs.length / requiredDocs.length) * 100) 
       : 100;
     
     // Generate PDF packet
