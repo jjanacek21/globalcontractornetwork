@@ -101,6 +101,54 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
     cleanupOrphanedRecords();
   }, []);
 
+  // Real-time subscription for live updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('training-samples-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'permit_packet_training'
+        },
+        (payload) => {
+          console.log('[Realtime] Training sample changed:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            setSamples(prev => [payload.new as TrainingSample, ...prev]);
+            toast.info("New training sample added");
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as TrainingSample;
+            const old = payload.old as { processing_status?: string };
+            
+            setSamples(prev => prev.map(s => 
+              s.id === updated.id ? updated : s
+            ));
+            
+            // Show toast for status changes
+            if (old.processing_status !== updated.processing_status) {
+              if (updated.processing_status === 'completed') {
+                toast.success(`AI analysis complete: ${updated.county || 'Sample'}`);
+              } else if (updated.processing_status === 'failed') {
+                toast.error(`Processing failed: ${updated.county || 'Sample'}`);
+              }
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old as { id: string };
+            setSamples(prev => prev.filter(s => s.id !== deleted.id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Subscription status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchSamples = async () => {
     setLoading(true);
     try {
