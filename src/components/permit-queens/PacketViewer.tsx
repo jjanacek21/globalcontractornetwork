@@ -18,10 +18,12 @@ import {
   Package,
   Loader2,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Upload
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DocumentInfo {
   type: string;
@@ -51,6 +53,7 @@ interface PacketViewerProps {
   packet: PacketData;
   onRegenerate?: () => void;
   onEdit?: () => void;
+  onDocumentClick?: (docType: string, docName: string) => void;
   generating?: boolean;
 }
 
@@ -58,6 +61,7 @@ export function PacketViewer({
   packet,
   onRegenerate,
   onEdit,
+  onDocumentClick,
   generating = false,
 }: PacketViewerProps) {
   const [showCoverSheet, setShowCoverSheet] = useState(false);
@@ -192,7 +196,17 @@ export function PacketViewer({
           {packet.documentIndex.map((doc, index) => (
             <div 
               key={`${doc.type}-${index}`}
-              className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+              className={cn(
+                "flex items-center justify-between p-3 transition-colors",
+                doc.status === 'missing' 
+                  ? "cursor-pointer hover:bg-primary/5" 
+                  : "hover:bg-muted/50"
+              )}
+              onClick={() => {
+                if (doc.status === 'missing' && onDocumentClick) {
+                  onDocumentClick(doc.type, doc.name);
+                }
+              }}
             >
               <div className="flex items-center gap-3">
                 <span className="text-xs text-muted-foreground font-mono w-6">
@@ -208,12 +222,28 @@ export function PacketViewer({
               </div>
               <div className="flex items-center gap-2">
                 {getStatusBadge(doc.status)}
-                {doc.url && (
+                {doc.status === 'missing' ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDocumentClick?.(doc.type, doc.name);
+                    }}
+                  >
+                    <Upload className="h-3 w-3" />
+                    Upload
+                  </Button>
+                ) : doc.url && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     className="h-8 w-8 p-0"
-                    onClick={() => handleViewDocument(doc.url!)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewDocument(doc.url!);
+                    }}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>

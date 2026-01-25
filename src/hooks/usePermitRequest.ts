@@ -40,15 +40,18 @@ export interface PermitRequest {
 
 export interface PermitDocument {
   id: string;
-  permit_request_id: string;
+  project_id: string;
   document_type: string;
-  document_name: string;
-  file_url: string;
+  file_name: string;
+  file_path: string;
   validation_status: string;
   validation_notes: string | null;
   extracted_text: string | null;
   ai_analysis_json: Record<string, unknown>;
-  uploaded_at: string;
+  processing_status: string | null;
+  extracted_data: Record<string, unknown> | null;
+  fields_populated: string[] | null;
+  created_at: string;
 }
 
 export interface JurisdictionRule {
@@ -123,7 +126,7 @@ export function usePermitRequest(permitId?: string) {
         .from('permit_project_documents')
         .select('*')
         .eq('project_id', permitId)
-        .order('uploaded_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setDocuments(data as unknown as PermitDocument[]);
