@@ -1,4 +1,5 @@
-import { useCallback, useState, Fragment } from "react";
+import { useCallback, useState, Fragment, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { 
   Upload, FileText, Loader2, CheckCircle, AlertCircle, 
-  X, RefreshCw, Trash2, Eye, ChevronDown, ChevronUp
+  X, RefreshCw, Trash2, Eye, ChevronDown, ChevronUp, ShieldAlert
 } from "lucide-react";
 import { usePermitBatchUpload, QueuedFile } from "@/hooks/usePermitBatchUpload";
 import { cn } from "@/lib/utils";
@@ -101,6 +102,8 @@ function getConfidenceBadge(confidence: number | undefined) {
 export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [storageReady, setStorageReady] = useState(true);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const {
     queue,
@@ -115,6 +118,38 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
     retryFile,
     confirmAll,
   } = usePermitBatchUpload({ onBatchComplete });
+
+  // Validate storage access on mount
+  useEffect(() => {
+    const validateStorageAccess = async () => {
+      try {
+        const { error } = await supabase.storage
+          .from("permit-training-packets")
+          .list("test-access", { limit: 1 });
+        
+        if (error) {
+          console.error("[PermitBatchUploader] Storage access check failed:", error);
+          if (error.message.includes("not found")) {
+            setStorageError("Training storage bucket not configured. Contact support.");
+          } else if (error.message.includes("policy") || error.message.includes("permission") || error.message.includes("denied")) {
+            setStorageError("You don't have permission to upload training files. Ensure you're added as a permit admin.");
+          } else {
+            setStorageError(`Storage error: ${error.message}`);
+          }
+          setStorageReady(false);
+        } else {
+          setStorageReady(true);
+          setStorageError(null);
+        }
+      } catch (err) {
+        console.error("[PermitBatchUploader] Storage validation error:", err);
+        setStorageReady(false);
+        setStorageError("Failed to validate storage access");
+      }
+    };
+
+    validateStorageAccess();
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -167,6 +202,17 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Storage Access Error Banner */}
+        {!storageReady && storageError && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-center gap-3">
+            <ShieldAlert className="h-5 w-5 text-destructive flex-shrink-0" />
+            <div>
+              <p className="font-medium text-destructive">Storage Access Error</p>
+              <p className="text-sm text-destructive/80">{storageError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Drop Zone */}
         <div
           onDragOver={handleDragOver}
@@ -174,18 +220,19 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
           onDrop={handleDrop}
           className={cn(
             "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
+            !storageReady ? "opacity-50 pointer-events-none" : "",
             isDragOver 
               ? "border-primary bg-primary/5" 
               : "border-muted-foreground/25 hover:border-primary/50"
           )}
-          onClick={() => document.getElementById("batch-file-input")?.click()}
+          onClick={() => storageReady && document.getElementById("batch-file-input")?.click()}
         >
           <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="text-lg font-medium">Drop permit packets here</p>
           <p className="text-sm text-muted-foreground mt-1">
             Supports PDF, JPG, PNG • Up to 50MB each • ~15-30s per file
           </p>
-          <Button variant="outline" className="mt-4">
+          <Button variant="outline" className="mt-4" disabled={!storageReady}>
             Browse Files
           </Button>
           <input
@@ -195,6 +242,7 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileSelect}
             className="hidden"
+            disabled={!storageReady}
           />
         </div>
 

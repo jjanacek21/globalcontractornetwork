@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Loader2, FileText, Clock, CheckCircle, AlertCircle, 
-  DollarSign, RefreshCw, Eye, MessageSquare, Crown, Brain, Upload
+  DollarSign, RefreshCw, Eye, MessageSquare, Crown, Brain, Upload, BarChart3
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { PermitDetailDialog } from "./PermitDetailDialog";
 import PermitTrainingUploader from "./PermitTrainingUploader";
 import PermitBatchUploader from "./PermitBatchUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
+import PermitTrainingAnalytics from "./PermitTrainingAnalytics";
 import { toast } from "sonner";
 
 interface PermitProject {
@@ -148,7 +149,7 @@ export default function PermitExpeditingTab() {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full max-w-md grid-cols-2">
+      <TabsList className="grid w-full max-w-xl grid-cols-3">
         <TabsTrigger value="queue" className="flex items-center gap-2">
           <Crown className="h-4 w-4" />
           Permit Queue
@@ -156,6 +157,10 @@ export default function PermitExpeditingTab() {
         <TabsTrigger value="training" className="flex items-center gap-2">
           <Brain className="h-4 w-4" />
           AI Training
+        </TabsTrigger>
+        <TabsTrigger value="analytics" className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Analytics
         </TabsTrigger>
       </TabsList>
 
@@ -397,6 +402,10 @@ export default function PermitExpeditingTab() {
         )}
         
         <TrainingSamplesTable refreshTrigger={trainingRefresh} />
+      </TabsContent>
+
+      <TabsContent value="analytics" className="space-y-6">
+        <PermitTrainingAnalytics />
       </TabsContent>
     </Tabs>
   );

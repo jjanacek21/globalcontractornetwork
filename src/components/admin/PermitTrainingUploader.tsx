@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Brain } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Brain, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 const FLORIDA_COUNTIES = [
@@ -66,6 +66,8 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
   const [analyzing, setAnalyzing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [storageReady, setStorageReady] = useState(true);
+  const [storageError, setStorageError] = useState<string | null>(null);
   
   // Form state
   const [county, setCounty] = useState("");
@@ -74,6 +76,38 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
   const [materialType, setMaterialType] = useState("");
   const [isHvhz, setIsHvhz] = useState(false);
   const [description, setDescription] = useState("");
+
+  // Validate storage access on mount
+  useEffect(() => {
+    const validateStorageAccess = async () => {
+      try {
+        const { error } = await supabase.storage
+          .from("permit-training-packets")
+          .list("test-access", { limit: 1 });
+        
+        if (error) {
+          console.error("[PermitTrainingUploader] Storage access check failed:", error);
+          if (error.message.includes("not found")) {
+            setStorageError("Training storage bucket not configured. Contact support.");
+          } else if (error.message.includes("policy") || error.message.includes("permission") || error.message.includes("denied")) {
+            setStorageError("You don't have permission to upload training files. Ensure you're added as a permit admin.");
+          } else {
+            setStorageError(`Storage error: ${error.message}`);
+          }
+          setStorageReady(false);
+        } else {
+          setStorageReady(true);
+          setStorageError(null);
+        }
+      } catch (err) {
+        console.error("[PermitTrainingUploader] Storage validation error:", err);
+        setStorageReady(false);
+        setStorageError("Failed to validate storage access");
+      }
+    };
+
+    validateStorageAccess();
+  }, []);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -224,10 +258,22 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Storage Access Error Banner */}
+        {!storageReady && storageError && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-center gap-3">
+            <ShieldAlert className="h-5 w-5 text-destructive flex-shrink-0" />
+            <div>
+              <p className="font-medium text-destructive">Storage Access Error</p>
+              <p className="text-sm text-destructive/80">{storageError}</p>
+            </div>
+          </div>
+        )}
+
         {/* File Drop Zone */}
         <div
           className={`
             relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
+            ${!storageReady ? "opacity-50 pointer-events-none" : ""}
             ${dragActive ? "border-primary bg-primary/10" : "border-muted-foreground/25 hover:border-primary/50"}
             ${selectedFile ? "bg-green-50 border-green-300 dark:bg-green-900/20" : ""}
           `}
@@ -241,6 +287,7 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            disabled={!storageReady}
           />
           {selectedFile ? (
             <div className="flex flex-col items-center gap-2">
@@ -342,7 +389,7 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
         {/* Upload Button */}
         <Button
           onClick={handleUpload}
-          disabled={uploading || analyzing || !selectedFile || !county || !tradeType}
+          disabled={uploading || analyzing || !selectedFile || !county || !tradeType || !storageReady}
           className="w-full"
           size="lg"
         >
