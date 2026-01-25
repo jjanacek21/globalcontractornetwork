@@ -232,11 +232,14 @@ function PermitQueensRequestDetailInner() {
 
   // Handler for upload completion
   const handleUploadComplete = async () => {
+    console.log('handleUploadComplete triggered - refetching documents');
     await refetchDocuments();
+    console.log('Documents refetched - running gap analysis');
     await runGapAnalysis();
-    if (packet) {
-      await handleRegeneratePacket();
-    }
+    console.log('Gap analysis complete - regenerating packet');
+    // Always regenerate packet after upload to update document index
+    await handleRegeneratePacket();
+    console.log('Packet regenerated successfully');
   };
 
   // Handler for questionnaire completion

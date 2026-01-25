@@ -30,7 +30,7 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required';
   order?: number;
 }
 
@@ -101,11 +101,16 @@ export function PacketViewer({
       case 'generated':
         return <CheckCircle2 className="h-4 w-4 text-primary" />;
       case 'included':
+      case 'auto_sourced':
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case 'needs_signature':
         return <PenTool className="h-4 w-4 text-orange-500" />;
       case 'missing':
         return <AlertCircle className="h-4 w-4 text-destructive" />;
+      case 'not_required':
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
+      default:
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -114,11 +119,16 @@ export function PacketViewer({
       case 'generated':
         return <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">Generated</Badge>;
       case 'included':
+      case 'auto_sourced':
         return <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">Included</Badge>;
       case 'needs_signature':
         return <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-orange-500/20">Needs Signature</Badge>;
       case 'missing':
         return <Badge variant="destructive">Missing</Badge>;
+      case 'not_required':
+        return <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">Not Required</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
