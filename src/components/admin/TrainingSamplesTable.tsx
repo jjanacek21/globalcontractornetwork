@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,19 @@ import {
 } from "@/components/ui/table";
 import {
   Search, Loader2, RefreshCw, Eye, Trash2, RotateCcw, 
-  CheckCircle, Clock, AlertCircle, Brain, FileText
+  CheckCircle, Clock, AlertCircle, Brain, FileText, Zap
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import TrainingDetailDialog from "./TrainingDetailDialog";
+
+// Helper to detect stuck records (processing for more than 5 minutes)
+const isStuck = (sample: TrainingSample): boolean => {
+  if (sample.processing_status !== "processing") return false;
+  const createdAt = new Date(sample.created_at || Date.now()).getTime();
+  const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+  return createdAt < fiveMinutesAgo;
+};
 
 interface TrainingSample {
   id: string;
@@ -57,10 +65,41 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
   const [countyFilter, setCountyFilter] = useState("all");
   const [selectedSample, setSelectedSample] = useState<TrainingSample | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
+  const [cleaningUp, setCleaningUp] = useState(false);
+
+  // Calculate counts for failed and stuck records
+  const failedOrStuckCount = samples.filter(s => 
+    s.processing_status === "failed" || isStuck(s)
+  ).length;
 
   useEffect(() => {
     fetchSamples();
   }, [refreshTrigger]);
+
+  // Cleanup stuck records on mount
+  useEffect(() => {
+    const cleanupOrphanedRecords = async () => {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from("permit_packet_training")
+        .update({ 
+          processing_status: "failed",
+          admin_notes: "Cleanup: Marked as failed due to timeout (5+ min in processing)"
+        })
+        .eq("processing_status", "processing")
+        .lt("created_at", fiveMinutesAgo)
+        .select();
+
+      if (!error && data && data.length > 0) {
+        console.log(`[TrainingSamplesTable] Auto-cleaned ${data.length} stuck records`);
+        fetchSamples();
+      }
+    };
+    
+    cleanupOrphanedRecords();
+  }, []);
 
   const fetchSamples = async () => {
     setLoading(true);
@@ -145,6 +184,73 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
     setDetailOpen(true);
   };
 
+  const handleRetryAllFailed = async () => {
+    const failedSamples = samples.filter(s => 
+      s.processing_status === "failed" || isStuck(s)
+    );
+    
+    if (failedSamples.length === 0) {
+      toast.info("No failed or stuck records to retry");
+      return;
+    }
+
+    setRetryingFailed(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    toast.info(`Retrying ${failedSamples.length} records...`);
+
+    for (const sample of failedSamples) {
+      try {
+        // Reset status to pending first
+        await supabase
+          .from("permit_packet_training")
+          .update({ 
+            processing_status: "pending",
+            admin_notes: `Retry initiated at ${new Date().toISOString()}`
+          })
+          .eq("id", sample.id);
+        
+        // Invoke the analyzer
+        const { error } = await supabase.functions.invoke("permit-packet-analyzer", {
+          body: { trainingId: sample.id, fileUrl: sample.file_url }
+        });
+
+        if (error) throw error;
+        successCount++;
+      } catch (error) {
+        console.error(`Retry failed for ${sample.id}:`, error);
+        errorCount++;
+      }
+    }
+    
+    toast.success(`Retried ${successCount} of ${failedSamples.length} records${errorCount > 0 ? ` (${errorCount} errors)` : ""}`);
+    setRetryingFailed(false);
+    fetchSamples();
+  };
+
+  const handleCleanupStuck = async () => {
+    setCleaningUp(true);
+    try {
+      const { data, error } = await supabase.rpc("cleanup_stuck_training_records");
+      
+      if (error) throw error;
+      
+      const count = data as number;
+      if (count > 0) {
+        toast.success(`Cleaned up ${count} stuck records`);
+        fetchSamples();
+      } else {
+        toast.info("No stuck records found");
+      }
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      toast.error("Failed to cleanup stuck records");
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
   const getQualityBadge = (score: number | null) => {
     if (score === null) return null;
     const percent = Math.round(score * 100);
@@ -207,6 +313,34 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
+              {failedOrStuckCount > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleRetryAllFailed}
+                  disabled={retryingFailed}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                >
+                  {retryingFailed ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                  )}
+                  Retry Failed ({failedOrStuckCount})
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleCleanupStuck}
+                disabled={cleaningUp}
+                title="Cleanup stuck records"
+              >
+                {cleaningUp ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4" />
+                )}
+              </Button>
               <Button variant="outline" size="icon" onClick={fetchSamples}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
