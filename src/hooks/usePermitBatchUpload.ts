@@ -143,23 +143,29 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
         f.id === item.id ? { ...f, status: "analyzing" as const, progress: 50, storageUrl: urlData.publicUrl } : f
       ));
 
-      // Create initial training record
+      // Create initial training record using raw insert with type assertion
+      const insertData = {
+        county: "Pending Detection",
+        file_url: urlData.publicUrl,
+        file_name: item.file.name,
+        processing_status: "queued",
+        batch_id: currentBatchId,
+        auto_detected: true,
+      };
+      
       const { data: trainingRecord, error: insertError } = await supabase
         .from("permit_packet_training")
-        .insert({
-          file_url: urlData.publicUrl,
-          file_name: item.file.name,
-          processing_status: "queued",
-          batch_id: currentBatchId,
-          auto_detected: true,
-        })
+        .insert(insertData as any)
         .select("id")
         .single();
 
       if (insertError) throw new Error(`Database insert failed: ${insertError.message}`);
 
+      const recordId = (trainingRecord as any)?.id;
+      if (!recordId) throw new Error("Failed to get training record ID");
+
       setQueue(prev => prev.map(f => 
-        f.id === item.id ? { ...f, progress: 60, trainingId: trainingRecord.id } : f
+        f.id === item.id ? { ...f, progress: 60, trainingId: recordId } : f
       ));
 
       // Call edge function for OCR detection
@@ -168,7 +174,7 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
         {
           body: {
             mode: "detect_and_analyze",
-            trainingId: trainingRecord.id,
+            trainingId: recordId,
             fileContent: base64,
             fileName: item.file.name,
             batchId: currentBatchId,
@@ -189,7 +195,7 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
         status: "ready",
         progress: 100,
         storageUrl: urlData.publicUrl,
-        trainingId: trainingRecord.id,
+        trainingId: recordId,
         detected: detection?.detected || null,
         confidence: detection?.confidence || null,
         detectedFrom: detection?.detected_from || [],
@@ -229,82 +235,91 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
     processingRef.current = true;
     setIsProcessing(true);
 
-    // Create batch record
+    // Create batch record using type assertion for new table
+    const batchInsert = {
+      total_files: queuedFiles.length,
+      status: "processing",
+    };
+    
     const { data: batch, error: batchError } = await supabase
-      .from("permit_training_batches")
-      .insert({
-        total_files: queuedFiles.length,
-        status: "processing",
-      })
+      .from("permit_training_batches" as any)
+      .insert(batchInsert)
       .select("id")
       .single();
 
     if (batchError) {
+      console.error("Batch creation error:", batchError);
       toast.error("Failed to create batch");
       processingRef.current = false;
       setIsProcessing(false);
       return;
     }
 
-    setBatchId(batch.id);
-    const currentBatchId = batch.id;
+    const batchRecord = batch as any;
+    setBatchId(batchRecord.id);
+    const currentBatchId = batchRecord.id;
 
-    // Process files with concurrency limit
-    const processNext = async () => {
-      while (processingRef.current) {
-        // Find next queued file
-        const nextFile = queue.find(f => f.status === "queued");
-        if (!nextFile) break;
+    // Process files sequentially with parallel limit
+    let processedCount = 0;
+    const filesToProcess = [...queuedFiles];
+    
+    const processNext = async (): Promise<void> => {
+      while (filesToProcess.length > 0 && processingRef.current) {
         if (activeCountRef.current >= maxConcurrent) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
           continue;
         }
 
+        const fileItem = filesToProcess.shift();
+        if (!fileItem) break;
+
         activeCountRef.current++;
         
-        // Mark as processing in queue state
-        setQueue(prev => {
-          const file = prev.find(f => f.id === nextFile.id);
-          if (file && file.status === "queued") {
-            return prev.map(f => f.id === nextFile.id ? { ...f, status: "uploading" as const } : f);
-          }
-          return prev;
-        });
-
-        processFile(nextFile, currentBatchId).finally(() => {
+        try {
+          await processFile(fileItem, currentBatchId);
+          processedCount++;
+        } finally {
           activeCountRef.current--;
-        });
+        }
       }
     };
 
-    // Start concurrent workers
-    const workers = Array(maxConcurrent).fill(null).map(() => processNext());
-    await Promise.all(workers);
+    // Start workers
+    const workerPromises = Array(Math.min(maxConcurrent, queuedFiles.length))
+      .fill(null)
+      .map(() => processNext());
+    
+    await Promise.all(workerPromises);
 
     // Wait for all active processing to complete
     while (activeCountRef.current > 0) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    // Update batch status
-    const finalQueue = queue;
-    const completed = finalQueue.filter(f => f.status === "ready").length;
-    const failed = finalQueue.filter(f => f.status === "failed").length;
+    // Get final stats
+    setQueue(currentQueue => {
+      const completed = currentQueue.filter(f => f.status === "ready").length;
+      const failed = currentQueue.filter(f => f.status === "failed").length;
 
-    await supabase
-      .from("permit_training_batches")
-      .update({
-        status: "completed",
-        processed_files: completed,
-        failed_files: failed,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", currentBatchId);
+      // Update batch status
+      supabase
+        .from("permit_training_batches" as any)
+        .update({
+          status: "completed",
+          processed_files: completed,
+          failed_files: failed,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", currentBatchId)
+        .then(() => {
+          toast.success(`Batch complete: ${completed} processed, ${failed} failed`);
+        });
+
+      return currentQueue;
+    });
 
     processingRef.current = false;
     setIsProcessing(false);
-    
-    toast.success(`Batch complete: ${completed} processed, ${failed} failed`);
     onBatchComplete?.();
   }, [queue, maxConcurrent, onFileComplete, onBatchComplete]);
 
@@ -340,7 +355,7 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
       try {
         // Merge detected values with overrides
         const finalValues = {
-          county: file.overrides.county ?? file.detected?.county ?? null,
+          county: file.overrides.county ?? file.detected?.county ?? "Unknown",
           city: file.overrides.city ?? file.detected?.city ?? null,
           trade_type: file.overrides.trade_type ?? file.detected?.trade_type ?? null,
           material_type: file.overrides.material_type ?? file.detected?.material_type ?? null,
@@ -351,7 +366,7 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
 
         const { error } = await supabase
           .from("permit_packet_training")
-          .update(finalValues)
+          .update(finalValues as any)
           .eq("id", file.trainingId);
 
         if (error) throw error;

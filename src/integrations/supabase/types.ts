@@ -4882,9 +4882,13 @@ export type Database = {
         Row: {
           admin_notes: string | null
           admin_verified: boolean | null
+          auto_detected: boolean | null
+          batch_id: string | null
           city: string | null
           county: string
           created_at: string | null
+          detected_from: string[] | null
+          detection_confidence: Json | null
           example_description: string | null
           extracted_documents: Json | null
           extracted_fields: Json | null
@@ -4907,9 +4911,13 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           admin_verified?: boolean | null
+          auto_detected?: boolean | null
+          batch_id?: string | null
           city?: string | null
           county: string
           created_at?: string | null
+          detected_from?: string[] | null
+          detection_confidence?: Json | null
           example_description?: string | null
           extracted_documents?: Json | null
           extracted_fields?: Json | null
@@ -4932,9 +4940,13 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           admin_verified?: boolean | null
+          auto_detected?: boolean | null
+          batch_id?: string | null
           city?: string | null
           county?: string
           created_at?: string | null
+          detected_from?: string[] | null
+          detection_confidence?: Json | null
           example_description?: string | null
           extracted_documents?: Json | null
           extracted_fields?: Json | null
@@ -4954,7 +4966,15 @@ export type Database = {
           uploaded_at?: string | null
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "permit_packet_training_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "permit_training_batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permit_packets: {
         Row: {
@@ -5601,6 +5621,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      permit_training_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          failed_files: number
+          id: string
+          processed_files: number
+          status: string
+          total_files: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_files?: number
+          id?: string
+          processed_files?: number
+          status?: string
+          total_files?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_files?: number
+          id?: string
+          processed_files?: number
+          status?: string
+          total_files?: number
+        }
+        Relationships: []
       }
       permit_training_files: {
         Row: {
@@ -8224,6 +8277,10 @@ export type Database = {
         Returns: boolean
       }
       has_social_access: { Args: never; Returns: boolean }
+      increment_batch_processed: {
+        Args: { batch_id: string }
+        Returns: undefined
+      }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_company_or_super_admin: {
         Args: { _company_id: string }

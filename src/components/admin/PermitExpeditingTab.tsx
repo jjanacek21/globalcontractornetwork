@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Loader2, FileText, Clock, CheckCircle, AlertCircle, 
-  DollarSign, RefreshCw, Eye, MessageSquare, Crown, Brain, BookOpen
+  DollarSign, RefreshCw, Eye, MessageSquare, Crown, Brain, Upload
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { PermitDetailDialog } from "./PermitDetailDialog";
 import PermitTrainingUploader from "./PermitTrainingUploader";
+import PermitBatchUploader from "./PermitBatchUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
 import { toast } from "sonner";
 
@@ -72,6 +73,7 @@ export default function PermitExpeditingTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("queue");
   const [trainingRefresh, setTrainingRefresh] = useState(0);
+  const [trainingMode, setTrainingMode] = useState<"single" | "batch">("batch");
 
   useEffect(() => {
     fetchPermits();
@@ -358,9 +360,42 @@ export default function PermitExpeditingTab() {
       </TabsContent>
 
       <TabsContent value="training" className="space-y-6">
-        <PermitTrainingUploader 
-          onUploadComplete={() => setTrainingRefresh(prev => prev + 1)} 
-        />
+        {/* Upload Mode Toggle */}
+        <div className="flex items-center gap-4 mb-4">
+          <span className="text-sm font-medium text-muted-foreground">Upload Mode:</span>
+          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+            <Button
+              variant={trainingMode === "batch" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTrainingMode("batch")}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Batch Upload
+            </Button>
+            <Button
+              variant={trainingMode === "single" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTrainingMode("single")}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Single Upload
+            </Button>
+          </div>
+        </div>
+
+        {/* Conditional Uploader */}
+        {trainingMode === "batch" ? (
+          <PermitBatchUploader 
+            onBatchComplete={() => setTrainingRefresh(prev => prev + 1)} 
+          />
+        ) : (
+          <PermitTrainingUploader 
+            onUploadComplete={() => setTrainingRefresh(prev => prev + 1)} 
+          />
+        )}
+        
         <TrainingSamplesTable refreshTrigger={trainingRefresh} />
       </TabsContent>
     </Tabs>
