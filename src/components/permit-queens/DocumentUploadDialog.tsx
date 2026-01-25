@@ -161,6 +161,9 @@ export function DocumentUploadDialog({
       }
       setProcessing(false);
 
+      // Trigger callback to refresh documents and regenerate packet
+      console.log('Upload complete, triggering onUploadComplete callback');
+      toast.info('Regenerating packet with new document...');
       onUploadComplete?.();
     } catch (error) {
       console.error('Upload error:', error);

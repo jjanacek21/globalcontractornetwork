@@ -34,7 +34,7 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required';
   source?: 'auto_fill' | 'auto_source' | 'user_upload' | 'generated' | 'city_specific' | 'conditional';
   requiresNotary?: boolean;
   requiresRecording?: boolean;
@@ -522,20 +522,42 @@ serve(async (req) => {
         });
         totalPages += item.pages || 4;
       } else if (item.source === 'conditional') {
-        // Conditional documents - check if condition is met
-        const conditionMet = evaluateCondition(item.condition, permit);
-        documentIndex.push({
-          type: item.type,
-          name: docName,
-          pages: conditionMet ? (item.pages || 1) : 0,
-          status: conditionMet ? 'conditional' : 'missing',
-          source: 'conditional',
-          condition: item.condition,
-          requiresNotary: item.needs_notary,
-          requiresRecording: item.requires_recording,
-        });
-        if (conditionMet) {
+        // Conditional documents - FIRST check if user already uploaded this document
+        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
+        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        
+        if (dbDoc || passedDoc) {
+          // User uploaded this document - mark as included regardless of condition
+          const url = dbDoc?.file_path || dbDoc?.file_url || passedDoc?.url;
+          documentIndex.push({
+            type: item.type,
+            name: docName,
+            pages: item.pages || 1,
+            url: url,
+            status: 'included',
+            source: 'user_upload',
+            condition: item.condition,
+            requiresNotary: item.needs_notary,
+            requiresRecording: item.requires_recording,
+          });
           totalPages += item.pages || 1;
+          if (url) pdfUrls.push(url);
+        } else {
+          // No upload - check if condition is met to determine if required
+          const conditionMet = evaluateCondition(item.condition, permit);
+          documentIndex.push({
+            type: item.type,
+            name: docName,
+            pages: conditionMet ? (item.pages || 1) : 0,
+            status: conditionMet ? 'missing' : 'not_required',
+            source: 'conditional',
+            condition: item.condition,
+            requiresNotary: item.needs_notary,
+            requiresRecording: item.requires_recording,
+          });
+          if (conditionMet) {
+            totalPages += item.pages || 1;
+          }
         }
       }
     }
