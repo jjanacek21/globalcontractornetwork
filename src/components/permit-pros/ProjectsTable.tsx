@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Trash2, ChevronDown, ChevronUp, Upload, ClipboardCheck, RefreshCw, MoreHorizontal } from "lucide-react";
+import { Eye, Trash2, ChevronDown, ChevronUp, Upload, ClipboardCheck, RefreshCw, MoreHorizontal, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +70,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function ProjectsTable({ projects, onRefresh, onViewProject, onAction }: ProjectsTableProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'created_at' | 'customer_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -212,6 +214,14 @@ export function ProjectsTable({ projects, onRefresh, onViewProject, onAction }: 
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-zinc-800 border-zinc-700">
+                        <DropdownMenuItem 
+                          onClick={() => navigate(`/permit-queens/request/${project.id}`)}
+                          className="text-zinc-300 hover:bg-zinc-700 hover:text-white cursor-pointer"
+                        >
+                          <FileText className="h-4 w-4 mr-2 text-primary" />
+                          Manage Permit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-zinc-700" />
                         <DropdownMenuItem 
                           onClick={() => onAction(project.id, 'upload')}
                           className="text-zinc-300 hover:bg-zinc-700 hover:text-white cursor-pointer"

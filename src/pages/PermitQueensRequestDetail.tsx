@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Crown, Download, FileText, MessageSquare, CreditCard, Loader2, RefreshCw, Package } from 'lucide-react';
+import { ArrowLeft, Crown, Download, FileText, MessageSquare, CreditCard, Loader2, RefreshCw, Package, Sparkles } from 'lucide-react';
 import { StatusTimeline, getStatusLabel, getStatusColor } from '@/components/permit-queens/StatusTimeline';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
 import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
+import { DocumentUploadDialog } from '@/components/permit-queens/DocumentUploadDialog';
+import { AIQuestionnaireDialog } from '@/components/permit-queens/AIQuestionnaireDialog';
 import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,6 +65,12 @@ export default function PermitQueensRequestDetail() {
   const [packet, setPacket] = useState<PacketData | null>(null);
   const [loadingPacket, setLoadingPacket] = useState(true);
   const [generatingPacket, setGeneratingPacket] = useState(false);
+  
+  // Dialog states for interactive checklist
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<string | null>(null);
+  const [uploadDocName, setUploadDocName] = useState<string>('');
+  const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
 
   useEffect(() => {
     if (permit && documents) {
@@ -121,8 +129,8 @@ export default function PermitQueensRequestDetail() {
           generateCoverSheet: true,
           uploadedDocuments: documents.map(d => ({
             type: d.document_type,
-            name: d.document_name,
-            url: d.file_url,
+            name: d.file_name,
+            url: d.file_path,
           })),
         },
       });
@@ -171,7 +179,7 @@ export default function PermitQueensRequestDetail() {
           },
           uploadedDocuments: documents.map(d => ({
             type: d.document_type,
-            name: d.document_name,
+            name: d.file_name,
           })),
           jurisdictionRules: [],
         },
@@ -198,6 +206,31 @@ export default function PermitQueensRequestDetail() {
 
   const handleDocumentDelete = async (docId: string): Promise<boolean> => {
     return await deleteDocument(docId);
+  };
+  
+  // Handler for document upload from PacketViewer or MissingItemsPanel
+  const handleDocumentClick = (docType: string, docName: string) => {
+    setUploadDocType(docType);
+    setUploadDocName(docName);
+    setUploadDialogOpen(true);
+  };
+
+  // Handler for upload completion
+  const handleUploadComplete = async () => {
+    await refetchDocuments();
+    await runGapAnalysis();
+    if (packet) {
+      await handleRegeneratePacket();
+    }
+  };
+
+  // Handler for questionnaire completion
+  const handleQuestionnaireComplete = async () => {
+    await refetch();
+    await runGapAnalysis();
+    if (packet) {
+      await handleRegeneratePacket();
+    }
   };
 
   const formatCurrency = (amount: number | null | undefined) => {
@@ -250,8 +283,8 @@ export default function PermitQueensRequestDetail() {
   const uploadedDocsForUploader: UploadedDocument[] = documents.map(doc => ({
     id: doc.id,
     type: doc.document_type || 'other',
-    name: doc.document_name,
-    url: doc.file_url,
+    name: doc.file_name,
+    url: doc.file_path,
     status: mapDocumentStatus(doc.validation_status || 'pending'),
     notes: doc.validation_notes || undefined,
   }));
@@ -422,12 +455,28 @@ export default function PermitQueensRequestDetail() {
                 </CardContent>
               </Card>
             ) : (
-              <MissingItemsPanel
-                completionPercentage={completionPercentage}
-                missingFields={missingFields}
-                missingDocuments={missingDocuments}
-                complianceIssues={complianceIssues}
-              />
+              <>
+                <MissingItemsPanel
+                  completionPercentage={completionPercentage}
+                  missingFields={missingFields}
+                  missingDocuments={missingDocuments}
+                  complianceIssues={complianceIssues}
+                  onUploadClick={(docType) => handleDocumentClick(docType, docType.replace(/_/g, ' '))}
+                  onFieldClick={() => setQuestionnaireOpen(true)}
+                />
+                
+                {/* AI Questionnaire Button */}
+                {missingFields.length > 0 && (
+                  <Button 
+                    onClick={() => setQuestionnaireOpen(true)} 
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Complete Missing Info with AI
+                  </Button>
+                )}
+              </>
             )}
 
             {/* Payment Card */}
@@ -482,6 +531,7 @@ export default function PermitQueensRequestDetail() {
                   <PacketViewer
                     packet={packet}
                     onRegenerate={handleRegeneratePacket}
+                    onDocumentClick={handleDocumentClick}
                     generating={generatingPacket}
                   />
                 ) : (
@@ -520,6 +570,31 @@ export default function PermitQueensRequestDetail() {
           </div>
         </div>
       </main>
+
+      {/* Document Upload Dialog */}
+      <DocumentUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        docType={uploadDocType}
+        docName={uploadDocName}
+        permitProjectId={permit?.id || ''}
+        onUploadComplete={handleUploadComplete}
+      />
+
+      {/* AI Questionnaire Dialog */}
+      <AIQuestionnaireDialog
+        open={questionnaireOpen}
+        onOpenChange={setQuestionnaireOpen}
+        permitId={permit?.id || ''}
+        missingFields={missingFields.map(f => ({
+          field: f.field,
+          description: f.reason,
+          priority: f.priority,
+        }))}
+        permitType={permit?.permit_type || 'roofing'}
+        jurisdiction={permit?.jurisdiction_county || 'Palm Beach'}
+        onComplete={handleQuestionnaireComplete}
+      />
     </div>
   );
 }

@@ -110,3 +110,12 @@ verify_jwt = false
 
 [functions.source-product-approvals]
 verify_jwt = false
+
+[functions.permit-smart-form-filler]
+verify_jwt = false
+
+[functions.permit-questionnaire-ai]
+verify_jwt = false
+
+[functions.permit-document-processor]
+verify_jwt = false

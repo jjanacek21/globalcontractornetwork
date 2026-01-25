@@ -4887,11 +4887,14 @@ export type Database = {
           ai_analysis_json: Json | null
           created_at: string
           document_type: string
+          extracted_data: Json | null
           extracted_text: string | null
+          fields_populated: string[] | null
           file_name: string
           file_path: string
           file_size: number | null
           id: string
+          processing_status: string | null
           project_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -4902,11 +4905,14 @@ export type Database = {
           ai_analysis_json?: Json | null
           created_at?: string
           document_type: string
+          extracted_data?: Json | null
           extracted_text?: string | null
+          fields_populated?: string[] | null
           file_name: string
           file_path: string
           file_size?: number | null
           id?: string
+          processing_status?: string | null
           project_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -4917,11 +4923,14 @@ export type Database = {
           ai_analysis_json?: Json | null
           created_at?: string
           document_type?: string
+          extracted_data?: Json | null
           extracted_text?: string | null
+          fields_populated?: string[] | null
           file_name?: string
           file_path?: string
           file_size?: number | null
           id?: string
+          processing_status?: string | null
           project_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
