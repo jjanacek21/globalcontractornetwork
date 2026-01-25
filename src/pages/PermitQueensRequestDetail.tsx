@@ -11,6 +11,8 @@ import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
 import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
 import { DocumentUploadDialog } from '@/components/permit-queens/DocumentUploadDialog';
 import { AIQuestionnaireDialog } from '@/components/permit-queens/AIQuestionnaireDialog';
+import { PermitStatusBanner } from '@/components/permit-queens/PermitStatusBanner';
+import { ContractorMessagesTab } from '@/components/permit-queens/ContractorMessagesTab';
 import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -367,6 +369,16 @@ function PermitQueensRequestDetailInner() {
         </header>
 
         <main className="container mx-auto px-4 py-8 flex-1">
+          {/* Status Banner - Always visible at top */}
+          <PermitStatusBanner
+            pipelineStatus={permit.pipeline_status || 'intake'}
+            cityReviewStatus={(permit as any).city_review_status}
+            paymentStatus={permit.payment_status}
+            readyForPaymentNotifiedAt={(permit as any).ready_for_payment_notified_at}
+            onPayNow={() => toast.info('Payment coming soon!')}
+            className="mb-6"
+          />
+
           {/* Status Timeline */}
           <Card className="mb-6">
             <CardHeader>
@@ -459,24 +471,10 @@ function PermitQueensRequestDetailInner() {
                 </TabsContent>
 
                 <TabsContent value="messages">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5" />
-                        Messages
-                      </CardTitle>
-                      <CardDescription>
-                        Communicate with your permit expediter
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No messages yet.</p>
-                        <p className="text-sm">Your expediter will contact you here if they need additional information.</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ContractorMessagesTab 
+                    permitId={permit.id}
+                    contractorName={permit.owner_name || permit.customer_name}
+                  />
                 </TabsContent>
               </Tabs>
             </div>

@@ -4356,6 +4356,71 @@ export type Database = {
           },
         ]
       }
+      permit_document_library: {
+        Row: {
+          approval_number: string | null
+          contractor_id: string | null
+          created_at: string | null
+          document_name: string
+          document_type: string
+          expiration_date: string | null
+          file_path: string
+          file_url: string
+          id: string
+          is_verified: boolean | null
+          manufacturer: string | null
+          notes: string | null
+          product_name: string | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          approval_number?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          document_name: string
+          document_type: string
+          expiration_date?: string | null
+          file_path: string
+          file_url: string
+          id?: string
+          is_verified?: boolean | null
+          manufacturer?: string | null
+          notes?: string | null
+          product_name?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          approval_number?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          document_name?: string
+          document_type?: string
+          expiration_date?: string | null
+          file_path?: string
+          file_url?: string
+          id?: string
+          is_verified?: boolean | null
+          manufacturer?: string | null
+          notes?: string | null
+          product_name?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_document_library_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "permit_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_field_mappings: {
         Row: {
           conditional_logic: Json | null
@@ -4956,6 +5021,8 @@ export type Database = {
           assigned_expediter_id: string | null
           building_dept_id: string | null
           city: string | null
+          city_review_status: string | null
+          city_submission_date: string | null
           completion_percentage: number | null
           complexity_tier: string | null
           contractor_id: string | null
@@ -4988,6 +5055,7 @@ export type Database = {
           permit_type: string | null
           pipeline_status: string | null
           property_address: string
+          ready_for_payment_notified_at: string | null
           revision_notes: string | null
           revision_requested: boolean | null
           roof_accessories: string | null
@@ -5015,6 +5083,8 @@ export type Database = {
           assigned_expediter_id?: string | null
           building_dept_id?: string | null
           city?: string | null
+          city_review_status?: string | null
+          city_submission_date?: string | null
           completion_percentage?: number | null
           complexity_tier?: string | null
           contractor_id?: string | null
@@ -5047,6 +5117,7 @@ export type Database = {
           permit_type?: string | null
           pipeline_status?: string | null
           property_address: string
+          ready_for_payment_notified_at?: string | null
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
@@ -5074,6 +5145,8 @@ export type Database = {
           assigned_expediter_id?: string | null
           building_dept_id?: string | null
           city?: string | null
+          city_review_status?: string | null
+          city_submission_date?: string | null
           completion_percentage?: number | null
           complexity_tier?: string | null
           contractor_id?: string | null
@@ -5106,6 +5179,7 @@ export type Database = {
           permit_type?: string | null
           pipeline_status?: string | null
           property_address?: string
+          ready_for_payment_notified_at?: string | null
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
