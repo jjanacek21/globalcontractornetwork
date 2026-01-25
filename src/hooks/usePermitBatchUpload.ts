@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -37,6 +37,8 @@ export interface QueuedFile {
   };
   error?: string;
   overrides: Partial<DetectedMetadata>;
+  startedAt?: number;
+  elapsedMs?: number;
 }
 
 interface BatchUploadOptions {
@@ -44,6 +46,10 @@ interface BatchUploadOptions {
   onFileComplete?: (file: QueuedFile) => void;
   onBatchComplete?: () => void;
 }
+
+const PROCESSING_TIMEOUT_MS = 90000; // 90 seconds timeout per file
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [2000, 4000, 8000]; // Exponential backoff
 
 export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
   const { maxConcurrent = 3, onFileComplete, onBatchComplete } = options;
@@ -53,6 +59,29 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
   const [batchId, setBatchId] = useState<string | null>(null);
   const processingRef = useRef(false);
   const activeCountRef = useRef(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update elapsed time for processing files
+  useEffect(() => {
+    if (isProcessing) {
+      timerRef.current = setInterval(() => {
+        setQueue(prev => prev.map(f => {
+          if ((f.status === "uploading" || f.status === "analyzing") && f.startedAt) {
+            return { ...f, elapsedMs: Date.now() - f.startedAt };
+          }
+          return f;
+        }));
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isProcessing]);
 
   // Add files to the queue
   const addFiles = useCallback((files: File[]) => {
@@ -102,12 +131,70 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
     ));
   }, []);
 
+  // Helper to call edge function with timeout and retry
+  const invokeWithRetry = async (
+    trainingId: string, 
+    base64: string, 
+    fileName: string, 
+    batchId: string
+  ) => {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), PROCESSING_TIMEOUT_MS);
+        
+        const { data, error } = await supabase.functions.invoke(
+          "permit-packet-analyzer",
+          {
+            body: {
+              mode: "detect_and_analyze",
+              trainingId,
+              fileContent: base64,
+              fileName,
+              batchId,
+            },
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          // Check for rate limit
+          if (error.message?.includes("429") || error.message?.toLowerCase().includes("rate")) {
+            lastError = new Error("Rate limited - retrying...");
+            if (attempt < MAX_RETRIES - 1) {
+              await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+              continue;
+            }
+          }
+          throw error;
+        }
+        
+        return data;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error("Unknown error");
+        if (err instanceof Error && err.name === "AbortError") {
+          throw new Error("Processing timeout - file took too long to analyze");
+        }
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+        }
+      }
+    }
+    
+    throw lastError || new Error("Failed after max retries");
+  };
+
   // Process a single file
   const processFile = async (item: QueuedFile, currentBatchId: string): Promise<QueuedFile> => {
+    const startedAt = Date.now();
+    
     try {
       // Update status to uploading
       setQueue(prev => prev.map(f => 
-        f.id === item.id ? { ...f, status: "uploading" as const, progress: 10 } : f
+        f.id === item.id ? { ...f, status: "uploading" as const, progress: 10, startedAt, elapsedMs: 0 } : f
       ));
 
       // Convert file to base64
@@ -168,21 +255,8 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
         f.id === item.id ? { ...f, progress: 60, trainingId: recordId } : f
       ));
 
-      // Call edge function for OCR detection
-      const { data: detectData, error: detectError } = await supabase.functions.invoke(
-        "permit-packet-analyzer",
-        {
-          body: {
-            mode: "detect_and_analyze",
-            trainingId: recordId,
-            fileContent: base64,
-            fileName: item.file.name,
-            batchId: currentBatchId,
-          },
-        }
-      );
-
-      if (detectError) throw new Error(`Detection failed: ${detectError.message}`);
+      // Call edge function for OCR detection with timeout and retry
+      const detectData = await invokeWithRetry(recordId, base64, item.file.name, currentBatchId);
 
       setQueue(prev => prev.map(f => 
         f.id === item.id ? { ...f, progress: 100 } : f
