@@ -117,11 +117,7 @@ export function SmartDocumentUploader({
           throw uploadError;
         }
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('permit-documents')
-          .getPublicUrl(filePath);
-
+        // Store file path for signed URL generation (private bucket)
         // Detect if it's a pre-signed form (simple heuristic based on name)
         const isPreSigned = file.name.toLowerCase().includes('signed') || 
                            file.name.toLowerCase().includes('notarized');
@@ -130,7 +126,7 @@ export function SmartDocumentUploader({
           id: crypto.randomUUID(),
           name: file.name,
           type: selectedType || 'other',
-          url: publicUrl,
+          url: filePath, // Store path, not public URL - will generate signed URL on view
           status: isPreSigned ? 'signed' : 'uploaded',
           isPreSigned,
         };
@@ -176,6 +172,28 @@ export function SmartDocumentUploader({
       toast.success('Document removed');
     } catch (error) {
       toast.error('Failed to remove document');
+    }
+  };
+
+  const handleViewDocument = async (doc: UploadedDocument) => {
+    try {
+      // Generate signed URL for private bucket access
+      const { data, error } = await supabase.storage
+        .from('permit-documents')
+        .createSignedUrl(doc.url, 3600); // 1 hour expiry
+      
+      if (error) {
+        console.error('Signed URL error:', error);
+        toast.error('Failed to access document');
+        return;
+      }
+      
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('View document error:', error);
+      toast.error('Failed to open document');
     }
   };
 
@@ -296,10 +314,12 @@ export function SmartDocumentUploader({
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(doc)}
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                        <Eye className="h-4 w-4" />
-                      </a>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleViewDocument(doc)}
+                    >
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button 
                       variant="ghost" 
