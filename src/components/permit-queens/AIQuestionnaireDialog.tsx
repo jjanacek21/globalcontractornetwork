@@ -87,6 +87,26 @@ export function AIQuestionnaireDialog({
     }
   }, [open, messages]);
 
+  // Tips map with contractor-specific guidance for each field
+  const tipsMap: Record<string, string> = {
+    'mean_roof_height': '💡 Tip: Measure from grade level to the midpoint between the eave and ridge. For multi-story buildings, measure to the highest midpoint. Your inspector will verify this.',
+    'roof_slope': '💡 Tip: Use a pitch gauge or level + ruler. Place the level against the roof and measure 12" horizontally, then measure the vertical rise. Format as rise:12 (e.g., 4:12 means 4" rise per 12" run).',
+    'building_sqft': '💡 Tip: Use the property appraiser\'s recorded square footage, or measure exterior walls. Include all heated/cooled areas.',
+    'owner_name': '💡 Tip: This must match the name on the deed exactly. Check the property appraiser website if unsure.',
+    'owner_phone': '💡 Tip: Provide a number where the owner can be reached during business hours for inspector callbacks.',
+    'owner_email': '💡 Tip: This will be used for permit status notifications and inspection scheduling.',
+    'contractor_license': '💡 Tip: Enter your active Florida contractor license number (e.g., CCC1234567 for roofing). This will be verified against DBPR records.',
+    'property_value': '💡 Tip: For permit valuation, use the total cost of materials + labor for this project. This determines the permit fee.',
+    'construction_type': '💡 Tip: Check the original building permit or property appraiser records. Common types: CBS (concrete block/stucco), Wood Frame, Steel Frame, Masonry.',
+    'year_built': '💡 Tip: Find this on the property appraiser website or the original Certificate of Occupancy. This affects which building code version applies.',
+    'hvac_type': '💡 Tip: Common types: Split System, Package Unit, Mini-Split, Heat Pump. Check the equipment nameplate or the quote from your supplier.',
+    'window_count': '💡 Tip: Count all window units being replaced, including fixed and operable. Picture windows and sliding glass doors count separately.',
+    'door_count': '💡 Tip: Count entry doors and impact-rated garage doors. Sliding glass doors typically count as windows for permit purposes.',
+    'folio_number': '💡 Tip: Find this on the county property appraiser website. Search by address to get the parcel/folio number.',
+    'legal_description': '💡 Tip: This is on the warranty deed or property appraiser website. Include lot, block, subdivision name.',
+    'existing_roof_type': '💡 Tip: Common types: Shingle, Tile, Metal, Flat/Built-Up. Look at the current roof or previous permit records.',
+  };
+
   const generateQuestionForField = (field: MissingField): string => {
     const fieldName = field.field;
     const description = field.description;
@@ -107,7 +127,11 @@ export function AIQuestionnaireDialog({
       'door_count': 'How many doors are included in this permit?',
     };
 
-    return questionMap[fieldName] || `${description || `Please provide the ${fieldName.replace(/_/g, ' ')}`}`;
+    const question = questionMap[fieldName] || `${description || `Please provide the ${fieldName.replace(/_/g, ' ')}`}`;
+    
+    // Append tip if available
+    const tip = tipsMap[fieldName];
+    return tip ? `${question}\n\n${tip}` : question;
   };
 
   const handleSendMessage = async () => {
@@ -314,15 +338,25 @@ export function AIQuestionnaireDialog({
                     <Bot className="h-4 w-4 text-primary" />
                   </div>
                 )}
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-lg px-4 py-2",
-                    message.role === 'user'
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  )}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-lg px-4 py-2",
+                      message.role === 'user'
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    )}
+                  >
+                    <div className="text-sm whitespace-pre-wrap">
+                      {message.content.split('\n\n').map((part, i) => (
+                        part.startsWith('💡 Tip:') ? (
+                          <span key={i} className="block mt-2 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                            {part}
+                          </span>
+                        ) : (
+                          <span key={i} className={i > 0 ? 'block mt-2' : ''}>{part}</span>
+                        )
+                      ))}
+                    </div>
                 </div>
                 {message.role === 'user' && (
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">

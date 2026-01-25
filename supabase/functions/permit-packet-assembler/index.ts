@@ -736,11 +736,12 @@ Respond with JSON:
         });
       
       if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
+        // Use signed URL for private bucket instead of public URL
+        const { data: signedData } = await supabase.storage
           .from('permit-documents')
-          .getPublicUrl(packetPath);
+          .createSignedUrl(packetPath, 60 * 60 * 24 * 7); // 7 days expiry
         
-        packetPdfUrl = publicUrl;
+        packetPdfUrl = signedData?.signedUrl || packetPath;
       } else {
         console.warn('Could not upload packet PDF:', uploadError);
       }
