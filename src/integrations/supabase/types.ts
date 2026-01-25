@@ -4188,6 +4188,54 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_ai_knowledge: {
+        Row: {
+          city: string | null
+          confidence: number | null
+          created_at: string | null
+          frequency: number | null
+          id: string
+          is_verified: boolean | null
+          jurisdiction_county: string
+          knowledge_type: string
+          pattern_description: string
+          source: string | null
+          trade_type: string | null
+          updated_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          city?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          frequency?: number | null
+          id?: string
+          is_verified?: boolean | null
+          jurisdiction_county: string
+          knowledge_type: string
+          pattern_description: string
+          source?: string | null
+          trade_type?: string | null
+          updated_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          city?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          frequency?: number | null
+          id?: string
+          is_verified?: boolean | null
+          jurisdiction_county?: string
+          knowledge_type?: string
+          pattern_description?: string
+          source?: string | null
+          trade_type?: string | null
+          updated_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       permit_building_departments: {
         Row: {
           address: string | null
@@ -4253,6 +4301,44 @@ export type Database = {
           zip_codes?: string[] | null
         }
         Relationships: []
+      }
+      permit_chat_sessions: {
+        Row: {
+          context_snapshot: Json | null
+          created_at: string | null
+          id: string
+          messages: Json | null
+          permit_project_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          messages?: Json | null
+          permit_project_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context_snapshot?: Json | null
+          created_at?: string | null
+          id?: string
+          messages?: Json | null
+          permit_project_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_chat_sessions_permit_project_id_fkey"
+            columns: ["permit_project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permit_contractors: {
         Row: {
@@ -5016,6 +5102,10 @@ export type Database = {
         Row: {
           after_hours: boolean | null
           ai_analysis_json: Json | null
+          ai_analysis_timestamp: string | null
+          ai_confidence_score: number | null
+          ai_risk_factors: Json | null
+          ai_suggested_actions: Json | null
           architectural_approval: boolean | null
           architectural_approval_required: boolean | null
           assigned_expediter_id: string | null
@@ -5078,6 +5168,10 @@ export type Database = {
         Insert: {
           after_hours?: boolean | null
           ai_analysis_json?: Json | null
+          ai_analysis_timestamp?: string | null
+          ai_confidence_score?: number | null
+          ai_risk_factors?: Json | null
+          ai_suggested_actions?: Json | null
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
@@ -5140,6 +5234,10 @@ export type Database = {
         Update: {
           after_hours?: boolean | null
           ai_analysis_json?: Json | null
+          ai_analysis_timestamp?: string | null
+          ai_confidence_score?: number | null
+          ai_risk_factors?: Json | null
+          ai_suggested_actions?: Json | null
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
