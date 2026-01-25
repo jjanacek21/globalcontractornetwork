@@ -111,7 +111,7 @@ export function PermitDetailDialog({ open, onOpenChange, permit, onRefresh }: Pe
       const result = await supabase
         .from('permit_project_documents')
         .select('*')
-        .eq('permit_project_id', permit.id);
+        .eq('project_id', permit.id);
 
       if (result.error) throw result.error;
       const docs = ((result.data as any[]) || []).sort((a: any, b: any) => 
