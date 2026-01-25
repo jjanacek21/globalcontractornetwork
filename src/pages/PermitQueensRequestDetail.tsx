@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Crown, Download, FileText, MessageSquare, CreditCard, Loader2, RefreshCw, Package, Sparkles } from 'lucide-react';
+import { ArrowLeft, Crown, FileText, MessageSquare, CreditCard, Loader2, RefreshCw, Package, Sparkles, PanelRightClose, PanelRightOpen, CheckCircle2 } from 'lucide-react';
 import { StatusTimeline, getStatusLabel, getStatusColor } from '@/components/permit-queens/StatusTimeline';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { DocumentUploader } from '@/components/permit-queens/DocumentUploader';
@@ -15,6 +15,15 @@ import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatScopeOfWork } from '@/lib/scopeFormatter';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarTrigger,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 const DOCUMENT_REQUIREMENTS = [
   { type: 'noc', label: 'Notice of Commencement', required: true, description: 'Required for most permits' },
@@ -51,7 +60,8 @@ interface ComplianceIssue {
   severity: 'critical' | 'warning' | 'info';
 }
 
-export default function PermitQueensRequestDetail() {
+// Inner component to access sidebar context
+function PermitQueensRequestDetailInner() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { permit, documents, loading, uploadDocument, deleteDocument, refetch, refetchDocuments } = usePermitRequest(id);
@@ -71,6 +81,9 @@ export default function PermitQueensRequestDetail() {
   const [uploadDocType, setUploadDocType] = useState<string | null>(null);
   const [uploadDocName, setUploadDocName] = useState<string>('');
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
+  
+  // Sidebar context
+  const { open: sidebarOpen, toggleSidebar } = useSidebar();
 
   useEffect(() => {
     if (permit && documents) {
@@ -102,7 +115,7 @@ export default function PermitQueensRequestDetail() {
           totalPages: data.total_pages || 0,
           documentCount: data.document_count,
           completionPercentage: docIndex.length > 0 
-            ? Math.round((docIndex.filter((d: any) => d.status === 'included' || d.status === 'generated').length / docIndex.length) * 100)
+            ? Math.round((docIndex.filter((d: any) => d.status === 'included' || d.status === 'generated' || d.status === 'auto_sourced').length / docIndex.length) * 100)
             : 0,
           missingDocuments: docIndex.filter((d: any) => d.status === 'missing').map((d: any) => d.name),
           needsSignature: docIndex.filter((d: any) => d.status === 'needs_signature').map((d: any) => d.name),
@@ -300,278 +313,323 @@ export default function PermitQueensRequestDetail() {
   };
 
   const amountDue = permit.fee_estimate || getTierPrice(permit.complexity_tier);
+  
+  // Count missing items for badge
+  const totalMissingItems = missingFields.length + missingDocuments.length + complianceIssues.length;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/permit-queens/dashboard')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+    <>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="border-b bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/permit-queens/dashboard')}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Crown className="h-6 w-6 text-primary" />
+                  <span className="font-bold text-xl">Permit Request</span>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
-                <Crown className="h-6 w-6 text-primary" />
-                <span className="font-bold text-xl">Permit Request</span>
+                <Badge className={getStatusColor(permit.pipeline_status || 'intake')}>
+                  {getStatusLabel(permit.pipeline_status || 'intake')}
+                </Badge>
+                <Button variant="outline" size="sm" onClick={() => { refetch(); refetchDocuments(); }}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={toggleSidebar}
+                  className="relative"
+                >
+                  {sidebarOpen ? (
+                    <PanelRightClose className="h-4 w-4" />
+                  ) : (
+                    <>
+                      <PanelRightOpen className="h-4 w-4" />
+                      {totalMissingItems > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 text-xs bg-destructive text-destructive-foreground rounded-full flex items-center justify-center">
+                          {totalMissingItems}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge className={getStatusColor(permit.pipeline_status || 'intake')}>
-                {getStatusLabel(permit.pipeline_status || 'intake')}
-              </Badge>
-              <Button variant="outline" size="sm" onClick={() => { refetch(); refetchDocuments(); }}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 flex-1">
+          {/* Status Timeline */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Application Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusTimeline currentStatus={permit.pipeline_status || 'intake'} />
+            </CardContent>
+          </Card>
+
+          {/* Main Content Grid - 2 columns for details/payment */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            {/* Left Column - Details */}
+            <div className="space-y-6">
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="documents">Documents</TabsTrigger>
+                  <TabsTrigger value="messages">Messages</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Property Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Property Address</p>
+                          <p className="font-medium">{permit.property_address}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Jurisdiction</p>
+                          <p className="font-medium">{permit.jurisdiction_county || 'Not specified'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Permit Type</p>
+                          <p className="font-medium capitalize">{(permit.permit_type || '').replace('_', ' ')}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Valuation</p>
+                          <p className="font-medium">{formatCurrency(permit.valuation)}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Owner Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Owner Name</p>
+                          <p className="font-medium">{permit.owner_name || permit.customer_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Email</p>
+                          <p className="font-medium">{permit.owner_email || permit.customer_email || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Phone</p>
+                          <p className="font-medium">{permit.owner_phone || permit.customer_phone || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Scope of Work</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {formatScopeOfWork(permit.scope_description, permit.permit_type)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="documents">
+                  <DocumentUploader
+                    requirements={DOCUMENT_REQUIREMENTS}
+                    uploadedDocuments={uploadedDocsForUploader}
+                    onUpload={handleDocumentUpload}
+                    onDelete={handleDocumentDelete}
+                  />
+                </TabsContent>
+
+                <TabsContent value="messages">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Messages
+                      </CardTitle>
+                      <CardDescription>
+                        Communicate with your permit expediter
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No messages yet.</p>
+                        <p className="text-sm">Your expediter will contact you here if they need additional information.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
-          </div>
-        </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Status Timeline */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Application Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StatusTimeline currentStatus={permit.pipeline_status || 'intake'} />
-          </CardContent>
-        </Card>
-
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          {/* Left Column - Details */}
-          <div className="space-y-6">
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="messages">Messages</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="details" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Property Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Property Address</p>
-                        <p className="font-medium">{permit.property_address}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Jurisdiction</p>
-                        <p className="font-medium">{permit.jurisdiction_county || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Permit Type</p>
-                        <p className="font-medium capitalize">{(permit.permit_type || '').replace('_', ' ')}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valuation</p>
-                        <p className="font-medium">{formatCurrency(permit.valuation)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Owner Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Owner Name</p>
-                        <p className="font-medium">{permit.owner_name || permit.customer_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-medium">{permit.owner_email || permit.customer_email || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <p className="font-medium">{permit.owner_phone || permit.customer_phone || 'Not provided'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Scope of Work</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap">
-                      {formatScopeOfWork(permit.scope_description, permit.permit_type)}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="documents">
-                <DocumentUploader
-                  requirements={DOCUMENT_REQUIREMENTS}
-                  uploadedDocuments={uploadedDocsForUploader}
-                  onUpload={handleDocumentUpload}
-                  onDelete={handleDocumentDelete}
-                />
-              </TabsContent>
-
-              <TabsContent value="messages">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" />
-                      Messages
-                    </CardTitle>
-                    <CardDescription>
-                      Communicate with your permit expediter
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No messages yet.</p>
-                      <p className="text-sm">Your expediter will contact you here if they need additional information.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right Column - Actions & Summary */}
-          <div className="space-y-6">
-            {/* Missing Items */}
-            {analyzingGaps ? (
+            {/* Right Column - Payment & Info */}
+            <div className="space-y-6">
+              {/* Payment Card */}
               <Card>
-                <CardContent className="py-6 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                  <p className="text-sm text-muted-foreground">Checking completeness...</p>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Service Tier</span>
+                    <Badge variant="secondary" className="capitalize">
+                      {permit.complexity_tier || 'Basic'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Amount Due</span>
+                    <span className="font-semibold text-lg">{formatCurrency(amountDue)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Payment Status</span>
+                    <Badge variant={permit.payment_status === 'paid' ? 'default' : 'outline'}>
+                      {permit.payment_status || 'Unpaid'}
+                    </Badge>
+                  </div>
+                  {permit.payment_status !== 'paid' && (
+                    <Button className="w-full" disabled>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay Now (Coming Soon)
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
-            ) : (
-              <>
-                <MissingItemsPanel
-                  completionPercentage={completionPercentage}
-                  missingFields={missingFields}
-                  missingDocuments={missingDocuments}
-                  complianceIssues={complianceIssues}
-                  onUploadClick={(docType) => handleDocumentClick(docType, docType.replace(/_/g, ' '))}
-                  onFieldClick={() => setQuestionnaireOpen(true)}
-                />
-                
-                {/* AI Questionnaire Button */}
-                {missingFields.length > 0 && (
-                  <Button 
-                    onClick={() => setQuestionnaireOpen(true)} 
-                    className="w-full"
-                    variant="outline"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Complete Missing Info with AI
-                  </Button>
-                )}
-              </>
-            )}
 
-            {/* Payment Card */}
+              {/* Request Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Request Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Request ID</span>
+                    <span className="font-mono">{permit.id.slice(0, 8)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Created</span>
+                    <span>{formatDate(permit.created_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last Updated</span>
+                    <span>{formatDate(permit.updated_at)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Full-Width Centered Permit Packet Section */}
+          <div className="max-w-5xl mx-auto">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payment
+                  <Package className="h-5 w-5" />
+                  Generated Permit Packet
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Service Tier</span>
-                  <Badge variant="secondary" className="capitalize">
-                    {permit.complexity_tier || 'Basic'}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Amount Due</span>
-                  <span className="font-semibold text-lg">{formatCurrency(amountDue)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Payment Status</span>
-                  <Badge variant={permit.payment_status === 'paid' ? 'default' : 'outline'}>
-                    {permit.payment_status || 'Unpaid'}
-                  </Badge>
-                </div>
-                {permit.payment_status !== 'paid' && (
-                  <Button className="w-full" disabled>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Pay Now (Coming Soon)
-                  </Button>
+              <CardContent>
+                {loadingPacket ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading packet...</p>
+                  </div>
+                ) : packet ? (
+                  <PacketViewer
+                    packet={packet}
+                    onRegenerate={handleRegeneratePacket}
+                    onDocumentClick={handleDocumentClick}
+                    generating={generatingPacket}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No packet generated yet</p>
+                    <Button onClick={handleRegeneratePacket} variant="outline" size="lg" disabled={generatingPacket}>
+                      {generatingPacket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Generate Packet
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* Request Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Request ID</span>
-                  <span className="font-mono">{permit.id.slice(0, 8)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Created</span>
-                  <span>{formatDate(permit.created_at)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Updated</span>
-                  <span>{formatDate(permit.updated_at)}</span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
+        </main>
+      </div>
 
-        {/* Full-Width Centered Permit Packet Section */}
-        <div className="max-w-5xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Generated Permit Packet
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingPacket ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                  <p className="text-sm text-muted-foreground mt-2">Loading packet...</p>
-                </div>
-              ) : packet ? (
-                <PacketViewer
-                  packet={packet}
-                  onRegenerate={handleRegeneratePacket}
-                  onDocumentClick={handleDocumentClick}
-                  generating={generatingPacket}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No packet generated yet</p>
-                  <Button onClick={handleRegeneratePacket} variant="outline" size="lg" disabled={generatingPacket}>
-                    {generatingPacket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Generate Packet
-                  </Button>
-                </div>
+      {/* Right Sidebar - Collapsible Missing Items Panel */}
+      <Sidebar side="right" collapsible="offcanvas" className="border-l bg-card">
+        <SidebarHeader className="p-4 border-b">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Packet Checklist</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {completionPercentage}% complete
+          </p>
+        </SidebarHeader>
+        <SidebarContent className="p-4">
+          {analyzingGaps ? (
+            <div className="text-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+              <p className="text-sm text-muted-foreground">Analyzing completeness...</p>
+            </div>
+          ) : completionPercentage === 100 && missingFields.length === 0 && missingDocuments.length === 0 && complianceIssues.length === 0 ? (
+            <div className="text-center py-6">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
+              <h4 className="font-semibold text-lg mb-1">Packet Complete!</h4>
+              <p className="text-sm text-muted-foreground">
+                All required items have been provided.
+              </p>
+            </div>
+          ) : (
+            <>
+              <MissingItemsPanel
+                completionPercentage={completionPercentage}
+                missingFields={missingFields}
+                missingDocuments={missingDocuments}
+                complianceIssues={complianceIssues}
+                onUploadClick={(docType) => handleDocumentClick(docType, docType.replace(/_/g, ' '))}
+                onFieldClick={() => setQuestionnaireOpen(true)}
+                className="shadow-none border-0 p-0"
+              />
+              
+              {/* AI Questionnaire Button */}
+              {missingFields.length > 0 && (
+                <Button 
+                  onClick={() => setQuestionnaireOpen(true)} 
+                  className="w-full mt-4"
+                  variant="default"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Complete Missing Info with AI
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+            </>
+          )}
+        </SidebarContent>
+      </Sidebar>
 
       {/* Document Upload Dialog */}
       <DocumentUploadDialog
@@ -597,6 +655,17 @@ export default function PermitQueensRequestDetail() {
         jurisdiction={permit?.jurisdiction_county || 'Palm Beach'}
         onComplete={handleQuestionnaireComplete}
       />
-    </div>
+    </>
+  );
+}
+
+// Main component wrapper with SidebarProvider
+export default function PermitQueensRequestDetail() {
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen bg-background flex w-full">
+        <PermitQueensRequestDetailInner />
+      </div>
+    </SidebarProvider>
   );
 }
