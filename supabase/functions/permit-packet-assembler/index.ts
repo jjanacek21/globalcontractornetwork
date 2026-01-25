@@ -160,13 +160,14 @@ async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[])
   y -= 20;
   
   for (const doc of documentIndex) {
-    const checkmark = doc.status === 'included' || doc.status === 'generated' ? '✓' : 
-                      doc.status === 'needs_signature' ? '✎' : '○';
-    const statusColor = doc.status === 'included' || doc.status === 'generated' ? rgb(0.2, 0.6, 0.2) :
+    // Use ASCII-compatible symbols for WinAnsi encoding
+    const checkmark = doc.status === 'included' || doc.status === 'generated' || doc.status === 'auto_sourced' ? '[X]' : 
+                      doc.status === 'needs_signature' ? '[S]' : '[ ]';
+    const statusColor = doc.status === 'included' || doc.status === 'generated' || doc.status === 'auto_sourced' ? rgb(0.2, 0.6, 0.2) :
                         doc.status === 'needs_signature' ? rgb(0.8, 0.5, 0.1) : rgb(0.5, 0.5, 0.5);
     
-    page.drawText(checkmark, { x: leftMargin, y, size: 12, font: helvetica, color: statusColor });
-    page.drawText(doc.name, { x: leftMargin + 20, y, size: 10, font: helvetica });
+    page.drawText(checkmark, { x: leftMargin, y, size: 10, font: helvetica, color: statusColor });
+    page.drawText(doc.name, { x: leftMargin + 30, y, size: 10, font: helvetica });
     
     if (doc.status === 'needs_signature') {
       page.drawText('(signature required)', { x: 400, y, size: 8, font: helvetica, color: rgb(0.8, 0.5, 0.1) });
@@ -296,9 +297,9 @@ serve(async (req) => {
     
     // Fetch uploaded documents from DB
     const { data: dbDocuments, error: docsError } = await supabase
-      .from('permit_documents')
+      .from('permit_project_documents')
       .select('*')
-      .eq('permit_project_id', permitRequestId);
+      .eq('project_id', permitRequestId);
     
     if (docsError) {
       console.error('Error fetching documents:', docsError);
@@ -458,8 +459,31 @@ serve(async (req) => {
           });
         }
       } else if (item.source === 'auto_source') {
-        // Auto-source from product_approvals based on product_category
+        // Auto-source from product_approvals - only add products ONCE
+        // Skip if this is a document type other than 'product_approvals' (to avoid duplicates)
+        if (item.type !== 'product_approvals') {
+          // For non-product doc types (fastening_patterns, impact_test_report, etc.)
+          // Add as a single placeholder document
+          documentIndex.push({
+            type: item.type,
+            name: docName,
+            pages: item.pages || 1,
+            status: 'missing',
+            source: 'auto_source',
+          });
+          continue;
+        }
+        
+        // Process each selected product for the 'product_approvals' type
         for (const sp of selectedProducts) {
+          // Check if this product was already added to avoid duplicates
+          const alreadyAdded = documentIndex.some(d => 
+            d.type === 'product_approval' && 
+            d.name.includes(sp.product_name) &&
+            d.name.includes(sp.manufacturer)
+          );
+          if (alreadyAdded) continue;
+          
           const approval = productApprovals.find(a => a.id === sp.id);
           const fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
           
