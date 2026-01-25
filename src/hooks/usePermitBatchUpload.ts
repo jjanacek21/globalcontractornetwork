@@ -217,13 +217,13 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
       // Upload to storage
       const fileName = `batch_${currentBatchId}/${item.id}_${item.file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("permit-training")
+        .from("permit-training-packets")
         .upload(fileName, item.file, { upsert: true });
 
       if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
       const { data: urlData } = supabase.storage
-        .from("permit-training")
+        .from("permit-training-packets")
         .getPublicUrl(uploadData.path);
 
       setQueue(prev => prev.map(f => 
