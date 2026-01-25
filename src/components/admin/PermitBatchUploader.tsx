@@ -183,7 +183,7 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
           <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="text-lg font-medium">Drop permit packets here</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Supports PDF, JPG, PNG • Up to 50MB each • Multiple files allowed
+            Supports PDF, JPG, PNG • Up to 50MB each • ~15-30s per file
           </p>
           <Button variant="outline" className="mt-4">
             Browse Files
@@ -265,18 +265,27 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
                             )}
                           </td>
                           <td className="py-2 px-3">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(item.status)}
-                              <span className={cn(
-                                item.status === "failed" && "text-destructive",
-                                item.status === "confirmed" && "text-emerald-600"
-                              )}>
-                                {getStatusLabel(item.status)}
-                              </span>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(item.status)}
+                                <span className={cn(
+                                  item.status === "failed" && "text-destructive",
+                                  item.status === "confirmed" && "text-emerald-600"
+                                )}>
+                                  {getStatusLabel(item.status)}
+                                </span>
+                              </div>
+                              {(item.status === "uploading" || item.status === "analyzing") && (
+                                <>
+                                  <Progress value={item.progress} className="h-1 w-20" />
+                                  {item.elapsedMs !== undefined && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {Math.round(item.elapsedMs / 1000)}s
+                                    </span>
+                                  )}
+                                </>
+                              )}
                             </div>
-                            {(item.status === "uploading" || item.status === "analyzing") && (
-                              <Progress value={item.progress} className="h-1 mt-1 w-20" />
-                            )}
                           </td>
                           <td className="py-2 px-3 max-w-[200px] truncate" title={item.file.name}>
                             {item.file.name}
