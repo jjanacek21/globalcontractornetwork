@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, LogOut, Users, FileText, Building2, TrendingUp, 
-  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle, Trophy, Home, MapPin
+  Search, Loader2, DollarSign, Eye, BarChart3, UserPlus, Bell, Lightbulb, ShieldCheck, GraduationCap, Brain, AlertTriangle, Trophy, Home, MapPin, Crown
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { LeadDetailsDialog } from "@/components/admin/LeadDetailsDialog";
@@ -30,6 +30,7 @@ import GamificationManagement from "@/components/admin/GamificationManagement";
 import PropertyOwnersTable from "@/components/admin/PropertyOwnersTable";
 import BuildingDepartmentsTab from "@/components/admin/BuildingDepartmentsTab";
 import { ProductApprovalsManagement } from "@/components/admin/ProductApprovalsManagement";
+import PermitExpeditingTab from "@/components/admin/PermitExpeditingTab";
 
 interface UnifiedLead {
   id: string;
@@ -512,6 +513,9 @@ const SuperAdminDashboard = () => {
                 <TabsTrigger value="superadmins" className="gap-2"><ShieldCheck className="h-4 w-4" />Super Admins</TabsTrigger>
                 <TabsTrigger value="building-depts" className="gap-2"><MapPin className="h-4 w-4" />Building Depts</TabsTrigger>
                 <TabsTrigger value="product-approvals" className="gap-2"><Shield className="h-4 w-4" />Product Approvals</TabsTrigger>
+                <TabsTrigger value="permit-expediting" className="gap-2 bg-amber-100 data-[state=active]:bg-amber-200">
+                  <Crown className="h-4 w-4 text-amber-600" />Permit Expediting
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="pending">
@@ -564,6 +568,10 @@ const SuperAdminDashboard = () => {
 
               <TabsContent value="product-approvals">
                 <ProductApprovalsManagement />
+              </TabsContent>
+
+              <TabsContent value="permit-expediting">
+                <PermitExpeditingTab />
               </TabsContent>
             </Tabs>
           </CardContent>
