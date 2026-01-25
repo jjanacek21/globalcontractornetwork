@@ -4358,6 +4358,8 @@ export type Database = {
       }
       permit_field_mappings: {
         Row: {
+          conditional_logic: Json | null
+          county: string | null
           created_at: string | null
           default_value: string | null
           field_type: string | null
@@ -4367,11 +4369,16 @@ export type Database = {
           our_field: string
           page_number: number | null
           pdf_field: string
+          section: string | null
           template_id: string | null
           transform_function: string | null
+          transform_type: string | null
           updated_at: string | null
+          validation_pattern: string | null
         }
         Insert: {
+          conditional_logic?: Json | null
+          county?: string | null
           created_at?: string | null
           default_value?: string | null
           field_type?: string | null
@@ -4381,11 +4388,16 @@ export type Database = {
           our_field: string
           page_number?: number | null
           pdf_field: string
+          section?: string | null
           template_id?: string | null
           transform_function?: string | null
+          transform_type?: string | null
           updated_at?: string | null
+          validation_pattern?: string | null
         }
         Update: {
+          conditional_logic?: Json | null
+          county?: string | null
           created_at?: string | null
           default_value?: string | null
           field_type?: string | null
@@ -4395,9 +4407,12 @@ export type Database = {
           our_field?: string
           page_number?: number | null
           pdf_field?: string
+          section?: string | null
           template_id?: string | null
           transform_function?: string | null
+          transform_type?: string | null
           updated_at?: string | null
+          validation_pattern?: string | null
         }
         Relationships: [
           {
@@ -4412,7 +4427,10 @@ export type Database = {
       permit_form_templates: {
         Row: {
           category: string | null
+          city: string | null
           common_errors: string[] | null
+          conditional_logic: Json | null
+          county: string | null
           created_at: string | null
           field_mapping: Json | null
           file_path: string
@@ -4425,17 +4443,24 @@ export type Database = {
           is_fillable: boolean | null
           jurisdiction_id: string | null
           jurisdiction_name: string
+          material_type: string | null
+          notary_threshold: number | null
           notes: string | null
           page_count: number | null
           requires_notary: boolean | null
           requires_signature: boolean | null
+          sections_required: Json | null
+          signature_fields: Json | null
           signature_locations: Json | null
           trade_types: string[] | null
           updated_at: string | null
         }
         Insert: {
           category?: string | null
+          city?: string | null
           common_errors?: string[] | null
+          conditional_logic?: Json | null
+          county?: string | null
           created_at?: string | null
           field_mapping?: Json | null
           file_path: string
@@ -4448,17 +4473,24 @@ export type Database = {
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name: string
+          material_type?: string | null
+          notary_threshold?: number | null
           notes?: string | null
           page_count?: number | null
           requires_notary?: boolean | null
           requires_signature?: boolean | null
+          sections_required?: Json | null
+          signature_fields?: Json | null
           signature_locations?: Json | null
           trade_types?: string[] | null
           updated_at?: string | null
         }
         Update: {
           category?: string | null
+          city?: string | null
           common_errors?: string[] | null
+          conditional_logic?: Json | null
+          county?: string | null
           created_at?: string | null
           field_mapping?: Json | null
           file_path?: string
@@ -4471,10 +4503,14 @@ export type Database = {
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name?: string
+          material_type?: string | null
+          notary_threshold?: number | null
           notes?: string | null
           page_count?: number | null
           requires_notary?: boolean | null
           requires_signature?: boolean | null
+          sections_required?: Json | null
+          signature_fields?: Json | null
           signature_locations?: Json | null
           trade_types?: string[] | null
           updated_at?: string | null
@@ -4639,6 +4675,105 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      permit_packet_structures: {
+        Row: {
+          city: string | null
+          conditional_documents: Json | null
+          county: string
+          created_at: string | null
+          document_structure: Json
+          id: string
+          is_active: boolean | null
+          is_hvhz: boolean | null
+          material_type: string | null
+          notes: string | null
+          recording_requirements: Json | null
+          signature_requirements: Json | null
+          trade_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          city?: string | null
+          conditional_documents?: Json | null
+          county: string
+          created_at?: string | null
+          document_structure: Json
+          id?: string
+          is_active?: boolean | null
+          is_hvhz?: boolean | null
+          material_type?: string | null
+          notes?: string | null
+          recording_requirements?: Json | null
+          signature_requirements?: Json | null
+          trade_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string | null
+          conditional_documents?: Json | null
+          county?: string
+          created_at?: string | null
+          document_structure?: Json
+          id?: string
+          is_active?: boolean | null
+          is_hvhz?: boolean | null
+          material_type?: string | null
+          notes?: string | null
+          recording_requirements?: Json | null
+          signature_requirements?: Json | null
+          trade_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      permit_packet_training: {
+        Row: {
+          city: string | null
+          county: string
+          created_at: string | null
+          example_description: string | null
+          extracted_fields: Json | null
+          id: string
+          is_hvhz: boolean | null
+          material_type: string | null
+          packet_structure: Json
+          page_count: number | null
+          quality_score: number | null
+          source_file_name: string | null
+          trade_type: string
+        }
+        Insert: {
+          city?: string | null
+          county: string
+          created_at?: string | null
+          example_description?: string | null
+          extracted_fields?: Json | null
+          id?: string
+          is_hvhz?: boolean | null
+          material_type?: string | null
+          packet_structure: Json
+          page_count?: number | null
+          quality_score?: number | null
+          source_file_name?: string | null
+          trade_type: string
+        }
+        Update: {
+          city?: string | null
+          county?: string
+          created_at?: string | null
+          example_description?: string | null
+          extracted_fields?: Json | null
+          id?: string
+          is_hvhz?: boolean | null
+          material_type?: string | null
+          packet_structure?: Json
+          page_count?: number | null
+          quality_score?: number | null
+          source_file_name?: string | null
+          trade_type?: string
+        }
+        Relationships: []
       }
       permit_packets: {
         Row: {
