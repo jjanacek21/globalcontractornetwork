@@ -13,6 +13,7 @@ import { DocumentUploadDialog } from '@/components/permit-queens/DocumentUploadD
 import { AIQuestionnaireDialog } from '@/components/permit-queens/AIQuestionnaireDialog';
 import { PermitStatusBanner } from '@/components/permit-queens/PermitStatusBanner';
 import { ContractorMessagesTab } from '@/components/permit-queens/ContractorMessagesTab';
+import { AIPermitChat } from '@/components/permit-queens/AIPermitChat';
 import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -656,6 +657,33 @@ function PermitQueensRequestDetailInner() {
         jurisdiction={permit?.jurisdiction_county || 'Palm Beach'}
         onComplete={handleQuestionnaireComplete}
       />
+
+      {/* AI Permit Expediter Chat */}
+      {permit?.id && (
+        <AIPermitChat 
+          permitId={permit.id} 
+          onAnalysisComplete={(analysis) => {
+            // Update local state with AI analysis results
+            if (analysis.missingFields) {
+              setMissingFields(analysis.missingFields.map(f => ({
+                field: f.field,
+                reason: f.reason,
+                priority: f.priority as 'high' | 'medium' | 'low',
+              })));
+            }
+            if (analysis.missingDocuments) {
+              setMissingDocuments(analysis.missingDocuments.map(d => ({
+                docType: d.docType,
+                reason: d.reason,
+                priority: d.priority as 'high' | 'medium' | 'low',
+              })));
+            }
+            if (typeof analysis.confidenceScore === 'number') {
+              setCompletionPercentage(analysis.confidenceScore);
+            }
+          }}
+        />
+      )}
     </>
   );
 }

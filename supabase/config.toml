@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.permit-document-processor]
 verify_jwt = false
+
+[functions.permit-expediter-brain]
+verify_jwt = false
