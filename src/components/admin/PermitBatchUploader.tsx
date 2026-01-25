@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -250,8 +250,8 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
                     const materialOptions = getMaterialOptions(tradeType);
 
                     return (
-                      <>
-                        <tr key={item.id} className="border-t hover:bg-muted/30">
+                      <Fragment key={item.id}>
+                        <tr className="border-t hover:bg-muted/30">
                           <td className="py-2 px-3">
                             {item.status === "ready" && (
                               <Button
@@ -415,7 +415,7 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
                         </tr>
                         {/* Expanded Details Row */}
                         {isExpanded && item.status === "ready" && (
-                          <tr key={`${item.id}-details`} className="bg-muted/20">
+                          <tr className="bg-muted/20">
                             <td colSpan={9} className="py-3 px-6">
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
@@ -456,13 +456,13 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
                         )}
                         {/* Error Row */}
                         {item.status === "failed" && item.error && (
-                          <tr key={`${item.id}-error`} className="bg-destructive/5">
+                          <tr className="bg-destructive/5">
                             <td colSpan={9} className="py-2 px-6">
                               <p className="text-sm text-destructive">Error: {item.error}</p>
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
