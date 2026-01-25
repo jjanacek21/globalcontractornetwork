@@ -29,11 +29,15 @@ interface DocumentStatus {
   id: string;
   name: string;
   type: string;
-  status: 'auto_filled' | 'auto_sourced' | 'uploaded' | 'pending_upload' | 'pending_signature' | 'complete';
+  status: 'auto_filled' | 'auto_sourced' | 'uploaded' | 'pending_upload' | 'pending_signature' | 'complete' | 'city_specific' | 'conditional';
   pages?: number;
   source?: string;
   signatureRequired?: boolean;
   notes?: string;
+  requiresNotary?: boolean;
+  requiresRecording?: boolean;
+  citySpecific?: boolean;
+  condition?: string;
 }
 
 interface PacketPreviewProps {
@@ -128,11 +132,69 @@ export function PacketPreview({
         id: 'roof_wall_affidavit',
         name: 'Roof-to-Wall Connection Affidavit',
         type: 'form',
-        status: formData.valuation > 300000 ? 'pending_upload' : 'auto_filled',
+        status: formData.valuation > 300000 ? 'conditional' : 'auto_filled',
         pages: 1,
         source: formData.valuation > 300000 ? 'Requires inspection' : 'AI Auto-Fill',
         signatureRequired: true,
-        notes: formData.valuation > 300000 ? 'Property over $300K requires retrofit inspection' : undefined,
+        requiresNotary: true,
+        notes: formData.valuation > 300000 ? 'Required for permits $300K+ (Section 706.8)' : undefined,
+        condition: formData.valuation > 300000 ? 'if_over_300k' : undefined,
+      });
+    }
+    
+    // Palm Beach / Boca Raton specific
+    if (jurisdiction.toLowerCase().includes('palm beach') || jurisdiction.toLowerCase().includes('boca raton')) {
+      documents.push({
+        id: 'noc',
+        name: 'Notice of Commencement (NOC)',
+        type: 'form',
+        status: formData.owner_name ? 'auto_filled' : 'pending_upload',
+        pages: 1,
+        source: 'AI Auto-Fill',
+        signatureRequired: true,
+        requiresNotary: true,
+        requiresRecording: true,
+        notes: 'Must be recorded with Palm Beach County Clerk',
+      });
+      
+      if (jurisdiction.toLowerCase().includes('boca raton')) {
+        documents.push({
+          id: 'boca_supplemental',
+          name: 'Boca Raton Supplemental Roofing Package',
+          type: 'form',
+          status: 'city_specific',
+          pages: 6,
+          source: 'City-Specific Form',
+          signatureRequired: true,
+          requiresNotary: true,
+          citySpecific: true,
+          notes: 'Sections A, B, C required for metal roofing',
+        });
+      }
+    }
+    
+    // Miami-Dade specific
+    if (jurisdiction.toLowerCase().includes('miami-dade')) {
+      if (isHVHZ) {
+        documents.push({
+          id: 'hvhz_section_d',
+          name: 'HVHZ Section D - Steep Slope Roofing',
+          type: 'form',
+          status: 'auto_filled',
+          pages: 2,
+          source: 'AI Auto-Fill',
+          signatureRequired: true,
+        });
+      }
+      
+      documents.push({
+        id: 'owner_notification',
+        name: 'Owner Notification for Roofing',
+        type: 'form',
+        status: formData.owner_name ? 'auto_filled' : 'pending_upload',
+        pages: 1,
+        source: 'AI Auto-Fill',
+        signatureRequired: true,
       });
     }
 
@@ -249,6 +311,10 @@ export function PacketPreview({
         return <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-orange-500/20">Needs Signature</Badge>;
       case 'pending_upload':
         return <Badge variant="outline" className="text-muted-foreground">Pending</Badge>;
+      case 'city_specific':
+        return <Badge variant="secondary" className="bg-purple-500/10 text-purple-600 border-purple-500/20">City Form</Badge>;
+      case 'conditional':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Conditional</Badge>;
     }
   };
 

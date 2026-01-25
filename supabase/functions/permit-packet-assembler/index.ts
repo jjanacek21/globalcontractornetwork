@@ -25,6 +25,7 @@ interface PacketRequest {
     name: string;
     url: string;
   }>;
+  usePacketStructure?: boolean; // Use the new packet structures system
 }
 
 interface DocumentInfo {
@@ -32,7 +33,28 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional';
+  source?: 'auto_fill' | 'auto_source' | 'user_upload' | 'generated' | 'city_specific' | 'conditional';
+  requiresNotary?: boolean;
+  requiresRecording?: boolean;
+  condition?: string;
+}
+
+interface PacketStructureDocument {
+  order: number;
+  type: string;
+  source: string;
+  pages?: number;
+  needs_notary?: boolean;
+  needs_signature?: boolean;
+  requires_recording?: boolean;
+  city_specific?: boolean;
+  condition?: string;
+  sections?: string[];
+  product_category?: string;
+  include_full_report?: boolean;
+  include_pe_seal?: boolean;
+  test_type?: string;
 }
 
 async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[]): Promise<Uint8Array> {
@@ -243,7 +265,8 @@ serve(async (req) => {
       generateCoverSheet = true, 
       generateNOC = true,
       selectedProducts = [],
-      uploadedDocuments = []
+      uploadedDocuments = [],
+      usePacketStructure = true, // Default to using new packet structures
     } = await req.json() as PacketRequest;
     
     if (!permitRequestId) {
@@ -294,19 +317,86 @@ serve(async (req) => {
       productApprovals = data || [];
     }
     
-    // Define packet structure
-    const PACKET_STRUCTURE = [
-      { type: 'cover_sheet', name: 'Cover Sheet', generated: true, pages: 1 },
-      { type: 'permit_application', name: 'Permit Application', generated: true, pages: 2 },
-      { type: 'noc', name: 'Notice of Commencement', generated: true, needs_signature: true, pages: 1 },
-      { type: 'owner_authorization', name: 'Owner Authorization Letter', needs_signature: true },
-      { type: 'signed_contract', name: 'Signed Contract', uploaded: true },
-      { type: 'coi', name: 'Certificate of Insurance', uploaded: true },
-      { type: 'contractor_license', name: 'Contractor License', uploaded: true },
-      { type: 'product_approvals', name: 'Product Approvals (NOAs)', lookup: true },
-      { type: 'roof_layout', name: 'Roof Layout/Diagram', uploaded: true },
-      { type: 'site_photos', name: 'Property Photos', uploaded: true },
+    // Detect jurisdiction info for packet structure lookup
+    const county = permit.county || permit.jurisdiction_county || '';
+    const city = permit.city || '';
+    const tradeType = permit.permit_type || permit.service_type || 'roofing';
+    const materialType = permit.material_type || permit.new_roof_type || '';
+    const isHVHZ = permit.is_hvhz || false;
+    
+    // Try to fetch packet structure from database
+    let packetStructure: PacketStructureDocument[] | null = null;
+    
+    if (usePacketStructure) {
+      // First try city-specific structure
+      let { data: structure } = await supabase
+        .from('permit_packet_structures')
+        .select('document_structure')
+        .eq('county', county)
+        .eq('city', city)
+        .eq('trade_type', tradeType)
+        .eq('is_active', true)
+        .single();
+      
+      // If no city-specific, try county default
+      if (!structure) {
+        const { data: countyStructure } = await supabase
+          .from('permit_packet_structures')
+          .select('document_structure')
+          .eq('county', county)
+          .is('city', null)
+          .eq('trade_type', tradeType)
+          .eq('is_active', true)
+          .single();
+        structure = countyStructure;
+      }
+      
+      if (structure?.document_structure) {
+        packetStructure = structure.document_structure as PacketStructureDocument[];
+        console.log(`Using packet structure for ${county}/${city}/${tradeType}`);
+      }
+    }
+    
+    // Define packet structure (use DB structure or fallback)
+    const PACKET_STRUCTURE = packetStructure || [
+      { order: 1, type: 'cover_sheet', source: 'generated', pages: 1 },
+      { order: 2, type: 'permit_application', source: 'auto_fill', needs_signature: true, pages: 2 },
+      { order: 3, type: 'noc', source: 'auto_fill', needs_notary: true, pages: 1 },
+      { order: 4, type: 'owner_authorization', source: 'user_upload', needs_signature: true },
+      { order: 5, type: 'signed_contract', source: 'user_upload' },
+      { order: 6, type: 'coi', source: 'user_upload' },
+      { order: 7, type: 'contractor_license', source: 'user_upload' },
+      { order: 8, type: 'product_approvals', source: 'auto_source', product_category: 'roofing' },
+      { order: 9, type: 'roof_layout', source: 'user_upload' },
+      { order: 10, type: 'site_photos', source: 'user_upload' },
     ];
+    
+    // Document type name mapping
+    const DOC_TYPE_NAMES: Record<string, string> = {
+      'cover_sheet': 'Cover Sheet',
+      'permit_application': 'Permit Application',
+      'noc': 'Notice of Commencement',
+      'owner_authorization': 'Owner Authorization Letter',
+      'signed_contract': 'Signed Contract',
+      'coi': 'Certificate of Insurance',
+      'contractor_license': 'Contractor License',
+      'product_approvals': 'Product Approvals (NOAs)',
+      'roof_layout': 'Roof Layout/Diagram',
+      'site_photos': 'Property Photos',
+      'hvhz_section_d': 'HVHZ Section D - Steep Slope',
+      'section_1524': 'Section 1524 Owner Notification',
+      'roof_to_wall_affidavit': 'Roof-to-Wall Connection Affidavit',
+      'hoa_affidavit': 'HOA Awareness Affidavit',
+      'city_supplement': 'City Supplemental Form',
+      'underlayment_fpa': 'Underlayment Florida Product Approval',
+      'underlayment_pe_evaluation': 'Underlayment P.E. Evaluation',
+      'compliance_statement': 'Roofing Compliance Statement',
+      'roofing_material_fpa': 'Roofing Material Product Approval',
+      'fastening_patterns': 'Fastening Pattern Documentation',
+      'impact_test_report': 'Impact Test Report (UL 2218)',
+      'owner_notification': 'Owner Notification for Roofing',
+      'roof_to_wall_mitigation': 'Roof-to-Wall Mitigation (Section 706.8)',
+    };
     
     // Map uploaded documents to packet structure
     const documentIndex: DocumentInfo[] = [];
@@ -314,15 +404,33 @@ serve(async (req) => {
     const pdfUrls: string[] = [];
     
     for (const item of PACKET_STRUCTURE) {
-      if (item.generated) {
+      const docName = DOC_TYPE_NAMES[item.type] || item.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      // Handle source types
+      if (item.source === 'generated') {
         documentIndex.push({
           type: item.type,
-          name: item.name,
+          name: docName,
           pages: item.pages || 1,
-          status: item.needs_signature ? 'needs_signature' : 'generated'
+          status: item.needs_signature ? 'needs_signature' : 'generated',
+          source: 'generated',
+          requiresNotary: item.needs_notary,
+          requiresRecording: item.requires_recording,
         });
         totalPages += item.pages || 1;
-      } else if (item.uploaded) {
+      } else if (item.source === 'auto_fill') {
+        // Forms that will be auto-filled
+        documentIndex.push({
+          type: item.type,
+          name: docName,
+          pages: item.pages || 2,
+          status: item.needs_signature ? 'needs_signature' : 'generated',
+          source: 'auto_fill',
+          requiresNotary: item.needs_notary,
+          requiresRecording: item.requires_recording,
+        });
+        totalPages += item.pages || 2;
+      } else if (item.source === 'user_upload') {
         // Check DB documents first
         const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
         // Then check passed uploadedDocuments
@@ -332,23 +440,25 @@ serve(async (req) => {
           const url = dbDoc?.file_path || dbDoc?.file_url || passedDoc?.url;
           documentIndex.push({
             type: item.type,
-            name: item.name,
+            name: docName,
             pages: 1,
             url: url,
-            status: 'included'
+            status: 'included',
+            source: 'user_upload',
           });
           totalPages += 1;
           if (url) pdfUrls.push(url);
         } else {
           documentIndex.push({
             type: item.type,
-            name: item.name,
+            name: docName,
             pages: 0,
-            status: 'missing'
+            status: 'missing',
+            source: 'user_upload',
           });
         }
-      } else if (item.lookup) {
-        // Add product approval documents from selected products
+      } else if (item.source === 'auto_source') {
+        // Auto-source from product_approvals based on product_category
         for (const sp of selectedProducts) {
           const approval = productApprovals.find(a => a.id === sp.id);
           const fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
@@ -359,7 +469,8 @@ serve(async (req) => {
               name: `${sp.manufacturer} ${sp.product_name}${sp.noa_number ? ` - NOA ${sp.noa_number}` : ''}`,
               pages: 2,
               url: fileUrl,
-              status: 'included'
+              status: 'auto_sourced',
+              source: 'auto_source',
             });
             totalPages += 2;
             pdfUrls.push(fileUrl);
@@ -368,10 +479,68 @@ serve(async (req) => {
               type: 'product_approval',
               name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number}`,
               pages: 0,
-              status: 'missing'
+              status: 'missing',
+              source: 'auto_source',
             });
           }
         }
+      } else if (item.source === 'city_specific') {
+        // City-specific forms
+        documentIndex.push({
+          type: item.type,
+          name: docName,
+          pages: item.pages || 4,
+          status: 'city_specific',
+          source: 'city_specific',
+          requiresNotary: item.needs_notary,
+          requiresRecording: item.requires_recording,
+        });
+        totalPages += item.pages || 4;
+      } else if (item.source === 'conditional') {
+        // Conditional documents - check if condition is met
+        const conditionMet = evaluateCondition(item.condition, permit);
+        documentIndex.push({
+          type: item.type,
+          name: docName,
+          pages: conditionMet ? (item.pages || 1) : 0,
+          status: conditionMet ? 'conditional' : 'missing',
+          source: 'conditional',
+          condition: item.condition,
+          requiresNotary: item.needs_notary,
+          requiresRecording: item.requires_recording,
+        });
+        if (conditionMet) {
+          totalPages += item.pages || 1;
+        }
+      }
+    }
+    
+    // Helper function to evaluate conditions
+    function evaluateCondition(condition: string | undefined, permit: any): boolean {
+      if (!condition) return true;
+      
+      switch (condition) {
+        case 'if_hoa':
+          return permit.is_hoa === true;
+        case 'if_pre_1988':
+          const yearBuilt = permit.year_built || new Date().getFullYear();
+          return yearBuilt < 1988;
+        case 'if_pre_1994':
+          const yb = permit.year_built || new Date().getFullYear();
+          return yb < 1994;
+        case 'if_over_300k':
+          const value = permit.estimated_value || permit.valuation || 0;
+          return value >= 300000;
+        case 'if_pre_1988_and_over_300k':
+          const yr = permit.year_built || new Date().getFullYear();
+          const val = permit.estimated_value || permit.valuation || 0;
+          return yr < 1988 && val >= 300000;
+        case 'if_pre_1994_or_over_300k':
+          const year = permit.year_built || new Date().getFullYear();
+          const v = permit.estimated_value || permit.valuation || 0;
+          return year < 1994 || v >= 300000;
+        default:
+          return true;
       }
     }
     

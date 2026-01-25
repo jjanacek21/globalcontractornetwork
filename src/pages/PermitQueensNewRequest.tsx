@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { PricingGrid } from '@/components/permit-queens/PricingCard';
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
+import { SignatureChecklist, generateSignatureRequirements, SignatureRequirement } from '@/components/permit-queens/SignatureChecklist';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,9 +99,31 @@ export default function PermitQueensNewRequest() {
   const [generationStage, setGenerationStage] = useState('');
   const [tempPermitId, setTempPermitId] = useState<string | null>(null);
   
+  // Signature requirements state
+  const [signatureRequirements, setSignatureRequirements] = useState<SignatureRequirement[]>([]);
+  
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  
+  // Generate signature requirements based on permit type and jurisdiction
+  const computedSignatureRequirements = useMemo(() => {
+    if (!formData.permit_type || !formData.jurisdiction_county) return [];
+    
+    // Map roofing newMaterial to material_type
+    const materialType = tradeData.roofing?.newMaterial || '';
+    
+    return generateSignatureRequirements(
+      formData.permit_type,
+      formData.jurisdiction_county,
+      formData.jurisdiction_city,
+      materialType,
+      formData.valuation,
+      undefined, // year_built not available in current form
+      false, // is_hoa not available in current form
+      formData.isHVHZ
+    );
+  }, [formData.permit_type, formData.jurisdiction_county, formData.jurisdiction_city, formData.valuation, formData.isHVHZ, tradeData]);
 
   // Validation functions
   const validateField = useCallback((field: string, value: any): Record<string, string> => {
@@ -721,6 +744,28 @@ export default function PermitQueensNewRequest() {
                 <Card><CardContent className="py-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" /><p>Analyzing...</p></CardContent></Card>
               ) : (
                 <MissingItemsPanel completionPercentage={completionPercentage} missingFields={missingFields} missingDocuments={missingDocuments} complianceIssues={complianceIssues} onFieldClick={() => setCurrentStep(2)} onUploadClick={() => setCurrentStep(3)} />
+              )}
+              
+              {/* Signature Requirements Checklist */}
+              {computedSignatureRequirements.length > 0 && (
+                <SignatureChecklist
+                  requirements={computedSignatureRequirements}
+                  ownerName={formData.owner_name}
+                  estimatedValue={formData.valuation}
+                  county={formData.jurisdiction_county}
+                  onSignatureComplete={(id) => {
+                    // Mark signature as complete
+                    toast.success('Signature recorded');
+                  }}
+                  onDownloadForSigning={(req) => {
+                    // Download document for wet signing
+                    if (req.documentUrl) {
+                      window.open(req.documentUrl, '_blank');
+                    } else {
+                      toast.info('Document will be available after packet generation');
+                    }
+                  }}
+                />
               )}
 
               <div>
