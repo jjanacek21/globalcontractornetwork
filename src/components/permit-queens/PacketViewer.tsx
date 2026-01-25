@@ -20,6 +20,8 @@ import {
   Eye,
   ExternalLink
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DocumentInfo {
   type: string;
@@ -59,6 +61,36 @@ export function PacketViewer({
   generating = false,
 }: PacketViewerProps) {
   const [showCoverSheet, setShowCoverSheet] = useState(false);
+
+  const handleViewDocument = async (url: string) => {
+    if (!url) return;
+    
+    // If it's already a full URL (from edge function or external), open directly
+    if (url.startsWith('http')) {
+      window.open(url, '_blank');
+      return;
+    }
+    
+    // Otherwise, generate signed URL for storage path
+    try {
+      const { data, error } = await supabase.storage
+        .from('permit-documents')
+        .createSignedUrl(url, 3600); // 1 hour expiry
+      
+      if (error) {
+        console.error('Signed URL error:', error);
+        toast.error('Failed to access document');
+        return;
+      }
+      
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('View document error:', error);
+      toast.error('Failed to open document');
+    }
+  };
 
   const getStatusIcon = (status: DocumentInfo['status']) => {
     switch (status) {
@@ -177,10 +209,13 @@ export function PacketViewer({
               <div className="flex items-center gap-2">
                 {getStatusBadge(doc.status)}
                 {doc.url && (
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
-                    <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => handleViewDocument(doc.url!)}
+                  >
+                    <ExternalLink className="h-4 w-4" />
                   </Button>
                 )}
               </div>
