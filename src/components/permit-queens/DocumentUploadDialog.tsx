@@ -87,15 +87,23 @@ export function DocumentUploadDialog({
     setUploadProgress(0);
 
     try {
+      // Get user ID for storage path (required by RLS policy)
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast.error('Please log in to upload documents');
+        setUploading(false);
+        return;
+      }
+
       // Simulate progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
-      // Generate unique file path
+      // Generate unique file path with user UUID prefix for RLS compliance
       const fileExt = file.name.split('.').pop();
       const fileName = `${docType}_${Date.now()}.${fileExt}`;
-      const filePath = `${permitProjectId}/${fileName}`;
+      const filePath = `${user.id}/${permitProjectId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -107,7 +115,11 @@ export function DocumentUploadDialog({
 
       clearInterval(progressInterval);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        toast.error(`Upload failed: ${uploadError.message}`);
+        throw uploadError;
+      }
 
       setUploadProgress(100);
 

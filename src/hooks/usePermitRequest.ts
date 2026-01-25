@@ -259,26 +259,38 @@ export function usePermitRequest(permitId?: string) {
     if (!permitId) return false;
 
     try {
+      // Get user ID for storage path (required by RLS policy)
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast({
+          title: 'Error',
+          description: 'Please log in to upload documents',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${permitId}/${documentType}_${Date.now()}.${fileExt}`;
+      // Use user UUID prefix for RLS compliance
+      const filePath = `${user.id}/${permitId}/${documentType}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('permit-documents')
-        .upload(fileName, file);
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('permit-documents')
-        .getPublicUrl(fileName);
-
+      // Store file path (not public URL) for signed URL generation
       const { error: insertError } = await supabase
         .from('permit_project_documents')
         .insert({
           project_id: permitId,
           document_type: documentType,
           file_name: documentName || file.name,
-          file_path: publicUrl,
+          file_path: filePath,
           validation_status: 'pending',
         });
 
