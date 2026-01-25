@@ -4,15 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
 import { PacketPreview } from '@/components/permit-queens/PacketPreview';
 import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
-import { PricingGrid } from '@/components/permit-queens/PricingCard';
+// PricingGrid removed - now using dropdown selector
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
@@ -101,6 +104,9 @@ export default function PermitQueensNewRequest() {
   
   // Signature requirements state
   const [signatureRequirements, setSignatureRequirements] = useState<SignatureRequirement[]>([]);
+  
+  // Payment agreement state
+  const [paymentAgreed, setPaymentAgreed] = useState(false);
   
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -768,10 +774,85 @@ export default function PermitQueensNewRequest() {
                 />
               )}
 
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Select Service Tier</h3>
-                <PricingGrid tiers={displayTiers} selectedTier={formData.complexity_tier} recommendedTier="standard" onSelectTier={(tier) => setFormData(prev => ({ ...prev, complexity_tier: tier }))} />
-              </div>
+              {/* Service Selection & Payment Agreement */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Service Selection & Payment
+                  </CardTitle>
+                  <CardDescription>
+                    Select your expediting service level and acknowledge payment terms
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Service Type Dropdown */}
+                  <div className="space-y-2">
+                    <Label>Service Type</Label>
+                    <Select 
+                      value={formData.complexity_tier} 
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, complexity_tier: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">
+                          <div className="flex items-center justify-between gap-4">
+                            <span>Basic (7-day turnaround)</span>
+                            <Badge variant="secondary">$99</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="standard">
+                          <div className="flex items-center justify-between gap-4">
+                            <span>Standard (5-day turnaround)</span>
+                            <Badge variant="secondary">$199</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="complex">
+                          <div className="flex items-center justify-between gap-4">
+                            <span>Complex/Rush (2-day turnaround)</span>
+                            <Badge variant="secondary">$349</Badge>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      <Badge variant="outline" className="mr-2 bg-green-500/10 text-green-600 border-green-500/20">FREE BETA</Badge>
+                      Currently FREE for beta testing. Normal pricing shown for reference.
+                    </p>
+                  </div>
+
+                  {/* Payment Agreement Checkbox */}
+                  <div className="flex items-start gap-3 p-4 border rounded-lg bg-muted/50">
+                    <Checkbox 
+                      id="payment-agree" 
+                      checked={paymentAgreed}
+                      onCheckedChange={(checked) => setPaymentAgreed(checked === true)}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="payment-agree" className="font-medium cursor-pointer">
+                        I agree to pay the expediting fee and city permit costs
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Once your permit packet is complete and ready for submission, 
+                        you will be charged the expediting fee plus any city/county 
+                        permit fees. You will receive an invoice before any charges are made.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Credit Card Section - Placeholder for future Stripe */}
+                  <div className="space-y-2">
+                    <Label>Payment Method (Optional)</Label>
+                    <div className="p-4 border rounded-lg border-dashed text-center text-muted-foreground">
+                      <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Credit card collection will be enabled after beta.</p>
+                      <p className="text-xs">For now, you'll receive an invoice when your packet is ready.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 

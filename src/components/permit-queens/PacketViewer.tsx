@@ -122,9 +122,30 @@ export function PacketViewer({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (packet.packetPdfUrl) {
-      window.open(packet.packetPdfUrl, '_blank');
+      // If URL already has a token (signed URL) or is external, use directly
+      if (packet.packetPdfUrl.includes('?token=') || packet.packetPdfUrl.startsWith('http')) {
+        window.open(packet.packetPdfUrl, '_blank');
+        return;
+      }
+      
+      // Generate fresh signed URL for storage paths
+      try {
+        const { data, error } = await supabase.storage
+          .from('permit-documents')
+          .createSignedUrl(packet.packetPdfUrl, 3600); // 1 hour
+        
+        if (!error && data?.signedUrl) {
+          window.open(data.signedUrl, '_blank');
+        } else {
+          console.error('Signed URL error:', error);
+          toast.error('Failed to access packet');
+        }
+      } catch (err) {
+        console.error('Download error:', err);
+        toast.error('Failed to download packet');
+      }
     } else {
       // Fallback: print cover sheet HTML
       const printWindow = window.open('', '_blank');

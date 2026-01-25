@@ -26,6 +26,69 @@ const MANUFACTURER_PATTERNS: Record<string, string> = {
   'Marvin': 'marvin.com',
 };
 
+// Download PDF from external URL and store in Lovable storage
+async function downloadAndStorePdf(
+  supabase: any,
+  pdfUrl: string,
+  productId: string,
+  docType: 'noa' | 'fl_approval'
+): Promise<string | null> {
+  try {
+    console.log(`Downloading PDF from: ${pdfUrl}`);
+    
+    // Fetch the PDF from the external URL
+    const response = await fetch(pdfUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PermitQueens/1.0)',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to download PDF: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('pdf') && !contentType?.includes('octet-stream')) {
+      console.warn(`Unexpected content type: ${contentType}`);
+    }
+    
+    const pdfBuffer = await response.arrayBuffer();
+    
+    if (pdfBuffer.byteLength < 1000) {
+      console.warn(`PDF too small (${pdfBuffer.byteLength} bytes), likely an error page`);
+      return null;
+    }
+    
+    // Generate unique filename
+    const filename = `${productId}/${docType}-${Date.now()}.pdf`;
+    
+    // Upload to product-approvals bucket (which is public)
+    const { error: uploadError } = await supabase.storage
+      .from('product-approvals')
+      .upload(filename, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+    
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return null;
+    }
+    
+    // Get public URL (product-approvals bucket is public)
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-approvals')
+      .getPublicUrl(filename);
+    
+    console.log(`✅ PDF stored locally: ${publicUrl}`);
+    return publicUrl;
+  } catch (error) {
+    console.error('Download/store error:', error);
+    return null;
+  }
+}
+
 async function searchForDocument(
   firecrawlApiKey: string,
   manufacturer: string,
@@ -309,21 +372,42 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Update product with found URLs
+        // Update product with found URLs - download and store locally
         if (finalNoaUrl || finalFlUrl) {
           const updateData: Record<string, any> = {
             source_status: 'found',
             source_website: sourceWebsite,
-            last_source_attempt: new Date().toISOString()
+            last_source_attempt: new Date().toISOString(),
+            source_url_noa: finalNoaUrl, // Store original external URL for reference
+            source_url_fl: finalFlUrl,
           };
 
+          // Download and store NOA PDF locally
           if (finalNoaUrl) {
-            updateData.noa_pdf_url = finalNoaUrl;
-            updateData.file_url = finalNoaUrl;
+            const localNoaUrl = await downloadAndStorePdf(supabase, finalNoaUrl, product.id, 'noa');
+            if (localNoaUrl) {
+              updateData.noa_pdf_url = localNoaUrl;
+              updateData.file_url = localNoaUrl;
+              console.log(`   ✅ NOA PDF stored locally`);
+            } else {
+              updateData.noa_pdf_url = finalNoaUrl; // Fallback to external URL
+              updateData.file_url = finalNoaUrl;
+              console.log(`   ⚠️ Using external NOA URL (download failed)`);
+            }
           }
+          
+          // Download and store FL Approval PDF locally
           if (finalFlUrl) {
-            updateData.fl_approval_pdf_url = finalFlUrl;
-            if (!finalNoaUrl) updateData.file_url = finalFlUrl;
+            const localFlUrl = await downloadAndStorePdf(supabase, finalFlUrl, product.id, 'fl_approval');
+            if (localFlUrl) {
+              updateData.fl_approval_pdf_url = localFlUrl;
+              if (!finalNoaUrl) updateData.file_url = localFlUrl;
+              console.log(`   ✅ FL Approval PDF stored locally`);
+            } else {
+              updateData.fl_approval_pdf_url = finalFlUrl;
+              if (!finalNoaUrl) updateData.file_url = finalFlUrl;
+              console.log(`   ⚠️ Using external FL URL (download failed)`);
+            }
           }
 
           const { error: updateError } = await supabase
@@ -335,7 +419,7 @@ Deno.serve(async (req) => {
             console.error(`Error updating ${product.id}:`, updateError);
             failed++;
           } else {
-            console.log(`✅ Found documents for: ${product.product_name}`);
+            console.log(`✅ Found and stored documents for: ${product.product_name}`);
             updated++;
           }
         } else {
