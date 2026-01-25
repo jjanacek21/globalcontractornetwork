@@ -563,7 +563,33 @@ If you cannot analyze the file directly, provide your best inference based on th
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("[permit-packet-analyzer] Error:", error);
+    console.error("[permit-packet-analyzer] Critical Error:", error);
+    
+    // ALWAYS update the training record status on failure to prevent orphaned "processing" records
+    const requestData = await req.clone().json().catch(() => ({})) as AnalyzeRequest;
+    const { trainingId } = requestData;
+    
+    if (trainingId) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        console.log(`[permit-packet-analyzer] Marking training ID ${trainingId} as failed`);
+        
+        await supabase
+          .from("permit_packet_training")
+          .update({ 
+            processing_status: "failed",
+            admin_notes: `Error: ${errorMessage}`,
+            processed_at: new Date().toISOString()
+          })
+          .eq("id", trainingId);
+      } catch (updateError) {
+        console.error("[permit-packet-analyzer] Failed to update training record status:", updateError);
+      }
+    }
     
     return new Response(
       JSON.stringify({
