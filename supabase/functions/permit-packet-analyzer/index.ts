@@ -399,10 +399,14 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
       .from("permit_packet_training")
       .select("*")
       .eq("id", trainingId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !trainingRecord) {
-      throw new Error(`Training record not found: ${fetchError?.message}`);
+    if (fetchError) {
+      throw new Error(`Database error fetching training record: ${fetchError.message}`);
+    }
+    
+    if (!trainingRecord) {
+      throw new Error(`Training record not found with ID: ${trainingId}`);
     }
 
     // Build context for AI analysis
