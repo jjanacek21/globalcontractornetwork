@@ -420,10 +420,18 @@ ${trainingRecord.example_description ? `Description: ${trainingRecord.example_de
 ${fileName ? `File Name: ${fileName}` : ""}
     `.trim();
 
-    // ENHANCED AI Analysis Prompt
+    // ENHANCED AI Analysis Prompt with OCR/Handwriting handling
     const systemPrompt = `You are an expert Florida building permit analyst and data extraction specialist, focusing on South Florida jurisdictions (Miami-Dade, Broward, Palm Beach counties).
 
 Your mission is to analyze permit packet documentation and extract STRUCTURED DATA that will be saved to a database for training an AI permit expediting system.
+
+IMPORTANT OCR/SCANNING NOTES:
+- Some documents may be handwritten or poorly scanned
+- Do your best to read handwritten text - common handwritten fields include signatures, dates, and addresses
+- If text is illegible, use null for that field
+- For handwritten numeric values (permit numbers, square footage), extract what you can read
+- Focus on typed/printed text first, then attempt handwritten sections
+- NEVER guess at illegible text - leave as null
 
 You MUST extract data in these specific categories:
 
@@ -470,7 +478,13 @@ You MUST extract data in these specific categories:
 5. PACKET STRUCTURE:
    List all documents in order with their purpose.
 
-Return ONLY valid JSON in this exact structure. Do NOT include markdown formatting or code blocks.`;
+CRITICAL JSON FORMATTING RULES:
+1. Return ONLY the JSON object - NO markdown code blocks, NO explanations before or after
+2. Start your response with { and end with }
+3. Do NOT wrap in \`\`\`json code blocks
+4. Use null (not "null" string) for missing values
+5. Ensure all arrays and objects are properly closed
+6. No trailing commas after the last item in arrays or objects`;
 
     const userPrompt = `Analyze this completed Florida permit packet and extract ALL structured data:
 
@@ -576,24 +590,71 @@ Extract as much data as possible. If you cannot find a particular field, use nul
       analysisContent = [{ type: "text", text: userPrompt }];
     }
 
-    // Call Lovable AI for enhanced analysis
+    // Helper function to call API with retry logic for transient errors
+    async function callAPIWithRetry(
+      url: string,
+      options: RequestInit,
+      maxRetries: number = 3
+    ): Promise<Response> {
+      let lastError: Error | null = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(url, options);
+          
+          // Success or client error (no retry)
+          if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+            return response;
+          }
+          
+          // Retry on 503 (Service Unavailable) or 429 (Rate Limit)
+          if (response.status === 503 || response.status === 429) {
+            const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.log(`[permit-packet-analyzer] API returned ${response.status}, retry ${attempt}/${maxRetries} after ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            lastError = new Error(`API returned ${response.status}`);
+            continue;
+          }
+          
+          // Other errors - don't retry
+          return response;
+        } catch (fetchError) {
+          console.error(`[permit-packet-analyzer] Fetch error on attempt ${attempt}:`, fetchError);
+          lastError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
+          
+          if (attempt < maxRetries) {
+            const waitTime = Math.pow(2, attempt) * 1000;
+            console.log(`[permit-packet-analyzer] Retrying after ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+        }
+      }
+      
+      throw lastError || new Error("Max retries exceeded");
+    }
+
+    // Call Lovable AI for enhanced analysis with retry logic
     console.log("[permit-packet-analyzer] Calling AI with enhanced extraction prompt...");
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
+    const aiResponse = await callAPIWithRetry(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: analysisContent },
+          ],
+          temperature: 0.2,
+          max_tokens: 8000,
+        }),
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: analysisContent },
-        ],
-        temperature: 0.2,
-        max_tokens: 8000,
-      }),
-    });
+      3 // max retries
+    );
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
@@ -616,47 +677,95 @@ Extract as much data as possible. If you cannot find a particular field, use nul
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices?.[0]?.message?.content || "";
 
-    console.log("[permit-packet-analyzer] AI response received, parsing enhanced extraction...");
+    console.log("[permit-packet-analyzer] AI response received, length:", aiContent.length);
 
-    // Enhanced JSON parsing with multiple fallback strategies
+    // ROBUST JSON extraction with multiple fallback strategies
     function extractJSON(content: string): any {
-      // Strategy 1: Find JSON between code blocks
-      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (codeBlockMatch) {
-        try {
-          return JSON.parse(codeBlockMatch[1].trim());
-        } catch (e) {
-          console.log("[permit-packet-analyzer] Code block JSON parse failed:", e);
+      console.log("[permit-packet-analyzer] Attempting JSON extraction, content length:", content.length);
+      
+      // Strategy 1: Remove markdown code blocks wrapper first
+      let cleanContent = content.trim();
+      
+      // Check for various code block formats
+      // Handle: ```json\n{...}\n``` or ```{...}``` or ``` json {...}```
+      const codeBlockPatterns = [
+        /^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/,  // Standard markdown
+        /```(?:json)?\s*([\s\S]*?)```/,              // Inline code block
+        /^`([^`]+)`$/,                                // Single backticks
+      ];
+      
+      for (const pattern of codeBlockPatterns) {
+        const match = cleanContent.match(pattern);
+        if (match) {
+          cleanContent = match[1].trim();
+          console.log("[permit-packet-analyzer] Extracted from code block, new length:", cleanContent.length);
+          break;
         }
       }
       
-      // Strategy 2: Find outermost JSON object
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
+      // Strategy 2: Find content between first { and last }
+      const firstBrace = cleanContent.indexOf('{');
+      const lastBrace = cleanContent.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
+        console.log("[permit-packet-analyzer] Extracted JSON object, length:", cleanContent.length);
+      }
+      
+      // Strategy 3: Try direct parse
+      try {
+        const result = JSON.parse(cleanContent);
+        console.log("[permit-packet-analyzer] Direct parse successful");
+        return result;
+      } catch (e) {
+        console.log("[permit-packet-analyzer] Direct parse failed, trying repairs...", e instanceof Error ? e.message : e);
+      }
+      
+      // Strategy 4: Fix common JSON issues
+      let repaired = cleanContent
+        .replace(/,(\s*[}\]])/g, '$1')     // Remove trailing commas
+        .replace(/\r\n/g, ' ')              // Replace CRLF with space
+        .replace(/\n/g, ' ')                // Replace newlines with space
+        .replace(/\r/g, '')                 // Remove carriage returns
+        .replace(/\t/g, ' ')                // Replace tabs with spaces
+        .replace(/[\x00-\x1F\x7F]/g, '')    // Remove control characters (except within strings)
+        .replace(/\\'/g, "'")               // Fix escaped single quotes
+        .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3'); // Add quotes to unquoted keys
+      
+      try {
+        const result = JSON.parse(repaired);
+        console.log("[permit-packet-analyzer] Repaired parse successful");
+        return result;
+      } catch (e) {
+        console.log("[permit-packet-analyzer] Repaired parse failed:", e instanceof Error ? e.message : e);
+      }
+
+      // Strategy 5: Try to extract just the productApprovals array if present
+      const productArrayMatch = cleanContent.match(/"productApprovals"\s*:\s*\[([\s\S]*?)\]/);
+      if (productArrayMatch) {
+        console.log("[permit-packet-analyzer] Attempting partial extraction of productApprovals...");
         try {
-          return JSON.parse(jsonMatch[0]);
-        } catch (e) {
-          console.log("[permit-packet-analyzer] Direct JSON parse failed:", e);
+          const partialProducts = JSON.parse('[' + productArrayMatch[1] + ']');
+          return {
+            productApprovals: partialProducts,
+            formFieldMappings: [],
+            jurisdictionRules: [],
+            tradeSpecificData: { nailPattern: null, strapSpacing: null, meanRoofHeight: null, roofSlope: null, deckType: null, underlaymentProduct: null, hvhzRequirements: [] },
+            packetStructure: [],
+            extractedFields: {},
+            jurisdictionPatterns: [],
+            qualityScore: 0.5,
+            keyFeatures: ["Partial extraction - only product approvals recovered"],
+            exampleDescription: "Partial data extraction",
+            commonDocuments: [],
+            processingNotes: ["Full JSON parsing failed, recovered productApprovals only"],
+          };
+        } catch (partialError) {
+          console.log("[permit-packet-analyzer] Partial extraction also failed");
         }
       }
       
-      // Strategy 3: Try to fix common JSON issues
-      let cleaned = content
-        .replace(/,\s*\}/g, '}')    // Remove trailing commas in objects
-        .replace(/,\s*\]/g, ']')    // Remove trailing commas in arrays
-        .replace(/'/g, '"')          // Replace single quotes
-        .replace(/\n/g, ' ')         // Remove newlines
-        .replace(/\t/g, ' ');        // Remove tabs
-        
-      const cleanedMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (cleanedMatch) {
-        try {
-          return JSON.parse(cleanedMatch[0]);
-        } catch (e) {
-          console.log("[permit-packet-analyzer] Cleaned JSON parse failed:", e);
-        }
-      }
-      
+      console.log("[permit-packet-analyzer] All parsing strategies failed");
+      console.log("[permit-packet-analyzer] First 200 chars of content:", cleanContent.substring(0, 200));
       return null;
     }
 
