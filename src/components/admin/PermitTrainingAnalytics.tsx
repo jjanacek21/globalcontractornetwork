@@ -12,6 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from "recharts";
+import LearningMetricsSection from "./LearningMetricsSection";
 
 interface AnalyticsData {
   totalSamples: number;
@@ -396,6 +397,11 @@ export default function PermitTrainingAnalytics() {
           )}
         </CardContent>
       </Card>
+
+      {/* Learning Metrics Section */}
+      <div className="border-t pt-6">
+        <LearningMetricsSection />
+      </div>
     </div>
   );
 }
