@@ -131,17 +131,53 @@ export default function TrainingDetailDialog({
         .update({ processing_status: "pending" })
         .eq("id", sample.id);
 
-      // Call the analyzer
+      let fileContent: string | undefined;
+
+      // Try to fetch file from storage for re-analysis
+      if (sample.file_url) {
+        try {
+          // Extract path from the URL
+          const urlParts = sample.file_url.split("/permit-training-packets/");
+          if (urlParts.length > 1) {
+            const filePath = decodeURIComponent(urlParts[1]);
+            
+            // Download file from storage
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from("permit-training-packets")
+              .download(filePath);
+
+            if (!downloadError && fileData) {
+              // Convert to base64
+              const arrayBuffer = await fileData.arrayBuffer();
+              const bytes = new Uint8Array(arrayBuffer);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              fileContent = btoa(binary);
+              console.log("File content loaded for re-analysis, size:", fileContent.length);
+            } else if (downloadError) {
+              console.warn("Could not download file:", downloadError.message);
+            }
+          }
+        } catch (fetchError) {
+          console.warn("Could not fetch file for re-analysis:", fetchError);
+        }
+      }
+
+      // Call the analyzer with file content
       const { error } = await supabase.functions.invoke("permit-packet-analyzer", {
         body: {
           mode: "analyze_only",
           trainingId: sample.id,
           fileName: sample.source_file_name,
+          fileContent, // Now included!
+          fileUrl: sample.file_url,
         },
       });
 
       if (error) throw error;
-      toast.success("Re-analysis started");
+      toast.success("Re-analysis started" + (fileContent ? " with file content" : " (no file content)"));
       onUpdate();
     } catch (error: any) {
       console.error("Re-analyze error:", error);
