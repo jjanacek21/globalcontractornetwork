@@ -99,6 +99,51 @@ function transformValue(value: any, transformType?: string): string {
   }
 }
 
+// Section 1524 checkbox evaluation logic
+const SECTION_1524_CHECKBOXES: Record<string, {
+  field: string;
+  operator: string;
+  value: any;
+  description: string;
+}> = {
+  'aesthetics_reserved': { field: '_always', operator: 'always_true', value: null, description: 'Always checked' },
+  'renailing_wood_decks': { field: 'year_built', operator: 'less_than', value: 1994, description: 'Pre-1994 homes require deck renailing' },
+  'common_roofs_reserved': { field: 'building_type', operator: 'equals', value: 'multi_family', description: 'Multi-family buildings' },
+  'exposed_ceilings': { field: 'has_exposed_ceilings', operator: 'equals', value: true, description: 'Has exposed ceilings' },
+  'ponding_water_reserved': { field: 'has_ponding_water', operator: 'equals', value: true, description: 'Flat roof with ponding concerns' },
+  'overflow_scuppers': { field: 'requires_overflow_scuppers', operator: 'equals', value: true, description: 'Flat roof requires overflow scuppers' },
+  'deck_attachment': { field: 'deck_attachment_confirmed', operator: 'equals', value: true, description: 'Deck attachment confirmed' },
+  'hvhz_zone': { field: 'is_hvhz', operator: 'equals', value: true, description: 'High Velocity Hurricane Zone' },
+};
+
+// Auto-evaluate Section 1524 checkboxes based on project data
+function evaluateSection1524Checkboxes(data: Record<string, any>): Record<string, boolean> {
+  const results: Record<string, boolean> = {};
+  
+  for (const [checkboxId, config] of Object.entries(SECTION_1524_CHECKBOXES)) {
+    if (config.operator === 'always_true') {
+      results[checkboxId] = true;
+    } else {
+      results[checkboxId] = evaluateCondition(config, data);
+    }
+  }
+  
+  // Additional compound logic
+  // Ponding water only applies to flat roofs
+  if (data.roof_slope !== 'flat' && data.pitch !== 'flat') {
+    results['ponding_water_reserved'] = false;
+    results['overflow_scuppers'] = false;
+  }
+  
+  // Check for pre-1994 (year_built can be a number or string)
+  const yearBuilt = parseInt(String(data.year_built), 10);
+  if (!isNaN(yearBuilt) && yearBuilt < 1994) {
+    results['renailing_wood_decks'] = true;
+  }
+  
+  return results;
+}
+
 // Evaluate conditional logic for fields
 function evaluateCondition(condition: any, data: Record<string, any>): boolean {
   if (!condition) return true;
@@ -107,6 +152,8 @@ function evaluateCondition(condition: any, data: Record<string, any>): boolean {
   const fieldValue = data[field];
   
   switch (operator) {
+    case 'always_true':
+      return true;
     case 'equals':
       return fieldValue === value;
     case 'not_equals':
@@ -115,12 +162,22 @@ function evaluateCondition(condition: any, data: Record<string, any>): boolean {
       return Number(fieldValue) > Number(value);
     case 'less_than':
       return Number(fieldValue) < Number(value);
+    case 'greater_than_or_equals':
+      return Number(fieldValue) >= Number(value);
+    case 'less_than_or_equals':
+      return Number(fieldValue) <= Number(value);
     case 'contains':
       return String(fieldValue).toLowerCase().includes(String(value).toLowerCase());
+    case 'not_contains':
+      return !String(fieldValue).toLowerCase().includes(String(value).toLowerCase());
     case 'is_empty':
       return !fieldValue;
     case 'is_not_empty':
       return !!fieldValue;
+    case 'is_true':
+      return fieldValue === true || fieldValue === 'true' || fieldValue === '1';
+    case 'is_false':
+      return fieldValue === false || fieldValue === 'false' || fieldValue === '0' || !fieldValue;
     case 'before_year':
       try {
         const year = new Date(fieldValue).getFullYear();
@@ -135,6 +192,10 @@ function evaluateCondition(condition: any, data: Record<string, any>): boolean {
       } catch {
         return false;
       }
+    case 'in_list':
+      return Array.isArray(value) && value.includes(fieldValue);
+    case 'not_in_list':
+      return Array.isArray(value) && !value.includes(fieldValue);
     default:
       return true;
   }
@@ -212,7 +273,6 @@ serve(async (req) => {
           work_description: project.scope_of_work || project.scope_description,
           valuation: project.estimated_value || project.valuation,
           square_footage: project.roof_square_footage || project.square_footage,
-          year_built: project.year_built,
           building_use: project.building_use || 'Residential',
           roof_slope: project.roof_slope,
           mean_roof_height: project.mean_roof_height,
@@ -222,8 +282,21 @@ serve(async (req) => {
           underlayment_product: project.underlayment_product,
           is_hoa: project.is_hoa,
           hoa_name: project.hoa_name,
+          // Section 1524 fields
+          year_built: project.year_built,
+          building_type: project.building_type,
+          has_exposed_ceilings: project.has_exposed_ceilings,
+          has_ponding_water: project.has_ponding_water,
+          requires_overflow_scuppers: project.requires_overflow_scuppers,
+          deck_attachment_confirmed: project.deck_attachment_confirmed,
+          fastener_pattern_confirmed: project.fastener_pattern_confirmed,
+          is_hvhz: project.is_hvhz,
           ...project.trade_questions, // Spread any trade-specific questions
         };
+        
+        // Auto-evaluate Section 1524 checkboxes
+        const section1524Values = evaluateSection1524Checkboxes(mergedData);
+        mergedData = { ...mergedData, ...section1524Values };
         
         // Fetch contractor data if available
         const authHeader = req.headers.get('Authorization');

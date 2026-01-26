@@ -94,6 +94,11 @@ export const getDefaultTradeData = (trade: TradeType): TradeQuestionsData => {
           selectedWindowProduct: null,
           selectedDoorProduct: null,
           selectedSlidingDoorProduct: null,
+          uFactor: null,
+          shgc: null,
+          requiresEngineering: false,
+          openingHeight: null,
+          isMultiFamily: false,
         },
       };
     case 'electrical':
