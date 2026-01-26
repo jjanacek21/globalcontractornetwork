@@ -211,8 +211,8 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
       setCity("");
       setDescription("");
       
-      // Trigger AI analysis
-      await triggerAnalysis(trainingRecord.id, urlData.publicUrl, selectedFile.name);
+      // Trigger AI analysis - pass the actual file for base64 encoding
+      await triggerAnalysis(trainingRecord.id, urlData.publicUrl, selectedFile.name, selectedFile);
       
       onUploadComplete?.();
     } catch (error: any) {
@@ -223,11 +223,26 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
     }
   };
 
-  const triggerAnalysis = async (trainingId: string, fileUrl: string, fileName: string) => {
+  const triggerAnalysis = async (trainingId: string, fileUrl: string, fileName: string, file: File) => {
     setAnalyzing(true);
     try {
+      // Convert file to base64 for AI analysis (private bucket can't be accessed via URL)
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+
       const { data, error } = await supabase.functions.invoke("permit-packet-analyzer", {
-        body: { trainingId, fileUrl, fileName },
+        body: { 
+          mode: "analyze_only",
+          trainingId, 
+          fileUrl, 
+          fileContent: base64,
+          fileName 
+        },
       });
 
       if (error) throw error;
