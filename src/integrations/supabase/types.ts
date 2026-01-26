@@ -4895,13 +4895,16 @@ export type Database = {
           file_url: string | null
           id: string
           is_hvhz: boolean | null
+          mappings_learned: number | null
           material_type: string | null
           packet_structure: Json
           page_count: number | null
           processed_at: string | null
           processing_status: string | null
+          products_extracted: number | null
           quality_score: number | null
           raw_text_content: string | null
+          rules_discovered: number | null
           source_file_name: string | null
           trade_type: string
           training_usage_count: number | null
@@ -4924,13 +4927,16 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_hvhz?: boolean | null
+          mappings_learned?: number | null
           material_type?: string | null
           packet_structure: Json
           page_count?: number | null
           processed_at?: string | null
           processing_status?: string | null
+          products_extracted?: number | null
           quality_score?: number | null
           raw_text_content?: string | null
+          rules_discovered?: number | null
           source_file_name?: string | null
           trade_type: string
           training_usage_count?: number | null
@@ -4953,13 +4959,16 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_hvhz?: boolean | null
+          mappings_learned?: number | null
           material_type?: string | null
           packet_structure?: Json
           page_count?: number | null
           processed_at?: string | null
           processing_status?: string | null
+          products_extracted?: number | null
           quality_score?: number | null
           raw_text_content?: string | null
+          rules_discovered?: number | null
           source_file_name?: string | null
           trade_type?: string
           training_usage_count?: number | null
