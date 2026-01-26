@@ -49,7 +49,54 @@ interface ExtractedDocument {
   fields?: Record<string, string>;
 }
 
-interface AnalysisResult {
+interface ExtractedProductApproval {
+  manufacturer: string;
+  productName: string;
+  noaNumber: string | null;
+  flApprovalNumber: string | null;
+  ulListing: string | null;
+  hvhzApproved: boolean;
+  expirationDate: string | null;
+  category: string;
+  pageFound: number;
+}
+
+interface ExtractedFormMapping {
+  formName: string;
+  formType: string;
+  fields: {
+    ourFieldName: string;
+    pdfFieldName: string;
+    sampleValue: string;
+    fieldType: string;
+    transform: string | null;
+    pageNumber: number;
+  }[];
+}
+
+interface ExtractedJurisdictionRule {
+  ruleType: "gotcha" | "requirement" | "exception";
+  description: string;
+  tradeApplicable: string[];
+  documentRequired: string | null;
+  source: string;
+}
+
+interface TradeSpecificData {
+  nailPattern: string | null;
+  strapSpacing: string | null;
+  meanRoofHeight: string | null;
+  roofSlope: string | null;
+  deckType: string | null;
+  underlaymentProduct: string | null;
+  hvhzRequirements: string[];
+}
+
+interface EnhancedAnalysisResult {
+  productApprovals: ExtractedProductApproval[];
+  formFieldMappings: ExtractedFormMapping[];
+  jurisdictionRules: ExtractedJurisdictionRule[];
+  tradeSpecificData: TradeSpecificData;
   packetStructure: ExtractedDocument[];
   extractedFields: Record<string, string>;
   jurisdictionPatterns: string[];
@@ -81,6 +128,9 @@ function getMimeType(fileName: string): string {
 }
 
 serve(async (req) => {
+  // Capture trainingId early for error handling
+  let capturedTrainingId: string | undefined;
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -98,7 +148,10 @@ serve(async (req) => {
     const requestData = await req.json() as AnalyzeRequest;
     const { mode = "analyze_only", trainingId, fileUrl, fileContent, fileName, batchId } = requestData;
 
-    console.log(`[permit-packet-analyzer] Mode: ${mode}, Training ID: ${trainingId || "N/A"}, File: ${fileName || "N/A"}`);
+    // Store for error handling
+    capturedTrainingId = trainingId;
+
+    console.log(`[permit-packet-analyzer] Mode: ${mode}, Training ID: ${trainingId || "N/A"}, File: ${fileName || "N/A"}, Has Content: ${!!fileContent}`);
 
     // ========================================
     // MODE: DETECT_AND_ANALYZE (OCR/Vision-based auto-detection)
@@ -175,8 +228,6 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
             },
           ];
         } else if (ext === "pdf") {
-          // For PDFs, Gemini can analyze them via URL or we describe context
-          // Since we have base64, we'll use the inline_data approach
           messageContent = [
             { type: "text", text: "Analyze this scanned permit document PDF and extract the metadata as specified. Use OCR to read all visible text." },
             {
@@ -186,7 +237,6 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
           ];
         }
       } else if (fileUrl) {
-        // Use URL for analysis
         messageContent = [
           { type: "text", text: `Analyze the permit document at this URL and extract the metadata as specified: ${fileUrl}` },
         ];
@@ -280,7 +330,6 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
         
         if (matchedDepts && matchedDepts.length > 0) {
           const dept = matchedDepts[0];
-          // Use verified data from database
           detectionResult.detected.county = dept.county;
           detectionResult.detected.city = dept.city;
           detectionResult.matched_department = {
@@ -288,7 +337,6 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
             name: dept.name,
             portal_url: dept.portal_url,
           };
-          // Boost confidence for verified matches
           detectionResult.confidence.county = Math.max(detectionResult.confidence.county, 0.95);
           if (dept.city) {
             detectionResult.confidence.city = Math.max(detectionResult.confidence.city, 0.95);
@@ -297,7 +345,7 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
         }
       }
 
-      // If we have a trainingId, create/update the training record with detected values
+      // If we have a trainingId, update the training record with detected values
       if (trainingId) {
         await supabase
           .from("permit_packet_training")
@@ -332,13 +380,13 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
     }
 
     // ========================================
-    // MODE: ANALYZE_ONLY (Original detailed analysis)
+    // MODE: ANALYZE_ONLY (Enhanced detailed analysis with knowledge extraction)
     // ========================================
     if (!trainingId) {
       throw new Error("trainingId is required for analyze_only mode");
     }
 
-    console.log(`[permit-packet-analyzer] Starting detailed analysis for training ID: ${trainingId}`);
+    console.log(`[permit-packet-analyzer] Starting ENHANCED analysis for training ID: ${trainingId}`);
 
     // Update status to processing
     await supabase
@@ -368,59 +416,144 @@ ${trainingRecord.example_description ? `Description: ${trainingRecord.example_de
 ${fileName ? `File Name: ${fileName}` : ""}
     `.trim();
 
-    // AI Analysis Prompt
-    const systemPrompt = `You are an expert Florida building permit analyst specializing in South Florida jurisdictions (Miami-Dade, Broward, Palm Beach counties and their cities like Boca Raton, Fort Lauderdale, West Palm Beach).
+    // ENHANCED AI Analysis Prompt
+    const systemPrompt = `You are an expert Florida building permit analyst and data extraction specialist, focusing on South Florida jurisdictions (Miami-Dade, Broward, Palm Beach counties).
 
-Your task is to analyze permit packet documentation and extract structured information that will be used to train an AI system for automated permit processing.
+Your mission is to analyze permit packet documentation and extract STRUCTURED DATA that will be saved to a database for training an AI permit expediting system.
 
-Focus on:
-1. Identifying standard document types (application forms, site plans, NOCs, product approvals, affidavits, etc.)
-2. Extracting field patterns and how they should be filled
-3. Recognizing jurisdiction-specific requirements
-4. Noting HVHZ (High Velocity Hurricane Zone) requirements when applicable
-5. Identifying common rejection reasons based on document patterns
+You MUST extract data in these specific categories:
 
-Always base your analysis on Florida Building Code standards and municipal requirements.`;
+1. PRODUCT APPROVALS (NOAs, UL Listings, FL Product Approvals):
+   For EACH product approval document found, extract:
+   - Manufacturer name (e.g., "GAF", "CertainTeed", "Boral")
+   - Product name and line (e.g., "Timberline HDZ", "Presidential TL")
+   - NOA number (format: NOA-XX-XXXX.XX)
+   - FL Product Approval number (format: FL-XXXXX or FL XXXXX-R#)
+   - UL Listing number if present (e.g., "UL 2218 Class 4", "UL 2166")
+   - HVHZ approval status (true if mentions HVHZ, TAS, or Miami-Dade testing)
+   - Expiration date if visible
+   - Category: underlayment, shingle, tile, metal, flat_roof, coating, window, door, fastener, other
 
-    const userPrompt = `Analyze this completed Florida permit packet:
+2. FORM FIELD MAPPINGS (Learn PDF field names for smart-fill):
+   For each filled form, identify:
+   - Form name/title as printed (e.g., "City of Boca Raton Re-Roofing Application")
+   - Form type: permit_application, hvhz_affidavit, noc, owner_affidavit, contractor_affidavit, site_plan, product_approval
+   - Field mappings: What OUR internal field name maps to what PDF field name
+     Examples:
+     - ourFieldName: "owner_name" -> pdfFieldName: "Owner Name" or "PropertyOwner"
+     - ourFieldName: "property_address" -> pdfFieldName: "Job Address" or "SiteAddress"
+     - ourFieldName: "contractor_license" -> pdfFieldName: "License #" or "ContractorLicenseNumber"
+   - Sample value filled in (to understand format)
+   - Field type: text, checkbox, date, currency, phone, signature
+   - Transform needed: uppercase, date_format, phone_format, currency_format
+
+3. JURISDICTION RULES (City/County-specific requirements):
+   Extract rules like:
+   - "gotcha": Common rejection reasons or tricky requirements
+   - "requirement": Required documents or certifications
+   - "exception": Special cases or exemptions
+   Include which trades these apply to and any documents required.
+
+4. TRADE-SPECIFIC TECHNICAL DATA (For roofing especially):
+   - Nail pattern/schedule (e.g., "6/6 field, 4/4 perimeter")
+   - Strap spacing requirements (e.g., "Every 4 rafters")
+   - Mean roof height
+   - Roof slope/pitch
+   - Deck type (Plywood, OSB, etc.)
+   - Underlayment product used
+   - HVHZ-specific requirements
+
+5. PACKET STRUCTURE:
+   List all documents in order with their purpose.
+
+Return ONLY valid JSON in this exact structure. Do NOT include markdown formatting or code blocks.`;
+
+    const userPrompt = `Analyze this completed Florida permit packet and extract ALL structured data:
 
 Context:
 ${analysisContext}
 
-${fileContent ? `The packet file has been provided as base64 content.` : fileUrl ? `File URL: ${fileUrl}` : "No file content available - analyze based on context only."}
+${fileContent ? "The packet file has been provided as base64 content for vision analysis." : fileUrl ? `File URL: ${fileUrl}` : "No file content available - analyze based on context only."}
 
-Extract and return a JSON object with the following structure:
+Return a JSON object with this EXACT structure (no markdown, just JSON):
 {
+  "productApprovals": [
+    {
+      "manufacturer": "GAF",
+      "productName": "Timberline HDZ",
+      "noaNumber": "NOA-21-0123.01",
+      "flApprovalNumber": null,
+      "ulListing": "UL 2218 Class 4",
+      "hvhzApproved": true,
+      "expirationDate": "2026-12-31",
+      "category": "shingle",
+      "pageFound": 5
+    }
+  ],
+  "formFieldMappings": [
+    {
+      "formName": "City of Boca Raton Re-Roofing Permit Application",
+      "formType": "permit_application",
+      "fields": [
+        {
+          "ourFieldName": "owner_name",
+          "pdfFieldName": "Property Owner",
+          "sampleValue": "JOHN SMITH",
+          "fieldType": "text",
+          "transform": "uppercase",
+          "pageNumber": 1
+        }
+      ]
+    }
+  ],
+  "jurisdictionRules": [
+    {
+      "ruleType": "gotcha",
+      "description": "Boca Raton requires product approval documents to be dated within 2 years",
+      "tradeApplicable": ["roofing"],
+      "documentRequired": null,
+      "source": "Form footer note"
+    }
+  ],
+  "tradeSpecificData": {
+    "nailPattern": "6 nails per shingle, 4 inch perimeter spacing",
+    "strapSpacing": "Every 4 rafters",
+    "meanRoofHeight": "18 feet",
+    "roofSlope": "5:12",
+    "deckType": "Plywood",
+    "underlaymentProduct": "GAF FeltBuster",
+    "hvhzRequirements": ["Sealed plywood deck", "Hurricane clips at every rafter"]
+  },
   "packetStructure": [
     {
-      "type": "document type name",
-      "description": "what this document contains",
-      "pageRange": "e.g., 1-3 or 'single page'",
-      "requirements": ["list of requirements this document fulfills"],
-      "fields": {"fieldName": "expected value format or example"}
+      "type": "Permit Application",
+      "description": "Main re-roofing permit application form",
+      "pageRange": "1-2",
+      "requirements": ["Owner signature", "Contractor signature"],
+      "fields": {"permitType": "Re-Roof", "scopeOfWork": "Complete tear-off and re-roof"}
     }
   ],
   "extractedFields": {
-    "ownerName": "format pattern",
-    "propertyAddress": "format pattern",
-    "jobDescription": "typical content",
-    // other common permit fields
+    "ownerName": "JOHN SMITH",
+    "propertyAddress": "123 Main St, Boca Raton, FL 33432",
+    "contractorName": "ABC Roofing Inc",
+    "contractorLicense": "CCC1234567"
   },
   "jurisdictionPatterns": [
-    "e.g., 'Boca Raton requires sealed engineer drawings for roofs over 500 sqft'",
-    "e.g., 'Palm Beach County needs NOC recording before permit closure'"
+    "Boca Raton requires signed and sealed engineering for roofs over 500 sqft on commercial buildings"
   ],
-  "qualityScore": 0.85, // 0-1 rating of packet completeness
+  "qualityScore": 0.85,
   "keyFeatures": [
-    "e.g., 'Includes HVHZ product approvals'",
-    "e.g., 'Has notarized owner affidavit'"
+    "Complete product approval documentation",
+    "HVHZ compliant materials",
+    "Notarized owner affidavit"
   ],
-  "exampleDescription": "A one-paragraph summary of what this packet demonstrates",
-  "commonDocuments": ["list of document types present"],
-  "processingNotes": ["any observations about the packet quality or patterns"]
+  "exampleDescription": "Complete Palm Beach County residential re-roof packet with HVHZ-compliant GAF shingles",
+  "commonDocuments": ["Permit Application", "NOA", "Owner Affidavit", "Site Plan"],
+  "processingNotes": ["High quality packet suitable for training"]
 }
 
-If you cannot analyze the file directly, provide your best inference based on the context provided (county, trade type, etc.) using your knowledge of Florida permit requirements.`;
+Extract as much data as possible. If you cannot find a particular field, use null. Be thorough!`;
 
     // Build message content for analysis
     let analysisContent: any[] = [];
@@ -439,7 +572,8 @@ If you cannot analyze the file directly, provide your best inference based on th
       analysisContent = [{ type: "text", text: userPrompt }];
     }
 
-    // Call Lovable AI for analysis
+    // Call Lovable AI for enhanced analysis
+    console.log("[permit-packet-analyzer] Calling AI with enhanced extraction prompt...");
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -452,7 +586,8 @@ If you cannot analyze the file directly, provide your best inference based on th
           { role: "system", content: systemPrompt },
           { role: "user", content: analysisContent },
         ],
-        temperature: 0.3,
+        temperature: 0.2,
+        max_tokens: 8000,
       }),
     });
 
@@ -477,12 +612,11 @@ If you cannot analyze the file directly, provide your best inference based on th
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices?.[0]?.message?.content || "";
 
-    console.log("[permit-packet-analyzer] AI response received, parsing...");
+    console.log("[permit-packet-analyzer] AI response received, parsing enhanced extraction...");
 
-    // Parse the AI response - try to extract JSON
-    let analysisResult: AnalysisResult;
+    // Parse the AI response
+    let analysisResult: EnhancedAnalysisResult;
     try {
-      // Try to find JSON in the response
       const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysisResult = JSON.parse(jsonMatch[0]);
@@ -491,8 +625,19 @@ If you cannot analyze the file directly, provide your best inference based on th
       }
     } catch (parseError) {
       console.error("[permit-packet-analyzer] Failed to parse AI response:", parseError);
-      // Create a default structure if parsing fails
       analysisResult = {
+        productApprovals: [],
+        formFieldMappings: [],
+        jurisdictionRules: [],
+        tradeSpecificData: {
+          nailPattern: null,
+          strapSpacing: null,
+          meanRoofHeight: null,
+          roofSlope: null,
+          deckType: null,
+          underlaymentProduct: null,
+          hvhzRequirements: [],
+        },
         packetStructure: [],
         extractedFields: {},
         jurisdictionPatterns: [],
@@ -504,9 +649,182 @@ If you cannot analyze the file directly, provide your best inference based on th
       };
     }
 
+    // ========================================
+    // AUTO-SAVE EXTRACTED DATA TO DATABASE
+    // ========================================
+    
+    let productsExtracted = 0;
+    let mappingsLearned = 0;
+    let rulesDiscovered = 0;
+
+    // 1. SAVE PRODUCT APPROVALS
+    if (analysisResult.productApprovals && analysisResult.productApprovals.length > 0) {
+      console.log(`[permit-packet-analyzer] Saving ${analysisResult.productApprovals.length} product approvals...`);
+      
+      for (const approval of analysisResult.productApprovals) {
+        try {
+          // Check if product already exists by NOA or FL number
+          let existingCheck = null;
+          
+          if (approval.noaNumber) {
+            const { data } = await supabase
+              .from("product_approvals")
+              .select("id")
+              .eq("noa_number", approval.noaNumber)
+              .maybeSingle();
+            existingCheck = data;
+          }
+          
+          if (!existingCheck && approval.flApprovalNumber) {
+            const { data } = await supabase
+              .from("product_approvals")
+              .select("id")
+              .eq("fl_product_approval", approval.flApprovalNumber)
+              .maybeSingle();
+            existingCheck = data;
+          }
+
+          if (!existingCheck && (approval.noaNumber || approval.flApprovalNumber)) {
+            const { error: insertError } = await supabase.from("product_approvals").insert({
+              manufacturer: approval.manufacturer,
+              product_name: approval.productName,
+              product_category: approval.category || "other",
+              noa_number: approval.noaNumber,
+              fl_product_approval: approval.flApprovalNumber,
+              uil_number: approval.ulListing,
+              hvhz_approved: approval.hvhzApproved || false,
+              expiration_date: approval.expirationDate,
+              is_active: true,
+            });
+
+            if (insertError) {
+              console.warn(`[permit-packet-analyzer] Failed to insert product approval:`, insertError);
+            } else {
+              productsExtracted++;
+              console.log(`[permit-packet-analyzer] Saved product: ${approval.manufacturer} ${approval.productName}`);
+            }
+          } else if (existingCheck) {
+            console.log(`[permit-packet-analyzer] Product already exists: ${approval.noaNumber || approval.flApprovalNumber}`);
+          }
+        } catch (prodError) {
+          console.warn(`[permit-packet-analyzer] Error saving product approval:`, prodError);
+        }
+      }
+    }
+
+    // 2. SAVE FORM FIELD MAPPINGS
+    if (analysisResult.formFieldMappings && analysisResult.formFieldMappings.length > 0) {
+      console.log(`[permit-packet-analyzer] Processing ${analysisResult.formFieldMappings.length} form mappings...`);
+      
+      for (const form of analysisResult.formFieldMappings) {
+        try {
+          // Try to find matching template
+          const { data: templates } = await supabase
+            .from("permit_form_templates")
+            .select("id, form_name")
+            .ilike("form_name", `%${form.formName.substring(0, 30)}%`)
+            .limit(1);
+
+          if (templates && templates.length > 0) {
+            const template = templates[0];
+            
+            for (const field of form.fields) {
+              // Check if mapping exists
+              const { data: existingMapping } = await supabase
+                .from("permit_field_mappings")
+                .select("id")
+                .eq("template_id", template.id)
+                .eq("pdf_field", field.pdfFieldName)
+                .maybeSingle();
+
+              if (!existingMapping) {
+                const { error: mapError } = await supabase.from("permit_field_mappings").insert({
+                  template_id: template.id,
+                  our_field: field.ourFieldName,
+                  pdf_field: field.pdfFieldName,
+                  field_type: field.fieldType,
+                  transform_type: field.transform,
+                  page_number: field.pageNumber,
+                  notes: `Learned from training: ${trainingId}`,
+                });
+
+                if (!mapError) {
+                  mappingsLearned++;
+                }
+              }
+            }
+          }
+        } catch (mapError) {
+          console.warn(`[permit-packet-analyzer] Error saving form mapping:`, mapError);
+        }
+      }
+    }
+
+    // 3. SAVE JURISDICTION RULES
+    if (analysisResult.jurisdictionRules && analysisResult.jurisdictionRules.length > 0) {
+      console.log(`[permit-packet-analyzer] Saving ${analysisResult.jurisdictionRules.length} jurisdiction rules...`);
+      
+      for (const rule of analysisResult.jurisdictionRules) {
+        try {
+          // Check for existing similar rule
+          const { data: existingRule } = await supabase
+            .from("building_department_rules")
+            .select("id")
+            .eq("county", trainingRecord.county || "")
+            .ilike("rule_description", `%${rule.description.substring(0, 50)}%`)
+            .maybeSingle();
+
+          if (!existingRule) {
+            const { error: ruleError } = await supabase.from("building_department_rules").insert({
+              county: trainingRecord.county || "",
+              city: trainingRecord.city || null,
+              rule_type: rule.ruleType,
+              permit_types: rule.tradeApplicable,
+              rule_description: rule.description,
+              document_required: rule.documentRequired,
+            });
+
+            if (!ruleError) {
+              rulesDiscovered++;
+            }
+          }
+        } catch (ruleErr) {
+          console.warn(`[permit-packet-analyzer] Error saving jurisdiction rule:`, ruleErr);
+        }
+      }
+    }
+
+    // 4. SAVE JURISDICTION PATTERNS TO AI KNOWLEDGE
+    if (analysisResult.jurisdictionPatterns && analysisResult.jurisdictionPatterns.length > 0) {
+      for (const pattern of analysisResult.jurisdictionPatterns) {
+        try {
+          const { data: existing } = await supabase
+            .from("permit_ai_knowledge")
+            .select("id")
+            .eq("county", trainingRecord.county || "")
+            .ilike("knowledge_text", `%${pattern.substring(0, 50)}%`)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from("permit_ai_knowledge").insert({
+              county: trainingRecord.county || "",
+              city: trainingRecord.city || null,
+              trade_type: trainingRecord.trade_type || null,
+              knowledge_type: "requirement",
+              knowledge_text: pattern,
+              source: "training_packet_analysis",
+              confidence_score: analysisResult.qualityScore,
+            });
+          }
+        } catch (patternErr) {
+          console.warn(`[permit-packet-analyzer] Error saving pattern:`, patternErr);
+        }
+      }
+    }
+
     // Update the training record with extracted data
     const updateData: Record<string, any> = {
-      processing_status: "analyzed",
+      processing_status: "completed",
       processed_at: new Date().toISOString(),
       quality_score: analysisResult.qualityScore,
       example_description: analysisResult.exampleDescription || trainingRecord.example_description,
@@ -518,11 +836,18 @@ If you cannot analyze the file directly, provide your best inference based on th
         jurisdictionPatterns: analysisResult.jurisdictionPatterns,
         commonDocuments: analysisResult.commonDocuments,
         processingNotes: analysisResult.processingNotes,
+        productApprovals: analysisResult.productApprovals,
+        formFieldMappings: analysisResult.formFieldMappings,
+        jurisdictionRules: analysisResult.jurisdictionRules,
+        tradeSpecificData: analysisResult.tradeSpecificData,
       },
+      products_extracted: productsExtracted,
+      mappings_learned: mappingsLearned,
+      rules_discovered: rulesDiscovered,
     };
 
-    // If we have packet structure, extract common requirements
-    if (analysisResult.packetStructure.length > 0) {
+    // Extract common requirements from packet structure
+    if (analysisResult.packetStructure && analysisResult.packetStructure.length > 0) {
       const allRequirements = analysisResult.packetStructure
         .flatMap((doc) => doc.requirements || []);
       updateData.required_documents = [...new Set(allRequirements)];
@@ -533,38 +858,18 @@ If you cannot analyze the file directly, provide your best inference based on th
       .update(updateData)
       .eq("id", trainingId);
 
-    // Also update/create AI knowledge entries for jurisdiction patterns
-    if (analysisResult.jurisdictionPatterns.length > 0) {
-      for (const pattern of analysisResult.jurisdictionPatterns) {
-        // Check if similar knowledge exists
-        const { data: existing } = await supabase
-          .from("permit_ai_knowledge")
-          .select("id")
-          .eq("county", trainingRecord.county || "")
-          .ilike("knowledge_text", `%${pattern.substring(0, 50)}%`)
-          .maybeSingle();
-
-        if (!existing) {
-          await supabase.from("permit_ai_knowledge").insert({
-            county: trainingRecord.county || "",
-            city: trainingRecord.city || null,
-            trade_type: trainingRecord.trade_type || null,
-            knowledge_type: "requirement",
-            knowledge_text: pattern,
-            source: "training_packet_analysis",
-            confidence_score: analysisResult.qualityScore,
-          });
-        }
-      }
-    }
-
-    console.log(`[permit-packet-analyzer] Analysis complete for training ID: ${trainingId}`);
+    console.log(`[permit-packet-analyzer] Analysis complete for ${trainingId}. Products: ${productsExtracted}, Mappings: ${mappingsLearned}, Rules: ${rulesDiscovered}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         mode: "analyze_only",
         trainingId,
+        stats: {
+          productsExtracted,
+          mappingsLearned,
+          rulesDiscovered,
+        },
         analysisResult,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -572,18 +877,15 @@ If you cannot analyze the file directly, provide your best inference based on th
   } catch (error) {
     console.error("[permit-packet-analyzer] Critical Error:", error);
     
-    // ALWAYS update the training record status on failure to prevent orphaned "processing" records
-    const requestData = await req.clone().json().catch(() => ({})) as AnalyzeRequest;
-    const { trainingId } = requestData;
-    
-    if (trainingId) {
+    // Use captured trainingId for error handling (don't re-read request body)
+    if (capturedTrainingId) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseKey);
         
         const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-        console.log(`[permit-packet-analyzer] Marking training ID ${trainingId} as failed`);
+        console.log(`[permit-packet-analyzer] Marking training ID ${capturedTrainingId} as failed`);
         
         await supabase
           .from("permit_packet_training")
@@ -592,7 +894,7 @@ If you cannot analyze the file directly, provide your best inference based on th
             admin_notes: `Error: ${errorMessage}`,
             processed_at: new Date().toISOString()
           })
-          .eq("id", trainingId);
+          .eq("id", capturedTrainingId);
       } catch (updateError) {
         console.error("[permit-packet-analyzer] Failed to update training record status:", updateError);
       }

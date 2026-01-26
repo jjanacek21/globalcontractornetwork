@@ -187,15 +187,53 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
 
   const handleReanalyze = async (sample: TrainingSample) => {
     try {
-      toast.info("Re-analyzing packet...");
+      toast.info("Downloading and re-analyzing packet...");
       
       await supabase
         .from("permit_packet_training")
-        .update({ processing_status: "pending" })
+        .update({ processing_status: "processing" })
         .eq("id", sample.id);
 
+      // Download the file from storage to get actual content
+      let fileContent: string | null = null;
+      if (sample.file_url) {
+        try {
+          // Extract storage path from URL
+          const urlParts = sample.file_url.split("/permit-training-packets/");
+          if (urlParts.length > 1) {
+            const storagePath = decodeURIComponent(urlParts[1].split("?")[0]);
+            console.log(`[ReAnalyze] Downloading file from path: ${storagePath}`);
+            
+            const { data: blob, error: downloadError } = await supabase.storage
+              .from("permit-training-packets")
+              .download(storagePath);
+            
+            if (downloadError) {
+              console.warn(`[ReAnalyze] Download error:`, downloadError);
+            } else if (blob) {
+              const arrayBuffer = await blob.arrayBuffer();
+              const bytes = new Uint8Array(arrayBuffer);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+              }
+              fileContent = btoa(binary);
+              console.log(`[ReAnalyze] File downloaded, size: ${bytes.length} bytes`);
+            }
+          }
+        } catch (dlError) {
+          console.warn("[ReAnalyze] Could not download file:", dlError);
+        }
+      }
+
       const { error } = await supabase.functions.invoke("permit-packet-analyzer", {
-        body: { trainingId: sample.id, fileUrl: sample.file_url },
+        body: { 
+          mode: "analyze_only",
+          trainingId: sample.id, 
+          fileUrl: sample.file_url,
+          fileContent,
+          fileName: sample.source_file_name
+        },
       });
 
       if (error) throw error;
@@ -205,6 +243,11 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
     } catch (error: any) {
       console.error("Reanalysis error:", error);
       toast.error("Failed to re-analyze");
+      // Reset status on error
+      await supabase
+        .from("permit_packet_training")
+        .update({ processing_status: "failed", admin_notes: `Re-analysis error: ${error.message}` })
+        .eq("id", sample.id);
     }
   };
 
@@ -246,22 +289,54 @@ export default function TrainingSamplesTable({ refreshTrigger }: TrainingSamples
     let successCount = 0;
     let errorCount = 0;
     
-    toast.info(`Retrying ${failedSamples.length} records...`);
+    toast.info(`Retrying ${failedSamples.length} records with file download...`);
 
     for (const sample of failedSamples) {
       try {
-        // Reset status to pending first
+        // Reset status first
         await supabase
           .from("permit_packet_training")
           .update({ 
-            processing_status: "pending",
+            processing_status: "processing",
             admin_notes: `Retry initiated at ${new Date().toISOString()}`
           })
           .eq("id", sample.id);
         
-        // Invoke the analyzer
+        // Download the file to get content
+        let fileContent: string | null = null;
+        if (sample.file_url) {
+          try {
+            const urlParts = sample.file_url.split("/permit-training-packets/");
+            if (urlParts.length > 1) {
+              const storagePath = decodeURIComponent(urlParts[1].split("?")[0]);
+              const { data: blob, error: downloadError } = await supabase.storage
+                .from("permit-training-packets")
+                .download(storagePath);
+              
+              if (!downloadError && blob) {
+                const arrayBuffer = await blob.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+                let binary = "";
+                for (let i = 0; i < bytes.length; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+                }
+                fileContent = btoa(binary);
+              }
+            }
+          } catch (dlError) {
+            console.warn(`[RetryAll] Could not download file for ${sample.id}:`, dlError);
+          }
+        }
+        
+        // Invoke the analyzer with file content
         const { error } = await supabase.functions.invoke("permit-packet-analyzer", {
-          body: { trainingId: sample.id, fileUrl: sample.file_url }
+          body: { 
+            mode: "analyze_only",
+            trainingId: sample.id, 
+            fileUrl: sample.file_url,
+            fileContent,
+            fileName: sample.source_file_name
+          }
         });
 
         if (error) throw error;
