@@ -266,6 +266,42 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
 
       const detection = detectData?.detection;
 
+      // If detection succeeded, trigger detailed analysis for key features extraction
+      if (detection && recordId) {
+        setQueue(prev => prev.map(f => 
+          f.id === item.id ? { ...f, progress: 80, status: "analyzing" as const } : f
+        ));
+        
+        try {
+          console.log(`[BatchUpload] Triggering detailed analysis for ${item.file.name}`);
+          const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
+            "permit-packet-analyzer",
+            {
+              body: {
+                mode: "analyze_only",
+                trainingId: recordId,
+                fileContent: base64,
+                fileName: item.file.name,
+              },
+            }
+          );
+          
+          if (analysisError) {
+            console.warn(`[BatchUpload] Detailed analysis warning for ${item.file.name}:`, analysisError);
+            // Don't fail the upload - detection still succeeded
+          } else {
+            console.log(`[BatchUpload] Detailed analysis completed for ${item.file.name}`);
+          }
+        } catch (analysisErr) {
+          console.warn(`[BatchUpload] Detailed analysis failed for ${item.file.name}:`, analysisErr);
+          // Don't fail the whole upload - detection still succeeded
+        }
+      }
+
+      setQueue(prev => prev.map(f => 
+        f.id === item.id ? { ...f, progress: 100 } : f
+      ));
+
       const updatedItem: QueuedFile = {
         ...item,
         status: "ready",
@@ -437,7 +473,7 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
           material_type: file.overrides.material_type ?? file.detected?.material_type ?? null,
           is_hvhz: file.overrides.is_hvhz ?? file.detected?.is_hvhz ?? false,
           processing_status: "completed",
-          is_verified: true,
+          admin_verified: true,
         };
 
         const { error } = await supabase
