@@ -506,12 +506,19 @@ If you cannot analyze the file directly, provide your best inference based on th
 
     // Update the training record with extracted data
     const updateData: Record<string, any> = {
-      processing_status: "completed",
+      processing_status: "analyzed",
       processed_at: new Date().toISOString(),
       quality_score: analysisResult.qualityScore,
       example_description: analysisResult.exampleDescription || trainingRecord.example_description,
       extracted_documents: analysisResult.packetStructure,
       key_features: analysisResult.keyFeatures,
+      packet_structure: {
+        documents: analysisResult.packetStructure,
+        extractedFields: analysisResult.extractedFields,
+        jurisdictionPatterns: analysisResult.jurisdictionPatterns,
+        commonDocuments: analysisResult.commonDocuments,
+        processingNotes: analysisResult.processingNotes,
+      },
     };
 
     // If we have packet structure, extract common requirements
