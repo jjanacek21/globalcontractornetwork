@@ -113,7 +113,9 @@ export default function TrainingDetailDialog({
   const packetData = sample.packet_structure || {};
   const keyFeatures: string[] = Array.isArray(packetData.keyFeatures)
     ? packetData.keyFeatures
-    : [];
+    : Array.isArray(packetData.processingNotes) && packetData.processingNotes.length > 0
+      ? packetData.processingNotes
+      : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,10 +169,11 @@ export default function TrainingDetailDialog({
           )}
 
           <Tabs defaultValue="extracted" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="extracted">Extracted Data</TabsTrigger>
               <TabsTrigger value="features">Key Features</TabsTrigger>
               <TabsTrigger value="admin">Admin Notes</TabsTrigger>
+              <TabsTrigger value="debug" className="text-xs">Debug</TabsTrigger>
             </TabsList>
 
             <TabsContent value="extracted" className="space-y-4">
@@ -283,8 +286,30 @@ export default function TrainingDetailDialog({
                 {sample.processed_at && (
                   <p>Analyzed: {format(new Date(sample.processed_at), "PPp")}</p>
                 )}
-                <p>Created: {format(new Date(sample.created_at), "PPp")}</p>
+                <p>Created: {format(new Date(sample.created_at!), "PPp")}</p>
               </div>
+            </TabsContent>
+
+            <TabsContent value="debug" className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Raw Packet Structure (Debug)</p>
+                <pre className="text-xs bg-muted p-3 rounded-lg overflow-auto max-h-64 whitespace-pre-wrap">
+                  {JSON.stringify(sample.packet_structure, null, 2) || "No data"}
+                </pre>
+              </div>
+              {packetData.processingNotes && packetData.processingNotes.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2 text-amber-600">Processing Notes</p>
+                  <ul className="text-sm space-y-1">
+                    {packetData.processingNotes.map((note: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

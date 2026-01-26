@@ -614,17 +614,62 @@ Extract as much data as possible. If you cannot find a particular field, use nul
 
     console.log("[permit-packet-analyzer] AI response received, parsing enhanced extraction...");
 
+    // Enhanced JSON parsing with multiple fallback strategies
+    function extractJSON(content: string): any {
+      // Strategy 1: Find JSON between code blocks
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        try {
+          return JSON.parse(codeBlockMatch[1].trim());
+        } catch (e) {
+          console.log("[permit-packet-analyzer] Code block JSON parse failed:", e);
+        }
+      }
+      
+      // Strategy 2: Find outermost JSON object
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          console.log("[permit-packet-analyzer] Direct JSON parse failed:", e);
+        }
+      }
+      
+      // Strategy 3: Try to fix common JSON issues
+      let cleaned = content
+        .replace(/,\s*\}/g, '}')    // Remove trailing commas in objects
+        .replace(/,\s*\]/g, ']')    // Remove trailing commas in arrays
+        .replace(/'/g, '"')          // Replace single quotes
+        .replace(/\n/g, ' ')         // Remove newlines
+        .replace(/\t/g, ' ');        // Remove tabs
+        
+      const cleanedMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (cleanedMatch) {
+        try {
+          return JSON.parse(cleanedMatch[0]);
+        } catch (e) {
+          console.log("[permit-packet-analyzer] Cleaned JSON parse failed:", e);
+        }
+      }
+      
+      return null;
+    }
+
     // Parse the AI response
     let analysisResult: EnhancedAnalysisResult;
     try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysisResult = JSON.parse(jsonMatch[0]);
+      const parsed = extractJSON(aiContent);
+      if (parsed) {
+        analysisResult = parsed;
       } else {
-        throw new Error("No JSON found in response");
+        throw new Error("No JSON found in response after multiple parsing attempts");
       }
     } catch (parseError) {
       console.error("[permit-packet-analyzer] Failed to parse AI response:", parseError);
+      console.log("[permit-packet-analyzer] Raw AI content (first 500 chars):", aiContent.substring(0, 500));
+      
+      // Save fallback data with low quality score to indicate parsing failed
       analysisResult = {
         productApprovals: [],
         formFieldMappings: [],
@@ -641,11 +686,15 @@ Extract as much data as possible. If you cannot find a particular field, use nul
         packetStructure: [],
         extractedFields: {},
         jurisdictionPatterns: [],
-        qualityScore: 0.5,
-        keyFeatures: [],
-        exampleDescription: aiContent.substring(0, 500),
+        qualityScore: 0.3, // Lower score indicates parsing failed
+        keyFeatures: ["Parsing failed - manual review needed"],
+        exampleDescription: "AI response could not be parsed. Raw: " + aiContent.substring(0, 300),
         commonDocuments: [],
-        processingNotes: ["AI response could not be fully parsed"],
+        processingNotes: [
+          "AI response parsing failed",
+          `Error: ${parseError instanceof Error ? parseError.message : 'Unknown'}`,
+          "Consider re-running analysis"
+        ],
       };
     }
 
@@ -684,10 +733,14 @@ Extract as much data as possible. If you cannot find a particular field, use nul
             existingCheck = data;
           }
 
-          if (!existingCheck && (approval.noaNumber || approval.flApprovalNumber)) {
+          // Guard: Ensure required fields exist before inserting
+          if (!existingCheck && 
+              (approval.noaNumber || approval.flApprovalNumber) &&
+              approval.manufacturer && 
+              approval.productName) {
             const { error: insertError } = await supabase.from("product_approvals").insert({
               manufacturer: approval.manufacturer,
-              product_name: approval.productName,
+              product_name: approval.productName || "Unknown Product",
               product_category: approval.category || "other",
               noa_number: approval.noaNumber,
               fl_product_approval: approval.flApprovalNumber,
@@ -695,6 +748,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
               hvhz_approved: approval.hvhzApproved || false,
               expiration_date: approval.expirationDate,
               is_active: true,
+              source_status: "training_extracted",
+              metadata: { source_training_id: trainingId },
             });
 
             if (insertError) {
@@ -705,6 +760,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
             }
           } else if (existingCheck) {
             console.log(`[permit-packet-analyzer] Product already exists: ${approval.noaNumber || approval.flApprovalNumber}`);
+          } else if (!approval.manufacturer || !approval.productName) {
+            console.warn(`[permit-packet-analyzer] Skipping product - missing required fields: manufacturer=${approval.manufacturer}, productName=${approval.productName}`);
           }
         } catch (prodError) {
           console.warn(`[permit-packet-analyzer] Error saving product approval:`, prodError);
@@ -823,15 +880,16 @@ Extract as much data as possible. If you cannot find a particular field, use nul
     }
 
     // Update the training record with extracted data
+    // NOTE: key_features column doesn't exist - store in packet_structure instead
     const updateData: Record<string, any> = {
       processing_status: "completed",
       processed_at: new Date().toISOString(),
       quality_score: analysisResult.qualityScore,
       example_description: analysisResult.exampleDescription || trainingRecord.example_description,
       extracted_documents: analysisResult.packetStructure,
-      key_features: analysisResult.keyFeatures,
       packet_structure: {
         documents: analysisResult.packetStructure,
+        keyFeatures: analysisResult.keyFeatures, // Store key_features here
         extractedFields: analysisResult.extractedFields,
         jurisdictionPatterns: analysisResult.jurisdictionPatterns,
         commonDocuments: analysisResult.commonDocuments,
