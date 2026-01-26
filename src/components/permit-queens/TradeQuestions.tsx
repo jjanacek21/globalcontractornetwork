@@ -60,6 +60,13 @@ export const getDefaultTradeData = (trade: TradeType): TradeQuestionsData => {
           selectedUnderlayment: null,
           selectedCovering: null,
           selectedFasteners: null,
+          // Section 1524 fields
+          yearBuilt: null,
+          buildingType: 'single_family',
+          hasExposedCeilings: false,
+          hasPondingWater: false,
+          requiresOverflowScuppers: false,
+          deckAttachmentConfirmed: false,
         },
       };
     case 'hvac':

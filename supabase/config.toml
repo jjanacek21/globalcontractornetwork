@@ -125,3 +125,12 @@ verify_jwt = false
 
 [functions.permit-expediter-brain]
 verify_jwt = false
+
+[functions.batch-source-products]
+verify_jwt = false
+
+[functions.property-appraiser-lookup]
+verify_jwt = false
+
+[functions.dbpr-license-check]
+verify_jwt = false
