@@ -5459,6 +5459,7 @@ export type Database = {
           architectural_approval_required: boolean | null
           assigned_expediter_id: string | null
           building_dept_id: string | null
+          building_type: string | null
           city: string | null
           city_review_status: string | null
           city_submission_date: string | null
@@ -5470,11 +5471,15 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          deck_attachment_confirmed: boolean | null
           expedited: boolean | null
+          fastener_pattern_confirmed: boolean | null
           fee_actual: number | null
           fee_estimate: number | null
           generated_forms: Json | null
+          has_exposed_ceilings: boolean | null
           has_hurricane_straps: boolean | null
+          has_ponding_water: boolean | null
           hoa_approval: boolean | null
           id: string
           inspection_requested: string | null
@@ -5495,6 +5500,7 @@ export type Database = {
           pipeline_status: string | null
           property_address: string
           ready_for_payment_notified_at: string | null
+          requires_overflow_scuppers: boolean | null
           revision_notes: string | null
           revision_requested: boolean | null
           roof_accessories: string | null
@@ -5512,6 +5518,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valuation: number | null
+          year_built: number | null
           zip_code: string | null
         }
         Insert: {
@@ -5525,6 +5532,7 @@ export type Database = {
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
           building_dept_id?: string | null
+          building_type?: string | null
           city?: string | null
           city_review_status?: string | null
           city_submission_date?: string | null
@@ -5536,11 +5544,15 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          deck_attachment_confirmed?: boolean | null
           expedited?: boolean | null
+          fastener_pattern_confirmed?: boolean | null
           fee_actual?: number | null
           fee_estimate?: number | null
           generated_forms?: Json | null
+          has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
+          has_ponding_water?: boolean | null
           hoa_approval?: boolean | null
           id?: string
           inspection_requested?: string | null
@@ -5561,6 +5573,7 @@ export type Database = {
           pipeline_status?: string | null
           property_address: string
           ready_for_payment_notified_at?: string | null
+          requires_overflow_scuppers?: boolean | null
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
@@ -5578,6 +5591,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valuation?: number | null
+          year_built?: number | null
           zip_code?: string | null
         }
         Update: {
@@ -5591,6 +5605,7 @@ export type Database = {
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
           building_dept_id?: string | null
+          building_type?: string | null
           city?: string | null
           city_review_status?: string | null
           city_submission_date?: string | null
@@ -5602,11 +5617,15 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          deck_attachment_confirmed?: boolean | null
           expedited?: boolean | null
+          fastener_pattern_confirmed?: boolean | null
           fee_actual?: number | null
           fee_estimate?: number | null
           generated_forms?: Json | null
+          has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
+          has_ponding_water?: boolean | null
           hoa_approval?: boolean | null
           id?: string
           inspection_requested?: string | null
@@ -5627,6 +5646,7 @@ export type Database = {
           pipeline_status?: string | null
           property_address?: string
           ready_for_payment_notified_at?: string | null
+          requires_overflow_scuppers?: boolean | null
           revision_notes?: string | null
           revision_requested?: boolean | null
           roof_accessories?: string | null
@@ -5644,6 +5664,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valuation?: number | null
+          year_built?: number | null
           zip_code?: string | null
         }
         Relationships: [
@@ -6181,6 +6202,8 @@ export type Database = {
           fl_product_approval: string | null
           hvhz_approved: boolean | null
           id: string
+          impact_test_url: string | null
+          installation_guide_url: string | null
           is_active: boolean | null
           jurisdiction_scope: string[] | null
           last_source_attempt: string | null
@@ -6188,14 +6211,18 @@ export type Database = {
           metadata: Json | null
           noa_number: string | null
           noa_pdf_url: string | null
+          pe_evaluation_url: string | null
           premium_tier: number | null
           product_category: string
           product_line: string | null
           product_name: string
           source_status: string | null
+          source_url_fl: string | null
+          source_url_noa: string | null
           source_website: string | null
           specifications: Json | null
           uil_number: string | null
+          ul_2218_class: string | null
           ul_listing_url: string | null
           updated_at: string | null
           wind_speed_rating: number | null
@@ -6211,6 +6238,8 @@ export type Database = {
           fl_product_approval?: string | null
           hvhz_approved?: boolean | null
           id?: string
+          impact_test_url?: string | null
+          installation_guide_url?: string | null
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
           last_source_attempt?: string | null
@@ -6218,14 +6247,18 @@ export type Database = {
           metadata?: Json | null
           noa_number?: string | null
           noa_pdf_url?: string | null
+          pe_evaluation_url?: string | null
           premium_tier?: number | null
           product_category: string
           product_line?: string | null
           product_name: string
           source_status?: string | null
+          source_url_fl?: string | null
+          source_url_noa?: string | null
           source_website?: string | null
           specifications?: Json | null
           uil_number?: string | null
+          ul_2218_class?: string | null
           ul_listing_url?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
@@ -6241,6 +6274,8 @@ export type Database = {
           fl_product_approval?: string | null
           hvhz_approved?: boolean | null
           id?: string
+          impact_test_url?: string | null
+          installation_guide_url?: string | null
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
           last_source_attempt?: string | null
@@ -6248,14 +6283,18 @@ export type Database = {
           metadata?: Json | null
           noa_number?: string | null
           noa_pdf_url?: string | null
+          pe_evaluation_url?: string | null
           premium_tier?: number | null
           product_category?: string
           product_line?: string | null
           product_name?: string
           source_status?: string | null
+          source_url_fl?: string | null
+          source_url_noa?: string | null
           source_website?: string | null
           specifications?: Json | null
           uil_number?: string | null
+          ul_2218_class?: string | null
           ul_listing_url?: string | null
           updated_at?: string | null
           wind_speed_rating?: number | null
@@ -6999,6 +7038,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      section_1524_mappings: {
+        Row: {
+          checkbox_id: string
+          checkbox_label: string
+          condition_field: string | null
+          condition_operator: string | null
+          condition_type: string
+          condition_value: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          pdf_field_name: string | null
+        }
+        Insert: {
+          checkbox_id: string
+          checkbox_label: string
+          condition_field?: string | null
+          condition_operator?: string | null
+          condition_type: string
+          condition_value?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pdf_field_name?: string | null
+        }
+        Update: {
+          checkbox_id?: string
+          checkbox_label?: string
+          condition_field?: string | null
+          condition_operator?: string | null
+          condition_type?: string
+          condition_value?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pdf_field_name?: string | null
+        }
+        Relationships: []
       }
       service_categories: {
         Row: {

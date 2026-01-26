@@ -23,6 +23,13 @@ export interface RoofingFormData {
   selectedUnderlayment: TradeProduct | null;
   selectedCovering: TradeProduct | null;
   selectedFasteners: TradeProduct | null;
+  // Section 1524 fields
+  yearBuilt: number | null;
+  buildingType: 'single_family' | 'multi_family' | 'commercial';
+  hasExposedCeilings: boolean;
+  hasPondingWater: boolean;
+  requiresOverflowScuppers: boolean;
+  deckAttachmentConfirmed: boolean;
 }
 
 interface RoofingQuestionsProps {
@@ -61,6 +68,12 @@ const OBSTACLES = [
   { id: 'hvac', label: 'Rooftop HVAC' },
   { id: 'vents', label: 'Multiple Vents' },
   { id: 'valleys', label: 'Complex Valleys' },
+];
+
+const BUILDING_TYPES = [
+  { id: 'single_family', label: 'Single Family Home' },
+  { id: 'multi_family', label: 'Multi-Family/Condo' },
+  { id: 'commercial', label: 'Commercial' },
 ];
 
 export function RoofingQuestions({
@@ -348,6 +361,113 @@ export function RoofingQuestions({
                   <span className="text-sm">{obstacle.label}</span>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* Section 1524 - Building Information (for HVHZ and deck attachment compliance) */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <Label className="text-sm font-medium text-amber-700">Section 1524 Compliance (Required for HVHZ)</Label>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Year Built */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Year Built</Label>
+                <Input
+                  type="number"
+                  value={formData.yearBuilt || ''}
+                  onChange={(e) => updateField('yearBuilt', parseInt(e.target.value) || null)}
+                  placeholder="e.g. 1985"
+                  min={1900}
+                  max={new Date().getFullYear()}
+                />
+                {formData.yearBuilt && formData.yearBuilt < 1994 && (
+                  <Alert className="py-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Pre-1994 home: Deck renailing may be required per FBC Section 1524
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              {/* Building Type */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Building Type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {BUILDING_TYPES.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => updateField('buildingType', type.id as RoofingFormData['buildingType'])}
+                      className={cn(
+                        "px-3 py-2 border rounded-lg text-sm transition-all",
+                        formData.buildingType === type.id
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-primary/50"
+                      )}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* HVHZ-specific checkboxes */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:border-primary/50">
+                <Checkbox
+                  checked={formData.hasExposedCeilings}
+                  onCheckedChange={(checked) => updateField('hasExposedCeilings', !!checked)}
+                />
+                <div>
+                  <span className="text-sm font-medium">Exposed/Cathedral Ceilings</span>
+                  <p className="text-xs text-muted-foreground">No attic access - roof deck visible from interior</p>
+                </div>
+              </label>
+
+              {formData.pitch === 'flat' && (
+                <>
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:border-primary/50">
+                    <Checkbox
+                      checked={formData.hasPondingWater}
+                      onCheckedChange={(checked) => updateField('hasPondingWater', !!checked)}
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Ponding Water Issues</span>
+                      <p className="text-xs text-muted-foreground">Standing water on roof after rain</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:border-primary/50">
+                    <Checkbox
+                      checked={formData.requiresOverflowScuppers}
+                      onCheckedChange={(checked) => updateField('requiresOverflowScuppers', !!checked)}
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Overflow Scuppers Required</span>
+                      <p className="text-xs text-muted-foreground">Secondary drainage needed for flat roof</p>
+                    </div>
+                  </label>
+                </>
+              )}
+
+              {isHVHZ && (
+                <label className="flex items-center gap-3 p-3 border border-amber-200 bg-amber-50 rounded-lg cursor-pointer">
+                  <Checkbox
+                    checked={formData.deckAttachmentConfirmed}
+                    onCheckedChange={(checked) => updateField('deckAttachmentConfirmed', !!checked)}
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-amber-800">Deck Attachment Compliance</span>
+                    <p className="text-xs text-amber-700">
+                      Confirm: 8d ring-shank nails @ 6" o.c. field / 4" o.c. edges per FBC HVHZ requirements
+                    </p>
+                  </div>
+                </label>
+              )}
             </div>
           </div>
         </CardContent>

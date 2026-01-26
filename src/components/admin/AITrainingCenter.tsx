@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, FileUp, Package } from "lucide-react";
+import { BarChart3, CheckCircle2, FileUp, Package, Download } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
 import ExtractedProductsTab from "./ExtractedProductsTab";
+import { BatchProductSourcing } from "@/components/permit-queens/BatchProductSourcing";
 
 const AITrainingCenter = () => {
   const [activeSubTab, setActiveSubTab] = useState("analytics");
@@ -41,6 +42,13 @@ const AITrainingCenter = () => {
             <Package className="h-4 w-4" />
             Extracted Products
           </TabsTrigger>
+          <TabsTrigger 
+            value="batch-sourcing" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Download className="h-4 w-4" />
+            PDF Sourcing
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
@@ -57,6 +65,10 @@ const AITrainingCenter = () => {
 
         <TabsContent value="extracted-products" className="mt-4">
           <ExtractedProductsTab />
+        </TabsContent>
+
+        <TabsContent value="batch-sourcing" className="mt-4">
+          <BatchProductSourcing />
         </TabsContent>
       </Tabs>
     </div>
