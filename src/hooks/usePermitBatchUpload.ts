@@ -233,8 +233,10 @@ export function usePermitBatchUpload(options: BatchUploadOptions = {}) {
       // Create initial training record using raw insert with type assertion
       const insertData = {
         county: "Pending Detection",
+        trade_type: "Pending Detection",
+        packet_structure: {},
         file_url: urlData.publicUrl,
-        file_name: item.file.name,
+        source_file_name: item.file.name,
         processing_status: "queued",
         batch_id: currentBatchId,
         auto_detected: true,
