@@ -882,46 +882,68 @@ Extract as much data as possible. If you cannot find a particular field, use nul
       }
     }
 
-    // 2. SAVE FORM FIELD MAPPINGS
+    // 2. SAVE FORM FIELD MAPPINGS (Now saves even without matching template)
     if (analysisResult.formFieldMappings && analysisResult.formFieldMappings.length > 0) {
       console.log(`[permit-packet-analyzer] Processing ${analysisResult.formFieldMappings.length} form mappings...`);
       
       for (const form of analysisResult.formFieldMappings) {
         try {
-          // Try to find matching template
-          const { data: templates } = await supabase
-            .from("permit_form_templates")
-            .select("id, form_name")
-            .ilike("form_name", `%${form.formName.substring(0, 30)}%`)
-            .limit(1);
+          // Try to find matching template (optional now)
+          let templateId: string | null = null;
+          
+          if (form.formName && form.formName.length > 5) {
+            const { data: templates } = await supabase
+              .from("permit_form_templates")
+              .select("id, form_name")
+              .ilike("form_name", `%${form.formName.substring(0, 30)}%`)
+              .limit(1);
 
-          if (templates && templates.length > 0) {
-            const template = templates[0];
+            if (templates && templates.length > 0) {
+              templateId = templates[0].id;
+              console.log(`[permit-packet-analyzer] Matched form to template: ${templates[0].form_name}`);
+            } else {
+              console.log(`[permit-packet-analyzer] No template match for form: ${form.formName}, saving with county context`);
+            }
+          }
+
+          // Process each field mapping
+          for (const field of form.fields) {
+            if (!field.pdfFieldName || !field.ourFieldName) {
+              console.log(`[permit-packet-analyzer] Skipping field with missing names`);
+              continue;
+            }
             
-            for (const field of form.fields) {
-              // Check if mapping exists
-              const { data: existingMapping } = await supabase
+            // Check if mapping exists (by pdf_field and county, since template_id can be null)
+            const { data: existingMapping } = await supabase
+              .from("permit_field_mappings")
+              .select("id")
+              .eq("pdf_field", field.pdfFieldName)
+              .eq("our_field", field.ourFieldName)
+              .maybeSingle();
+
+            if (!existingMapping) {
+              const mappingData: Record<string, any> = {
+                template_id: templateId, // Can be null - we'll associate later
+                our_field: field.ourFieldName,
+                pdf_field: field.pdfFieldName,
+                field_type: field.fieldType || "text",
+                transform_type: field.transform || null,
+                page_number: field.pageNumber || 1,
+                notes: `Learned from training: ${trainingId}, Form: ${form.formName}, County: ${trainingRecord.county || "Unknown"}`,
+              };
+              
+              const { error: mapError } = await supabase
                 .from("permit_field_mappings")
-                .select("id")
-                .eq("template_id", template.id)
-                .eq("pdf_field", field.pdfFieldName)
-                .maybeSingle();
+                .insert(mappingData);
 
-              if (!existingMapping) {
-                const { error: mapError } = await supabase.from("permit_field_mappings").insert({
-                  template_id: template.id,
-                  our_field: field.ourFieldName,
-                  pdf_field: field.pdfFieldName,
-                  field_type: field.fieldType,
-                  transform_type: field.transform,
-                  page_number: field.pageNumber,
-                  notes: `Learned from training: ${trainingId}`,
-                });
-
-                if (!mapError) {
-                  mappingsLearned++;
-                }
+              if (!mapError) {
+                mappingsLearned++;
+                console.log(`[permit-packet-analyzer] Saved field mapping: ${field.ourFieldName} -> ${field.pdfFieldName}`);
+              } else {
+                console.warn(`[permit-packet-analyzer] Failed to save mapping:`, mapError.message);
               }
+            } else {
+              console.log(`[permit-packet-analyzer] Mapping already exists: ${field.pdfFieldName}`);
             }
           }
         } catch (mapError) {
