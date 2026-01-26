@@ -3856,6 +3856,42 @@ export type Database = {
           },
         ]
       }
+      license_verifications: {
+        Row: {
+          concerns: string[] | null
+          created_at: string
+          id: string
+          is_valid: boolean | null
+          license_data: Json
+          license_number: string
+          license_type: string | null
+          updated_at: string
+          verified_at: string
+        }
+        Insert: {
+          concerns?: string[] | null
+          created_at?: string
+          id?: string
+          is_valid?: boolean | null
+          license_data: Json
+          license_number: string
+          license_type?: string | null
+          updated_at?: string
+          verified_at: string
+        }
+        Update: {
+          concerns?: string[] | null
+          created_at?: string
+          id?: string
+          is_valid?: boolean | null
+          license_data?: Json
+          license_number?: string
+          license_type?: string | null
+          updated_at?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       login_requests: {
         Row: {
           admin_notes: string | null
@@ -6448,6 +6484,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      property_cache: {
+        Row: {
+          county: string
+          created_at: string
+          folio: string
+          id: string
+          property_data: Json
+          scraped_at: string
+        }
+        Insert: {
+          county: string
+          created_at?: string
+          folio: string
+          id?: string
+          property_data: Json
+          scraped_at?: string
+        }
+        Update: {
+          county?: string
+          created_at?: string
+          folio?: string
+          id?: string
+          property_data?: Json
+          scraped_at?: string
+        }
+        Relationships: []
       }
       quiz_attempts: {
         Row: {
