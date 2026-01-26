@@ -2432,6 +2432,93 @@ export type Database = {
           },
         ]
       }
+      fastener_patterns: {
+        Row: {
+          created_at: string
+          deck_type: string | null
+          fastener_for: string | null
+          id: string
+          is_hvhz: boolean | null
+          jurisdiction_city: string | null
+          jurisdiction_county: string
+          nail_gauge: string | null
+          nail_length: string | null
+          nail_type: string | null
+          nails_per_square: number | null
+          notes: string | null
+          product_approval_id: string | null
+          roof_material: string | null
+          source_document: string | null
+          source_page: number | null
+          spacing_description: string | null
+          spacing_inches: number | null
+          training_session_id: string | null
+          updated_at: string
+          zone_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          deck_type?: string | null
+          fastener_for?: string | null
+          id?: string
+          is_hvhz?: boolean | null
+          jurisdiction_city?: string | null
+          jurisdiction_county: string
+          nail_gauge?: string | null
+          nail_length?: string | null
+          nail_type?: string | null
+          nails_per_square?: number | null
+          notes?: string | null
+          product_approval_id?: string | null
+          roof_material?: string | null
+          source_document?: string | null
+          source_page?: number | null
+          spacing_description?: string | null
+          spacing_inches?: number | null
+          training_session_id?: string | null
+          updated_at?: string
+          zone_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          deck_type?: string | null
+          fastener_for?: string | null
+          id?: string
+          is_hvhz?: boolean | null
+          jurisdiction_city?: string | null
+          jurisdiction_county?: string
+          nail_gauge?: string | null
+          nail_length?: string | null
+          nail_type?: string | null
+          nails_per_square?: number | null
+          notes?: string | null
+          product_approval_id?: string | null
+          roof_material?: string | null
+          source_document?: string | null
+          source_page?: number | null
+          spacing_description?: string | null
+          spacing_inches?: number | null
+          training_session_id?: string | null
+          updated_at?: string
+          zone_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fastener_patterns_product_approval_id_fkey"
+            columns: ["product_approval_id"]
+            isOneToOne: false
+            referencedRelation: "product_approvals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fastener_patterns_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "permit_packet_training"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorite_contractors: {
         Row: {
           contractor_id: string
@@ -4676,6 +4763,90 @@ export type Database = {
           },
         ]
       }
+      permit_inspections: {
+        Row: {
+          category: string | null
+          completed_date: string | null
+          created_at: string
+          description: string | null
+          id: string
+          inspection_code: string | null
+          inspection_type: string
+          inspector_id: string | null
+          inspector_name: string | null
+          is_required: boolean | null
+          order_in_sequence: number | null
+          permit_project_id: string | null
+          prerequisites: string[] | null
+          result: string | null
+          result_notes: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          seq_id: number
+          training_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          inspection_code?: string | null
+          inspection_type: string
+          inspector_id?: string | null
+          inspector_name?: string | null
+          is_required?: boolean | null
+          order_in_sequence?: number | null
+          permit_project_id?: string | null
+          prerequisites?: string[] | null
+          result?: string | null
+          result_notes?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          seq_id: number
+          training_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          completed_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          inspection_code?: string | null
+          inspection_type?: string
+          inspector_id?: string | null
+          inspector_name?: string | null
+          is_required?: boolean | null
+          order_in_sequence?: number | null
+          permit_project_id?: string | null
+          prerequisites?: string[] | null
+          result?: string | null
+          result_notes?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          seq_id?: number
+          training_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_inspections_permit_project_id_fkey"
+            columns: ["permit_project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_inspections_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "permit_packet_training"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_local_codes: {
         Row: {
           building_dept_id: string | null
@@ -4985,6 +5156,74 @@ export type Database = {
           },
         ]
       }
+      permit_packet_versions: {
+        Row: {
+          change_notes: string | null
+          changes_from_previous: Json | null
+          created_at: string
+          document_count: number | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          packet_size_bytes: number | null
+          packet_url: string
+          permit_project_id: string | null
+          result: string | null
+          result_date: string | null
+          result_notes: string | null
+          reviewer_name: string | null
+          submission_date: string | null
+          submission_method: string | null
+          version_number: number
+        }
+        Insert: {
+          change_notes?: string | null
+          changes_from_previous?: Json | null
+          created_at?: string
+          document_count?: number | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          packet_size_bytes?: number | null
+          packet_url: string
+          permit_project_id?: string | null
+          result?: string | null
+          result_date?: string | null
+          result_notes?: string | null
+          reviewer_name?: string | null
+          submission_date?: string | null
+          submission_method?: string | null
+          version_number?: number
+        }
+        Update: {
+          change_notes?: string | null
+          changes_from_previous?: Json | null
+          created_at?: string
+          document_count?: number | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          packet_size_bytes?: number | null
+          packet_url?: string
+          permit_project_id?: string | null
+          result?: string | null
+          result_date?: string | null
+          result_notes?: string | null
+          reviewer_name?: string | null
+          submission_date?: string | null
+          submission_method?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_packet_versions_permit_project_id_fkey"
+            columns: ["permit_project_id"]
+            isOneToOne: false
+            referencedRelation: "permit_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_packets: {
         Row: {
           ai_notes: string | null
@@ -5104,6 +5343,11 @@ export type Database = {
           file_path: string
           file_size: number | null
           id: string
+          notarization_session_url: string | null
+          notarization_status: string | null
+          notarization_type: string | null
+          notarized_at: string | null
+          notary_name: string | null
           processing_status: string | null
           project_id: string
           reviewed_at: string | null
@@ -5122,6 +5366,11 @@ export type Database = {
           file_path: string
           file_size?: number | null
           id?: string
+          notarization_session_url?: string | null
+          notarization_status?: string | null
+          notarization_type?: string | null
+          notarized_at?: string | null
+          notary_name?: string | null
           processing_status?: string | null
           project_id: string
           reviewed_at?: string | null
@@ -5140,6 +5389,11 @@ export type Database = {
           file_path?: string
           file_size?: number | null
           id?: string
+          notarization_session_url?: string | null
+          notarization_status?: string | null
+          notarization_type?: string | null
+          notarized_at?: string | null
+          notary_name?: string | null
           processing_status?: string | null
           project_id?: string
           reviewed_at?: string | null

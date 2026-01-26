@@ -92,11 +92,41 @@ interface TradeSpecificData {
   hvhzRequirements: string[];
 }
 
+// NEW: Fastener pattern extraction interface
+interface ExtractedFastenerPattern {
+  zoneType: "field" | "perimeter" | "corner" | "hip_ridge" | "eave" | "rake" | "general";
+  nailType: string | null;
+  nailLength: string | null;
+  nailGauge: string | null;
+  spacingInches: number | null;
+  spacingDescription: string | null;
+  nailsPerSquare: number | null;
+  fastenerFor: string | null;
+  roofMaterial: string | null;
+  deckType: string | null;
+  sourceDocument: string | null;
+  sourcePage: number | null;
+}
+
+// NEW: Inspection schedule extraction interface
+interface ExtractedInspection {
+  seqId: number;
+  inspectionType: string;
+  inspectionCode: string | null;
+  category: "building" | "electrical" | "plumbing" | "mechanical" | "fire" | "structural" | "roofing";
+  description: string;
+  isRequired: boolean;
+  orderInSequence: number;
+  prerequisites: string[];
+}
+
 interface EnhancedAnalysisResult {
   productApprovals: ExtractedProductApproval[];
   formFieldMappings: ExtractedFormMapping[];
   jurisdictionRules: ExtractedJurisdictionRule[];
   tradeSpecificData: TradeSpecificData;
+  fastenerPatterns: ExtractedFastenerPattern[]; // NEW
+  inspectionSchedule: ExtractedInspection[]; // NEW
   packetStructure: ExtractedDocument[];
   extractedFields: Record<string, string>;
   jurisdictionPatterns: string[];
@@ -475,7 +505,30 @@ You MUST extract data in these specific categories:
    - Underlayment product used
    - HVHZ-specific requirements
 
-5. PACKET STRUCTURE:
+5. FASTENER PATTERNS (CRITICAL for compliance):
+   Extract DETAILED nail/screw schedules from product approvals, installation instructions, or NOAs:
+   - Zone type: field, perimeter, corner, hip_ridge, eave, rake
+   - Nail type: ring shank, smooth shank, cap nail, roofing nail, coil nail
+   - Nail length: "1.25 inch", "2 inch", etc.
+   - Nail gauge: "12 gauge", "11 gauge"
+   - Spacing: in inches on center (e.g., 6 for "6 inches o.c.")
+   - Nails per square (100 sq ft): if mentioned
+   - What the fastener is for: underlayment, shingle, metal panel, tile, base sheet
+   - Roof material: asphalt shingle, metal, tile, modified bitumen, TPO
+   - Deck type: plywood, OSB, concrete
+
+6. INSPECTION SCHEDULE:
+   Extract the list of required inspections from the permit card or application:
+   - SEQ ID number (e.g., 8, 9, 10)
+   - Inspection type: anchor_sheet, fire_barrier, roof_in_progress, final, tie_beam, electrical_rough, etc.
+   - Inspection code used by building dept
+   - Category: building, electrical, plumbing, mechanical, fire, structural, roofing
+   - Description as printed (e.g., "Anchor Sheet (Tin Cap)")
+   - Is it required?
+   - Order in sequence (which inspection comes first?)
+   - Prerequisites (what must pass first?)
+
+7. PACKET STRUCTURE:
    List all documents in order with their purpose.
 
 CRITICAL JSON FORMATTING RULES:
@@ -549,6 +602,78 @@ Return a JSON object with this EXACT structure (no markdown, just JSON):
       "pageRange": "1-2",
       "requirements": ["Owner signature", "Contractor signature"],
       "fields": {"permitType": "Re-Roof", "scopeOfWork": "Complete tear-off and re-roof"}
+    }
+  ],
+  "fastenerPatterns": [
+    {
+      "zoneType": "field",
+      "nailType": "ring shank",
+      "nailLength": "1.25 inch",
+      "nailGauge": "12 gauge",
+      "spacingInches": 6,
+      "spacingDescription": "6 inches on center",
+      "nailsPerSquare": 320,
+      "fastenerFor": "shingle",
+      "roofMaterial": "asphalt shingle",
+      "deckType": "plywood",
+      "sourceDocument": "GAF Installation Instructions",
+      "sourcePage": 3
+    },
+    {
+      "zoneType": "perimeter",
+      "nailType": "ring shank",
+      "nailLength": "1.25 inch",
+      "nailGauge": "12 gauge",
+      "spacingInches": 4,
+      "spacingDescription": "4 inches on center",
+      "nailsPerSquare": 480,
+      "fastenerFor": "shingle",
+      "roofMaterial": "asphalt shingle",
+      "deckType": "plywood",
+      "sourceDocument": "NOA 21-0123.01",
+      "sourcePage": 5
+    }
+  ],
+  "inspectionSchedule": [
+    {
+      "seqId": 8,
+      "inspectionType": "anchor_sheet",
+      "inspectionCode": "8",
+      "category": "roofing",
+      "description": "Anchor Sheet (Tin Cap)",
+      "isRequired": true,
+      "orderInSequence": 1,
+      "prerequisites": []
+    },
+    {
+      "seqId": 9,
+      "inspectionType": "fire_barrier",
+      "inspectionCode": "9",
+      "category": "roofing",
+      "description": "Fire Barrier",
+      "isRequired": false,
+      "orderInSequence": 2,
+      "prerequisites": ["anchor_sheet"]
+    },
+    {
+      "seqId": 10,
+      "inspectionType": "roof_in_progress",
+      "inspectionCode": "10",
+      "category": "roofing",
+      "description": "Roof In Progress",
+      "isRequired": true,
+      "orderInSequence": 3,
+      "prerequisites": ["anchor_sheet"]
+    },
+    {
+      "seqId": 11,
+      "inspectionType": "final",
+      "inspectionCode": "11",
+      "category": "building",
+      "description": "Final Inspection",
+      "isRequired": true,
+      "orderInSequence": 4,
+      "prerequisites": ["roof_in_progress"]
     }
   ],
   "extractedFields": {
@@ -750,6 +875,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
             formFieldMappings: [],
             jurisdictionRules: [],
             tradeSpecificData: { nailPattern: null, strapSpacing: null, meanRoofHeight: null, roofSlope: null, deckType: null, underlaymentProduct: null, hvhzRequirements: [] },
+            fastenerPatterns: [],
+            inspectionSchedule: [],
             packetStructure: [],
             extractedFields: {},
             jurisdictionPatterns: [],
@@ -796,6 +923,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
           underlaymentProduct: null,
           hvhzRequirements: [],
         },
+        fastenerPatterns: [],
+        inspectionSchedule: [],
         packetStructure: [],
         extractedFields: {},
         jurisdictionPatterns: [],
@@ -1014,6 +1143,99 @@ Extract as much data as possible. If you cannot find a particular field, use nul
       }
     }
 
+    // 5. SAVE FASTENER PATTERNS (NEW)
+    let fastenerPatternsSaved = 0;
+    if (analysisResult.fastenerPatterns && analysisResult.fastenerPatterns.length > 0) {
+      console.log(`[permit-packet-analyzer] Saving ${analysisResult.fastenerPatterns.length} fastener patterns...`);
+      
+      for (const pattern of analysisResult.fastenerPatterns) {
+        try {
+          // Check if similar pattern exists
+          const { data: existingPattern } = await supabase
+            .from("fastener_patterns")
+            .select("id")
+            .eq("jurisdiction_county", trainingRecord.county || "")
+            .eq("zone_type", pattern.zoneType || "general")
+            .eq("roof_material", pattern.roofMaterial || "")
+            .maybeSingle();
+
+          if (!existingPattern) {
+            const { error: patternError } = await supabase.from("fastener_patterns").insert({
+              training_session_id: trainingId,
+              jurisdiction_county: trainingRecord.county || "Unknown",
+              jurisdiction_city: trainingRecord.city || null,
+              is_hvhz: trainingRecord.is_hvhz || false,
+              zone_type: pattern.zoneType || "general",
+              nail_type: pattern.nailType,
+              nail_length: pattern.nailLength,
+              nail_gauge: pattern.nailGauge,
+              spacing_inches: pattern.spacingInches,
+              spacing_description: pattern.spacingDescription,
+              nails_per_square: pattern.nailsPerSquare,
+              fastener_for: pattern.fastenerFor,
+              roof_material: pattern.roofMaterial,
+              deck_type: pattern.deckType,
+              source_document: pattern.sourceDocument,
+              source_page: pattern.sourcePage,
+            });
+
+            if (!patternError) {
+              fastenerPatternsSaved++;
+              console.log(`[permit-packet-analyzer] Saved fastener pattern: ${pattern.zoneType} - ${pattern.roofMaterial}`);
+            } else {
+              console.warn(`[permit-packet-analyzer] Failed to save fastener pattern:`, patternError.message);
+            }
+          } else {
+            console.log(`[permit-packet-analyzer] Fastener pattern already exists for ${pattern.zoneType}`);
+          }
+        } catch (fastenerErr) {
+          console.warn(`[permit-packet-analyzer] Error saving fastener pattern:`, fastenerErr);
+        }
+      }
+    }
+
+    // 6. SAVE INSPECTION SCHEDULE (NEW)
+    let inspectionsSaved = 0;
+    if (analysisResult.inspectionSchedule && analysisResult.inspectionSchedule.length > 0) {
+      console.log(`[permit-packet-analyzer] Saving ${analysisResult.inspectionSchedule.length} inspections...`);
+      
+      for (const inspection of analysisResult.inspectionSchedule) {
+        try {
+          // Check if similar inspection exists for this training session
+          const { data: existingInspection } = await supabase
+            .from("permit_inspections")
+            .select("id")
+            .eq("training_session_id", trainingId)
+            .eq("seq_id", inspection.seqId)
+            .maybeSingle();
+
+          if (!existingInspection) {
+            const { error: inspectionError } = await supabase.from("permit_inspections").insert({
+              training_session_id: trainingId,
+              seq_id: inspection.seqId,
+              inspection_type: inspection.inspectionType,
+              inspection_code: inspection.inspectionCode,
+              category: inspection.category,
+              description: inspection.description,
+              is_required: inspection.isRequired,
+              order_in_sequence: inspection.orderInSequence,
+              prerequisites: inspection.prerequisites,
+              result: "pending",
+            });
+
+            if (!inspectionError) {
+              inspectionsSaved++;
+              console.log(`[permit-packet-analyzer] Saved inspection: ${inspection.seqId} - ${inspection.description}`);
+            } else {
+              console.warn(`[permit-packet-analyzer] Failed to save inspection:`, inspectionError.message);
+            }
+          }
+        } catch (inspErr) {
+          console.warn(`[permit-packet-analyzer] Error saving inspection:`, inspErr);
+        }
+      }
+    }
+
     // Update the training record with extracted data
     // NOTE: key_features column doesn't exist - store in packet_structure instead
     const updateData: Record<string, any> = {
@@ -1033,6 +1255,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
         formFieldMappings: analysisResult.formFieldMappings,
         jurisdictionRules: analysisResult.jurisdictionRules,
         tradeSpecificData: analysisResult.tradeSpecificData,
+        fastenerPatterns: analysisResult.fastenerPatterns, // NEW
+        inspectionSchedule: analysisResult.inspectionSchedule, // NEW
       },
       products_extracted: productsExtracted,
       mappings_learned: mappingsLearned,
@@ -1053,6 +1277,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
 
     console.log(`[permit-packet-analyzer] Analysis complete for ${trainingId}. Products: ${productsExtracted}, Mappings: ${mappingsLearned}, Rules: ${rulesDiscovered}`);
 
+    console.log(`[permit-packet-analyzer] Analysis complete for ${trainingId}. Products: ${productsExtracted}, Mappings: ${mappingsLearned}, Rules: ${rulesDiscovered}, Fasteners: ${fastenerPatternsSaved}, Inspections: ${inspectionsSaved}`);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1062,6 +1288,8 @@ Extract as much data as possible. If you cannot find a particular field, use nul
           productsExtracted,
           mappingsLearned,
           rulesDiscovered,
+          fastenerPatternsSaved,
+          inspectionsSaved,
         },
         analysisResult,
       }),
