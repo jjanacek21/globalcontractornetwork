@@ -1,194 +1,195 @@
 
+
 # Fix: Training Data Extraction and Display Issues
 
 ## Problem Summary
-After uploading and processing training packets, the Training Details dialog shows:
-- Quality Score: "Not Analyzed"
-- Extracted Data: "No extracted document data available"
-- Key Features: "No key features extracted yet"
-- Analytics: 0 products extracted, 0 field mappings
 
-## Root Causes Identified
+Based on investigating the database and edge function, I found these issues:
 
-### 1. AI JSON Parsing Failures
-The edge function logs show the AI is returning malformed JSON or non-JSON responses:
+1. **JSON parsing is failing despite valid JSON** - The AI IS returning correct product approvals, NOA numbers, etc. inside markdown code blocks, but the parser can't extract it
+2. **503 errors** - The Vision API sometimes returns service unavailable errors, especially for large scanned PDFs
+3. **No retry logic** - When the API fails, there's no automatic retry
+4. **Handwritten documents** - These are harder to OCR but Gemini can handle them with the right approach
+5. **Raw code showing in UI** - When parsing fails, the fallback stores truncated raw JSON which looks like "computer code" to users
+
+---
+
+## Root Cause: JSON Parsing
+
+Looking at the database, the AI response shows valid JSON like:
 ```
-SyntaxError: Expected ',' or ']' after array element in JSON at position 10776
-Error: No JSON found in response
+```json
+{
+  "productApprovals": [
+    {
+      "manufacturer": "Birdview Skylights, LLC",
+      "productName": "CMDADE Curb Mounted & 6SF Self Flashing Skylights",
+      "noaNumber": "NOA-24-0401.06",
+      ...
 ```
 
-### 2. Database Column Mismatch
-The edge function tries to save `key_features` but this column doesn't exist in the `permit_packet_training` table. The existing columns are:
-- `packet_structure` (JSONB) - stores nested data
-- `extracted_documents` (JSONB) - stores document list
-- No standalone `key_features` column exists
-
-### 3. Silent Update Failures
-When the database update fails (due to non-existent column), the entire update silently fails, leaving `quality_score`, `extracted_documents`, and `packet_structure` empty.
-
-### 4. Required Fields Missing
-The `product_approvals` insert may fail due to missing required `product_name` when AI parsing fails.
+The current `extractJSON()` function has a regex issue - it's not properly extracting the content between the code blocks when the JSON is very large or contains special characters.
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Fix the Edge Function JSON Parsing
+### 1. Improve JSON Extraction in Edge Function
 
 **File:** `supabase/functions/permit-packet-analyzer/index.ts`
 
-Add more robust JSON extraction with multiple fallback strategies:
+Add a more robust JSON extractor that:
+- Handles markdown code blocks with various formats
+- Extracts JSON even when truncated
+- Attempts to repair common JSON issues
+- Logs detailed debugging info
 
 ```typescript
-// Enhanced JSON parsing with multiple strategies
 function extractJSON(content: string): any {
-  // Strategy 1: Find JSON between code blocks
-  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  console.log("[permit-packet-analyzer] Attempting JSON extraction, content length:", content.length);
+  
+  // Strategy 1: Remove markdown code blocks wrapper first
+  let cleanContent = content.trim();
+  
+  // Check if wrapped in ```json ... ```
+  const codeBlockRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/m;
+  const codeBlockMatch = cleanContent.match(codeBlockRegex);
   if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim());
-    } catch {}
+    cleanContent = codeBlockMatch[1].trim();
+    console.log("[permit-packet-analyzer] Extracted from code block, length:", cleanContent.length);
   }
   
-  // Strategy 2: Find outermost JSON object
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch {}
+  // Strategy 2: Find content between first { and last }
+  const firstBrace = cleanContent.indexOf('{');
+  const lastBrace = cleanContent.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
   }
   
-  // Strategy 3: Try to fix common JSON issues
-  let cleaned = content
-    .replace(/,\s*\}/g, '}')    // Remove trailing commas
-    .replace(/,\s*\]/g, ']')    // Remove trailing commas in arrays
-    .replace(/'/g, '"');         // Replace single quotes
-    
-  const cleanedMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (cleanedMatch) {
-    try {
-      return JSON.parse(cleanedMatch[0]);
-    } catch {}
+  // Strategy 3: Try direct parse
+  try {
+    return JSON.parse(cleanContent);
+  } catch (e) {
+    console.log("[permit-packet-analyzer] Direct parse failed, trying repairs...");
+  }
+  
+  // Strategy 4: Fix common JSON issues
+  let repaired = cleanContent
+    .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+    .replace(/\n/g, ' ')            // Remove newlines
+    .replace(/\r/g, '')             // Remove carriage returns
+    .replace(/\t/g, ' ')            // Replace tabs with spaces
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/\\'/g, "'");           // Fix escaped single quotes
+  
+  try {
+    return JSON.parse(repaired);
+  } catch (e) {
+    console.log("[permit-packet-analyzer] Repaired parse failed");
   }
   
   return null;
 }
 ```
 
-### Step 2: Remove Non-Existent Column from Update
+### 2. Add Retry Logic for 503 Errors
 
-**File:** `supabase/functions/permit-packet-analyzer/index.ts`
-
-Remove the `key_features` field from the update query since it doesn't exist:
+Add automatic retry with exponential backoff for transient API failures:
 
 ```typescript
-const updateData: Record<string, any> = {
-  processing_status: "completed",
-  processed_at: new Date().toISOString(),
-  quality_score: analysisResult.qualityScore,
-  example_description: analysisResult.exampleDescription || trainingRecord.example_description,
-  extracted_documents: analysisResult.packetStructure,
-  // key_features: analysisResult.keyFeatures,  // REMOVE - column doesn't exist
-  packet_structure: {
-    documents: analysisResult.packetStructure,
-    keyFeatures: analysisResult.keyFeatures,  // Store here instead
-    // ... rest of packet_structure
-  },
-  // ...
-};
-```
-
-### Step 3: Add Fallback Quality Score on Parse Failure
-
-Ensure that even on parsing failure, we save something useful:
-
-```typescript
-} catch (parseError) {
-  console.error("[permit-packet-analyzer] Failed to parse AI response:", parseError);
+async function callVisionAPIWithRetry(
+  url: string,
+  body: object,
+  headers: Record<string, string>,
+  maxRetries: number = 3
+): Promise<Response> {
+  let lastError: Error | null = null;
   
-  // Save the raw AI response for debugging
-  analysisResult = {
-    productApprovals: [],
-    formFieldMappings: [],
-    jurisdictionRules: [],
-    tradeSpecificData: { /* defaults */ },
-    packetStructure: [],
-    extractedFields: {},
-    jurisdictionPatterns: [],
-    qualityScore: 0.3,  // Lower score indicates parsing failed
-    keyFeatures: ["Parsing failed - manual review needed"],
-    exampleDescription: "AI response could not be parsed. Raw: " + aiContent.substring(0, 300),
-    commonDocuments: [],
-    processingNotes: [
-      "AI response parsing failed",
-      `Error: ${parseError.message || 'Unknown'}`,
-      "Consider re-running analysis"
-    ],
-  };
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    
+    // Success or client error (no retry)
+    if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+      return response;
+    }
+    
+    // Retry on 503 (Service Unavailable) or 429 (Rate Limit)
+    if (response.status === 503 || response.status === 429) {
+      const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+      console.log(`[permit-packet-analyzer] Retry ${attempt}/${maxRetries} after ${waitTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      lastError = new Error(`API returned ${response.status}`);
+      continue;
+    }
+    
+    // Other errors - don't retry
+    return response;
+  }
+  
+  throw lastError || new Error("Max retries exceeded");
 }
 ```
 
-### Step 4: Guard Against Missing Required Fields in Inserts
+### 3. Better AI Prompt for Handwritten Documents
 
-Add null checks before inserting into `product_approvals`:
-
-```typescript
-if (!existingCheck && 
-    (approval.noaNumber || approval.flApprovalNumber) &&
-    approval.manufacturer &&
-    approval.productName) {  // Ensure required fields exist
-  const { error: insertError } = await supabase.from("product_approvals").insert({
-    manufacturer: approval.manufacturer,
-    product_name: approval.productName || "Unknown Product",  // Fallback
-    // ...
-  });
-}
-```
-
-### Step 5: Improve AI Prompt for Cleaner JSON
-
-Add explicit instructions to the AI to return clean JSON:
+Add OCR-specific instructions to handle scanned/handwritten content:
 
 ```typescript
 const systemPrompt = `...existing prompt...
 
-CRITICAL JSON FORMATTING RULES:
-1. Return ONLY the JSON object - no markdown, no code blocks, no explanations
-2. Do NOT include trailing commas
-3. Use double quotes for all strings
-4. Ensure all arrays and objects are properly closed
-5. If a value is unknown, use null (not empty string or undefined)`;
+IMPORTANT OCR/SCANNING NOTES:
+- Some documents may be handwritten or poorly scanned
+- Do your best to read handwritten text - common handwritten fields include signatures, dates, and addresses
+- If text is illegible, use null for that field
+- For handwritten numeric values (permit numbers, square footage), extract what you can read
+- Focus on typed/printed text first, then attempt handwritten sections
+- NEVER guess at illegible text - leave as null
+
+CRITICAL JSON FORMATTING:
+1. Return ONLY the JSON object - no markdown code blocks, no explanations before or after
+2. Start your response with { and end with }
+3. Do NOT wrap in \`\`\`json code blocks
+4. Use null (not "null" string) for missing values
+5. Ensure all arrays and objects are properly closed`;
 ```
 
-### Step 6: Update TrainingDetailDialog to Show Fallback Info
+### 4. Improve UI Display for Partial Extraction
 
 **File:** `src/components/admin/TrainingDetailDialog.tsx`
 
-Improve data reading with better fallbacks:
+Add better display of partial data and product approvals from the raw response:
+
+- Try to parse product approvals from the raw `example_description` if it contains valid data
+- Show extracted products in a user-friendly format instead of raw JSON
+- Add a "Re-analyze" button to retry failed extractions
+- Improve the "Extracted Data" tab to show product approval cards
+
+### 5. Add Product Approvals Tab to Training Details
+
+When parsing fails but the raw JSON contains valid product data, extract and display it:
 
 ```typescript
-// Extract key_features from packet_structure if available
-const packetData = sample.packet_structure || {};
-const keyFeatures: string[] = Array.isArray(packetData.keyFeatures)
-  ? packetData.keyFeatures
-  : packetData.processingNotes || [];  // Fallback to processingNotes
-
-// Show raw AI response if parsing failed
-const showDebugInfo = packetData.processingNotes?.includes("AI response parsing failed");
-```
-
-### Step 7: Add Debug Panel in TrainingDetailDialog
-
-Add a hidden "Debug" tab for admins to see raw packet_structure data when troubleshooting:
-
-```tsx
-<TabsTrigger value="debug" className="text-xs">Debug</TabsTrigger>
-
-<TabsContent value="debug">
-  <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-48">
-    {JSON.stringify(sample.packet_structure, null, 2)}
-  </pre>
-</TabsContent>
+// Try to recover product approvals from raw example_description
+function extractProductApprovalsFromRaw(raw: string): any[] {
+  if (!raw || !raw.includes('productApprovals')) return [];
+  
+  try {
+    // Find the productApprovals array
+    const match = raw.match(/"productApprovals"\s*:\s*\[([\s\S]*?)\]/);
+    if (match) {
+      // Try to parse individual products
+      const arrayContent = '[' + match[1] + ']';
+      return JSON.parse(arrayContent);
+    }
+  } catch (e) {
+    // Silent fail - return empty array
+  }
+  return [];
+}
 ```
 
 ---
@@ -197,30 +198,18 @@ Add a hidden "Debug" tab for admins to see raw packet_structure data when troubl
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/permit-packet-analyzer/index.ts` | Fix JSON parsing, remove non-existent column, add guards, improve prompt |
-| `src/components/admin/TrainingDetailDialog.tsx` | Better fallbacks, optional debug panel |
+| `supabase/functions/permit-packet-analyzer/index.ts` | Improve JSON extraction, add retry logic, update AI prompt |
+| `src/components/admin/TrainingDetailDialog.tsx` | Better display of partial data, product approval cards, re-analyze button |
 
 ---
 
-## Testing Plan
+## Summary
 
-After implementation:
-1. Re-run analysis on a failed sample (click Retry)
-2. Verify the Processing status changes properly
-3. Open Training Details dialog and confirm:
-   - Quality Score shows a percentage (even if low)
-   - Extracted Data or processingNotes are visible
-   - Key Features shows data or fallback message
-4. Check Analytics tab for updated counts
+The core fix is improving the JSON extraction to handle the AI's response format better. The AI is returning good data - we just need to parse it correctly. Additionally:
 
----
+1. **Better JSON parsing** with multiple fallback strategies
+2. **Retry logic** for transient 503/429 errors
+3. **Updated AI prompt** to not use code blocks and handle handwritten text
+4. **UI improvements** to show extracted products even when full parsing fails
+5. **Re-analyze button** so admins can retry failed extractions easily
 
-## Technical Summary
-
-The core issue is that the AI sometimes returns malformed JSON that fails to parse, and additionally the edge function was trying to write to a non-existent `key_features` column which caused the entire database update to fail. The fix involves:
-
-1. More robust JSON parsing with multiple fallback strategies
-2. Removing the invalid `key_features` column reference
-3. Storing key features inside the `packet_structure` JSONB field instead
-4. Better error handling to always save meaningful data even on failures
-5. UI improvements to display fallback/debug information
