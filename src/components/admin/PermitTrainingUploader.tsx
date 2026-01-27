@@ -177,12 +177,7 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("permit-training-packets")
-        .getPublicUrl(filePath);
-
-      // Create training record
+      // Create training record - store file path, not public URL for private bucket access
       const { data: trainingRecord, error: insertError } = await supabase
         .from("permit_packet_training")
         .insert([{
@@ -192,7 +187,7 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
           material_type: materialType || null,
           is_hvhz: isHvhz,
           example_description: description || null,
-          file_url: urlData.publicUrl,
+          file_url: filePath, // Store path, not public URL
           uploaded_by: user.id,
           uploaded_at: new Date().toISOString(),
           processing_status: "pending",
@@ -212,7 +207,7 @@ export default function PermitTrainingUploader({ onUploadComplete }: PermitTrain
       setDescription("");
       
       // Trigger AI analysis - pass the actual file for base64 encoding
-      await triggerAnalysis(trainingRecord.id, urlData.publicUrl, selectedFile.name, selectedFile);
+      await triggerAnalysis(trainingRecord.id, filePath, selectedFile.name, selectedFile);
       
       onUploadComplete?.();
     } catch (error: any) {
