@@ -11,7 +11,9 @@ import {
   XCircle, 
   FileText,
   Database,
-  Zap
+  Zap,
+  Brain,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,6 +35,8 @@ export function NOABulkManager() {
     total: number;
     withPdf: number;
     pending: number;
+    aiExtracted: number;
+    avgConfidence: number;
   } | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
@@ -53,11 +57,25 @@ export function NOABulkManager() {
         .select('id', { count: 'exact' })
         .eq('source_status', 'pending');
 
-      if (!allError && !pdfError && !pendingError) {
+      const { data: aiExtracted, error: aiError } = await supabase
+        .from('product_approvals')
+        .select('id, extraction_confidence', { count: 'exact' })
+        .not('ai_extracted_at', 'is', null);
+
+      // Calculate average confidence
+      let avgConfidence = 0;
+      if (aiExtracted && aiExtracted.length > 0) {
+        const totalConfidence = aiExtracted.reduce((sum, p) => sum + (p.extraction_confidence || 0), 0);
+        avgConfidence = totalConfidence / aiExtracted.length;
+      }
+
+      if (!allError && !pdfError && !pendingError && !aiError) {
         setStats({
           total: allProducts?.length || 0,
           withPdf: withPdf?.length || 0,
-          pending: pending?.length || 0
+          pending: pending?.length || 0,
+          aiExtracted: aiExtracted?.length || 0,
+          avgConfidence: avgConfidence
         });
       }
     } catch (e) {
@@ -142,27 +160,47 @@ export function NOABulkManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats Section */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-4">
-            {stats && (
-              <>
-                <Badge variant="outline" className="text-sm">
-                  <Database className="h-3 w-3 mr-1" />
-                  {stats.total} Total Products
-                </Badge>
-                <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-sm">
-                  <FileText className="h-3 w-3 mr-1" />
-                  {stats.withPdf} With PDFs ({((stats.withPdf / stats.total) * 100).toFixed(1)}%)
-                </Badge>
-                <Badge variant="outline" className="text-orange-600 text-sm">
-                  <Zap className="h-3 w-3 mr-1" />
-                  {stats.pending} Pending
-                </Badge>
-              </>
-            )}
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {stats && (
+            <>
+              <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <Database className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-xs text-muted-foreground">Total Products</div>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-lg text-center">
+                <FileText className="h-5 w-5 mx-auto mb-1 text-green-600" />
+                <div className="text-2xl font-bold text-green-600">{stats.withPdf}</div>
+                <div className="text-xs text-muted-foreground">With PDFs ({stats.total > 0 ? ((stats.withPdf / stats.total) * 100).toFixed(1) : 0}%)</div>
+              </div>
+              <div className="p-3 bg-orange-500/10 rounded-lg text-center">
+                <Zap className="h-5 w-5 mx-auto mb-1 text-orange-600" />
+                <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
+                <div className="text-xs text-muted-foreground">Pending</div>
+              </div>
+              <div className="p-3 bg-purple-500/10 rounded-lg text-center">
+                <Brain className="h-5 w-5 mx-auto mb-1 text-purple-600" />
+                <div className="text-2xl font-bold text-purple-600">{stats.aiExtracted}</div>
+                <div className="text-xs text-muted-foreground">AI Extracted</div>
+              </div>
+              <div className="p-3 bg-blue-500/10 rounded-lg text-center">
+                <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+                <div className="text-2xl font-bold text-blue-600">{(stats.avgConfidence * 100).toFixed(0)}%</div>
+                <div className="text-xs text-muted-foreground">Avg Confidence</div>
+              </div>
+            </>
+          )}
+          {!stats && !isLoadingStats && (
+            <div className="col-span-5 text-center py-4 text-muted-foreground">
+              Click "Refresh Stats" to load product approval data
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={loadStats} disabled={isLoadingStats}>
-            {isLoadingStats ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh Stats'}
+            {isLoadingStats ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Refresh Stats
           </Button>
         </div>
 

@@ -74,31 +74,34 @@ If a field cannot be determined from the document, use null for strings/numbers,
 
 IMPORTANT: Only return the JSON object, no additional text.`;
 
-    const aiPayload: any = {
+    // Build the message content based on what we have
+    const messageContent: any[] = [{ type: "text", text: extractionPrompt }];
+    
+    if (pdfBase64) {
+      // Use base64 data directly
+      messageContent.push({
+        type: "image_url",
+        image_url: {
+          url: `data:application/pdf;base64,${pdfBase64}`
+        }
+      });
+    } else if (pdfUrl) {
+      // Use URL reference
+      messageContent.push({
+        type: "image_url",
+        image_url: { url: pdfUrl }
+      });
+    }
+
+    const aiPayload = {
       model: "google/gemini-2.5-flash",
       messages: [
         {
           role: "user",
-          content: pdfBase64 
-            ? [
-                { type: "text", text: extractionPrompt },
-                { 
-                  type: "image_url", 
-                  image_url: { 
-                    url: `data:application/pdf;base64,${pdfBase64}` 
-                  } 
-                }
-              ]
-            : [
-                { type: "text", text: extractionPrompt },
-                { 
-                  type: "image_url", 
-                  image_url: { url: pdfUrl } 
-                }
-              ]
+          content: messageContent
         }
       ],
-      max_tokens: 2000
+      max_tokens: 4000
     };
 
     console.log(`[noa-metadata-extractor] Calling Lovable AI for extraction...`);

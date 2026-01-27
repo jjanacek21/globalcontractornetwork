@@ -127,29 +127,7 @@ serve(async (req: Request) => {
 
     console.log("[process-training-book] Sending to AI for analysis...");
     
-    const aiResponse = await fetch("https://api.lovable.dev/api/v1/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${lovableApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "file",
-                file: {
-                  filename: book.file_name,
-                  content_type: mimeType,
-                  data: base64Content,
-                }
-              },
-              {
-                type: "text",
-                text: `You are a Florida building permit expert. Analyze this training document and extract structured knowledge items.
+    const extractionPrompt = `You are a Florida building permit expert. Analyze this training document and extract structured knowledge items.
 
 Document Title: ${book.title}
 Category: ${book.category}
@@ -183,13 +161,34 @@ Extract 10-30 key knowledge items from this document. Focus on:
 - HVHZ requirements
 - Product approval (NOA) requirements
 
-Return ONLY the JSON array, no other text.`
+Return ONLY the JSON array, no other text.`;
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${lovableApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: extractionPrompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Content}`
+                }
               }
             ]
           }
         ],
         max_tokens: 8000,
-        temperature: 0.3,
       }),
     });
 
