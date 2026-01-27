@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle } from "lucide-react";
+import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
@@ -8,6 +8,8 @@ import ExtractedProductsTab from "./ExtractedProductsTab";
 import { BatchProductSourcing } from "@/components/permit-queens/BatchProductSourcing";
 import { TemplateManager } from "@/components/permit-queens/admin/TemplateManager";
 import { RejectionTracker } from "@/components/permit-queens/admin/RejectionTracker";
+import { SmartDocumentManager } from "@/components/permit-queens/admin/SmartDocumentManager";
+import { PropertyDataEnrichment } from "@/components/permit-queens/admin/PropertyDataEnrichment";
 
 const AITrainingCenter = () => {
   const [activeSubTab, setActiveSubTab] = useState("analytics");
@@ -65,6 +67,20 @@ const AITrainingCenter = () => {
             <XCircle className="h-4 w-4" />
             Rejections
           </TabsTrigger>
+          <TabsTrigger 
+            value="smart-docs" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Sparkles className="h-4 w-4" />
+            Smart Docs
+          </TabsTrigger>
+          <TabsTrigger 
+            value="property-data" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Building className="h-4 w-4" />
+            Property Data
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
@@ -87,6 +103,12 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="rejections" className="mt-4">
           <RejectionTracker />
+        </TabsContent>
+        <TabsContent value="smart-docs" className="mt-4">
+          <SmartDocumentManager />
+        </TabsContent>
+        <TabsContent value="property-data" className="mt-4">
+          <PropertyDataEnrichment />
         </TabsContent>
       </Tabs>
     </div>

@@ -4700,12 +4700,15 @@ export type Database = {
       }
       permit_form_templates: {
         Row: {
+          analysis_status: string | null
+          building_dept_id: string | null
           category: string | null
           city: string | null
           common_errors: string[] | null
           conditional_logic: Json | null
           county: string | null
           created_at: string | null
+          field_count: number | null
           field_mapping: Json | null
           file_path: string
           form_name: string
@@ -4717,6 +4720,7 @@ export type Database = {
           is_fillable: boolean | null
           jurisdiction_id: string | null
           jurisdiction_name: string
+          last_analyzed_at: string | null
           material_type: string | null
           notary_threshold: number | null
           notes: string | null
@@ -4730,12 +4734,15 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          analysis_status?: string | null
+          building_dept_id?: string | null
           category?: string | null
           city?: string | null
           common_errors?: string[] | null
           conditional_logic?: Json | null
           county?: string | null
           created_at?: string | null
+          field_count?: number | null
           field_mapping?: Json | null
           file_path: string
           form_name: string
@@ -4747,6 +4754,7 @@ export type Database = {
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name: string
+          last_analyzed_at?: string | null
           material_type?: string | null
           notary_threshold?: number | null
           notes?: string | null
@@ -4760,12 +4768,15 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          analysis_status?: string | null
+          building_dept_id?: string | null
           category?: string | null
           city?: string | null
           common_errors?: string[] | null
           conditional_logic?: Json | null
           county?: string | null
           created_at?: string | null
+          field_count?: number | null
           field_mapping?: Json | null
           file_path?: string
           form_name?: string
@@ -4777,6 +4788,7 @@ export type Database = {
           is_fillable?: boolean | null
           jurisdiction_id?: string | null
           jurisdiction_name?: string
+          last_analyzed_at?: string | null
           material_type?: string | null
           notary_threshold?: number | null
           notes?: string | null
@@ -4790,6 +4802,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "permit_form_templates_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "permit_form_templates_jurisdiction_id_fkey"
             columns: ["jurisdiction_id"]

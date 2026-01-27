@@ -160,6 +160,34 @@ export function BatchProductSourcing() {
           </div>
         </div>
 
+        {/* Quick Start Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            onClick={() => {
+              setSelectedCategory('Underlayment');
+              setTimeout(runBatchSourcing, 100);
+            }} 
+            disabled={isRunning}
+            variant="secondary"
+            size="sm"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Quick: Underlayment (Priority 1)
+          </Button>
+          <Button 
+            onClick={() => {
+              setSelectedCategory('Shingle');
+              setTimeout(runBatchSourcing, 100);
+            }} 
+            disabled={isRunning}
+            variant="secondary"
+            size="sm"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Quick: Shingles
+          </Button>
+        </div>
+
         {/* Run Button */}
         <Button 
           onClick={runBatchSourcing} 
