@@ -1,116 +1,155 @@
 
+# Fix PDF Viewing and Training Book Processing
 
-# Fix Custom Source Website Crawler for Dynamic Sites
+## Problems Identified
 
-## Problem Identified
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "Bucket not found" when viewing PDFs | `permit-training-books` is a **private** bucket, but the code stores and uses public URLs | Store the file path (not full URL), generate signed URLs on-demand for viewing |
+| Training materials stuck on "pending" | The `process-training-book` edge function doesn't exist yet | Create the edge function to extract knowledge from uploaded books |
 
-The custom source website crawler is failing because:
+## Root Cause Analysis
 
-| Issue | Cause |
-|-------|-------|
-| Edge function wasn't deployed | Now fixed - function is deployed |
-| Miami-Dade site returns 0 documents | The site is dynamic ASP.NET - Firecrawl's "map" can't discover PDFs from search results |
-| Different approach needed | Dynamic sites need "scrape" or "search" rather than "map" |
+When uploading a training book, the current code does:
 
-## Root Cause
+```text
+1. Upload file to storage bucket
+2. Call getPublicUrl() -> Returns public URL
+3. Store publicUrl in database file_url column
+4. When viewing: Pass publicUrl directly to PDFViewerDialog
+5. Browser tries to fetch public URL -> "Bucket not found" (bucket is private)
+```
 
-The Miami-Dade NOA search page is not a static sitemap that can be mapped. It requires:
-1. Form submission to generate search results
-2. JavaScript rendering to display results
-3. Pagination to access all results
+The fix requires:
 
-The current `crawl-source-websites` function uses `Firecrawl Map` which only discovers static links - it cannot interact with forms or dynamic content.
-
-## Solution
-
-Modify the `crawl-source-websites` edge function to:
-
-1. **Detect site type** - Check if the URL is a known dynamic site (Miami-Dade, Florida Building Code)
-2. **Use Scrape instead of Map** - For dynamic sites, use Firecrawl's `scrape` with JavaScript rendering
-3. **Add AI extraction** - Use Lovable AI to extract PDF links from the rendered page content
-4. **Handle pagination** - For search results, detect and follow pagination links
+```text
+1. Upload file to storage bucket
+2. Store just the file path (filename) in database
+3. When viewing: Generate signed URL with createSignedUrl()
+4. Pass signed URL to PDFViewerDialog -> Works!
+```
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `supabase/functions/crawl-source-websites/index.ts` | Add scrape-based approach for dynamic sites, AI extraction, better error handling |
+| File | Changes |
+|------|---------|
+| `src/components/admin/PermitBooksManager.tsx` | Store file path instead of public URL, generate signed URL when viewing |
+| `src/components/ui/PDFViewerDialog.tsx` | No changes needed (already handles URLs correctly) |
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/process-training-book/index.ts` | Edge function to process uploaded PDFs and extract knowledge |
 
 ## Implementation Details
 
-### 1. Site Type Detection
+### 1. Fix PermitBooksManager.tsx Upload Logic
 
-```text
-Known dynamic sites that need scraping:
-- miamidade.gov/building/* -> Use scrape + AI extraction
-- floridabuilding.org/pr/* -> Use scrape + AI extraction
-- bcap.floridabuilding.org/* -> Use scrape + AI extraction
+**Before (broken):**
+```typescript
+const { data: urlData } = supabase.storage
+  .from("permit-training-books")
+  .getPublicUrl(fileName);
 
-Static sites with PDF directories:
-- Manufacturer websites -> Use map (works fine)
+// Store public URL (doesn't work for private buckets)
+file_url: urlData.publicUrl
 ```
 
-### 2. Enhanced Crawl Flow
-
-```text
-+------------------+
-|  Source URL      |
-+--------+---------+
-         |
-         v
-+------------------+
-|  Detect site type|
-+--------+---------+
-         |
-    +----+----+
-    |         |
-    v         v
-Dynamic    Static
-    |         |
-    v         v
-Scrape      Map
-(with JS)   (current)
-    |         |
-    v         v
-AI Extract  Filter PDFs
-PDF links   by extension
-    |         |
-    +----+----+
-         |
-         v
-+------------------+
-|  Download PDFs   |
-+------------------+
+**After (fixed):**
+```typescript
+// Just store the file path, not the full URL
+file_url: fileName  // e.g., "1769517958257_Florida building code.pdf"
 ```
 
-### 3. Scrape with AI Extraction
+### 2. Fix PermitBooksManager.tsx View Logic
 
-For dynamic sites like Miami-Dade:
-- Scrape the page with `formats: ['html', 'links', 'markdown']`
-- Wait for JavaScript rendering with `waitFor: 3000`
-- Send content to Lovable AI to extract NOA numbers and PDF links
-- AI returns structured data with document URLs
+**Before (broken):**
+```typescript
+onClick={() => setViewingBook({ url: book.file_url, title: book.title })}
+```
 
-### 4. Error Handling Improvements
+**After (fixed):**
+```typescript
+onClick={async () => {
+  // Generate signed URL for private bucket access
+  const { data, error } = await supabase.storage
+    .from('permit-training-books')
+    .createSignedUrl(book.file_url, 3600); // 1-hour expiry
+  
+  if (data?.signedUrl) {
+    setViewingBook({ url: data.signedUrl, title: book.title });
+  }
+}}
+```
 
-- Clear error messages for each failure type
-- Retry logic for transient failures
-- Better logging for debugging
-- Graceful degradation (try scrape if map fails)
+### 3. Add "Process Now" Button
 
-## Expected Results
+Add a manual trigger button next to pending books that calls the `process-training-book` edge function to start extraction.
 
-After this fix:
-- Miami-Dade NOA searches will find PDF links from search results
-- Florida Building Code searches will work correctly
-- Static manufacturer sites continue working as before
-- Clear error messages when sites can't be crawled
-- Documents found count will increase significantly
+### 4. Create process-training-book Edge Function
 
-## Technical Considerations
+This function will:
+- Download the PDF from storage using signed URL
+- Use Lovable AI to extract structured knowledge
+- Parse chapters, code references, requirements
+- Save extracted knowledge to database
+- Update book status from "pending" to "completed"
 
-- Firecrawl scrape with JavaScript rendering costs more credits than map
-- Rate limiting is important to avoid blocking
-- Some government sites may have anti-bot measures
-- PDF download validation to avoid storing error pages
+**Extraction Categories:**
+- FBC Code References (e.g., "FBC 1523.4 - Roof deck attachment")
+- Permit Requirements (e.g., "Miami-Dade requires NOA")
+- Inspection Checkpoints
+- Trade-Specific Rules
+- HVHZ Special Requirements
 
+## Database Migration
+
+Add columns to `permit_training_books` for tracking processing:
+
+```sql
+ALTER TABLE permit_training_books 
+ADD COLUMN IF NOT EXISTS knowledge_items_extracted INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS processing_error TEXT,
+ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
+```
+
+Create knowledge storage table:
+
+```sql
+CREATE TABLE permit_ai_knowledge (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  source_id UUID REFERENCES permit_training_books(id),
+  applicable_counties TEXT[] DEFAULT ARRAY[]::TEXT[],
+  applicable_trades TEXT[] DEFAULT ARRAY[]::TEXT[],
+  confidence_level TEXT DEFAULT 'medium',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+## Fixing Existing Records
+
+Existing records in the database have full public URLs stored. The migration will include an update to extract just the filename:
+
+```sql
+UPDATE permit_training_books 
+SET file_url = split_part(file_url, '/', -1)
+WHERE file_url LIKE '%/storage/v1/object/public/%';
+```
+
+## Summary
+
+1. **Immediate fix**: Update `PermitBooksManager.tsx` to use signed URLs for viewing
+2. **Data fix**: Migration to convert existing full URLs to file paths
+3. **Processing fix**: Create `process-training-book` edge function to process pending books
+4. **Knowledge tracking**: Create database tables to store extracted knowledge
+
+After implementation:
+- PDF viewing will work for all uploaded training materials
+- "Process Now" button will trigger knowledge extraction
+- Status will update from "pending" to "completed"
+- You'll see what the AI learned from each book
