@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Home, Layers, Ruler, AlertTriangle, CheckCircle2, Shield, FileText, X } from 'lucide-react';
+import { Home, Layers, Ruler, AlertTriangle, CheckCircle2, Shield, FileText, X, Loader2, Sparkles, ClipboardCheck } from 'lucide-react';
 import { useTradeProducts, TradeProduct } from '@/hooks/useTradeProducts';
 import { cn } from '@/lib/utils';
 
@@ -32,9 +32,21 @@ export interface RoofingFormData {
   deckAttachmentConfirmed: boolean;
 }
 
+interface Section1524Requirement {
+  id: string;
+  label: string;
+  description: string;
+  fbcSection: string;
+  required: boolean;
+  checked: boolean;
+}
+
 interface RoofingQuestionsProps {
   isHVHZ: boolean;
   formData: RoofingFormData;
+  suggestedYearBuilt?: number | null;
+  suggestedOwnerName?: string | null;
+  propertyLoading?: boolean;
   onChange: (data: RoofingFormData) => void;
   onComplete: (isComplete: boolean) => void;
 }
@@ -79,10 +91,103 @@ const BUILDING_TYPES = [
 export function RoofingQuestions({
   isHVHZ,
   formData,
+  suggestedYearBuilt,
+  suggestedOwnerName,
+  propertyLoading,
   onChange,
   onComplete,
 }: RoofingQuestionsProps) {
   const { products, categorizedProducts, loading, isExpired, isExpiringSoon } = useTradeProducts('roofing', isHVHZ);
+  const [yearBuiltSource, setYearBuiltSource] = useState<'auto' | 'manual'>('manual');
+
+  // Auto-populate yearBuilt when property data arrives
+  useEffect(() => {
+    if (suggestedYearBuilt && !formData.yearBuilt) {
+      onChange({ ...formData, yearBuilt: suggestedYearBuilt });
+      setYearBuiltSource('auto');
+    }
+  }, [suggestedYearBuilt]);
+
+  // Section 1524 compliance requirements based on year_built and conditions
+  const section1524Requirements = useMemo((): Section1524Requirement[] => {
+    const requirements: Section1524Requirement[] = [];
+    const currentYear = new Date().getFullYear();
+    
+    // Pre-1994 deck renailing (FBC 1524.3)
+    if (formData.yearBuilt && formData.yearBuilt < 1994) {
+      requirements.push({
+        id: 'deck_renailing',
+        label: 'Deck Renailing Required',
+        description: 'Pre-1994 wood roof deck must be renailed with 8d ring-shank nails @ 6" o.c. field / 4" o.c. edges',
+        fbcSection: 'FBC 1524.3',
+        required: true,
+        checked: formData.deckAttachmentConfirmed,
+      });
+    }
+    
+    // HVHZ deck attachment (FBC 1524.3.1)
+    if (isHVHZ) {
+      requirements.push({
+        id: 'hvhz_deck_attachment',
+        label: 'HVHZ Deck Attachment',
+        description: 'Enhanced deck fastening per HVHZ requirements - 8d ring-shank @ 6" field / 4" edges minimum',
+        fbcSection: 'FBC 1524.3.1',
+        required: true,
+        checked: formData.deckAttachmentConfirmed,
+      });
+    }
+    
+    // Exposed ceilings (FBC 1524.4)
+    if (formData.hasExposedCeilings) {
+      requirements.push({
+        id: 'exposed_ceiling_inspection',
+        label: 'Exposed Ceiling Inspection',
+        description: 'Roof deck must be inspected from above and below when no attic space exists',
+        fbcSection: 'FBC 1524.4',
+        required: true,
+        checked: true, // Auto-checked since they acknowledged exposed ceilings
+      });
+    }
+    
+    // Flat roof drainage (FBC 1524.5)
+    if (formData.pitch === 'flat') {
+      if (formData.hasPondingWater) {
+        requirements.push({
+          id: 'ponding_remediation',
+          label: 'Ponding Water Remediation',
+          description: 'Positive drainage must be established to prevent water accumulation',
+          fbcSection: 'FBC 1524.5.1',
+          required: true,
+          checked: formData.requiresOverflowScuppers,
+        });
+      }
+      
+      requirements.push({
+        id: 'overflow_drainage',
+        label: 'Secondary Drainage/Overflow Scuppers',
+        description: 'Required for flat roofs - overflow scuppers or secondary drains per IPC',
+        fbcSection: 'FBC 1524.5.2',
+        required: formData.requiresOverflowScuppers,
+        checked: formData.requiresOverflowScuppers,
+      });
+    }
+    
+    // Multiple layers check (FBC 1524.2)
+    if (formData.workType === 'reroof') {
+      requirements.push({
+        id: 'layer_limit',
+        label: 'Roof Layer Limitation',
+        description: 'Maximum 2 roof coverings allowed - complete tear-off required if existing roof has 2+ layers',
+        fbcSection: 'FBC 1524.2',
+        required: true,
+        checked: true, // Will be verified during inspection
+      });
+    }
+    
+    return requirements;
+  }, [formData.yearBuilt, formData.deckAttachmentConfirmed, formData.hasExposedCeilings, 
+      formData.pitch, formData.hasPondingWater, formData.requiresOverflowScuppers, 
+      formData.workType, isHVHZ]);
 
   const updateField = <K extends keyof RoofingFormData>(field: K, value: RoofingFormData[K]) => {
     const newData = { ...formData, [field]: value };
@@ -366,28 +471,52 @@ export function RoofingQuestions({
 
           {/* Section 1524 - Building Information (for HVHZ and deck attachment compliance) */}
           <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <Label className="text-sm font-medium text-amber-700">Section 1524 Compliance (Required for HVHZ)</Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-amber-600" />
+                <Label className="text-sm font-medium text-amber-700">FBC Section 1524 Compliance</Label>
+              </div>
+              {isHVHZ && (
+                <Badge variant="destructive" className="text-xs">Required for HVHZ</Badge>
+              )}
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Year Built */}
+              {/* Year Built with auto-detect */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Year Built</Label>
-                <Input
-                  type="number"
-                  value={formData.yearBuilt || ''}
-                  onChange={(e) => updateField('yearBuilt', parseInt(e.target.value) || null)}
-                  placeholder="e.g. 1985"
-                  min={1900}
-                  max={new Date().getFullYear()}
-                />
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  Year Built
+                  {propertyLoading && (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  )}
+                </Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={formData.yearBuilt || ''}
+                    onChange={(e) => {
+                      updateField('yearBuilt', parseInt(e.target.value) || null);
+                      setYearBuiltSource('manual');
+                    }}
+                    placeholder="e.g. 1985"
+                    min={1900}
+                    max={new Date().getFullYear()}
+                    className={cn(
+                      yearBuiltSource === 'auto' && 'pr-24'
+                    )}
+                  />
+                  {yearBuiltSource === 'auto' && formData.yearBuilt && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-primary font-medium">Auto-detected</span>
+                    </div>
+                  )}
+                </div>
                 {formData.yearBuilt && formData.yearBuilt < 1994 && (
-                  <Alert className="py-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Pre-1994 home: Deck renailing may be required per FBC Section 1524
+                  <Alert className="py-2 border-amber-300 bg-amber-50">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-xs text-amber-800">
+                      <strong>Pre-1994 home:</strong> Deck renailing is required per FBC 1524.3
                     </AlertDescription>
                   </Alert>
                 )}
@@ -414,6 +543,63 @@ export function RoofingQuestions({
                 </div>
               </div>
             </div>
+
+            {/* Dynamic Section 1524 Compliance Checklist */}
+            {section1524Requirements.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-800">
+                    <Shield className="h-4 w-4" />
+                    Compliance Requirements ({section1524Requirements.filter(r => r.checked).length}/{section1524Requirements.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="py-2 px-4">
+                  <div className="space-y-2">
+                    {section1524Requirements.map((req) => (
+                      <div 
+                        key={req.id}
+                        className={cn(
+                          "flex items-start gap-3 p-2 rounded-lg transition-colors",
+                          req.checked 
+                            ? "bg-green-50 border border-green-200" 
+                            : "bg-amber-100 border border-amber-300"
+                        )}
+                      >
+                        {req.checked ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                              "text-sm font-medium",
+                              req.checked ? "text-green-800" : "text-amber-800"
+                            )}>
+                              {req.label}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {req.fbcSection}
+                            </Badge>
+                            {req.required && !req.checked && (
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                Required
+                              </Badge>
+                            )}
+                          </div>
+                          <p className={cn(
+                            "text-xs mt-0.5",
+                            req.checked ? "text-green-700" : "text-amber-700"
+                          )}>
+                            {req.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* HVHZ-specific checkboxes */}
             <div className="space-y-3">

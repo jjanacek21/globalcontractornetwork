@@ -6545,28 +6545,34 @@ export type Database = {
       }
       property_cache: {
         Row: {
+          address_normalized: string | null
           county: string
           created_at: string
           folio: string
           id: string
           property_data: Json
           scraped_at: string
+          updated_at: string | null
         }
         Insert: {
+          address_normalized?: string | null
           county: string
           created_at?: string
           folio: string
           id?: string
           property_data: Json
           scraped_at?: string
+          updated_at?: string | null
         }
         Update: {
+          address_normalized?: string | null
           county?: string
           created_at?: string
           folio?: string
           id?: string
           property_data?: Json
           scraped_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
