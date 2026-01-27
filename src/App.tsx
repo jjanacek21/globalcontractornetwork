@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isCoatingKingsDomain } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -186,8 +186,8 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
-          {/* Permit Queens Routes (rebranded from Permit Pros) */}
-          <Route path="/permit-queens" element={<PermitQueens />} />
+          {/* Permit Expediting Routes (redirect landing page to dashboard) */}
+          <Route path="/permit-queens" element={<Navigate to="/permit-queens/dashboard" replace />} />
           <Route path="/permit-queens/auth" element={<PermitQueensAuth />} />
           <Route path="/permit-queens/dashboard" element={
             <ProtectedRoute redirectTo="/permit-queens/auth">

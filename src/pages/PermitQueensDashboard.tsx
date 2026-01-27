@@ -136,8 +136,8 @@ export default function PermitQueensDashboard() {
                 <Crown className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">Permit Queens</h1>
-                <p className="text-xs text-white/50">Client Portal</p>
+                <h1 className="text-lg font-bold text-white">Permit Expediting</h1>
+                <p className="text-xs text-white/50">Contractor Portal</p>
               </div>
             </div>
             <Button 

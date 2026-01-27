@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles, Clock, Plus } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
@@ -18,14 +18,17 @@ import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel'
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
+import { MobileMaterialSheet } from '@/components/permit-queens/MobileMaterialSheet';
 import { SignatureChecklist, generateSignatureRequirements, SignatureRequirement } from '@/components/permit-queens/SignatureChecklist';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { usePropertyLookup } from '@/hooks/usePropertyLookup';
 import { useContractorProfile, PriorPermitData } from '@/hooks/useContractorProfile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 
 interface UploadedDocument {
   id: string;
@@ -72,8 +75,10 @@ export default function PermitQueensNewRequest() {
   const { createPermit, saving } = usePermitRequest();
   const { tiers } = usePricingTiers();
   const { lookupPriorPermit } = useContractorProfile(null);
+  const isMobile = useIsMobile();
   const [currentStep, setCurrentStep] = useState(1);
   const [tradeQuestionsComplete, setTradeQuestionsComplete] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   
   // Prior permit auto-fill state
   const [priorPermit, setPriorPermit] = useState<PriorPermitData | null>(null);
@@ -325,6 +330,16 @@ export default function PermitQueensNewRequest() {
 
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep(prev => prev - 1);
+  };
+
+  // Swipe navigation handler for mobile
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 100;
+    if (info.offset.x > threshold && currentStep > 1) {
+      prevStep();
+    } else if (info.offset.x < -threshold && currentStep < 3 && canProceed()) {
+      nextStep();
+    }
   };
 
   const runGapAnalysis = async () => {
@@ -589,12 +604,23 @@ export default function PermitQueensNewRequest() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-4xl mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: isMobile ? 50 : 0 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isMobile ? -50 : 0 }}
+              transition={{ duration: 0.2 }}
+              drag={isMobile ? "x" : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={handleDragEnd}
+            >
           {/* Step 1: Property & Scope (Merged) */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              {/* Property Location */}
               <Card>
                 <CardHeader>
                   <CardTitle>Property Location</CardTitle>
@@ -641,8 +667,8 @@ export default function PermitQueensNewRequest() {
                   <CardDescription>Select the type of permit you need</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Priority types first */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
+                  {/* Priority types first - responsive grid */}
+                  <div className={cn("grid gap-3 mb-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
                     {PERMIT_TYPES.filter(t => t.priority).map((type) => {
                       const Icon = type.icon;
                       const isSelected = formData.permit_type === type.id;
@@ -663,8 +689,8 @@ export default function PermitQueensNewRequest() {
                     })}
                   </div>
                   
-                  {/* Other types */}
-                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  {/* Other types - responsive grid */}
+                  <div className={cn("grid gap-2", isMobile ? "grid-cols-2" : "grid-cols-3 md:grid-cols-6")}>
                     {PERMIT_TYPES.filter(t => !t.priority).map((type) => {
                       const Icon = type.icon;
                       const isSelected = formData.permit_type === type.id;
@@ -696,7 +722,7 @@ export default function PermitQueensNewRequest() {
                     </CardTitle>
                     <CardDescription>Enter the property owner's information</CardDescription>
                   </CardHeader>
-                  <CardContent className="grid md:grid-cols-2 gap-4">
+                  <CardContent className={cn("grid gap-4", isMobile ? "grid-cols-1" : "md:grid-cols-2")}>
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1">
                         Owner Name <span className="text-destructive">*</span>
@@ -822,13 +848,43 @@ export default function PermitQueensNewRequest() {
               
               {/* Multi-Material Selector for Roofing */}
               {formData.permit_type === 'roofing' && (
-                <MultiMaterialSelector
-                  isHVHZ={formData.isHVHZ}
-                  roofType={roofType}
-                  selectedProducts={selectedMaterials}
-                  onProductsChange={setSelectedMaterials}
-                  onRoofTypeChange={setRoofType}
-                />
+                <>
+                  {/* Mobile: Show button to open bottom sheet */}
+                  {isMobile ? (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <Button 
+                          onClick={() => setMobileSheetOpen(true)} 
+                          className="w-full"
+                          variant="outline"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Select Materials ({selectedMaterials.length} selected)
+                        </Button>
+                        {selectedMaterials.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {selectedMaterials.slice(0, 3).map(sel => (
+                              <Badge key={`${sel.id}-${sel.category}`} variant="secondary" className="text-xs">
+                                {sel.product.product_name}
+                              </Badge>
+                            ))}
+                            {selectedMaterials.length > 3 && (
+                              <Badge variant="outline">+{selectedMaterials.length - 3} more</Badge>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <MultiMaterialSelector
+                      isHVHZ={formData.isHVHZ}
+                      roofType={roofType}
+                      selectedProducts={selectedMaterials}
+                      onProductsChange={setSelectedMaterials}
+                      onRoofTypeChange={setRoofType}
+                    />
+                  )}
+                </>
               )}
 
               {/* Inline Document Requirements Checklist */}
@@ -863,7 +919,7 @@ export default function PermitQueensNewRequest() {
                   <CardTitle className="text-lg">Request Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className={cn("grid gap-4 text-sm", isMobile ? "grid-cols-1" : "grid-cols-2 md:grid-cols-4")}>
                     <div>
                       <p className="text-muted-foreground">Address</p>
                       <p className="font-medium truncate">{formData.property_address}</p>
@@ -1071,8 +1127,20 @@ export default function PermitQueensNewRequest() {
               </Button>
             )}
           </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
+
+      {/* Mobile Material Sheet */}
+      <MobileMaterialSheet
+        open={mobileSheetOpen}
+        onOpenChange={setMobileSheetOpen}
+        isHVHZ={formData.isHVHZ}
+        roofType={roofType}
+        selectedProducts={selectedMaterials}
+        onProductsChange={setSelectedMaterials}
+      />
     </div>
   );
 }

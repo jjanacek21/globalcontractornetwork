@@ -215,7 +215,7 @@ const MemberDashboard = () => {
       icon: Crown,
       title: "Permit Expediting",
       description: "Fast-track Florida building permits",
-      link: "/permit-queens",
+      link: "/permit-queens/dashboard",
       color: "bg-amber-500/10 text-amber-600",
       category: "business" as ServiceCategory
     },

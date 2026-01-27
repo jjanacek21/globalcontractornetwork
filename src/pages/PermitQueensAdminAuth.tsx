@@ -94,7 +94,7 @@ export default function PermitQueensAdminAuth() {
               </div>
               <CardTitle className="text-2xl text-white">Admin Portal</CardTitle>
               <CardDescription className="text-slate-400">
-                Access the Permit Queens admin dashboard
+                Access the Permit Expediting admin dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
