@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Check, ChevronsUpDown, Search, ShieldCheck, FileText, Calendar, AlertTriangle, X, Building2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Search, ShieldCheck, FileText, Calendar, AlertTriangle, X, Building2, FileCheck, FileQuestion } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +67,12 @@ export function SearchableProductCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState('');
 
-  // Group products by manufacturer
+  // Helper to check if product has a PDF available
+  const hasPdf = (product: ProductApproval) => {
+    return !!(product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url);
+  };
+
+  // Group products by manufacturer, sorting products with PDFs first
   const groupedProducts = React.useMemo((): ManufacturerGroup[] => {
     const groups: Record<string, ProductApproval[]> = {};
     
@@ -81,9 +86,14 @@ export function SearchableProductCombobox({
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([manufacturer, products]) => ({
         manufacturer,
-        products: products.sort((a, b) => 
-          a.product_name.localeCompare(b.product_name)
-        )
+        // Sort products with PDFs first, then alphabetically
+        products: products.sort((a, b) => {
+          const aPdf = hasPdf(a);
+          const bPdf = hasPdf(b);
+          if (aPdf && !bPdf) return -1;
+          if (!aPdf && bPdf) return 1;
+          return a.product_name.localeCompare(b.product_name);
+        })
       }));
   }, [products]);
 
@@ -212,12 +222,23 @@ export function SearchableProductCombobox({
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
+                              {/* PDF availability indicator */}
+                              {hasPdf(product) ? (
+                                <FileCheck className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                              ) : (
+                                <FileQuestion className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                              )}
                               <p className="text-sm font-medium truncate">{product.product_name}</p>
                               <span className={cn("text-xs font-bold shrink-0", tierDisplay.color)}>
                                 {tierDisplay.symbol}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {hasPdf(product) && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-green-500/10 text-green-600 border-green-500/30">
+                                  PDF Ready
+                                </Badge>
+                              )}
                               {product.noa_number && (
                                 <span className="flex items-center gap-0.5">
                                   <FileText className="h-2.5 w-2.5" />

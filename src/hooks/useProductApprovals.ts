@@ -65,6 +65,11 @@ export function useProductApprovals() {
     }
   };
 
+  // Helper to check if product has PDF available
+  const hasPdf = (product: ProductApproval) => {
+    return !!(product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url);
+  };
+
   const getByCategory = (category: string) => {
     return products.filter(p => p.product_category === category);
   };
@@ -79,6 +84,17 @@ export function useProductApprovals() {
 
   const getCategories = () => {
     return [...new Set(products.map(p => p.product_category))].sort();
+  };
+
+  // Get products sorted with PDFs first
+  const getProductsSortedByPdfAvailability = () => {
+    return [...products].sort((a, b) => {
+      const aPdf = hasPdf(a);
+      const bPdf = hasPdf(b);
+      if (aPdf && !bPdf) return -1;
+      if (!aPdf && bPdf) return 1;
+      return a.product_name.localeCompare(b.product_name);
+    });
   };
 
   const isExpired = (product: ProductApproval) => {
@@ -159,10 +175,12 @@ export function useProductApprovals() {
     products,
     loading,
     error,
+    hasPdf,
     getByCategory,
     getByManufacturer,
     getManufacturers,
     getCategories,
+    getProductsSortedByPdfAvailability,
     isExpired,
     isExpiringSoon,
     verifyProductForJurisdiction,
