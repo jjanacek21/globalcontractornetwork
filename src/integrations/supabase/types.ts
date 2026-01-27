@@ -6337,10 +6337,12 @@ export type Database = {
       }
       product_approvals: {
         Row: {
+          ai_extracted_at: string | null
           applicable_trades: string[] | null
           approval_date: string | null
           created_at: string | null
           expiration_date: string | null
+          extraction_confidence: number | null
           file_path: string | null
           file_url: string | null
           fl_approval_pdf_url: string | null
@@ -6352,6 +6354,7 @@ export type Database = {
           is_active: boolean | null
           jurisdiction_scope: string[] | null
           last_source_attempt: string | null
+          last_verified_at: string | null
           manufacturer: string
           metadata: Json | null
           noa_number: string | null
@@ -6361,6 +6364,7 @@ export type Database = {
           product_category: string
           product_line: string | null
           product_name: string
+          source_attempts: number | null
           source_status: string | null
           source_url_fl: string | null
           source_url_noa: string | null
@@ -6373,10 +6377,12 @@ export type Database = {
           wind_speed_rating: number | null
         }
         Insert: {
+          ai_extracted_at?: string | null
           applicable_trades?: string[] | null
           approval_date?: string | null
           created_at?: string | null
           expiration_date?: string | null
+          extraction_confidence?: number | null
           file_path?: string | null
           file_url?: string | null
           fl_approval_pdf_url?: string | null
@@ -6388,6 +6394,7 @@ export type Database = {
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
           last_source_attempt?: string | null
+          last_verified_at?: string | null
           manufacturer: string
           metadata?: Json | null
           noa_number?: string | null
@@ -6397,6 +6404,7 @@ export type Database = {
           product_category: string
           product_line?: string | null
           product_name: string
+          source_attempts?: number | null
           source_status?: string | null
           source_url_fl?: string | null
           source_url_noa?: string | null
@@ -6409,10 +6417,12 @@ export type Database = {
           wind_speed_rating?: number | null
         }
         Update: {
+          ai_extracted_at?: string | null
           applicable_trades?: string[] | null
           approval_date?: string | null
           created_at?: string | null
           expiration_date?: string | null
+          extraction_confidence?: number | null
           file_path?: string | null
           file_url?: string | null
           fl_approval_pdf_url?: string | null
@@ -6424,6 +6434,7 @@ export type Database = {
           is_active?: boolean | null
           jurisdiction_scope?: string[] | null
           last_source_attempt?: string | null
+          last_verified_at?: string | null
           manufacturer?: string
           metadata?: Json | null
           noa_number?: string | null
@@ -6433,6 +6444,7 @@ export type Database = {
           product_category?: string
           product_line?: string | null
           product_name?: string
+          source_attempts?: number | null
           source_status?: string | null
           source_url_fl?: string | null
           source_url_noa?: string | null

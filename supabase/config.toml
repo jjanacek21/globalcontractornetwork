@@ -137,3 +137,12 @@ verify_jwt = false
 
 [functions.source-product-pdf]
 verify_jwt = false
+
+[functions.crawl-source-websites]
+verify_jwt = false
+
+[functions.noa-bulk-downloader]
+verify_jwt = false
+
+[functions.noa-metadata-extractor]
+verify_jwt = false

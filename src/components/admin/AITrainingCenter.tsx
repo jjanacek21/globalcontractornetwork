@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload } from "lucide-react";
+import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload, Brain } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
@@ -11,6 +11,8 @@ import { TemplateManager } from "@/components/permit-queens/admin/TemplateManage
 import { RejectionTracker } from "@/components/permit-queens/admin/RejectionTracker";
 import { SmartDocumentManager } from "@/components/permit-queens/admin/SmartDocumentManager";
 import { PropertyDataEnrichment } from "@/components/permit-queens/admin/PropertyDataEnrichment";
+import { NOABulkManager } from "@/components/permit-queens/admin/NOABulkManager";
+import { NOAUploadQueue } from "@/components/permit-queens/admin/NOAUploadQueue";
 import PermitBatchUploader from "./PermitBatchUploader";
 import PermitTrainingUploader from "./PermitTrainingUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
@@ -102,6 +104,13 @@ const AITrainingCenter = () => {
             <BookOpen className="h-4 w-4" />
             Books & Guides
           </TabsTrigger>
+          <TabsTrigger 
+            value="noa-intelligence" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Brain className="h-4 w-4" />
+            NOA Intelligence
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
@@ -174,6 +183,12 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="books-guides" className="mt-4">
           <PermitBooksManager />
+        </TabsContent>
+        <TabsContent value="noa-intelligence" className="mt-4">
+          <div className="space-y-6">
+            <NOABulkManager />
+            <NOAUploadQueue />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
