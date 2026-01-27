@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
@@ -10,9 +11,15 @@ import { TemplateManager } from "@/components/permit-queens/admin/TemplateManage
 import { RejectionTracker } from "@/components/permit-queens/admin/RejectionTracker";
 import { SmartDocumentManager } from "@/components/permit-queens/admin/SmartDocumentManager";
 import { PropertyDataEnrichment } from "@/components/permit-queens/admin/PropertyDataEnrichment";
+import PermitBatchUploader from "./PermitBatchUploader";
+import PermitTrainingUploader from "./PermitTrainingUploader";
+import TrainingSamplesTable from "./TrainingSamplesTable";
+import PermitBooksManager from "./PermitBooksManager";
 
 const AITrainingCenter = () => {
   const [activeSubTab, setActiveSubTab] = useState("analytics");
+  const [trainingRefresh, setTrainingRefresh] = useState(0);
+  const [trainingMode, setTrainingMode] = useState<"single" | "batch">("batch");
 
   return (
     <div className="space-y-4">
@@ -81,6 +88,20 @@ const AITrainingCenter = () => {
             <Building className="h-4 w-4" />
             Property Data
           </TabsTrigger>
+          <TabsTrigger 
+            value="permit-packets" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <FileStack className="h-4 w-4" />
+            Permit Packets
+          </TabsTrigger>
+          <TabsTrigger 
+            value="books-guides" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <BookOpen className="h-4 w-4" />
+            Books & Guides
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
@@ -109,6 +130,50 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="property-data" className="mt-4">
           <PropertyDataEnrichment />
+        </TabsContent>
+        <TabsContent value="permit-packets" className="mt-4">
+          <div className="space-y-6">
+            {/* Upload Mode Toggle */}
+            <div className="flex items-center gap-4 mb-4">
+              <span className="text-sm font-medium text-muted-foreground">Upload Mode:</span>
+              <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                <Button
+                  variant={trainingMode === "batch" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setTrainingMode("batch")}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Batch Upload
+                </Button>
+                <Button
+                  variant={trainingMode === "single" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setTrainingMode("single")}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Single Upload
+                </Button>
+              </div>
+            </div>
+
+            {/* Conditional Uploader */}
+            {trainingMode === "batch" ? (
+              <PermitBatchUploader 
+                onBatchComplete={() => setTrainingRefresh(prev => prev + 1)} 
+              />
+            ) : (
+              <PermitTrainingUploader 
+                onUploadComplete={() => setTrainingRefresh(prev => prev + 1)} 
+              />
+            )}
+            
+            <TrainingSamplesTable refreshTrigger={trainingRefresh} />
+          </div>
+        </TabsContent>
+        <TabsContent value="books-guides" className="mt-4">
+          <PermitBooksManager />
         </TabsContent>
       </Tabs>
     </div>
