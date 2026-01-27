@@ -11,7 +11,7 @@ export function PermitQueensFooter() {
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                 <Crown className="h-6 w-6 text-white" />
               </div>
-              <span className="text-lg font-bold text-white">Permit Queens</span>
+              <span className="text-lg font-bold text-white">Permit Expediting</span>
             </div>
             <p className="text-sm text-slate-400 mb-4">
               Florida's AI-powered permit intelligence engine. Complete permit packets for every South Florida building department.
@@ -70,7 +70,7 @@ export function PermitQueensFooter() {
         
         <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-500">
-            © 2025 Permit Queens. All rights reserved. A Global Contractor Network Service.
+            © 2025 Permit Expediting. All rights reserved. A Global Contractor Network Service.
           </p>
           <div className="flex gap-6 text-sm text-slate-500">
             <span className="hover:text-slate-300 cursor-pointer transition-colors">Privacy Policy</span>

@@ -117,7 +117,7 @@ export default function PermitQueensAuth() {
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center">
               <Crown className="h-8 w-8 text-amber-500" />
             </div>
-            <CardTitle className="text-2xl text-white">Permit Queens Client Portal</CardTitle>
+            <CardTitle className="text-2xl text-white">Permit Expediting Portal</CardTitle>
             <CardDescription className="text-zinc-400">
               Track your permits, documents, and project status
             </CardDescription>

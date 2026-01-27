@@ -208,7 +208,7 @@ export default function PermitQueensAdminDashboard() {
             <div className="flex items-center gap-3">
               <Crown className="h-8 w-8 text-amber-500" />
               <div>
-                <h1 className="text-xl font-bold text-white">Permit Queens</h1>
+                <h1 className="text-xl font-bold text-white">Permit Expediting</h1>
                 <p className="text-sm text-amber-500 flex items-center gap-1">
                   <ShieldCheck className="h-4 w-4" /> Admin Dashboard
                 </p>
