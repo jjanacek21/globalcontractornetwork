@@ -173,6 +173,84 @@ export default function PermitQueensNewRequest() {
     }
   };
 
+  // Create draft permit project when entering Step 2 (to ensure doc uploads are linked)
+  useEffect(() => {
+    const createDraftPermit = async () => {
+      if (currentStep === 2 && !tempPermitId && formData.property_address && formData.owner_name) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          
+          const { data: draft, error } = await supabase
+            .from('permit_projects')
+            .insert({
+              property_address: formData.property_address,
+              customer_name: formData.owner_name,
+              owner_name: formData.owner_name,
+              owner_email: formData.owner_email,
+              owner_phone: formData.owner_phone,
+              service_type: formData.permit_type || 'roofing',
+              permit_type: formData.permit_type,
+              jurisdiction_county: formData.jurisdiction_county,
+              city: formData.jurisdiction_city,
+              pipeline_status: 'draft',
+              status: 'draft',
+              user_id: user.id,
+            })
+            .select()
+            .single();
+          
+          if (!error && draft) {
+            setTempPermitId(draft.id);
+            console.log('Created draft permit:', draft.id);
+          }
+        } catch (e) {
+          console.error('Failed to create draft permit:', e);
+        }
+      }
+    };
+    
+    createDraftPermit();
+  }, [currentStep, formData.property_address, formData.owner_name]);
+
+  // Fetch uploaded documents from DB when entering Step 3 (to persist across navigation)
+  useEffect(() => {
+    const fetchUploadedDocs = async () => {
+      if (currentStep === 3 && tempPermitId) {
+        try {
+          const { data: dbDocs } = await supabase
+            .from('permit_project_documents')
+            .select('*')
+            .eq('project_id', tempPermitId);
+          
+          if (dbDocs && dbDocs.length > 0) {
+            // Merge with local state, avoiding duplicates
+            setUploadedDocuments(prev => {
+              const merged = [...prev];
+              dbDocs.forEach((dbDoc: any) => {
+                if (!merged.some(d => d.url === dbDoc.file_path || d.name === dbDoc.file_name)) {
+                  merged.push({
+                    id: dbDoc.id,
+                    name: dbDoc.file_name,
+                    type: dbDoc.document_type,
+                    url: dbDoc.file_path,
+                    status: 'uploaded' as const,
+                  });
+                }
+              });
+              return merged;
+            });
+            console.log(`Loaded ${dbDocs.length} documents from database`);
+          }
+        } catch (e) {
+          console.error('Failed to fetch documents from DB:', e);
+        }
+      }
+    };
+    
+    fetchUploadedDocs();
+  }, [currentStep, tempPermitId]);
+
   // Auto-generate packet when entering Step 3
   useEffect(() => {
     if (currentStep === 3 && !generatedPacket && !generatingPacket && formData.property_address && formData.owner_name) {

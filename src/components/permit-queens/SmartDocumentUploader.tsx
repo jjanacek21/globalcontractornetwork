@@ -181,22 +181,46 @@ export function SmartDocumentUploader({
 
   const handleViewDocument = async (doc: UploadedDocument) => {
     try {
+      console.log('[SmartDocumentUploader] Viewing document:', { name: doc.name, url: doc.url });
+      
+      // Check if URL is already a full URL (signed or public)
+      if (doc.url.startsWith('http://') || doc.url.startsWith('https://')) {
+        console.log('[SmartDocumentUploader] Using existing URL directly');
+        setViewingDocument({ url: doc.url, name: doc.name });
+        return;
+      }
+      
       // Generate signed URL for private bucket access
       const { data, error } = await supabase.storage
         .from('permit-documents')
         .createSignedUrl(doc.url, 3600); // 1 hour expiry
       
       if (error) {
-        console.error('Signed URL error:', error);
-        toast.error('Failed to access document');
+        console.error('[SmartDocumentUploader] Signed URL error:', error);
+        console.log('[SmartDocumentUploader] Attempting fallback with path:', doc.url);
+        
+        // Try to get public URL as fallback
+        const { data: publicData } = supabase.storage
+          .from('permit-documents')
+          .getPublicUrl(doc.url);
+        
+        if (publicData?.publicUrl) {
+          setViewingDocument({ url: publicData.publicUrl, name: doc.name });
+          return;
+        }
+        
+        toast.error('Failed to access document. Please check if the file was uploaded correctly.');
         return;
       }
       
       if (data?.signedUrl) {
+        console.log('[SmartDocumentUploader] Generated signed URL successfully');
         setViewingDocument({ url: data.signedUrl, name: doc.name });
+      } else {
+        toast.error('Could not generate document URL');
       }
     } catch (error) {
-      console.error('View document error:', error);
+      console.error('[SmartDocumentUploader] View document error:', error);
       toast.error('Failed to open document');
     }
   };
