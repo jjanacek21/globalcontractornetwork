@@ -22,6 +22,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AdminContractorMessaging } from "./AdminContractorMessaging";
+import { PDFViewerDialog } from "@/components/ui/PDFViewerDialog";
 
 interface PermitProject {
   id: string;
@@ -94,6 +95,7 @@ export function PermitDetailDialog({ open, onOpenChange, permit, onRefresh }: Pe
   const [pipelineStatus, setPipelineStatus] = useState(permit?.pipeline_status || 'intake');
   const [cityReviewStatus, setCityReviewStatus] = useState(permit?.city_review_status || 'not_submitted');
   const [adminNotes, setAdminNotes] = useState('');
+  const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     if (permit) {
@@ -246,7 +248,7 @@ export function PermitDetailDialog({ open, onOpenChange, permit, onRefresh }: Pe
 
       if (error) throw error;
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        setViewingDocument({ url: data.signedUrl, name: doc.file_name });
       }
     } catch (error) {
       console.error('Error viewing document:', error);
@@ -603,6 +605,15 @@ export function PermitDetailDialog({ open, onOpenChange, permit, onRefresh }: Pe
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+        url={viewingDocument?.url || ''}
+        title={viewingDocument?.name || 'Document'}
+        filename={viewingDocument?.name || 'document.pdf'}
+      />
     </Dialog>
   );
 }

@@ -24,6 +24,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 interface DocumentInfo {
   type: string;
@@ -57,6 +58,11 @@ interface PacketViewerProps {
   generating?: boolean;
 }
 
+interface ViewingDocument {
+  url: string;
+  name: string;
+}
+
 export function PacketViewer({
   packet,
   onRegenerate,
@@ -65,13 +71,15 @@ export function PacketViewer({
   generating = false,
 }: PacketViewerProps) {
   const [showCoverSheet, setShowCoverSheet] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<ViewingDocument | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
-  const handleViewDocument = async (url: string) => {
+  const handleViewDocument = async (url: string, name: string) => {
     if (!url) return;
     
-    // If it's already a full URL (from edge function or external), open directly
+    // If it's already a full URL (from edge function or external), use directly
     if (url.startsWith('http')) {
-      window.open(url, '_blank');
+      setViewingDocument({ url, name });
       return;
     }
     
@@ -88,7 +96,7 @@ export function PacketViewer({
       }
       
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+        setViewingDocument({ url: data.signedUrl, name });
       }
     } catch (error) {
       console.error('View document error:', error);
@@ -133,30 +141,7 @@ export function PacketViewer({
   };
 
   const handleDownload = async () => {
-    if (packet.packetPdfUrl) {
-      // If URL already has a token (signed URL) or is external, use directly
-      if (packet.packetPdfUrl.includes('?token=') || packet.packetPdfUrl.startsWith('http')) {
-        window.open(packet.packetPdfUrl, '_blank');
-        return;
-      }
-      
-      // Generate fresh signed URL for storage paths
-      try {
-        const { data, error } = await supabase.storage
-          .from('permit-documents')
-          .createSignedUrl(packet.packetPdfUrl, 3600); // 1 hour
-        
-        if (!error && data?.signedUrl) {
-          window.open(data.signedUrl, '_blank');
-        } else {
-          console.error('Signed URL error:', error);
-          toast.error('Failed to access packet');
-        }
-      } catch (err) {
-        console.error('Download error:', err);
-        toast.error('Failed to download packet');
-      }
-    } else {
+    if (!packet.packetPdfUrl) {
       // Fallback: print cover sheet HTML
       const printWindow = window.open('', '_blank');
       if (printWindow) {
@@ -179,6 +164,71 @@ export function PacketViewer({
         `);
         printWindow.document.close();
       }
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      let downloadUrl = packet.packetPdfUrl;
+      
+      // If it's a storage path (not a full URL), generate signed URL
+      if (!downloadUrl.startsWith('http')) {
+        const { data, error } = await supabase.storage
+          .from('permit-documents')
+          .createSignedUrl(downloadUrl, 3600);
+        
+        if (error || !data?.signedUrl) {
+          throw new Error('Failed to generate download URL');
+        }
+        downloadUrl = data.signedUrl;
+      }
+
+      // Use programmatic download to avoid popup blockers
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `permit-packet-${packet.packetId || 'download'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(blobUrl);
+      toast.success('Download started');
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error('Failed to download packet');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleViewPacket = async () => {
+    if (!packet.packetPdfUrl) return;
+
+    try {
+      let viewUrl = packet.packetPdfUrl;
+      
+      // If it's a storage path (not a full URL), generate signed URL
+      if (!viewUrl.startsWith('http')) {
+        const { data, error } = await supabase.storage
+          .from('permit-documents')
+          .createSignedUrl(viewUrl, 3600);
+        
+        if (error || !data?.signedUrl) {
+          throw new Error('Failed to generate view URL');
+        }
+        viewUrl = data.signedUrl;
+      }
+
+      setViewingDocument({ url: viewUrl, name: 'Permit Packet' });
+    } catch (error) {
+      console.error('View packet error:', error);
+      toast.error('Failed to open packet');
     }
   };
 
@@ -187,186 +237,211 @@ export function PacketViewer({
   const missingDocs = packet.documentIndex.filter(d => d.status === 'missing');
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            <CardTitle>Generated Permit Packet</CardTitle>
-            {packet.status === 'ready' && (
-              <Badge className="bg-green-500 ml-2">Ready</Badge>
-            )}
-            {packet.status === 'incomplete' && (
-              <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 ml-2">Incomplete</Badge>
-            )}
-          </div>
-          {packet.packetPdfUrl && (
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Packet Completion</span>
-            <span className="font-semibold">{packet.completionPercentage}%</span>
-          </div>
-          <Progress value={packet.completionPercentage} className="h-2" />
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>{packet.documentCount || includedDocs.length} documents</span>
-            <span>{packet.totalPages} pages</span>
-          </div>
-        </div>
-
-        {/* Document Index */}
-        <div className="border rounded-lg divide-y">
-          {packet.documentIndex.map((doc, index) => (
-            <div 
-              key={`${doc.type}-${index}`}
-              className={cn(
-                "flex items-center justify-between p-3 transition-colors",
-                doc.status === 'missing' 
-                  ? "cursor-pointer hover:bg-primary/5" 
-                  : "hover:bg-muted/50"
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              <CardTitle>Generated Permit Packet</CardTitle>
+              {packet.status === 'ready' && (
+                <Badge className="bg-green-500 ml-2">Ready</Badge>
               )}
-              onClick={() => {
-                if (doc.status === 'missing' && onDocumentClick) {
-                  onDocumentClick(doc.type, doc.name);
-                }
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground font-mono w-6">
-                  {String(doc.order || index + 1).padStart(2, '0')}
-                </span>
-                {getStatusIcon(doc.status)}
-                <div>
-                  <p className="text-sm font-medium">{doc.name}</p>
-                  {doc.pages > 0 && (
-                    <p className="text-xs text-muted-foreground">{doc.pages} page{doc.pages > 1 ? 's' : ''}</p>
+              {packet.status === 'incomplete' && (
+                <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 ml-2">Incomplete</Badge>
+              )}
+            </div>
+            {packet.packetPdfUrl && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleViewPacket}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}>
+                  {downloading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Download PDF
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Packet Completion</span>
+              <span className="font-semibold">{packet.completionPercentage}%</span>
+            </div>
+            <Progress value={packet.completionPercentage} className="h-2" />
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>{packet.documentCount || includedDocs.length} documents</span>
+              <span>{packet.totalPages} pages</span>
+            </div>
+          </div>
+
+          {/* Document Index */}
+          <div className="border rounded-lg divide-y">
+            {packet.documentIndex.map((doc, index) => (
+              <div 
+                key={`${doc.type}-${index}`}
+                className={cn(
+                  "flex items-center justify-between p-3 transition-colors",
+                  doc.status === 'missing' 
+                    ? "cursor-pointer hover:bg-primary/5" 
+                    : "hover:bg-muted/50"
+                )}
+                onClick={() => {
+                  if (doc.status === 'missing' && onDocumentClick) {
+                    onDocumentClick(doc.type, doc.name);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground font-mono w-6">
+                    {String(doc.order || index + 1).padStart(2, '0')}
+                  </span>
+                  {getStatusIcon(doc.status)}
+                  <div>
+                    <p className="text-sm font-medium">{doc.name}</p>
+                    {doc.pages > 0 && (
+                      <p className="text-xs text-muted-foreground">{doc.pages} page{doc.pages > 1 ? 's' : ''}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(doc.status)}
+                  {doc.status === 'missing' ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDocumentClick?.(doc.type, doc.name);
+                      }}
+                    >
+                      <Upload className="h-3 w-3" />
+                      Upload
+                    </Button>
+                  ) : doc.url && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewDocument(doc.url!, doc.name);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {getStatusBadge(doc.status)}
-                {doc.status === 'missing' ? (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDocumentClick?.(doc.type, doc.name);
-                    }}
-                  >
-                    <Upload className="h-3 w-3" />
-                    Upload
-                  </Button>
-                ) : doc.url && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewDocument(doc.url!);
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Missing Documents Alert */}
-        {missingDocs.length > 0 && (
-          <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Missing Documents</AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc list-inside mt-1">
-                {missingDocs.map((doc, i) => (
-                  <li key={i} className="text-sm">{doc.name}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Signature Requirements Alert */}
-        {signatureDocs.length > 0 && (
-          <Alert className="border-orange-500/50 bg-orange-500/10">
-            <PenTool className="h-4 w-4 text-orange-600" />
-            <AlertTitle className="text-orange-700">Signatures Required</AlertTitle>
-            <AlertDescription className="text-orange-600">
-              <ul className="list-disc list-inside mt-1">
-                {signatureDocs.map((doc, i) => (
-                  <li key={i} className="text-sm">{doc.name}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* AI Notes */}
-        {packet.aiNotes && (
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm font-medium mb-2">AI Summary</p>
-            <p className="text-sm text-muted-foreground">{packet.aiNotes}</p>
+            ))}
           </div>
-        )}
 
-        {/* Cover Sheet Preview */}
-        <Collapsible open={showCoverSheet} onOpenChange={setShowCoverSheet}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between">
-              <span className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Cover Sheet Preview
-              </span>
-              {showCoverSheet ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div 
-              className="border rounded-lg p-4 bg-white text-black mt-2 max-h-96 overflow-auto"
-              dangerouslySetInnerHTML={{ __html: packet.coverSheetHtml }}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+          {/* Missing Documents Alert */}
+          {missingDocs.length > 0 && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Missing Documents</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside mt-1">
+                  {missingDocs.map((doc, i) => (
+                    <li key={i} className="text-sm">{doc.name}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <Button 
-            onClick={handleDownload}
-            className="flex-1"
-            disabled={packet.status !== 'ready' && !packet.packetPdfUrl}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {packet.packetPdfUrl ? 'Download Packet' : 'Print Cover Sheet'}
-          </Button>
-          {onRegenerate && (
-            <Button variant="outline" onClick={onRegenerate} disabled={generating}>
-              {generating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+          {/* Signature Requirements Alert */}
+          {signatureDocs.length > 0 && (
+            <Alert className="border-orange-500/50 bg-orange-500/10">
+              <PenTool className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-orange-700">Signatures Required</AlertTitle>
+              <AlertDescription className="text-orange-600">
+                <ul className="list-disc list-inside mt-1">
+                  {signatureDocs.map((doc, i) => (
+                    <li key={i} className="text-sm">{doc.name}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* AI Notes */}
+          {packet.aiNotes && (
+            <div className="bg-muted/50 rounded-lg p-4">
+              <p className="text-sm font-medium mb-2">AI Summary</p>
+              <p className="text-sm text-muted-foreground">{packet.aiNotes}</p>
+            </div>
+          )}
+
+          {/* Cover Sheet Preview */}
+          <Collapsible open={showCoverSheet} onOpenChange={setShowCoverSheet}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Cover Sheet Preview
+                </span>
+                {showCoverSheet ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div 
+                className="border rounded-lg p-4 bg-white text-black mt-2 max-h-96 overflow-auto"
+                dangerouslySetInnerHTML={{ __html: packet.coverSheetHtml }}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button 
+              onClick={handleDownload}
+              className="flex-1"
+              disabled={(packet.status !== 'ready' && !packet.packetPdfUrl) || downloading}
+            >
+              {downloading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4" />
+                <Download className="h-4 w-4 mr-2" />
               )}
+              {packet.packetPdfUrl ? 'Download Packet' : 'Print Cover Sheet'}
             </Button>
-          )}
-          {onEdit && (
-            <Button variant="outline" onClick={onEdit}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            {onRegenerate && (
+              <Button variant="outline" onClick={onRegenerate} disabled={generating}>
+                {generating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+            {onEdit && (
+              <Button variant="outline" onClick={onEdit}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+        url={viewingDocument?.url || ''}
+        title={viewingDocument?.name || 'Document'}
+        filename={`${viewingDocument?.name || 'document'}.pdf`}
+      />
+    </>
   );
 }

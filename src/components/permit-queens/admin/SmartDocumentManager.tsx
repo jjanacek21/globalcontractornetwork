@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DocumentUploadZone } from './DocumentUploadZone';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 interface BuildingDepartment {
   id: string;
@@ -45,6 +46,11 @@ interface GroupedDocuments {
   [tradeType: string]: SmartDocument[];
 }
 
+interface ViewingDocument {
+  url: string;
+  name: string;
+}
+
 const TRADE_TYPES = ['Roofing', 'Windows/Doors', 'HVAC', 'Electrical', 'Plumbing', 'General'];
 
 export function SmartDocumentManager() {
@@ -53,6 +59,7 @@ export function SmartDocumentManager() {
   const [documents, setDocuments] = useState<SmartDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<ViewingDocument | null>(null);
 
   useEffect(() => {
     fetchDepartments();
@@ -127,16 +134,20 @@ export function SmartDocumentManager() {
   const triggerReanalysis = async (doc: SmartDocument) => {
     setAnalyzing(doc.id);
     try {
-      // Get public URL for the document
-      const { data: urlData } = supabase.storage
+      // Get signed URL for the document
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('permit-form-templates')
-        .getPublicUrl(doc.file_path);
+        .createSignedUrl(doc.file_path, 3600);
+
+      if (urlError || !urlData?.signedUrl) {
+        throw new Error('Failed to generate document URL');
+      }
 
       await supabase.functions.invoke('permit-packet-analyzer', {
         body: {
           mode: 'detect_and_analyze',
           templateId: doc.id,
-          fileUrl: urlData.publicUrl
+          fileUrl: urlData.signedUrl
         }
       });
 
@@ -154,11 +165,26 @@ export function SmartDocumentManager() {
     }
   };
 
-  const viewDocument = (doc: SmartDocument) => {
-    const { data } = supabase.storage
-      .from('permit-form-templates')
-      .getPublicUrl(doc.file_path);
-    window.open(data.publicUrl, '_blank');
+  const viewDocument = async (doc: SmartDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('permit-form-templates')
+        .createSignedUrl(doc.file_path, 3600);
+
+      if (error || !data?.signedUrl) {
+        toast.error('Failed to access document');
+        console.error(error);
+        return;
+      }
+
+      setViewingDocument({
+        url: data.signedUrl,
+        name: doc.form_name
+      });
+    } catch (error) {
+      console.error('View document error:', error);
+      toast.error('Failed to open document');
+    }
   };
 
   const selectedDept = departments.find(d => d.id === selectedDepartment);
@@ -331,6 +357,15 @@ export function SmartDocumentManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+        url={viewingDocument?.url || ''}
+        title={viewingDocument?.name || 'Document'}
+        filename={`${viewingDocument?.name || 'document'}.pdf`}
+      />
     </div>
   );
 }
