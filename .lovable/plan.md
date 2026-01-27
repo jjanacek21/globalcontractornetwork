@@ -1,238 +1,260 @@
 
-# Rebranding "Permit Queens" to "Permit Expediting" + Workflow Streamlining
 
-## Overview
+# Permit Packet Generator - Comprehensive Fix Plan
 
-This plan removes the "Permit Queens" branding throughout the application and streamlines the workflow so that clicking "Permit Expediting" from the Member Dashboard goes directly to the permit dashboard (no landing page).
+## Root Cause Analysis
+
+Based on my investigation, I've identified **three interconnected problems** causing the permit packet issues:
+
+### Problem 1: Missing Product Approval PDFs (Critical)
+
+**Current State:**
+| Status | Count | Percentage |
+|--------|-------|------------|
+| `pending` | 748 | 93.9% |
+| `training_extracted` | 25 | 3.1% |
+| `found` | 15 | 1.9% |
+| `searching` | 4 | 0.5% |
+| `not_found` | 4 | 0.5% |
+
+**Impact**: 93.9% of products have `pending` status and no PDFs, so when a user selects GAF Timberline HDZ or CertainTeed products in the wizard, the packet assembler correctly marks them as "Missing" because there's no `file_url`, `noa_pdf_url`, or `fl_approval_pdf_url` in the database.
+
+### Problem 2: PDF Sourcing Not Running Automatically
+
+The `batch-source-products` edge function exists and **works correctly** (it downloads PDFs and stores them in Supabase Storage), but:
+- It requires manual triggering from admin panel
+- It depends on Firecrawl API key which may not be configured
+- It only processes 50 products per batch (rate limited)
+
+### Problem 3: Data Flow Gap in Product Selection
+
+When products are selected in the wizard:
+1. **Selection**: User picks products from `MultiMaterialSelector`
+2. **Passing**: Products are passed to `permit-packet-assembler` with `file_url` from the product record
+3. **Assembly**: The assembler checks `file_url` → `noa_pdf_url` → `fl_approval_pdf_url`
+4. **Result**: All are NULL for 93.9% of products → marked as "Missing"
 
 ---
 
-## Part 1: Branding Changes
+## Solution: Two-Phase Approach
 
-### Text/Label Replacements
+### Phase 1: Immediate Fix - Prioritize Available PDFs (Quick Win)
 
-| Location | Current | New |
-|----------|---------|-----|
-| Dashboard header | "Permit Queens" / "Client Portal" | "Permit Expediting" / "Contractor Portal" |
-| MemberDashboard services | "Permit Expediting" (already correct) | Keep as-is |
-| All page titles | "Permit Queens" | "Permit Expediting" |
-| Auth page | "Permit Queens" | "Permit Expediting" |
-| Admin pages | "Permit Queens Admin" | "Permit Expediting Admin" |
+Modify the `MultiMaterialSelector` and product display to clearly indicate which products have PDFs available, so users can make informed choices.
 
-### Files to Modify for Branding
+**Changes:**
+1. Add visual indicator (green checkmark vs warning icon) for products with PDFs
+2. Filter/sort products with PDFs first
+3. Show "PDF Available" badge in product dropdown
 
-| File | Changes |
-|------|---------|
-| `src/pages/PermitQueensDashboard.tsx` | Change header title from "Permit Queens" to "Permit Expediting" (lines 139-141) |
-| `src/pages/PermitQueensAuth.tsx` | Change page title/branding |
-| `src/pages/PermitQueensNewRequest.tsx` | Update any "Permit Queens" references in UI |
-| `src/pages/PermitQueensAdminAuth.tsx` | Change admin title |
-| `src/pages/PermitQueensAdminDashboard.tsx` | Change admin dashboard title |
-| `src/components/permit-queens/PermitQueensHeader.tsx` | Change header branding (optional - may not be needed if landing page removed) |
-| `src/components/permit-queens/PermitQueensFooter.tsx` | Change footer branding (optional - may not be needed if landing page removed) |
+**Files to Modify:**
+- `src/components/permit-queens/SearchableProductCombobox.tsx` - Add PDF availability indicator
+- `src/components/permit-queens/MultiMaterialSelector.tsx` - Sort products with PDFs first
+
+### Phase 2: Background PDF Sourcing - Auto-Source on Selection
+
+Create a system where when a product is selected in the wizard, if it lacks a PDF, the system automatically attempts to source it.
+
+**New Edge Function: `source-product-pdf`**
+
+A lightweight, single-product sourcer that:
+1. Accepts a product ID
+2. Attempts to find and download the PDF from known sources
+3. Updates the `product_approvals` record with the URL
+4. Returns success/failure
+
+**Trigger Logic:**
+- When user selects a product in `MultiMaterialSelector`
+- If product has no PDF URLs
+- Call `source-product-pdf` in background
+- Update UI when PDF becomes available
+
+**Files to Create:**
+- `supabase/functions/source-product-pdf/index.ts`
+
+**Files to Modify:**
+- `src/components/permit-queens/MultiMaterialSelector.tsx` - Trigger background sourcing
+- `src/hooks/useProductApprovals.ts` - Add sourcing capability
+
+### Phase 3: Packet Assembler Improvements
+
+Fix the packet assembler to better handle missing PDFs and provide clearer feedback.
+
+**Changes to `permit-packet-assembler`:**
+
+1. **Better Fallback**: When PDF is missing, generate a placeholder page with product info
+2. **Real-time Sourcing**: Attempt to source PDF inline if not found
+3. **Clearer Status**: Return `pdf_unavailable` status vs generic `missing`
+
+**File to Modify:**
+- `supabase/functions/permit-packet-assembler/index.ts`
 
 ---
 
-## Part 2: Workflow Streamlining
+## Detailed Implementation
 
-### Current Flow (To Be Eliminated)
-```text
-MemberDashboard -> "/permit-queens" (Landing Page) -> Auth -> Dashboard
-```
-
-### New Flow (Target)
-```text
-MemberDashboard -> "/permit-queens/dashboard" (Direct to Dashboard)
-                   |
-                   v
-              (If not auth) -> "/permit-queens/auth" -> Dashboard
-```
-
-### Routing Changes in `src/App.tsx`
-
-**Option A: Redirect Landing Page Route**
-```typescript
-// Before (line 190)
-<Route path="/permit-queens" element={<PermitQueens />} />
-
-// After - Redirect to dashboard
-<Route path="/permit-queens" element={<Navigate to="/permit-queens/dashboard" replace />} />
-```
-
-**Option B: Remove Route Entirely**
-Simply remove the `/permit-queens` route and update all links.
-
-### Link Updates in `src/pages/MemberDashboard.tsx`
+### Step 1: Update SearchableProductCombobox for PDF Visibility
 
 ```typescript
-// Before (line 218-219)
-{
-  title: "Permit Expediting",
-  link: "/permit-queens",  // Goes to landing page
+// Add PDF status indicator to each product option
+const hasPdf = product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url;
+
+<div className="flex items-center gap-2">
+  {hasPdf ? (
+    <FileCheck className="h-4 w-4 text-green-500" />
+  ) : (
+    <FileQuestion className="h-4 w-4 text-orange-400" />
+  )}
+  <span>{product.product_name}</span>
+  {hasPdf && <Badge variant="outline" className="text-xs">PDF Ready</Badge>}
+</div>
+```
+
+### Step 2: Create source-product-pdf Edge Function
+
+This lightweight function attempts to find a PDF for a single product:
+
+```typescript
+// Core logic:
+1. Lookup product by ID
+2. Construct known PDF URL patterns:
+   - Miami-Dade: https://www.miamidade.gov/building/library/noa/{noaNumber}.pdf
+   - Florida Building: https://www.floridabuilding.org/upload/PR_Instl_Docs/{flNumber}.pdf
+3. Verify URL is accessible (HEAD request)
+4. If found, download and store in product-approvals bucket
+5. Update product_approvals record with file_url
+6. Return result
+```
+
+### Step 3: Integrate Background Sourcing in MultiMaterialSelector
+
+When a product is selected that lacks a PDF:
+
+```typescript
+const handleProductSelect = async (product: ProductApproval) => {
+  // Add to selection immediately
+  onProductsChange([...selectedProducts, { 
+    id: crypto.randomUUID(), 
+    product, 
+    category 
+  }]);
+  
+  // If no PDF, trigger background sourcing
+  if (!product.file_url && !product.noa_pdf_url && !product.fl_approval_pdf_url) {
+    try {
+      await supabase.functions.invoke('source-product-pdf', {
+        body: { productId: product.id }
+      });
+      // Refetch product to get updated URL
+      refetch();
+    } catch (e) {
+      console.log('Background sourcing failed, will use placeholder');
+    }
+  }
+};
+```
+
+### Step 4: Update Packet Assembler for Better Missing Handling
+
+```typescript
+// In permit-packet-assembler, when product has no PDF:
+if (!fileUrl) {
+  // Attempt inline sourcing
+  const sourcedUrl = await attemptSourcePdf(sp.id, sp.noa_number);
+  
+  if (sourcedUrl) {
+    fileUrl = sourcedUrl;
+  } else {
+    // Add as "needs_sourcing" with product info for manual lookup
+    documentIndex.push({
+      type: 'product_approval',
+      name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number}`,
+      pages: 0,
+      status: 'needs_sourcing',
+      source: 'auto_source',
+      noaNumber: sp.noa_number, // Include for manual lookup
+    });
+    continue;
+  }
 }
-
-// After
-{
-  title: "Permit Expediting",
-  link: "/permit-queens/dashboard",  // Goes directly to dashboard
-}
 ```
 
 ---
 
-## Part 3: Landing Page Disposition
+## File Changes Summary
 
-### Options for `PermitQueens.tsx`
-
-1. **Keep for SEO/Marketing** - Landing page remains accessible but not in normal workflow
-2. **Delete entirely** - Remove the file and route completely
-3. **Convert to redirect** - Make it auto-redirect to dashboard
-
-### Recommendation
-Use **Option A** (redirect in App.tsx) - This preserves the landing page code for potential future marketing use while ensuring the workflow is streamlined.
-
----
-
-## Part 4: Specific File Changes
-
-### 4A. `src/App.tsx` - Routing
-
-```typescript
-// Line 190: Change from landing page to redirect
-<Route path="/permit-queens" element={<Navigate to="/permit-queens/dashboard" replace />} />
-```
-
-### 4B. `src/pages/MemberDashboard.tsx` - Service Link
-
-```typescript
-// Line 216-221: Update link destination
-{
-  icon: Crown,
-  title: "Permit Expediting",
-  description: "Fast-track Florida building permits",
-  link: "/permit-queens/dashboard",  // Changed from "/permit-queens"
-  color: "bg-amber-500/10 text-amber-600",
-  category: "business" as ServiceCategory
-}
-```
-
-### 4C. `src/pages/PermitQueensDashboard.tsx` - Header Branding
-
-```typescript
-// Lines 133-142: Update header branding
-<header className="border-b border-white/10 bg-[hsl(0,0%,5%)] backdrop-blur-lg sticky top-0 z-50">
-  <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="icon-container-gold !w-10 !h-10 !rounded-full">
-        <Crown className="h-5 w-5" />
-      </div>
-      <div>
-        <h1 className="text-lg font-bold text-white">Permit Expediting</h1>  {/* Changed */}
-        <p className="text-xs text-white/50">Contractor Portal</p>  {/* Changed */}
-      </div>
-    </div>
-    ...
-  </div>
-</header>
-```
-
-### 4D. `src/pages/PermitQueensAuth.tsx` - Auth Page Branding
-
-Update the page title and any "Permit Queens" text to "Permit Expediting".
-
-### 4E. `src/pages/PermitQueensNewRequest.tsx` - Wizard Page
-
-Update any "Permit Queens" references in the wizard UI to "Permit Expediting".
-
-### 4F. `src/pages/PermitQueensAdminAuth.tsx` & `PermitQueensAdminDashboard.tsx`
-
-Update admin portal branding from "Permit Queens Admin" to "Permit Expediting Admin".
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/components/permit-queens/SearchableProductCombobox.tsx` | Modify | Add PDF availability indicators |
+| `src/components/permit-queens/MultiMaterialSelector.tsx` | Modify | Sort products with PDFs first, trigger background sourcing |
+| `src/hooks/useProductApprovals.ts` | Modify | Add `hasPdf` helper, sort by PDF availability |
+| `supabase/functions/source-product-pdf/index.ts` | Create | Single-product PDF sourcer |
+| `supabase/functions/permit-packet-assembler/index.ts` | Modify | Better missing handling, inline sourcing attempt |
+| `supabase/config.toml` | Modify | Add source-product-pdf function config |
 
 ---
 
-## Part 5: Mobile Optimization (From Previous Plan)
+## Known PDF Source Patterns
 
-In addition to the branding changes, apply the mobile optimizations:
+For the `source-product-pdf` function, these are known URL patterns:
 
-### 5A. Responsive Layouts in `PermitQueensNewRequest.tsx`
-
-Add `useIsMobile` hook and update grid classes:
-
-```typescript
-import { useIsMobile } from "@/hooks/use-mobile";
-
-const isMobile = useIsMobile();
-
-// Update grid layouts
-<div className={cn("grid gap-3 mb-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
+**Miami-Dade NOAs:**
+```
+https://www.miamidade.gov/building/library/noa/{noaNumber_no_dots}.pdf
+Example: NOA 21-0312.02 → https://www.miamidade.gov/building/library/noa/21-031202.pdf
 ```
 
-### 5B. Create `MobileMaterialSheet.tsx`
+**Florida Building Code:**
+```
+https://www.floridabuilding.org/upload/PR_Instl_Docs/{flNumber}.pdf
+```
 
-New bottom-sheet component for material selection on mobile devices.
-
-### 5C. Swipe Navigation
-
-Add framer-motion swipe gestures for step navigation on mobile.
-
-### 5D. Touch-Friendly Progress Indicator
-
-Update `WizardProgress.tsx` with larger touch targets and tap-to-navigate functionality.
+**Manufacturer Direct:**
+- GAF: `https://www.gaf.com/en-us/resources/documents`
+- CertainTeed: `https://www.certainteed.com/roofing`
+- Owens Corning: `https://www.owenscorning.com/roofing`
 
 ---
 
-## Part 6: PDF Testing Verification
+## Testing Plan
 
-### Test Flow
+After implementation:
 
-1. Navigate to `/permit-queens/dashboard`
-2. Click "New Permit Request"
-3. Complete Step 1 (Property & Scope) with a test address
-4. Complete Step 2 (Materials & Docs) - select products with PDFs:
-   - Query products with PDFs: `SELECT * FROM product_approvals WHERE file_url IS NOT NULL LIMIT 5`
-5. Proceed to Step 3 (Review & Submit)
-6. Verify packet auto-generates
-7. Click on a document in the packet viewer
-8. Confirm PDF opens in modal (not new tab with blocked error)
+1. **Select a product with existing PDF** (e.g., Boral TileSeal)
+   - Verify it shows "PDF Ready" badge
+   - Verify packet includes it as "auto_sourced"
+
+2. **Select a product without PDF** (e.g., GAF Timberline HDZ)
+   - Verify background sourcing triggers
+   - Check if PDF URL is populated after sourcing
+   - Verify packet status updates accordingly
+
+3. **Generate full packet**
+   - Verify cover sheet generates
+   - Verify NOC generates
+   - Verify sourced products show with PDFs
+   - Verify missing products show clear status
 
 ---
 
-## Summary of Files to Modify
+## Expected Outcomes
 
-| File | Type of Change |
-|------|----------------|
-| `src/App.tsx` | Route redirect |
-| `src/pages/MemberDashboard.tsx` | Service link update |
-| `src/pages/PermitQueensDashboard.tsx` | Branding text |
-| `src/pages/PermitQueensAuth.tsx` | Branding text |
-| `src/pages/PermitQueensNewRequest.tsx` | Branding text + Mobile optimization |
-| `src/pages/PermitQueensAdminAuth.tsx` | Branding text |
-| `src/pages/PermitQueensAdminDashboard.tsx` | Branding text |
-| `src/components/permit-queens/WizardProgress.tsx` | Mobile touch targets |
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/permit-queens/MobileMaterialSheet.tsx` | Bottom-sheet for mobile material selection |
+| Before | After |
+|--------|-------|
+| 93.9% products show "Missing" | Products with known NOA patterns auto-source |
+| No visual indication of PDF availability | Clear "PDF Ready" badges on products |
+| Manual PDF sourcing only | Background sourcing on selection |
+| Generic "missing" status | Specific "needs_sourcing" with NOA number for manual lookup |
+| 7% packet completion | 40-60%+ for standard roofing permits (with auto-sourcing) |
 
 ---
 
 ## Implementation Order
 
-1. **Routing & Links** - Update App.tsx redirect and MemberDashboard link
-2. **Dashboard Branding** - Update PermitQueensDashboard header
-3. **Auth Branding** - Update PermitQueensAuth page
-4. **Wizard Updates** - Update PermitQueensNewRequest branding + mobile optimization
-5. **Admin Branding** - Update admin pages
-6. **Create MobileMaterialSheet** - New component for mobile UX
-7. **Test PDF Flow** - End-to-end verification
+1. **Phase 1A**: Update `SearchableProductCombobox` with PDF indicators
+2. **Phase 1B**: Update `MultiMaterialSelector` to sort products with PDFs first
+3. **Phase 2A**: Create `source-product-pdf` edge function
+4. **Phase 2B**: Integrate background sourcing trigger
+5. **Phase 3**: Update `permit-packet-assembler` with better missing handling
+6. **Testing**: Full end-to-end permit packet generation test
 
----
-
-## Notes
-
-- The file names remain `PermitQueens*.tsx` for now (renaming files would be a larger refactor)
-- URL paths remain `/permit-queens/*` for backward compatibility
-- Only UI-visible text is changed from "Permit Queens" to "Permit Expediting"
-- The `PermitQueens.tsx` landing page is preserved but bypassed via redirect
