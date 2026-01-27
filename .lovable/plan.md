@@ -1,137 +1,116 @@
 
 
-# Fix PDF/Document Viewing - In-App PDF Viewer
+# Fix Custom Source Website Crawler for Dynamic Sites
 
-## Problem
+## Problem Identified
 
-When clicking "Download PDF", "View Document", or viewing smart documents:
-- Chrome blocks the redirect to Supabase storage URLs (ERR_BLOCKED_BY_CLIENT)
-- Opening external URLs in new tabs is unreliable
-- Users want to view documents within the app, not be redirected
+The custom source website crawler is failing because:
+
+| Issue | Cause |
+|-------|-------|
+| Edge function wasn't deployed | Now fixed - function is deployed |
+| Miami-Dade site returns 0 documents | The site is dynamic ASP.NET - Firecrawl's "map" can't discover PDFs from search results |
+| Different approach needed | Dynamic sites need "scrape" or "search" rather than "map" |
+
+## Root Cause
+
+The Miami-Dade NOA search page is not a static sitemap that can be mapped. It requires:
+1. Form submission to generate search results
+2. JavaScript rendering to display results
+3. Pagination to access all results
+
+The current `crawl-source-websites` function uses `Firecrawl Map` which only discovers static links - it cannot interact with forms or dynamic content.
 
 ## Solution
 
-Create a centralized **PDFViewerDialog** component that displays PDFs inside a modal dialog using an iframe. This pattern already works in `FormPreviewDialog.tsx` and avoids browser blocking issues.
+Modify the `crawl-source-websites` edge function to:
 
-## Technical Approach
-
-| Current Behavior | New Behavior |
-|------------------|--------------|
-| `window.open(signedUrl, '_blank')` | Open `PDFViewerDialog` with iframe |
-| External redirect to supabase.co | Inline PDF preview within the app |
-| Chrome blocks popup | Modal dialog renders normally |
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/ui/PDFViewerDialog.tsx` | Reusable dialog component that displays PDFs in an iframe |
+1. **Detect site type** - Check if the URL is a known dynamic site (Miami-Dade, Florida Building Code)
+2. **Use Scrape instead of Map** - For dynamic sites, use Firecrawl's `scrape` with JavaScript rendering
+3. **Add AI extraction** - Use Lovable AI to extract PDF links from the rendered page content
+4. **Handle pagination** - For search results, detect and follow pagination links
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/permit-queens/PacketViewer.tsx` | Replace `window.open()` with `PDFViewerDialog` for viewing documents and downloading packets |
-| `src/components/permit-queens/admin/SmartDocumentManager.tsx` | Fix `viewDocument()` to use signed URLs and show in dialog |
-| `src/components/admin/PermitBooksManager.tsx` | Replace direct `window.open()` with `PDFViewerDialog` |
-| `src/components/permit-queens/SmartDocumentUploader.tsx` | Replace `window.open()` with `PDFViewerDialog` |
-| `src/components/admin/PermitDetailDialog.tsx` | Replace `window.open()` with `PDFViewerDialog` |
+| `supabase/functions/crawl-source-websites/index.ts` | Add scrape-based approach for dynamic sites, AI extraction, better error handling |
 
 ## Implementation Details
 
-### 1. New PDFViewerDialog Component
-
-This reusable component will:
-- Accept a storage path or full URL
-- Generate signed URLs for private bucket files
-- Display the PDF in an iframe within a dialog
-- Provide download button that uses fetch + blob download (avoids browser blocking)
-- Handle loading states and errors gracefully
-
-Key features:
-- Full-screen modal option for better viewing
-- Zoom controls (optional enhancement)
-- Download button using programmatic download (not window.open)
-- Support for both storage paths and external URLs
-
-### 2. PacketViewer.tsx Changes
+### 1. Site Type Detection
 
 ```text
-BEFORE:
-window.open(data.signedUrl, '_blank')
+Known dynamic sites that need scraping:
+- miamidade.gov/building/* -> Use scrape + AI extraction
+- floridabuilding.org/pr/* -> Use scrape + AI extraction
+- bcap.floridabuilding.org/* -> Use scrape + AI extraction
 
-AFTER:
-setViewingDocument({ url: signedUrl, name: docName })
-<PDFViewerDialog url={viewingDocument.url} name={viewingDocument.name} />
+Static sites with PDF directories:
+- Manufacturer websites -> Use map (works fine)
 ```
 
-### 3. SmartDocumentManager.tsx Changes
-
-Fix the broken `getPublicUrl` call:
-```text
-BEFORE:
-const { data } = supabase.storage.from('permit-form-templates').getPublicUrl(doc.file_path)
-window.open(data.publicUrl, '_blank')
-
-AFTER:
-const { data } = await supabase.storage.from('permit-form-templates').createSignedUrl(doc.file_path, 3600)
-setViewingDocument({ url: data.signedUrl, name: doc.form_name })
-```
-
-### 4. Programmatic Download (No Popup Blocking)
-
-For the "Download" button, instead of `window.open()`, use:
-```typescript
-const downloadFile = async (url: string, filename: string) => {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = blobUrl;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(blobUrl);
-};
-```
-
-This approach:
-- Fetches the file programmatically
-- Creates a blob URL
-- Triggers download via hidden anchor click
-- Works without popup blockers
-
-## Component Structure
+### 2. Enhanced Crawl Flow
 
 ```text
-PDFViewerDialog
-├── Dialog (full-screen option)
-│   ├── DialogHeader
-│   │   ├── Document Name
-│   │   └── Close Button
-│   ├── DialogContent
-│   │   ├── Loading State (spinner)
-│   │   ├── Error State (retry option)
-│   │   └── iframe (PDF display)
-│   └── DialogFooter
-│       ├── Download Button (programmatic)
-│       └── Close Button
++------------------+
+|  Source URL      |
++--------+---------+
+         |
+         v
++------------------+
+|  Detect site type|
++--------+---------+
+         |
+    +----+----+
+    |         |
+    v         v
+Dynamic    Static
+    |         |
+    v         v
+Scrape      Map
+(with JS)   (current)
+    |         |
+    v         v
+AI Extract  Filter PDFs
+PDF links   by extension
+    |         |
+    +----+----+
+         |
+         v
++------------------+
+|  Download PDFs   |
++------------------+
 ```
 
-## Affected User Journeys
+### 3. Scrape with AI Extraction
 
-| Location | Fix |
-|----------|-----|
-| Permit Request > Generated Packet > Download PDF | View in dialog instead of redirect |
-| Permit Request > Document Index > View icon | View in dialog instead of redirect |
-| Master Admin > Smart Documents > View | View in dialog with signed URL |
-| Master Admin > Permit Books > Download | View in dialog instead of redirect |
-| Admin Portal > Permit Details > Documents | View in dialog instead of redirect |
+For dynamic sites like Miami-Dade:
+- Scrape the page with `formats: ['html', 'links', 'markdown']`
+- Wait for JavaScript rendering with `waitFor: 3000`
+- Send content to Lovable AI to extract NOA numbers and PDF links
+- AI returns structured data with document URLs
 
-## Result
+### 4. Error Handling Improvements
 
-After implementation:
-- PDFs open instantly within the app in a large modal
-- No more browser blocking or broken redirects  
-- Users can preview then download if needed
-- Consistent experience across all document viewing locations
+- Clear error messages for each failure type
+- Retry logic for transient failures
+- Better logging for debugging
+- Graceful degradation (try scrape if map fails)
+
+## Expected Results
+
+After this fix:
+- Miami-Dade NOA searches will find PDF links from search results
+- Florida Building Code searches will work correctly
+- Static manufacturer sites continue working as before
+- Clear error messages when sites can't be crawled
+- Documents found count will increase significantly
+
+## Technical Considerations
+
+- Firecrawl scrape with JavaScript rendering costs more credits than map
+- Rate limiting is important to avoid blocking
+- Some government sites may have anti-bot measures
+- PDF download validation to avoid storing error pages
 
