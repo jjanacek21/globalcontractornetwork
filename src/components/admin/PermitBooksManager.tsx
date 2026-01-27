@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PDFViewerDialog } from "@/components/ui/PDFViewerDialog";
 
 interface TrainingBook {
   id: string;
@@ -67,6 +68,7 @@ export default function PermitBooksManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingBook, setViewingBook] = useState<{ url: string; title: string } | null>(null);
   
   // Form state for new upload
   const [newBook, setNewBook] = useState({
@@ -445,10 +447,10 @@ export default function PermitBooksManager() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => window.open(book.file_url, "_blank")}
-                            title="Download/View"
+                            onClick={() => setViewingBook({ url: book.file_url, title: book.title })}
+                            title="View Document"
                           >
-                            <Download className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -470,6 +472,15 @@ export default function PermitBooksManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingBook}
+        onOpenChange={(open) => !open && setViewingBook(null)}
+        url={viewingBook?.url || ''}
+        title={viewingBook?.title || 'Training Book'}
+        filename={`${viewingBook?.title || 'book'}.pdf`}
+      />
     </div>
   );
 }
