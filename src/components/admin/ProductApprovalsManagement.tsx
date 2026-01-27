@@ -31,6 +31,7 @@ import { useProductApprovals, ProductApproval } from '@/hooks/useProductApproval
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 export function ProductApprovalsManagement() {
   const { products, loading, getCategories, getManufacturers, refetch } = useProductApprovals();
@@ -49,6 +50,10 @@ export function ProductApprovalsManagement() {
     total: number;
   } | null>(null);
   const [sourceStatusFilter, setSourceStatusFilter] = useState<string>('all');
+  const [viewingDocument, setViewingDocument] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   const categories = getCategories();
   const manufacturers = getManufacturers();
@@ -445,16 +450,13 @@ export function ProductApprovalsManagement() {
                           {(product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url) && (
                             <Button 
                               variant="ghost" 
-                              size="sm" 
-                              asChild
+                              size="sm"
+                              onClick={() => setViewingDocument({
+                                url: product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url || '',
+                                title: `${product.manufacturer} - ${product.product_name}`
+                              })}
                             >
-                              <a 
-                                href={product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url || '#'} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </a>
+                              <Eye className="h-4 w-4" />
                             </Button>
                           )}
                           
@@ -555,13 +557,19 @@ export function ProductApprovalsManagement() {
                                 {/* Current Documents */}
                                 <div className="border-t pt-4">
                                   <p className="text-sm font-medium mb-2">Current Documents</p>
-                                  <div className="space-y-2 text-sm">
+                                <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">NOA PDF:</span>
                                       {product.noa_pdf_url || product.file_url ? (
-                                        <a href={product.noa_pdf_url || product.file_url} target="_blank" className="text-primary flex items-center gap-1">
+                                        <button 
+                                          onClick={() => setViewingDocument({
+                                            url: product.noa_pdf_url || product.file_url || '',
+                                            title: `${product.manufacturer} NOA`
+                                          })}
+                                          className="text-primary flex items-center gap-1 hover:underline"
+                                        >
                                           View <ExternalLink className="h-3 w-3" />
-                                        </a>
+                                        </button>
                                       ) : (
                                         <span className="text-orange-500">Missing</span>
                                       )}
@@ -569,9 +577,15 @@ export function ProductApprovalsManagement() {
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">FL Approval:</span>
                                       {product.fl_approval_pdf_url ? (
-                                        <a href={product.fl_approval_pdf_url} target="_blank" className="text-primary flex items-center gap-1">
+                                        <button 
+                                          onClick={() => setViewingDocument({
+                                            url: product.fl_approval_pdf_url || '',
+                                            title: `${product.manufacturer} FL Product Approval`
+                                          })}
+                                          className="text-primary flex items-center gap-1 hover:underline"
+                                        >
                                           View <ExternalLink className="h-3 w-3" />
-                                        </a>
+                                        </button>
                                       ) : product.fl_product_approval ? (
                                         <span className="font-mono text-xs">{product.fl_product_approval}</span>
                                       ) : (
@@ -581,9 +595,15 @@ export function ProductApprovalsManagement() {
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">UL Listing:</span>
                                       {product.ul_listing_url ? (
-                                        <a href={product.ul_listing_url} target="_blank" className="text-primary flex items-center gap-1">
+                                        <button 
+                                          onClick={() => setViewingDocument({
+                                            url: product.ul_listing_url || '',
+                                            title: `${product.manufacturer} UL Listing`
+                                          })}
+                                          className="text-primary flex items-center gap-1 hover:underline"
+                                        >
                                           View <ExternalLink className="h-3 w-3" />
-                                        </a>
+                                        </button>
                                       ) : (
                                         <span className="text-muted-foreground">-</span>
                                       )}
@@ -611,6 +631,15 @@ export function ProductApprovalsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+        url={viewingDocument?.url || ''}
+        title={viewingDocument?.title || 'Product Approval Document'}
+        filename={`${viewingDocument?.title?.replace(/[^a-zA-Z0-9]/g, '_') || 'document'}.pdf`}
+      />
     </div>
   );
 }
