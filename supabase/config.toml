@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.dbpr-license-check]
 verify_jwt = false
+
+[functions.source-product-pdf]
+verify_jwt = false

@@ -34,11 +34,12 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required' | 'needs_sourcing';
   source?: 'auto_fill' | 'auto_source' | 'user_upload' | 'generated' | 'city_specific' | 'conditional';
   requiresNotary?: boolean;
   requiresRecording?: boolean;
   condition?: string;
+  noaNumber?: string; // Include for manual lookup
 }
 
 interface PacketStructureDocument {
@@ -163,15 +164,19 @@ async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[])
   for (const doc of documentIndex) {
     // Use ASCII-compatible symbols for WinAnsi encoding
     const checkmark = doc.status === 'included' || doc.status === 'generated' || doc.status === 'auto_sourced' ? '[X]' : 
-                      doc.status === 'needs_signature' ? '[S]' : '[ ]';
+                      doc.status === 'needs_signature' ? '[S]' : 
+                      doc.status === 'needs_sourcing' ? '[?]' : '[ ]';
     const statusColor = doc.status === 'included' || doc.status === 'generated' || doc.status === 'auto_sourced' ? rgb(0.2, 0.6, 0.2) :
-                        doc.status === 'needs_signature' ? rgb(0.8, 0.5, 0.1) : rgb(0.5, 0.5, 0.5);
+                        doc.status === 'needs_signature' ? rgb(0.8, 0.5, 0.1) : 
+                        doc.status === 'needs_sourcing' ? rgb(0.2, 0.4, 0.8) : rgb(0.5, 0.5, 0.5);
     
     page.drawText(checkmark, { x: leftMargin, y, size: 10, font: helvetica, color: statusColor });
     page.drawText(doc.name, { x: leftMargin + 30, y, size: 10, font: helvetica });
     
     if (doc.status === 'needs_signature') {
       page.drawText('(signature required)', { x: 400, y, size: 8, font: helvetica, color: rgb(0.8, 0.5, 0.1) });
+    } else if (doc.status === 'needs_sourcing' && doc.noaNumber) {
+      page.drawText(`(lookup: ${doc.noaNumber})`, { x: 400, y, size: 8, font: helvetica, color: rgb(0.2, 0.4, 0.8) });
     }
     y -= lineHeight;
     
@@ -187,7 +192,7 @@ async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[])
     color: rgb(0.5, 0.5, 0.5),
   });
   
-  page.drawText('Permit Queens - Florida Building Permit Expediting', {
+  page.drawText('Permit Expediting Service - Florida Building Permit Support', {
     x: leftMargin,
     y: 25,
     size: 9,
@@ -486,7 +491,38 @@ serve(async (req) => {
           if (alreadyAdded) continue;
           
           const approval = productApprovals.find(a => a.id === sp.id);
-          const fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
+          let fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
+          
+          // If no file URL, attempt inline sourcing
+          if (!fileUrl && (approval?.noa_number || sp.noa_number)) {
+            console.log(`Attempting inline sourcing for ${sp.product_name}`);
+            const noaNum = approval?.noa_number || sp.noa_number || '';
+            const cleaned = noaNum.replace(/^NOA\s*/i, '').replace(/\./g, '');
+            const tryUrl = `https://www.miamidade.gov/building/library/noa/${cleaned}.pdf`;
+            
+            try {
+              const testResponse = await fetch(tryUrl, { method: 'HEAD' });
+              if (testResponse.ok) {
+                fileUrl = tryUrl;
+                console.log(`Found PDF at ${tryUrl}`);
+                // Update product approval record in background
+                supabase
+                  .from('product_approvals')
+                  .update({ 
+                    noa_pdf_url: tryUrl, 
+                    file_url: tryUrl,
+                    source_status: 'found',
+                    source_updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', sp.id)
+                  .then(({ error }) => {
+                    if (error) console.warn('Failed to update product approval:', error);
+                  });
+              }
+            } catch (e) {
+              console.log(`Inline sourcing failed for ${sp.product_name}: ${e}`);
+            }
+          }
           
           if (fileUrl) {
             documentIndex.push({
@@ -499,10 +535,21 @@ serve(async (req) => {
             });
             totalPages += 2;
             pdfUrls.push(fileUrl);
-          } else if (sp.noa_number) {
+          } else if (sp.noa_number || approval?.noa_number) {
+            // Mark as needs_sourcing with the NOA number for manual lookup
             documentIndex.push({
               type: 'product_approval',
-              name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number}`,
+              name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number || approval?.noa_number}`,
+              pages: 0,
+              status: 'needs_sourcing',
+              source: 'auto_source',
+              noaNumber: sp.noa_number || approval?.noa_number,
+            });
+          } else {
+            // No NOA number - mark as missing
+            documentIndex.push({
+              type: 'product_approval',
+              name: `${sp.manufacturer} ${sp.product_name}`,
               pages: 0,
               status: 'missing',
               source: 'auto_source',

@@ -5,11 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  Plus, Shield, Hammer, Layers, Home, CircleDot, Check
+  Plus, Shield, Hammer, Layers, Home, CircleDot, Check, Loader2
 } from 'lucide-react';
 import { useProductApprovals, ProductApproval } from '@/hooks/useProductApprovals';
 import { SearchableProductCombobox } from './SearchableProductCombobox';
 import { ApprovalInfoCard } from './ApprovalInfoCard';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Extended category type for multi-material selection
 export type MaterialCategory = 
@@ -110,25 +112,71 @@ export function MultiMaterialSelector({
   onProductsChange,
   onRoofTypeChange
 }: MultiMaterialSelectorProps) {
-  const { products, loading, isExpired, isExpiringSoon } = useProductApprovals();
+  const { products, loading, isExpired, isExpiringSoon, refetch } = useProductApprovals();
   const [showAddDropdown, setShowAddDropdown] = useState<Record<string, boolean>>({});
+  const [sourcingProducts, setSourcingProducts] = useState<Set<string>>(new Set());
 
-  // Get products for a specific material category
+  // Helper to check if product has a PDF
+  const hasPdf = (product: ProductApproval) => {
+    return !!(product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url);
+  };
+
+  // Get products for a specific material category, sorted with PDFs first
   const getProductsForCategory = (category: MaterialCategory) => {
     const config = CATEGORY_CONFIG[category];
     if (!config) return [];
     
-    return products.filter(p => 
-      config.dbCategories.some(dbCat => 
-        p.product_category?.toLowerCase().includes(dbCat.toLowerCase()) ||
-        dbCat.toLowerCase().includes(p.product_category?.toLowerCase() || '')
+    return products
+      .filter(p => 
+        config.dbCategories.some(dbCat => 
+          p.product_category?.toLowerCase().includes(dbCat.toLowerCase()) ||
+          dbCat.toLowerCase().includes(p.product_category?.toLowerCase() || '')
+        )
       )
-    );
+      .sort((a, b) => {
+        // Sort products with PDFs first
+        const aPdf = hasPdf(a);
+        const bPdf = hasPdf(b);
+        if (aPdf && !bPdf) return -1;
+        if (!aPdf && bPdf) return 1;
+        return a.product_name.localeCompare(b.product_name);
+      });
   };
 
   // Get selected products for a category
   const getSelectedForCategory = (category: MaterialCategory) => {
     return selectedProducts.filter(p => p.category === category);
+  };
+
+  // Trigger background PDF sourcing for a product
+  const triggerBackgroundSourcing = async (product: ProductApproval) => {
+    if (hasPdf(product)) return; // Already has PDF
+    if (sourcingProducts.has(product.id)) return; // Already sourcing
+    
+    setSourcingProducts(prev => new Set(prev).add(product.id));
+    
+    try {
+      console.log(`Triggering background sourcing for ${product.product_name}`);
+      const { data, error } = await supabase.functions.invoke('source-product-pdf', {
+        body: { productId: product.id }
+      });
+      
+      if (error) {
+        console.warn('Background sourcing failed:', error);
+      } else if (data?.success && data?.fileUrl) {
+        toast.success(`PDF sourced for ${product.product_name}`);
+        // Refresh product list to get updated URL
+        refetch();
+      }
+    } catch (e) {
+      console.warn('Background sourcing error:', e);
+    } finally {
+      setSourcingProducts(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }
   };
 
   // Add a product selection
@@ -150,6 +198,11 @@ export function MultiMaterialSelector({
       // Replace existing selection for this category
       const filtered = selectedProducts.filter(p => p.category !== category);
       onProductsChange([...filtered, newProduct]);
+    }
+    
+    // If product doesn't have a PDF, trigger background sourcing
+    if (!hasPdf(product)) {
+      triggerBackgroundSourcing(product);
     }
     
     // Hide the add dropdown after selection
@@ -380,9 +433,15 @@ export function MultiMaterialSelector({
                     {selected.length > 0 ? (
                       <div className="space-y-1">
                         {selected.map(sel => (
-                          <div key={sel.id} className="text-xs flex items-center justify-between">
+                          <div key={sel.id} className="text-xs flex items-center justify-between gap-1">
                             <span className="truncate">{sel.product.product_name}</span>
-                            <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                            {sourcingProducts.has(sel.id) ? (
+                              <Loader2 className="h-3 w-3 text-blue-500 flex-shrink-0 animate-spin" />
+                            ) : hasPdf(sel.product) ? (
+                              <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <span className="text-[10px] text-orange-500">No PDF</span>
+                            )}
                           </div>
                         ))}
                       </div>
