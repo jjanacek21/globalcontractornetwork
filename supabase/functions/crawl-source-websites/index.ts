@@ -17,6 +17,18 @@ interface ExtractedDocument {
   noaNumber: string | null;
   pdfUrl: string;
   title?: string;
+  manufacturer?: string;
+  productName?: string;
+  category?: string;
+  subcategory?: string;
+  material?: string;
+  description?: string;
+  impactRating?: string;
+  designPressurePlus?: number;
+  designPressureMinus?: number;
+  classification?: string;
+  expirationDate?: string;
+  hvhzApproved?: boolean;
 }
 
 // Known dynamic sites that require scraping instead of mapping
@@ -28,13 +40,25 @@ const DYNAMIC_SITE_PATTERNS = [
   'productapproval.state.fl.us',
 ];
 
+// Miami-Dade search result pages that have HTML tables
+const MIAMI_DADE_SEARCH_PATTERNS = [
+  'pc-result_app.asp',
+  'pc_result',
+  'search_result',
+];
+
 function isDynamicSite(url: string): boolean {
   const lowerUrl = url.toLowerCase();
   return DYNAMIC_SITE_PATTERNS.some(pattern => lowerUrl.includes(pattern));
 }
 
+function isMiamiDadeSearchResults(url: string): boolean {
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.includes('miamidade.gov') && 
+    MIAMI_DADE_SEARCH_PATTERNS.some(pattern => lowerUrl.includes(pattern));
+}
+
 function extractNoaFromUrl(url: string): string | null {
-  // Try various NOA number patterns
   const patterns = [
     /NOA[\s\-_]?(\d{2}[\s\-_]?\d{4}\.\d{2})/i,
     /(\d{2}[\s\-_]?\d{4}\.\d{2})/,
@@ -67,11 +91,202 @@ function extractNoaFromText(text: string): string | null {
   return null;
 }
 
+// Parse date from formats like "July 15 2026" or "March 1 2026"
+function parseExpirationDate(dateStr: string): string | null {
+  if (!dateStr || dateStr.trim() === '') return null;
+  
+  const months: { [key: string]: string } = {
+    'january': '01', 'february': '02', 'march': '03', 'april': '04',
+    'may': '05', 'june': '06', 'july': '07', 'august': '08',
+    'september': '09', 'october': '10', 'november': '11', 'december': '12'
+  };
+  
+  // Try "Month Day Year" format
+  const match = dateStr.trim().match(/(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
+  if (match) {
+    const month = months[match[1].toLowerCase()];
+    if (month) {
+      const day = match[2].padStart(2, '0');
+      return `${match[3]}-${month}-${day}`;
+    }
+  }
+  
+  // Try other formats
+  try {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch {
+    // ignore
+  }
+  
+  return null;
+}
+
+// Parse HTML table from Miami-Dade search results
+function parseMiamiDadeTable(html: string): ExtractedDocument[] {
+  const documents: ExtractedDocument[] = [];
+  
+  console.log('Parsing Miami-Dade search results HTML table...');
+  
+  // Find all table rows - the results table has NOA in first column
+  // Match rows that contain NOA patterns
+  const rowPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const cellPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+  
+  let rowMatch;
+  let rowCount = 0;
+  
+  while ((rowMatch = rowPattern.exec(html)) !== null) {
+    const rowContent = rowMatch[1];
+    
+    // Skip header rows (contain <th> or header text)
+    if (rowContent.includes('<th') || rowContent.includes('APPLICANT') || rowContent.includes('CATEGORY')) {
+      continue;
+    }
+    
+    // Check if this row has an NOA number pattern
+    const noaMatch = rowContent.match(/(\d{2}-\d{4}\.\d{2})/);
+    if (!noaMatch) continue;
+    
+    rowCount++;
+    const noaNumber = noaMatch[1];
+    
+    // Extract all cells
+    const cells: string[] = [];
+    let cellMatch;
+    while ((cellMatch = cellPattern.exec(rowContent)) !== null) {
+      // Strip HTML tags and decode entities
+      let cellText = cellMatch[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/\s+/g, ' ')
+        .trim();
+      cells.push(cellText);
+    }
+    // Reset regex for next row
+    cellPattern.lastIndex = 0;
+    
+    if (cells.length < 7) continue;
+    
+    // Parse cells based on Miami-Dade table structure:
+    // NOA | APPLICANT | CATEGORY | SUBCATEGORY | MATERIAL | DESCRIPTION | IMPACT | MDP+ | MDP- | CLASS_DESC | EXPIRES
+    const manufacturer = cells[1] || '';
+    const category = cells[2] || '';
+    const subcategory = cells[3] || '';
+    const material = cells[4] || '';
+    const description = cells[5] || '';
+    const impactRating = cells[6] || '';
+    const mdpPlus = parseFloat(cells[7]) || 0;
+    const mdpMinus = parseFloat(cells[8]) || 0;
+    const classification = cells[9] || '';
+    const expires = cells[10] || '';
+    
+    // Build the PDF URL
+    const pdfUrl = `https://www.miamidade.gov/building/library/noa/${noaNumber.replace('.', '')}.pdf`;
+    
+    // Check if HVHZ approved based on classification
+    const hvhzApproved = classification.toLowerCase().includes('high velocity') || 
+                         classification.toLowerCase().includes('hvhz') ||
+                         classification.toLowerCase().includes('hurricane zone');
+    
+    documents.push({
+      noaNumber,
+      pdfUrl,
+      title: `NOA ${noaNumber}`,
+      manufacturer: manufacturer.replace(/\s+/g, ' ').trim(),
+      productName: description.substring(0, 200),
+      category: mapCategory(category),
+      subcategory,
+      material,
+      description,
+      impactRating,
+      designPressurePlus: mdpPlus,
+      designPressureMinus: mdpMinus,
+      classification,
+      expirationDate: parseExpirationDate(expires) || undefined,
+      hvhzApproved,
+    });
+  }
+  
+  console.log(`Parsed ${rowCount} product rows from table, extracted ${documents.length} valid documents`);
+  return documents;
+}
+
+// Map Miami-Dade categories to our product categories
+function mapCategory(mdCategory: string): string {
+  const lower = mdCategory.toLowerCase();
+  if (lower.includes('roof')) return 'roofing';
+  if (lower.includes('window')) return 'windows_doors';
+  if (lower.includes('door')) return 'windows_doors';
+  if (lower.includes('glass') || lower.includes('glazing')) return 'windows_doors';
+  if (lower.includes('shutter')) return 'shutters';
+  if (lower.includes('panel')) return 'panels';
+  if (lower.includes('fastener')) return 'fasteners';
+  if (lower.includes('insulation')) return 'insulation';
+  if (lower.includes('coating')) return 'coatings';
+  if (lower.includes('underlayment')) return 'underlayment';
+  return 'other';
+}
+
+async function crawlMiamiDadeSearchResults(
+  url: string,
+  firecrawlApiKey: string
+): Promise<ExtractedDocument[]> {
+  console.log('Crawling Miami-Dade search results page:', url);
+  
+  try {
+    // Scrape the search results page with full HTML
+    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firecrawlApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['html', 'rawHtml'],
+        onlyMainContent: false,
+        waitFor: 8000, // Wait longer for ASP.NET to render
+      }),
+    });
+
+    const scrapeData = await scrapeResponse.json();
+    
+    if (!scrapeResponse.ok || !scrapeData.success) {
+      console.error('Scrape failed:', scrapeData);
+      throw new Error(scrapeData.error || 'Failed to scrape Miami-Dade search results');
+    }
+
+    const html = scrapeData.data?.rawHtml || scrapeData.data?.html || '';
+    console.log(`Received ${html.length} characters of HTML`);
+    
+    if (html.length < 1000) {
+      console.log('HTML too short, site may require form submission');
+      return [];
+    }
+    
+    // Parse the HTML table
+    return parseMiamiDadeTable(html);
+    
+  } catch (error) {
+    console.error('Error crawling Miami-Dade search results:', error);
+    throw error;
+  }
+}
+
 async function crawlDynamicSite(
   url: string,
   firecrawlApiKey: string,
   documentTypes: string[]
 ): Promise<ExtractedDocument[]> {
+  // Check if this is a Miami-Dade search results page with the table format
+  if (isMiamiDadeSearchResults(url)) {
+    return await crawlMiamiDadeSearchResults(url, firecrawlApiKey);
+  }
+  
   console.log('Using scrape approach for dynamic site:', url);
   
   const documents: ExtractedDocument[] = [];
@@ -87,8 +302,8 @@ async function crawlDynamicSite(
       body: JSON.stringify({
         url,
         formats: ['markdown', 'links', 'html'],
-        onlyMainContent: false, // Get full page for dynamic content
-        waitFor: 5000, // Wait for JS to render
+        onlyMainContent: false,
+        waitFor: 5000,
       }),
     });
 
@@ -101,12 +316,19 @@ async function crawlDynamicSite(
 
     console.log('Scrape successful, analyzing content...');
     
-    // Extract links from the scraped content
     const links: string[] = scrapeData.data?.links || [];
     const markdown: string = scrapeData.data?.markdown || '';
     const html: string = scrapeData.data?.html || '';
     
     console.log(`Found ${links.length} links on the page`);
+    
+    // If it looks like a Miami-Dade page, try table parsing
+    if (url.includes('miamidade.gov') && html.includes('<table')) {
+      const tableDocuments = parseMiamiDadeTable(html);
+      if (tableDocuments.length > 0) {
+        return tableDocuments;
+      }
+    }
     
     // Filter for PDF links
     const pdfLinks = links.filter(link => 
@@ -118,7 +340,6 @@ async function crawlDynamicSite(
     
     console.log(`Found ${pdfLinks.length} potential PDF links`);
     
-    // Process PDF links
     for (const pdfUrl of pdfLinks) {
       const noaNumber = extractNoaFromUrl(pdfUrl) || extractNoaFromText(markdown);
       documents.push({
@@ -128,20 +349,19 @@ async function crawlDynamicSite(
       });
     }
     
-    // Also look for NOA references in the HTML/markdown that might link to PDFs
+    // Look for NOA references in the HTML/markdown that might link to PDFs
     const noaPattern = /NOA[\s\-_:#]*(\d{2}[\s\-_]?\d{4}\.\d{2})/gi;
     let match;
     while ((match = noaPattern.exec(markdown)) !== null) {
       const noaNumber = match[1].replace(/[\s_]/g, '-');
-      // Check if we already have this NOA
       if (!documents.some(d => d.noaNumber === noaNumber)) {
-        // Try to construct a potential PDF URL for Miami-Dade
         if (url.includes('miamidade.gov')) {
-          const potentialUrl = `https://www.miamidade.gov/building/library/noa/NOA${noaNumber}.pdf`;
+          const potentialUrl = `https://www.miamidade.gov/building/library/noa/${noaNumber.replace('.', '')}.pdf`;
           documents.push({
             noaNumber,
             pdfUrl: potentialUrl,
             title: `NOA ${noaNumber}`,
+            hvhzApproved: true,
           });
         }
       }
@@ -155,7 +375,7 @@ async function crawlDynamicSite(
         if (!documents.some(d => d.noaNumber === `FL-${flNumber}`)) {
           documents.push({
             noaNumber: `FL-${flNumber}`,
-            pdfUrl: url, // Store the source URL, actual PDF would need to be found
+            pdfUrl: url,
             title: `FL ${flNumber}`,
           });
         }
@@ -179,7 +399,6 @@ async function crawlStaticSite(
   
   const documents: ExtractedDocument[] = [];
   
-  // Use Firecrawl Map to discover all URLs
   const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
     method: 'POST',
     headers: {
@@ -197,8 +416,6 @@ async function crawlStaticSite(
   
   if (!mapResponse.ok || !mapData.success) {
     console.error('Map failed:', mapData);
-    
-    // Fall back to scrape if map fails
     console.log('Falling back to scrape approach...');
     return await crawlDynamicSite(url, firecrawlApiKey, documentTypes);
   }
@@ -206,7 +423,6 @@ async function crawlStaticSite(
   const allUrls: string[] = mapData.links || [];
   console.log(`Map found ${allUrls.length} URLs`);
 
-  // Filter for PDF links and relevant pages
   const relevantUrls = allUrls.filter(u => {
     const lower = u.toLowerCase();
     return (
@@ -221,7 +437,6 @@ async function crawlStaticSite(
 
   console.log(`Filtered to ${relevantUrls.length} relevant URLs`);
 
-  // Process each URL
   for (const pdfUrl of relevantUrls) {
     if (pdfUrl.toLowerCase().endsWith('.pdf')) {
       const noaNumber = extractNoaFromUrl(pdfUrl);
@@ -233,7 +448,6 @@ async function crawlStaticSite(
     }
   }
   
-  // For non-PDF pages, optionally scrape them to find PDF links
   const nonPdfPages = relevantUrls.filter(u => !u.toLowerCase().endsWith('.pdf')).slice(0, 10);
   
   for (const pageUrl of nonPdfPages) {
@@ -270,7 +484,6 @@ async function crawlStaticSite(
         }
       }
       
-      // Rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
       
     } catch (err) {
@@ -319,9 +532,8 @@ Deno.serve(async (req) => {
 
     console.log(`Starting crawl for source ${sourceId}: ${url}`);
     console.log(`Target category: ${targetCategory}, Document types: ${documentTypes.join(', ')}`);
-    console.log(`Site type: ${isDynamicSite(url) ? 'DYNAMIC' : 'STATIC'}`);
+    console.log(`Site type: ${isDynamicSite(url) ? 'DYNAMIC' : 'STATIC'}, Miami-Dade Search: ${isMiamiDadeSearchResults(url)}`);
 
-    // Update status to crawling
     await supabase
       .from('custom_source_websites')
       .update({ crawl_status: 'crawling', error_message: null })
@@ -329,7 +541,6 @@ Deno.serve(async (req) => {
 
     let documents: ExtractedDocument[];
     
-    // Choose crawling strategy based on site type
     if (isDynamicSite(url)) {
       documents = await crawlDynamicSite(url, firecrawlApiKey, documentTypes);
     } else {
@@ -338,41 +549,114 @@ Deno.serve(async (req) => {
 
     console.log(`Crawl discovered ${documents.length} documents`);
 
-    // Store discovered documents
     let documentsFound = 0;
     const processedDocs: string[] = [];
 
-    for (const doc of documents.slice(0, 100)) { // Limit to 100 per crawl
+    for (const doc of documents.slice(0, 500)) { // Increased limit to 500 per crawl
       try {
-        const approvalNumber = doc.noaNumber || `CRAWL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        // Use the NOA number as the primary identifier
+        const noaNumber = doc.noaNumber?.replace('.', '') || null;
         
-        const { error: insertError } = await supabase
-          .from('product_approvals')
-          .upsert({
-            approval_number: approvalNumber,
-            approval_type: documentTypes.includes('noa') ? 'noa' : 'fl_approval',
-            pdf_url: doc.pdfUrl,
-            source_url: url,
-            source_status: 'crawl_discovered',
-            category: targetCategory !== 'all' ? targetCategory : null,
-            is_active: true,
-          }, {
-            onConflict: 'approval_number',
-            ignoreDuplicates: true,
-          });
+        // Check if this product already exists
+        let existingProduct = null;
+        if (noaNumber) {
+          const { data: existing } = await supabase
+            .from('product_approvals')
+            .select('id')
+            .eq('noa_number', noaNumber)
+            .single();
+          existingProduct = existing;
+        }
+        
+        if (existingProduct) {
+          // Update existing product with any new info
+          const { error: updateError } = await supabase
+            .from('product_approvals')
+            .update({
+              noa_pdf_url: doc.pdfUrl,
+              source_status: 'crawl_discovered',
+              last_source_attempt: new Date().toISOString(),
+              source_website: url,
+              ...(doc.expirationDate && { expiration_date: doc.expirationDate }),
+              ...(doc.hvhzApproved !== undefined && { hvhz_approved: doc.hvhzApproved }),
+              ...(doc.designPressureMinus && { 
+                specifications: { 
+                  mdp_plus: doc.designPressurePlus,
+                  mdp_minus: doc.designPressureMinus,
+                  material: doc.material,
+                  impact_rating: doc.impactRating,
+                }
+              }),
+            })
+            .eq('id', existingProduct.id);
+            
+          if (!updateError) {
+            documentsFound++;
+            processedDocs.push(doc.pdfUrl);
+          }
+        } else if (doc.noaNumber && doc.manufacturer) {
+          // Insert new product with full details
+          const { error: insertError } = await supabase
+            .from('product_approvals')
+            .insert({
+              noa_number: noaNumber,
+              manufacturer: doc.manufacturer,
+              product_name: doc.productName || doc.description?.substring(0, 200) || 'Unknown Product',
+              product_category: doc.category || (targetCategory !== 'all' ? targetCategory : 'other'),
+              noa_pdf_url: doc.pdfUrl,
+              expiration_date: doc.expirationDate,
+              hvhz_approved: doc.hvhzApproved || false,
+              source_status: 'crawl_discovered',
+              source_website: url,
+              last_source_attempt: new Date().toISOString(),
+              is_active: true,
+              specifications: {
+                mdp_plus: doc.designPressurePlus,
+                mdp_minus: doc.designPressureMinus,
+                material: doc.material,
+                subcategory: doc.subcategory,
+                classification: doc.classification,
+                impact_rating: doc.impactRating,
+              },
+              metadata: {
+                crawl_source: 'miami_dade_search',
+                crawl_date: new Date().toISOString(),
+              },
+            });
 
-        if (!insertError) {
-          documentsFound++;
-          processedDocs.push(doc.pdfUrl);
-        } else {
-          console.log(`Skipped duplicate or error: ${approvalNumber}`);
+          if (!insertError) {
+            documentsFound++;
+            processedDocs.push(doc.pdfUrl);
+          } else {
+            console.log(`Insert error for ${noaNumber}:`, insertError.message);
+          }
+        } else if (doc.pdfUrl) {
+          // Insert minimal record for PDFs without full metadata
+          const tempId = `CRAWL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const { error: insertError } = await supabase
+            .from('product_approvals')
+            .insert({
+              noa_number: doc.noaNumber || tempId,
+              manufacturer: doc.manufacturer || 'Unknown',
+              product_name: doc.title || 'Discovered Product',
+              product_category: doc.category || (targetCategory !== 'all' ? targetCategory : 'other'),
+              noa_pdf_url: doc.pdfUrl,
+              source_status: 'crawl_discovered',
+              source_website: url,
+              last_source_attempt: new Date().toISOString(),
+              is_active: true,
+            });
+
+          if (!insertError) {
+            documentsFound++;
+            processedDocs.push(doc.pdfUrl);
+          }
         }
       } catch (err) {
         console.error(`Error storing document:`, err);
       }
     }
 
-    // Update source status
     await supabase
       .from('custom_source_websites')
       .update({
@@ -391,6 +675,7 @@ Deno.serve(async (req) => {
         documentsFound,
         totalDiscovered: documents.length,
         siteType: isDynamicSite(url) ? 'dynamic' : 'static',
+        isMiamiDadeSearch: isMiamiDadeSearchResults(url),
         processedDocs: processedDocs.slice(0, 10),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -399,14 +684,9 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Crawl error:', error);
     
-    // Try to update the source with the error
     try {
       const { sourceId } = await req.clone().json();
       if (sourceId) {
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!,
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        );
         await supabase
           .from('custom_source_websites')
           .update({ 
