@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,20 +8,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles, Clock } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
 import { PacketPreview } from '@/components/permit-queens/PacketPreview';
 import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
-// PricingGrid removed - now using dropdown selector
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
 import { SignatureChecklist, generateSignatureRequirements, SignatureRequirement } from '@/components/permit-queens/SignatureChecklist';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { usePropertyLookup } from '@/hooks/usePropertyLookup';
+import { useContractorProfile, PriorPermitData } from '@/hooks/useContractorProfile';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -36,22 +36,22 @@ interface UploadedDocument {
   isPreSigned?: boolean;
 }
 
+// Optimized 3-step wizard structure
 const WIZARD_STEPS = [
-  { number: 1, title: 'Location & Trade', description: 'Property address & permit type' },
-  { number: 2, title: 'Project Scope', description: 'Details & product selection' },
-  { number: 3, title: 'Documents', description: 'Upload & packet preview' },
-  { number: 4, title: 'Review', description: 'Confirm & submit' },
+  { number: 1, title: 'Property & Scope', description: 'Address, owner & project basics' },
+  { number: 2, title: 'Materials & Docs', description: 'Products, requirements & uploads' },
+  { number: 3, title: 'Review & Submit', description: 'Verify and submit request' },
 ];
 
 const PERMIT_TYPES = [
-  { id: 'roofing', label: 'Roofing', icon: Home, description: 'Re-roof, repairs, coatings' },
-  { id: 'hvac', label: 'HVAC', icon: Zap, description: 'AC, heating, ductwork' },
-  { id: 'plumbing', label: 'Plumbing', icon: Droplets, description: 'Pipes, water heaters' },
-  { id: 'electrical', label: 'Electrical', icon: Zap, description: 'Wiring, panels' },
-  { id: 'windows_doors', label: 'Windows & Doors', icon: Building2, description: 'Impact windows/doors' },
-  { id: 'general_construction', label: 'General', icon: Wrench, description: 'Additions, renovations' },
-  { id: 'tree_removal', label: 'Tree Removal', icon: TreeDeciduous, description: 'Tree permits' },
-  { id: 'fence', label: 'Fence', icon: Shield, description: 'Fencing permits' },
+  { id: 'roofing', label: 'Roofing', icon: Home, description: 'Re-roof, repairs, coatings', priority: true },
+  { id: 'windows_doors', label: 'Windows & Doors', icon: Building2, description: 'Impact windows/doors', priority: true },
+  { id: 'hvac', label: 'HVAC', icon: Zap, description: 'AC, heating, ductwork', priority: false },
+  { id: 'plumbing', label: 'Plumbing', icon: Droplets, description: 'Pipes, water heaters', priority: false },
+  { id: 'electrical', label: 'Electrical', icon: Zap, description: 'Wiring, panels', priority: false },
+  { id: 'general_construction', label: 'General', icon: Wrench, description: 'Additions, renovations', priority: false },
+  { id: 'tree_removal', label: 'Tree Removal', icon: TreeDeciduous, description: 'Tree permits', priority: false },
+  { id: 'fence', label: 'Fence', icon: Shield, description: 'Fencing permits', priority: false },
 ];
 
 interface FormData {
@@ -71,8 +71,14 @@ export default function PermitQueensNewRequest() {
   const navigate = useNavigate();
   const { createPermit, saving } = usePermitRequest();
   const { tiers } = usePricingTiers();
+  const { lookupPriorPermit } = useContractorProfile(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [tradeQuestionsComplete, setTradeQuestionsComplete] = useState(false);
+  
+  // Prior permit auto-fill state
+  const [priorPermit, setPriorPermit] = useState<PriorPermitData | null>(null);
+  const [showPriorPermitBanner, setShowPriorPermitBanner] = useState(false);
+  const [lookingUpPriorPermit, setLookingUpPriorPermit] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     property_address: '',
@@ -119,12 +125,84 @@ export default function PermitQueensNewRequest() {
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Prior permit lookup effect - triggers when address changes
+  useEffect(() => {
+    const lookupPrior = async () => {
+      if (formData.property_address.length > 15) {
+        setLookingUpPriorPermit(true);
+        try {
+          const result = await lookupPriorPermit(formData.property_address);
+          if (result) {
+            setPriorPermit(result);
+            setShowPriorPermitBanner(true);
+          } else {
+            setPriorPermit(null);
+            setShowPriorPermitBanner(false);
+          }
+        } catch (error) {
+          console.error('Prior permit lookup error:', error);
+        } finally {
+          setLookingUpPriorPermit(false);
+        }
+      }
+    };
+    
+    // Debounce the lookup
+    const timer = setTimeout(lookupPrior, 500);
+    return () => clearTimeout(timer);
+  }, [formData.property_address, lookupPriorPermit]);
+
+  // Apply prior permit data
+  const applyPriorPermitData = () => {
+    if (priorPermit) {
+      setFormData(prev => ({
+        ...prev,
+        owner_name: priorPermit.owner_name || prev.owner_name,
+        owner_email: priorPermit.owner_email || prev.owner_email,
+        owner_phone: priorPermit.owner_phone || prev.owner_phone,
+        valuation: priorPermit.valuation || prev.valuation,
+      }));
+      setShowPriorPermitBanner(false);
+      toast.success('Applied data from previous permit');
+    }
+  };
+
+  // Auto-generate packet when entering Step 3
+  useEffect(() => {
+    if (currentStep === 3 && !generatedPacket && !generatingPacket && formData.property_address && formData.owner_name) {
+      handleGeneratePacket();
+    }
+  }, [currentStep]);
+
+  // Calculate completion percentage based on form state
+  const calculatedCompletionPercentage = useMemo(() => {
+    let total = 0;
+    let completed = 0;
+    
+    // Step 1 fields
+    total += 3; // address, permit_type, owner_name
+    if (formData.property_address) completed++;
+    if (formData.permit_type) completed++;
+    if (formData.owner_name) completed++;
+    
+    // Step 2 fields
+    total += 2; // trade questions, materials
+    if (tradeQuestionsComplete) completed++;
+    if (selectedMaterials.length > 0 || formData.permit_type !== 'roofing') completed++;
+    
+    // Step 3 fields
+    total += 2; // packet, payment agreement
+    if (generatedPacket) completed++;
+    if (paymentAgreed) completed++;
+    
+    return Math.round((completed / total) * 100);
+  }, [formData, tradeQuestionsComplete, selectedMaterials, generatedPacket, paymentAgreed]);
   
   // Generate signature requirements based on permit type and jurisdiction
   const computedSignatureRequirements = useMemo(() => {
     if (!formData.permit_type || !formData.jurisdiction_county) return [];
     
-    // Map roofing newMaterial to material_type
     const materialType = tradeData.roofing?.newMaterial || '';
     
     return generateSignatureRequirements(
@@ -133,8 +211,8 @@ export default function PermitQueensNewRequest() {
       formData.jurisdiction_city,
       materialType,
       formData.valuation,
-      undefined, // year_built not available in current form
-      false, // is_hoa not available in current form
+      undefined,
+      false,
       formData.isHVHZ
     );
   }, [formData.permit_type, formData.jurisdiction_county, formData.jurisdiction_city, formData.valuation, formData.isHVHZ, tradeData]);
@@ -173,16 +251,13 @@ export default function PermitQueensNewRequest() {
     const fieldErrors = validateField(field, fieldValue);
     setValidationErrors(prev => {
       const newErrors = { ...prev };
-      // Remove old error for this field
       delete newErrors[field];
-      // Add new error if exists
       return { ...newErrors, ...fieldErrors };
     });
   };
 
   const handleFieldChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (touched[field]) {
       const fieldErrors = validateField(field, value);
       setValidationErrors(prev => {
@@ -197,9 +272,9 @@ export default function PermitQueensNewRequest() {
     if (currentStep === 1) {
       if (!formData.property_address?.trim()) return 'Enter property address to continue';
       if (!formData.permit_type) return 'Select a permit type to continue';
+      if (!formData.owner_name?.trim()) return 'Enter owner name to continue';
     }
     if (currentStep === 2) {
-      if (!formData.owner_name?.trim()) return 'Enter owner name to continue';
       if (!tradeQuestionsComplete) return 'Complete project details to continue';
     }
     return null;
@@ -228,25 +303,23 @@ export default function PermitQueensNewRequest() {
     setTradeQuestionsComplete(false);
   };
 
+  // Updated canProceed for 3-step wizard
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return formData.property_address && formData.permit_type;
+        return formData.property_address && formData.permit_type && formData.owner_name;
       case 2:
-        return tradeQuestionsComplete && formData.owner_name;
+        return tradeQuestionsComplete;
       case 3:
-        return true;
-      case 4:
-        return formData.complexity_tier;
+        return formData.complexity_tier && paymentAgreed;
       default:
         return false;
     }
   };
 
   const nextStep = () => {
-    if (currentStep < 4) {
+    if (currentStep < 3) {
       setCurrentStep(prev => prev + 1);
-      if (currentStep === 3) runGapAnalysis();
     }
   };
 
@@ -280,7 +353,6 @@ export default function PermitQueensNewRequest() {
     try {
       let permitId = tempPermitId;
       
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Please log in to generate a packet');
@@ -288,7 +360,6 @@ export default function PermitQueensNewRequest() {
         return;
       }
       
-      // Create temporary permit project if not already created
       if (!permitId) {
         const { data: tempPermit, error: permitError } = await supabase
           .from('permit_projects')
@@ -359,6 +430,9 @@ export default function PermitQueensNewRequest() {
         setCompletionPercentage(data.data.completionPercentage || 0);
         setGenerationStage('Complete!');
         toast.success('Permit packet generated!');
+        
+        // Run gap analysis after packet generation
+        runGapAnalysis();
       } else {
         throw new Error(data?.error || 'Unknown error');
       }
@@ -374,7 +448,6 @@ export default function PermitQueensNewRequest() {
 
   const handleSubmit = async () => {
     try {
-      // If we already created a temp permit, update it instead of creating new
       if (tempPermitId) {
         const { error: updateError } = await supabase
           .from('permit_projects')
@@ -410,6 +483,88 @@ export default function PermitQueensNewRequest() {
     }
   };
 
+  // Build selected products array for packet preview
+  const buildSelectedProducts = () => {
+    const products = [
+      ...selectedMaterials.map(m => ({
+        id: m.id,
+        product: m.product,
+        category: m.category as 'underlayment' | 'roof_covering' | 'fasteners' | 'other'
+      })),
+    ];
+    
+    if (formData.permit_type === 'windows_doors' && tradeData.windows_doors) {
+      if (tradeData.windows_doors.selectedWindowProduct) {
+        products.push({
+          id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
+          product: {
+            id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
+            manufacturer: tradeData.windows_doors.selectedWindowProduct.manufacturer || '',
+            product_name: tradeData.windows_doors.selectedWindowProduct.product_name || 'Selected Window',
+            product_category: 'Windows',
+            product_line: null,
+            noa_number: tradeData.windows_doors.selectedWindowProduct.noa_number || null,
+            fl_product_approval: tradeData.windows_doors.selectedWindowProduct.fl_product_approval || null,
+            uil_number: null,
+            expiration_date: null,
+            hvhz_approved: formData.isHVHZ,
+            wind_speed_rating: null,
+            file_path: null,
+            file_url: tradeData.windows_doors.selectedWindowProduct.file_url || null,
+            is_active: true
+          },
+          category: 'other' as const
+        });
+      }
+      if (tradeData.windows_doors.selectedDoorProduct) {
+        products.push({
+          id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
+          product: {
+            id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
+            manufacturer: tradeData.windows_doors.selectedDoorProduct.manufacturer || '',
+            product_name: tradeData.windows_doors.selectedDoorProduct.product_name || 'Selected Door',
+            product_category: 'Doors',
+            product_line: null,
+            noa_number: tradeData.windows_doors.selectedDoorProduct.noa_number || null,
+            fl_product_approval: tradeData.windows_doors.selectedDoorProduct.fl_product_approval || null,
+            uil_number: null,
+            expiration_date: null,
+            hvhz_approved: formData.isHVHZ,
+            wind_speed_rating: null,
+            file_path: null,
+            file_url: tradeData.windows_doors.selectedDoorProduct.file_url || null,
+            is_active: true
+          },
+          category: 'other' as const
+        });
+      }
+      if (tradeData.windows_doors.selectedSlidingDoorProduct) {
+        products.push({
+          id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
+          product: {
+            id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
+            manufacturer: tradeData.windows_doors.selectedSlidingDoorProduct.manufacturer || '',
+            product_name: tradeData.windows_doors.selectedSlidingDoorProduct.product_name || 'Selected Sliding Door',
+            product_category: 'Sliding Doors',
+            product_line: null,
+            noa_number: tradeData.windows_doors.selectedSlidingDoorProduct.noa_number || null,
+            fl_product_approval: tradeData.windows_doors.selectedSlidingDoorProduct.fl_product_approval || null,
+            uil_number: null,
+            expiration_date: null,
+            hvhz_approved: formData.isHVHZ,
+            wind_speed_rating: null,
+            file_path: null,
+            file_url: tradeData.windows_doors.selectedSlidingDoorProduct.file_url || null,
+            is_active: true
+          },
+          category: 'other' as const
+        });
+      }
+    }
+    
+    return products;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -426,15 +581,20 @@ export default function PermitQueensNewRequest() {
 
       <div className="border-b bg-card py-6">
         <div className="container mx-auto px-4">
-          <WizardProgress steps={WIZARD_STEPS} currentStep={currentStep} />
+          <WizardProgress 
+            steps={WIZARD_STEPS} 
+            currentStep={currentStep} 
+            completionPercentage={calculatedCompletionPercentage}
+          />
         </div>
       </div>
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Step 1: Location & Trade */}
+          {/* Step 1: Property & Scope (Merged) */}
           {currentStep === 1 && (
             <div className="space-y-6">
+              {/* Property Location */}
               <Card>
                 <CardHeader>
                   <CardTitle>Property Location</CardTitle>
@@ -449,13 +609,41 @@ export default function PermitQueensNewRequest() {
                 </CardContent>
               </Card>
 
+              {/* Prior Permit Banner - Shows when previous permit found at this address */}
+              {showPriorPermitBanner && priorPermit && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <span className="text-sm">
+                      <strong>Previous permit found!</strong> Owner: {priorPermit.owner_name} 
+                      {priorPermit.valuation && ` • Valuation: $${priorPermit.valuation.toLocaleString()}`}
+                    </span>
+                    <Button size="sm" onClick={applyPriorPermitData} className="shrink-0">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Use This Data
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Loading indicator for prior permit lookup */}
+              {lookingUpPriorPermit && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Checking for previous permits at this address...
+                </div>
+              )}
+
+              {/* Permit Type Selection */}
               <Card>
                 <CardHeader>
                   <CardTitle>Permit Type</CardTitle>
+                  <CardDescription>Select the type of permit you need</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {PERMIT_TYPES.map((type) => {
+                  {/* Priority types first */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {PERMIT_TYPES.filter(t => t.priority).map((type) => {
                       const Icon = type.icon;
                       const isSelected = formData.permit_type === type.id;
                       return (
@@ -474,10 +662,123 @@ export default function PermitQueensNewRequest() {
                       );
                     })}
                   </div>
+                  
+                  {/* Other types */}
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    {PERMIT_TYPES.filter(t => !t.priority).map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = formData.permit_type === type.id;
+                      return (
+                        <button
+                          key={type.id}
+                          onClick={() => handlePermitTypeChange(type.id as TradeType)}
+                          className={cn(
+                            "p-3 border rounded-lg text-center transition-all opacity-70 hover:opacity-100",
+                            isSelected ? "border-primary bg-primary/5 ring-2 ring-primary/20 opacity-100" : "hover:border-primary/50"
+                          )}
+                        >
+                          <Icon className={cn("w-5 h-5 mx-auto mb-1", isSelected ? "text-primary" : "text-muted-foreground")} />
+                          <p className="text-xs font-medium">{type.label}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Jurisdiction Rules Panel - Shows after address & permit type selected */}
+              {/* Owner Info - Moved from Step 2 */}
+              {formData.permit_type && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Home className="h-5 w-5" />
+                      Property Owner
+                    </CardTitle>
+                    <CardDescription>Enter the property owner's information</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1">
+                        Owner Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input 
+                        value={formData.owner_name} 
+                        onChange={(e) => handleFieldChange('owner_name', e.target.value)} 
+                        onBlur={() => handleBlur('owner_name')}
+                        placeholder="John Smith"
+                        className={cn(
+                          touched.owner_name && validationErrors.owner_name && "border-destructive focus-visible:ring-destructive"
+                        )}
+                      />
+                      {touched.owner_name && validationErrors.owner_name && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {validationErrors.owner_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Owner Email</Label>
+                      <Input 
+                        type="email" 
+                        value={formData.owner_email} 
+                        onChange={(e) => handleFieldChange('owner_email', e.target.value)}
+                        onBlur={() => handleBlur('owner_email')}
+                        placeholder="john@example.com"
+                        className={cn(
+                          touched.owner_email && validationErrors.owner_email && "border-destructive focus-visible:ring-destructive"
+                        )}
+                      />
+                      {touched.owner_email && validationErrors.owner_email && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {validationErrors.owner_email}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Owner Phone</Label>
+                      <Input 
+                        type="tel" 
+                        value={formData.owner_phone} 
+                        onChange={(e) => handleFieldChange('owner_phone', e.target.value)}
+                        onBlur={() => handleBlur('owner_phone')}
+                        placeholder="(954) 555-1234"
+                        className={cn(
+                          touched.owner_phone && validationErrors.owner_phone && "border-destructive focus-visible:ring-destructive"
+                        )}
+                      />
+                      {touched.owner_phone && validationErrors.owner_phone && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {validationErrors.owner_phone}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valuation ($)</Label>
+                      <Input 
+                        type="number" 
+                        value={formData.valuation || ''} 
+                        onChange={(e) => handleFieldChange('valuation', parseFloat(e.target.value) || 0)}
+                        onBlur={() => handleBlur('valuation')}
+                        placeholder="15000"
+                        className={cn(
+                          touched.valuation && validationErrors.valuation && "border-destructive focus-visible:ring-destructive"
+                        )}
+                      />
+                      {touched.valuation && validationErrors.valuation && (
+                        <p className="text-sm text-destructive flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {validationErrors.valuation}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Jurisdiction Rules Panel */}
               {formData.jurisdiction_county && formData.permit_type && (
                 <JurisdictionRulesPanel
                   county={formData.jurisdiction_county}
@@ -490,100 +791,10 @@ export default function PermitQueensNewRequest() {
             </div>
           )}
 
-          {/* Step 2: Trade-Specific Questions */}
+          {/* Step 2: Materials & Documents (Merged) */}
           {currentStep === 2 && formData.permit_type && (
             <div className="space-y-6">
-              {/* Property Owner - FIRST */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Home className="h-5 w-5" />
-                    Property Owner
-                  </CardTitle>
-                  <CardDescription>Enter the property owner's information</CardDescription>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      Owner Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input 
-                      value={formData.owner_name} 
-                      onChange={(e) => handleFieldChange('owner_name', e.target.value)} 
-                      onBlur={() => handleBlur('owner_name')}
-                      placeholder="John Smith"
-                      className={cn(
-                        touched.owner_name && validationErrors.owner_name && "border-destructive focus-visible:ring-destructive"
-                      )}
-                    />
-                    {touched.owner_name && validationErrors.owner_name && (
-                      <p className="text-sm text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {validationErrors.owner_name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Owner Email</Label>
-                    <Input 
-                      type="email" 
-                      value={formData.owner_email} 
-                      onChange={(e) => handleFieldChange('owner_email', e.target.value)}
-                      onBlur={() => handleBlur('owner_email')}
-                      placeholder="john@example.com"
-                      className={cn(
-                        touched.owner_email && validationErrors.owner_email && "border-destructive focus-visible:ring-destructive"
-                      )}
-                    />
-                    {touched.owner_email && validationErrors.owner_email && (
-                      <p className="text-sm text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {validationErrors.owner_email}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Owner Phone</Label>
-                    <Input 
-                      type="tel" 
-                      value={formData.owner_phone} 
-                      onChange={(e) => handleFieldChange('owner_phone', e.target.value)}
-                      onBlur={() => handleBlur('owner_phone')}
-                      placeholder="(954) 555-1234"
-                      className={cn(
-                        touched.owner_phone && validationErrors.owner_phone && "border-destructive focus-visible:ring-destructive"
-                      )}
-                    />
-                    {touched.owner_phone && validationErrors.owner_phone && (
-                      <p className="text-sm text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {validationErrors.owner_phone}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valuation ($)</Label>
-                    <Input 
-                      type="number" 
-                      value={formData.valuation || ''} 
-                      onChange={(e) => handleFieldChange('valuation', parseFloat(e.target.value) || 0)}
-                      onBlur={() => handleBlur('valuation')}
-                      placeholder="15000"
-                      className={cn(
-                        touched.valuation && validationErrors.valuation && "border-destructive focus-visible:ring-destructive"
-                      )}
-                    />
-                    {touched.valuation && validationErrors.valuation && (
-                      <p className="text-sm text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {validationErrors.valuation}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Property Data Banner - Shows when year_built is auto-detected */}
+              {/* Property Data Banner */}
               {propertyLookup.yearBuilt && (
                 <Alert className="border-primary/30 bg-primary/5">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -597,7 +808,7 @@ export default function PermitQueensNewRequest() {
                 </Alert>
               )}
 
-              {/* Trade Questions - SECOND */}
+              {/* Trade Questions */}
               <TradeQuestions
                 trade={formData.permit_type}
                 isHVHZ={formData.isHVHZ || propertyLookup.isHVHZ}
@@ -609,7 +820,7 @@ export default function PermitQueensNewRequest() {
                 propertyLoading={propertyLookup.loading}
               />
               
-              {/* Multi-Material Selector for Roofing - THIRD */}
+              {/* Multi-Material Selector for Roofing */}
               {formData.permit_type === 'roofing' && (
                 <MultiMaterialSelector
                   isHVHZ={formData.isHVHZ}
@@ -619,13 +830,8 @@ export default function PermitQueensNewRequest() {
                   onRoofTypeChange={setRoofType}
                 />
               )}
-            </div>
-          )}
 
-          {/* Step 3: Documents & Packet */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              {/* Required Documents from Jurisdiction Rules */}
+              {/* Inline Document Requirements Checklist */}
               {formData.jurisdiction_county && (
                 <JurisdictionRulesPanel
                   county={formData.jurisdiction_county}
@@ -639,130 +845,66 @@ export default function PermitQueensNewRequest() {
                 />
               )}
               
-              {/* Smart Document Uploader */}
+              {/* Smart Document Uploader - Moved from Step 3 */}
               <SmartDocumentUploader
                 jurisdiction={formData.jurisdiction_county}
                 permitType={formData.permit_type || ''}
                 onDocumentsChange={setUploadedDocuments}
               />
-              
-              <PacketPreview
-                permitType={formData.permit_type}
-                jurisdiction={formData.jurisdiction_county}
-                isHVHZ={formData.isHVHZ}
-                uploadedDocuments={uploadedDocuments}
-                selectedProducts={[
-                  // Roofing materials
-                  ...selectedMaterials.map(m => ({
-                    id: m.id,
-                    product: m.product,
-                    category: m.category as 'underlayment' | 'roof_covering' | 'fasteners' | 'other'
-                  })),
-                  // Window/door products from trade data
-                  ...(formData.permit_type === 'windows_doors' && tradeData.windows_doors ? [
-                    ...(tradeData.windows_doors.selectedWindowProduct ? [{
-                      id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
-                      product: {
-                        id: tradeData.windows_doors.selectedWindowProduct.id || crypto.randomUUID(),
-                        manufacturer: tradeData.windows_doors.selectedWindowProduct.manufacturer || '',
-                        product_name: tradeData.windows_doors.selectedWindowProduct.product_name || 'Selected Window',
-                        product_category: 'Windows',
-                        product_line: null,
-                        noa_number: tradeData.windows_doors.selectedWindowProduct.noa_number || null,
-                        fl_product_approval: tradeData.windows_doors.selectedWindowProduct.fl_product_approval || null,
-                        uil_number: null,
-                        expiration_date: null,
-                        hvhz_approved: formData.isHVHZ,
-                        wind_speed_rating: null,
-                        file_path: null,
-                        file_url: tradeData.windows_doors.selectedWindowProduct.file_url || null,
-                        is_active: true
-                      },
-                      category: 'other' as const
-                    }] : []),
-                    ...(tradeData.windows_doors.selectedDoorProduct ? [{
-                      id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
-                      product: {
-                        id: tradeData.windows_doors.selectedDoorProduct.id || crypto.randomUUID(),
-                        manufacturer: tradeData.windows_doors.selectedDoorProduct.manufacturer || '',
-                        product_name: tradeData.windows_doors.selectedDoorProduct.product_name || 'Selected Door',
-                        product_category: 'Doors',
-                        product_line: null,
-                        noa_number: tradeData.windows_doors.selectedDoorProduct.noa_number || null,
-                        fl_product_approval: tradeData.windows_doors.selectedDoorProduct.fl_product_approval || null,
-                        uil_number: null,
-                        expiration_date: null,
-                        hvhz_approved: formData.isHVHZ,
-                        wind_speed_rating: null,
-                        file_path: null,
-                        file_url: tradeData.windows_doors.selectedDoorProduct.file_url || null,
-                        is_active: true
-                      },
-                      category: 'other' as const
-                    }] : []),
-                    ...(tradeData.windows_doors.selectedSlidingDoorProduct ? [{
-                      id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
-                      product: {
-                        id: tradeData.windows_doors.selectedSlidingDoorProduct.id || crypto.randomUUID(),
-                        manufacturer: tradeData.windows_doors.selectedSlidingDoorProduct.manufacturer || '',
-                        product_name: tradeData.windows_doors.selectedSlidingDoorProduct.product_name || 'Selected Sliding Door',
-                        product_category: 'Sliding Doors',
-                        product_line: null,
-                        noa_number: tradeData.windows_doors.selectedSlidingDoorProduct.noa_number || null,
-                        fl_product_approval: tradeData.windows_doors.selectedSlidingDoorProduct.fl_product_approval || null,
-                        uil_number: null,
-                        expiration_date: null,
-                        hvhz_approved: formData.isHVHZ,
-                        wind_speed_rating: null,
-                        file_path: null,
-                        file_url: tradeData.windows_doors.selectedSlidingDoorProduct.file_url || null,
-                        is_active: true
-                      },
-                      category: 'other' as const
-                    }] : [])
-                  ] : [])
-                ]}
-                formData={{ property_address: formData.property_address, owner_name: formData.owner_name, scope_description: JSON.stringify(tradeData), valuation: formData.valuation }}
-                onGeneratePacket={handleGeneratePacket}
-                generating={generatingPacket}
-              />
-              
-              {/* Show generation stage */}
-              {generatingPacket && generationStage && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription>{generationStage}</AlertDescription>
-                </Alert>
-              )}
             </div>
           )}
 
-          {/* Step 4: Review */}
-          {currentStep === 4 && (
+          {/* Step 3: Review & Submit (Streamlined) */}
+          {currentStep === 3 && (
             <div className="space-y-6">
+              {/* Compact Summary Card */}
               <Card>
-                <CardHeader><CardTitle>Review Your Request</CardTitle></CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-4">
-                  <div><p className="text-sm text-muted-foreground">Address</p><p className="font-medium">{formData.property_address}</p></div>
-                  <div><p className="text-sm text-muted-foreground">Jurisdiction</p><p className="font-medium">{formData.jurisdiction_county || 'Detected from address'}</p></div>
-                  <div><p className="text-sm text-muted-foreground">Permit Type</p><p className="font-medium capitalize">{formData.permit_type?.replace('_', ' ')}</p></div>
-                  <div><p className="text-sm text-muted-foreground">Owner</p><p className="font-medium">{formData.owner_name}</p></div>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Request Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Address</p>
+                      <p className="font-medium truncate">{formData.property_address}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Jurisdiction</p>
+                      <p className="font-medium">{formData.jurisdiction_county || 'Auto-detected'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Permit Type</p>
+                      <p className="font-medium capitalize">{formData.permit_type?.replace('_', ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Owner</p>
+                      <p className="font-medium">{formData.owner_name}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Generated Packet Viewer */}
-              {generatedPacket ? (
+              {/* Auto-Generated Packet Viewer */}
+              {generatingPacket ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                    <p className="font-medium">{generationStage || 'Generating packet...'}</p>
+                    <p className="text-sm text-muted-foreground mt-1">This may take a few moments</p>
+                  </CardContent>
+                </Card>
+              ) : generatedPacket ? (
                 <PacketViewer
                   packet={generatedPacket}
                   onRegenerate={handleGeneratePacket}
-                  onEdit={() => setCurrentStep(3)}
+                  onEdit={() => setCurrentStep(2)}
                   generating={generatingPacket}
                 />
               ) : (
                 <Card className="border-dashed">
                   <CardContent className="py-8 text-center">
                     <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">No packet generated yet</p>
+                    <p className="text-muted-foreground mb-4">Packet generation failed or not started</p>
                     <Button onClick={handleGeneratePacket} disabled={generatingPacket}>
                       {generatingPacket ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
                       Generate Packet Now
@@ -771,10 +913,23 @@ export default function PermitQueensNewRequest() {
                 </Card>
               )}
 
+              {/* Gap Analysis */}
               {analyzingGaps ? (
-                <Card><CardContent className="py-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" /><p>Analyzing...</p></CardContent></Card>
-              ) : (
-                <MissingItemsPanel completionPercentage={completionPercentage} missingFields={missingFields} missingDocuments={missingDocuments} complianceIssues={complianceIssues} onFieldClick={() => setCurrentStep(2)} onUploadClick={() => setCurrentStep(3)} />
+                <Card>
+                  <CardContent className="py-6 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-sm text-muted-foreground">Analyzing completeness...</p>
+                  </CardContent>
+                </Card>
+              ) : (missingFields.length > 0 || missingDocuments.length > 0 || complianceIssues.length > 0) && (
+                <MissingItemsPanel 
+                  completionPercentage={completionPercentage} 
+                  missingFields={missingFields} 
+                  missingDocuments={missingDocuments} 
+                  complianceIssues={complianceIssues} 
+                  onFieldClick={() => setCurrentStep(1)} 
+                  onUploadClick={() => setCurrentStep(2)} 
+                />
               )}
               
               {/* Signature Requirements Checklist */}
@@ -785,11 +940,9 @@ export default function PermitQueensNewRequest() {
                   estimatedValue={formData.valuation}
                   county={formData.jurisdiction_county}
                   onSignatureComplete={(id) => {
-                    // Mark signature as complete
                     toast.success('Signature recorded');
                   }}
                   onDownloadForSigning={(req) => {
-                    // Download document for wet signing
                     if (req.documentUrl) {
                       window.open(req.documentUrl, '_blank');
                     } else {
@@ -867,7 +1020,7 @@ export default function PermitQueensNewRequest() {
                     </div>
                   </div>
 
-                  {/* Credit Card Section - Placeholder for future Stripe */}
+                  {/* Credit Card Section - Placeholder */}
                   <div className="space-y-2">
                     <Label>Payment Method (Optional)</Label>
                     <div className="p-4 border rounded-lg border-dashed text-center text-muted-foreground">
@@ -883,7 +1036,7 @@ export default function PermitQueensNewRequest() {
 
           {/* Validation Message */}
           {getStepValidationMessage() && !canProceed() && (
-            <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+            <Alert variant="default" className="border-amber-500/50 bg-amber-500/10 mt-6">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-700 dark:text-amber-400">
                 {getStepValidationMessage()}
@@ -897,13 +1050,13 @@ export default function PermitQueensNewRequest() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
-            {currentStep < 4 ? (
+            {currentStep < 3 ? (
               <Button onClick={nextStep} disabled={!canProceed()}>
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={saving}>
+              <Button onClick={handleSubmit} disabled={saving || !canProceed()}>
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />

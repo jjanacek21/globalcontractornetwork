@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface WizardStep {
   number: number;
@@ -11,9 +12,10 @@ interface WizardProgressProps {
   steps: WizardStep[];
   currentStep: number;
   className?: string;
+  completionPercentage?: number;
 }
 
-export function WizardProgress({ steps, currentStep, className }: WizardProgressProps) {
+export function WizardProgress({ steps, currentStep, className, completionPercentage }: WizardProgressProps) {
   return (
     <div className={cn("w-full", className)}>
       <div className="flex items-center justify-between">
@@ -59,6 +61,16 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
           );
         })}
       </div>
+
+      {/* Completion percentage bar */}
+      {completionPercentage !== undefined && (
+        <div className="mt-6 space-y-2">
+          <Progress value={completionPercentage} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center">
+            {completionPercentage}% complete
+          </p>
+        </div>
+      )}
     </div>
   );
 }
