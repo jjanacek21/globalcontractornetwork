@@ -1,200 +1,137 @@
 
 
-# Complete AI Learning Pipeline & Knowledge Visibility Dashboard
+# Fix PDF/Document Viewing - In-App PDF Viewer
 
-## What This Plan Delivers
+## Problem
 
-| Feature | Description |
-|---------|-------------|
-| **Book Processing** | AI will actually read your uploaded PDFs/texts and extract knowledge |
-| **Knowledge Browser** | See exactly what rules, patterns, and information the AI has learned |
-| **Learning Feed** | Real-time feed showing what the AI learned from each training session |
-| **Processing Dashboard** | Track status of all uploads with retry capability |
+When clicking "Download PDF", "View Document", or viewing smart documents:
+- Chrome blocks the redirect to Supabase storage URLs (ERR_BLOCKED_BY_CLIENT)
+- Opening external URLs in new tabs is unreliable
+- Users want to view documents within the app, not be redirected
 
-## Architecture Overview
+## Solution
 
-```text
-+------------------------+     +------------------------+
-|  Books & Guides Upload |     |  Permit Packet Upload  |
-+----------+-------------+     +----------+-------------+
-           |                              |
-           v                              v
-+------------------------+     +------------------------+
-| process-training-book  |     | permit-packet-analyzer |
-| (NEW EDGE FUNCTION)    |     | (existing)             |
-+----------+-------------+     +----------+-------------+
-           |                              |
-           +------------+  +--------------+
-                        |  |
-                        v  v
-              +-------------------+
-              | permit_ai_knowledge |
-              | (unified knowledge  |
-              |  base)              |
-              +-------------------+
-                        |
-                        v
-              +-------------------+
-              | AI Knowledge      |
-              | Browser (NEW UI)  |
-              +-------------------+
-```
+Create a centralized **PDFViewerDialog** component that displays PDFs inside a modal dialog using an iframe. This pattern already works in `FormPreviewDialog.tsx` and avoids browser blocking issues.
 
-## Implementation Details
+## Technical Approach
 
-### 1. New Edge Function: `process-training-book`
-
-This function will:
-- Download the uploaded PDF/text from storage
-- Use Lovable AI to extract structured knowledge
-- Parse chapters, key rules, code references, and requirements
-- Save extracted knowledge to `permit_ai_knowledge` table
-- Update book status from "pending" to "completed"
-
-**Knowledge Extraction Categories:**
-- FBC Code References (e.g., "FBC 1523.4 - Roof deck attachment")
-- Permit Requirements (e.g., "Miami-Dade requires NOA for all roofing products")
-- Inspection Checkpoints (e.g., "Final inspection includes tie-down verification")
-- Trade-Specific Rules (e.g., "Re-roofing over 25% requires full permit")
-- HVHZ Special Requirements
-
-### 2. New UI Component: `AIKnowledgeBrowser.tsx`
-
-A searchable, filterable view of everything the AI has learned:
-
-**Features:**
-- Browse by category (Products, Rules, Requirements, Procedures)
-- Filter by county, trade type, source
-- Search across all learned knowledge
-- See the source of each piece of knowledge
-- View confidence scores and frequency counts
-
-**Display Format:**
-```text
-+----------------------------------------------------------+
-|  AI Knowledge Browser                        [Search...] |
-+----------------------------------------------------------+
-| Filters: [County ▼] [Trade ▼] [Category ▼] [Source ▼]    |
-+----------------------------------------------------------+
-| Knowledge Items (847 total)                              |
-|                                                          |
-| ┌────────────────────────────────────────────────────┐  |
-| │ 📋 REQUIREMENT                                      │  |
-| │ "FBC 1523.4 requires 8d nails at 6" OC for deck"   │  |
-| │ County: Miami-Dade | Trade: Roofing                │  |
-| │ Source: FBC 2023 Manual | Confidence: High         │  |
-| └────────────────────────────────────────────────────┘  |
-+----------------------------------------------------------+
-```
-
-### 3. New UI Component: `LearningActivityFeed.tsx`
-
-A real-time feed showing what the AI learned from each session:
-
-**Shows:**
-- Recent training activities (last 50)
-- What was uploaded (packet, book, product doc)
-- Specific knowledge extracted from each
-- Processing status and timestamps
-
-**Example Entry:**
-```text
-┌────────────────────────────────────────────────────┐
-│ 📚 Training Book Processed                  2m ago │
-│ "Florida Building Code 2023 - Roofing Chapter"    │
-│                                                    │
-│ Extracted:                                         │
-│ • 23 code references                               │
-│ • 8 inspection requirements                        │
-│ • 5 HVHZ-specific rules                           │
-│ • 12 product approval patterns                     │
-│                                                    │
-│ Sample Knowledge:                                  │
-│ "FBC 1523.4 - Deck attachment shall use..."       │
-│ "HVHZ zone requires minimum 140 mph wind rating"  │
-└────────────────────────────────────────────────────┘
-```
-
-### 4. Processing Status Dashboard
-
-Add to Books & Guides tab:
-- "Process Now" button to manually trigger processing
-- Status indicators with progress
-- Error messages and retry capability
-- Estimated processing time
+| Current Behavior | New Behavior |
+|------------------|--------------|
+| `window.open(signedUrl, '_blank')` | Open `PDFViewerDialog` with iframe |
+| External redirect to supabase.co | Inline PDF preview within the app |
+| Chrome blocks popup | Modal dialog renders normally |
 
 ## Files to Create
 
 | File | Purpose |
 |------|---------|
-| `supabase/functions/process-training-book/index.ts` | Edge function to extract knowledge from books |
-| `src/components/admin/AIKnowledgeBrowser.tsx` | Browse all learned knowledge |
-| `src/components/admin/LearningActivityFeed.tsx` | Real-time learning activity |
-| `src/components/admin/BookProcessingControls.tsx` | Manual processing triggers |
+| `src/components/ui/PDFViewerDialog.tsx` | Reusable dialog component that displays PDFs in an iframe |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/admin/PermitBooksManager.tsx` | Add process button, show extracted chapters |
-| `src/components/admin/AITrainingCenter.tsx` | Add new "Knowledge Base" tab |
+| `src/components/permit-queens/PacketViewer.tsx` | Replace `window.open()` with `PDFViewerDialog` for viewing documents and downloading packets |
+| `src/components/permit-queens/admin/SmartDocumentManager.tsx` | Fix `viewDocument()` to use signed URLs and show in dialog |
+| `src/components/admin/PermitBooksManager.tsx` | Replace direct `window.open()` with `PDFViewerDialog` |
+| `src/components/permit-queens/SmartDocumentUploader.tsx` | Replace `window.open()` with `PDFViewerDialog` |
+| `src/components/admin/PermitDetailDialog.tsx` | Replace `window.open()` with `PDFViewerDialog` |
 
-## Database Updates
+## Implementation Details
 
-Add columns to track book processing:
+### 1. New PDFViewerDialog Component
 
-```sql
-ALTER TABLE permit_training_books 
-ADD COLUMN IF NOT EXISTS knowledge_items_extracted INTEGER DEFAULT 0,
-ADD COLUMN IF NOT EXISTS processing_error TEXT,
-ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
+This reusable component will:
+- Accept a storage path or full URL
+- Generate signed URLs for private bucket files
+- Display the PDF in an iframe within a dialog
+- Provide download button that uses fetch + blob download (avoids browser blocking)
+- Handle loading states and errors gracefully
+
+Key features:
+- Full-screen modal option for better viewing
+- Zoom controls (optional enhancement)
+- Download button using programmatic download (not window.open)
+- Support for both storage paths and external URLs
+
+### 2. PacketViewer.tsx Changes
+
+```text
+BEFORE:
+window.open(data.signedUrl, '_blank')
+
+AFTER:
+setViewingDocument({ url: signedUrl, name: docName })
+<PDFViewerDialog url={viewingDocument.url} name={viewingDocument.name} />
 ```
 
-## How the AI Becomes a Better Contractor
+### 3. SmartDocumentManager.tsx Changes
 
-Once implemented, the uploaded training materials directly improve the AI by:
+Fix the broken `getPublicUrl` call:
+```text
+BEFORE:
+const { data } = supabase.storage.from('permit-form-templates').getPublicUrl(doc.file_path)
+window.open(data.publicUrl, '_blank')
 
-1. **Code Knowledge** - AI learns specific FBC sections and can cite them
-2. **Jurisdiction Rules** - AI knows which county requires what documents
-3. **Trade Requirements** - AI understands different requirements for roofing vs windows vs plumbing
-4. **Inspection Prep** - AI can advise what inspectors look for
-5. **Common Rejections** - AI learns from rejection patterns to prevent them
+AFTER:
+const { data } = await supabase.storage.from('permit-form-templates').createSignedUrl(doc.file_path, 3600)
+setViewingDocument({ url: data.signedUrl, name: doc.form_name })
+```
 
-## Technical Implementation
+### 4. Programmatic Download (No Popup Blocking)
 
-### Edge Function: `process-training-book`
+For the "Download" button, instead of `window.open()`, use:
+```typescript
+const downloadFile = async (url: string, filename: string) => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(blobUrl);
+};
+```
 
-Uses Lovable AI (google/gemini-3-flash-preview) to:
-1. Download PDF from storage bucket
-2. Extract text content (using document parsing)
-3. Send to AI with structured extraction prompt
-4. Parse response into knowledge items
-5. Upsert to `permit_ai_knowledge` table
-6. Update book status to "completed"
+This approach:
+- Fetches the file programmatically
+- Creates a blob URL
+- Triggers download via hidden anchor click
+- Works without popup blockers
 
-### Knowledge Extraction Prompt
+## Component Structure
 
-The AI will be instructed to extract:
-- Specific code references with section numbers
-- Requirements that must be met for permits
-- Inspection checkpoints and what inspectors look for
-- Trade-specific rules and exceptions
-- HVHZ and special zone requirements
-- Common mistakes and how to avoid them
+```text
+PDFViewerDialog
+├── Dialog (full-screen option)
+│   ├── DialogHeader
+│   │   ├── Document Name
+│   │   └── Close Button
+│   ├── DialogContent
+│   │   ├── Loading State (spinner)
+│   │   ├── Error State (retry option)
+│   │   └── iframe (PDF display)
+│   └── DialogFooter
+│       ├── Download Button (programmatic)
+│       └── Close Button
+```
 
-Each extracted item includes:
-- Category (code_reference, requirement, procedure, etc.)
-- Full text of the rule/requirement
-- Applicable counties
-- Applicable trade types
-- Confidence level
+## Affected User Journeys
 
-## Expected Outcome
+| Location | Fix |
+|----------|-----|
+| Permit Request > Generated Packet > Download PDF | View in dialog instead of redirect |
+| Permit Request > Document Index > View icon | View in dialog instead of redirect |
+| Master Admin > Smart Documents > View | View in dialog with signed URL |
+| Master Admin > Permit Books > Download | View in dialog instead of redirect |
+| Admin Portal > Permit Details > Documents | View in dialog instead of redirect |
+
+## Result
 
 After implementation:
-- Uploaded books will process automatically
-- You'll see exactly what knowledge was extracted
-- The AI will use this knowledge when helping with permits
-- You can browse and search all learned information
-- You'll have visibility into the AI's growing expertise
+- PDFs open instantly within the app in a large modal
+- No more browser blocking or broken redirects  
+- Users can preview then download if needed
+- Consistent experience across all document viewing locations
 
