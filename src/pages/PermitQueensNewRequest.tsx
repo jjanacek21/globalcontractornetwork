@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
@@ -21,6 +21,7 @@ import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentU
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
 import { SignatureChecklist, generateSignatureRequirements, SignatureRequirement } from '@/components/permit-queens/SignatureChecklist';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
+import { usePropertyLookup } from '@/hooks/usePropertyLookup';
 import { JurisdictionInfo } from '@/hooks/useJurisdictionDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -95,6 +96,13 @@ export default function PermitQueensNewRequest() {
   const [missingDocuments, setMissingDocuments] = useState<any[]>([]);
   const [complianceIssues, setComplianceIssues] = useState<any[]>([]);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
+  
+  // Property lookup hook - auto-triggers when address and county are set
+  const propertyLookup = usePropertyLookup(
+    formData.property_address,
+    formData.jurisdiction_county,
+    { enabled: formData.property_address.length > 15 && !!formData.jurisdiction_county }
+  );
   
   // Packet generation state
   const [generatedPacket, setGeneratedPacket] = useState<PacketData | null>(null);
@@ -575,13 +583,30 @@ export default function PermitQueensNewRequest() {
                 </CardContent>
               </Card>
 
+              {/* Property Data Banner - Shows when year_built is auto-detected */}
+              {propertyLookup.yearBuilt && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    <strong>Property data detected:</strong> Year Built: {propertyLookup.yearBuilt}
+                    {propertyLookup.ownerName && ` • Owner: ${propertyLookup.ownerName}`}
+                    {propertyLookup.isHVHZ && (
+                      <Badge variant="destructive" className="ml-2 text-xs">HVHZ Zone</Badge>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Trade Questions - SECOND */}
               <TradeQuestions
                 trade={formData.permit_type}
-                isHVHZ={formData.isHVHZ}
+                isHVHZ={formData.isHVHZ || propertyLookup.isHVHZ}
                 data={tradeData}
                 onChange={setTradeData}
                 onComplete={setTradeQuestionsComplete}
+                suggestedYearBuilt={propertyLookup.yearBuilt}
+                suggestedOwnerName={propertyLookup.ownerName}
+                propertyLoading={propertyLookup.loading}
               />
               
               {/* Multi-Material Selector for Roofing - THIRD */}

@@ -41,6 +41,10 @@ interface TradeQuestionsProps {
   data: TradeQuestionsData;
   onChange: (data: TradeQuestionsData) => void;
   onComplete: (isComplete: boolean) => void;
+  // Property lookup data for auto-population
+  suggestedYearBuilt?: number | null;
+  suggestedOwnerName?: string | null;
+  propertyLoading?: boolean;
 }
 
 // Default initial data for each trade
@@ -133,6 +137,9 @@ export function TradeQuestions({
   data,
   onChange,
   onComplete,
+  suggestedYearBuilt,
+  suggestedOwnerName,
+  propertyLoading,
 }: TradeQuestionsProps) {
   // Render trade-specific questions
   switch (trade) {
@@ -141,6 +148,9 @@ export function TradeQuestions({
         <RoofingQuestions
           isHVHZ={isHVHZ}
           formData={data.roofing || getDefaultTradeData('roofing').roofing!}
+          suggestedYearBuilt={suggestedYearBuilt}
+          suggestedOwnerName={suggestedOwnerName}
+          propertyLoading={propertyLoading}
           onChange={(roofingData) => onChange({ ...data, roofing: roofingData })}
           onComplete={onComplete}
         />

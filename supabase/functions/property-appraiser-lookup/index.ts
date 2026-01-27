@@ -64,26 +64,186 @@ serve(async (req) => {
 
     let propertyData: PropertyData | null = null;
     let scraped = false;
+    let foundFolio = folio;
+
+    // First, check the cache for existing data
+    if (address) {
+      const normalizedAddress = normalizeAddress(address);
+      console.log(`[property-appraiser-lookup] Checking cache for normalized address: ${normalizedAddress}`);
+      
+      const { data: cachedData } = await supabase
+        .from("property_cache")
+        .select("*")
+        .eq("county", county)
+        .ilike("address_normalized", `%${normalizedAddress.substring(0, 30)}%`)
+        .limit(1)
+        .maybeSingle();
+      
+      if (cachedData && cachedData.property_data) {
+        console.log(`[property-appraiser-lookup] Cache hit! Using cached data for folio: ${cachedData.folio}`);
+        propertyData = cachedData.property_data as PropertyData;
+        scraped = true;
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            scraped: true,
+            cached: true,
+            data: propertyData,
+            source: `${county.replace("_", " ")} County Property Appraiser (cached)`,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // If we have a folio, check cache by folio
+    if (folio) {
+      const { data: cachedByFolio } = await supabase
+        .from("property_cache")
+        .select("*")
+        .eq("folio", folio)
+        .eq("county", county)
+        .maybeSingle();
+      
+      if (cachedByFolio && cachedByFolio.property_data) {
+        console.log(`[property-appraiser-lookup] Cache hit by folio: ${folio}`);
+        propertyData = cachedByFolio.property_data as PropertyData;
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            scraped: true,
+            cached: true,
+            data: propertyData,
+            source: `${county.replace("_", " ")} County Property Appraiser (cached)`,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // County-specific lookup URLs
-    const countyUrls: Record<string, string> = {
-      palm_beach: folio 
-        ? `https://www.pbcgov.org/papa/Asps/PropertyDetail/PropertyDetail.aspx?parcel=${folio}`
-        : `https://www.pbcgov.org/papa/`,
-      broward: folio
-        ? `https://www.bcpa.net/RecInfo.asp?FolioNo=${folio}`
-        : `https://www.bcpa.net/`,
-      miami_dade: folio
-        ? `https://www.miamidade.gov/pa/property_search.asp?folio=${folio}`
-        : `https://www.miamidade.gov/pa/`,
+    const getCountyUrls = (countyCode: string, lookupFolio?: string, lookupAddress?: string) => {
+      const encodedAddress = lookupAddress ? encodeURIComponent(lookupAddress) : "";
+      
+      switch (countyCode) {
+        case "palm_beach":
+          return {
+            searchUrl: lookupAddress 
+              ? `https://www.pbcgov.org/papa/Asps/Search/Search.aspx?q=${encodedAddress}`
+              : null,
+            detailUrl: lookupFolio 
+              ? `https://www.pbcgov.org/papa/Asps/PropertyDetail/PropertyDetail.aspx?parcel=${lookupFolio}`
+              : null,
+            baseUrl: "https://www.pbcgov.org/papa/",
+          };
+        case "broward":
+          return {
+            searchUrl: lookupAddress 
+              ? `https://www.bcpa.net/Property_Search.asp?Search=${encodedAddress}`
+              : null,
+            detailUrl: lookupFolio 
+              ? `https://www.bcpa.net/RecInfo.asp?FolioNo=${lookupFolio}`
+              : null,
+            baseUrl: "https://www.bcpa.net/",
+          };
+        case "miami_dade":
+          return {
+            searchUrl: lookupAddress 
+              ? `https://www.miamidade.gov/pa/property_search.asp?address=${encodedAddress}`
+              : null,
+            detailUrl: lookupFolio 
+              ? `https://www.miamidade.gov/pa/property_search.asp?folio=${lookupFolio}`
+              : null,
+            baseUrl: "https://www.miamidade.gov/pa/",
+          };
+        default:
+          return { searchUrl: null, detailUrl: null, baseUrl: "" };
+      }
     };
 
-    const targetUrl = countyUrls[county];
+    const urls = getCountyUrls(county, foundFolio, address);
+    const targetUrl = foundFolio ? urls.detailUrl : urls.searchUrl;
 
-    // Use Firecrawl to scrape property data if available
-    if (firecrawlKey && folio) {
+    // If we only have an address, we need to first search for the folio
+    if (!foundFolio && address && firecrawlKey) {
+      console.log(`[property-appraiser-lookup] Searching for folio via address: ${urls.searchUrl}`);
+      
       try {
-        console.log(`[property-appraiser-lookup] Scraping ${targetUrl}`);
+        const searchResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${firecrawlKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url: urls.searchUrl,
+            formats: ["markdown"],
+            waitFor: 4000,
+          }),
+        });
+
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          
+          if (searchData.success && searchData.data?.markdown) {
+            // Use AI to extract folio from search results
+            if (lovableApiKey) {
+              const folioResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${lovableApiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "google/gemini-2.5-flash",
+                  messages: [
+                    {
+                      role: "system",
+                      content: `You are an expert at extracting property folio/PCN numbers from Florida county property appraiser search results.
+                      
+Look for the folio number (also called PCN, Property Control Number, or Parcel ID) in the search results.
+For ${county.replace("_", " ")} County, the format is typically:
+- Palm Beach: XX-XX-XX-XX-XX-XXX-XXXX (with dashes)
+- Broward: XXXXXXXXXXXXXXXX (16 digits)
+- Miami-Dade: XX-XXXX-XXX-XXXX (with dashes)
+
+Return ONLY the folio number, nothing else. If multiple properties are found, return the first/best match.
+If no folio is found, return "NOT_FOUND".`,
+                    },
+                    {
+                      role: "user",
+                      content: `Find the folio/PCN for address "${address}" from this search results page:\n\n${searchData.data.markdown.substring(0, 6000)}`,
+                    },
+                  ],
+                  max_tokens: 100,
+                }),
+              });
+
+              if (folioResponse.ok) {
+                const folioData = await folioResponse.json();
+                const extractedFolio = folioData.choices?.[0]?.message?.content?.trim();
+                
+                if (extractedFolio && extractedFolio !== "NOT_FOUND") {
+                  foundFolio = extractedFolio;
+                  console.log(`[property-appraiser-lookup] Found folio from address search: ${foundFolio}`);
+                }
+              }
+            }
+          }
+        }
+      } catch (searchError) {
+        console.warn("[property-appraiser-lookup] Address search failed:", searchError);
+      }
+    }
+
+    // Now lookup property details using the folio
+    const detailUrl = foundFolio ? getCountyUrls(county, foundFolio).detailUrl : targetUrl;
+
+    if (firecrawlKey && detailUrl) {
+      try {
+        console.log(`[property-appraiser-lookup] Scraping details from: ${detailUrl}`);
         
         const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
           method: "POST",
@@ -92,7 +252,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            url: targetUrl,
+            url: detailUrl,
             formats: ["markdown"],
             waitFor: 3000,
           }),
@@ -172,7 +332,7 @@ Return ONLY valid JSON. Use null for missing values.`,
                         (county === "broward" && isCoastalBroward(propertyData.zipCode || ""));
                     }
                   } catch (parseError) {
-                    console.warn("[property-appraiser-lookup] Failed to parse AI response");
+                    console.warn("[property-appraiser-lookup] Failed to parse AI response:", parseError);
                   }
                 }
               }
@@ -191,12 +351,12 @@ Return ONLY valid JSON. Use null for missing values.`,
           success: false,
           scraped: false,
           message: "Unable to automatically retrieve property data. Please visit the county property appraiser website directly.",
-          lookupUrl: targetUrl,
+          lookupUrl: detailUrl || urls.baseUrl,
           county,
-          searchTerm: folio || address,
+          searchTerm: foundFolio || address,
           manualSteps: [
-            `1. Visit ${targetUrl}`,
-            `2. Enter the ${folio ? "folio/PCN: " + folio : "address: " + address}`,
+            `1. Visit ${detailUrl || urls.baseUrl}`,
+            `2. Enter the ${foundFolio ? "folio/PCN: " + foundFolio : "address: " + address}`,
             "3. Copy the relevant property details",
           ],
         }),
@@ -206,12 +366,17 @@ Return ONLY valid JSON. Use null for missing values.`,
 
     // Cache the result in the database for future lookups
     try {
+      const normalizedAddress = normalizeAddress(propertyData.address || address || "");
+      
       await supabase.from("property_cache").upsert({
-        folio: propertyData.folio,
+        folio: propertyData.folio || foundFolio || "unknown",
         county,
+        address_normalized: normalizedAddress,
         property_data: propertyData,
         scraped_at: new Date().toISOString(),
       }, { onConflict: "folio,county" });
+      
+      console.log(`[property-appraiser-lookup] Cached property data for folio: ${propertyData.folio}`);
     } catch (cacheError) {
       console.warn("[property-appraiser-lookup] Failed to cache property data:", cacheError);
     }
@@ -222,7 +387,7 @@ Return ONLY valid JSON. Use null for missing values.`,
         scraped,
         data: propertyData,
         source: `${county.replace("_", " ")} County Property Appraiser`,
-        lookupUrl: targetUrl,
+        lookupUrl: detailUrl || urls.baseUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -237,6 +402,15 @@ Return ONLY valid JSON. Use null for missing values.`,
     );
   }
 });
+
+// Normalize address for comparison
+function normalizeAddress(addr: string): string {
+  return addr
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 // Helper to determine if a Broward zip code is in coastal HVHZ
 function isCoastalBroward(zipCode: string): boolean {
