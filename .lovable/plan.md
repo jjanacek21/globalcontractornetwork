@@ -1,345 +1,320 @@
 
-# Comprehensive Permit Expediting AI Enhancement Plan
+# Implementation Plan: Enhanced Permit Expediting System
 
-## Executive Summary
+## Overview
 
-After thorough analysis of the current codebase against your detailed vision, I've identified **what's working well**, **critical gaps**, and **specific enhancements** to achieve your goal of generating perfect, submission-ready permit packets.
+This plan addresses three key enhancements to the AI permit expediting system:
 
----
-
-## Current System Strengths (What's Working)
-
-| Feature | Status | Details |
-|---------|--------|---------|
-| **PDF Packet Analysis** | Implemented | OCR/Vision via permit-packet-analyzer using Gemini |
-| **Product Approval Database** | Implemented | 775+ products across 32 categories |
-| **Jurisdiction Rules Engine** | Implemented | 4 packet structures (Boca Raton, Miami-Dade, Broward, Palm Beach) |
-| **AI Expediter Chatbot** | Implemented | permit-expediter-brain with confidence scoring |
-| **Smart Form Filler** | Implemented | pdf-lib integration with field mappings (48 learned) |
-| **Training from Packets** | Implemented | 3 samples processed, 5+ products extracted per packet |
-| **Cover Sheet Generation** | Implemented | Professional cover sheets with document checklists |
-| **HVHZ Detection** | Implemented | Auto-detects from county/jurisdiction |
-| **Windows/Doors Module** | Implemented | WindowDoorQuestions.tsx with product selection |
-| **Fastener Pattern Storage** | Implemented | New fastener_patterns table created |
-| **Inspection Schedule** | Implemented | New permit_inspections table created |
-| **Digital Signature Capture** | Implemented | SignatureCapture.tsx with touch support |
-| **Property Appraiser Lookup** | Implemented | Edge function for BCPA/PBCPA/MDPA |
-| **DBPR License Check** | Implemented | Edge function for contractor verification |
+1. **Run batch product sourcing for Underlayment products** - Trigger automated PDF downloads
+2. **Add year_built field functionality** - Enable Section 1524 pre-1994 deck renailing logic
+3. **Create Smart Document Manager organized by Building Department** - Upload and convert blank documents
 
 ---
 
-## Critical Gap Analysis
+## Current System Status
 
-### Gap 1: No PDFs Sourced for Products (High Priority)
-**Problem:** All 775 products have `file_url = NULL`
-```
-Impact Windows: 106 products, 0 with PDFs
-Underlayment: 55 products, 0 with PDFs  
-Shingles: 45 products, 0 with PDFs
-Impact Doors: 67 products, 0 with PDFs
-```
-
-**Solution:** Trigger `source-product-approvals` edge function to download actual NOA/FL PDFs
-
-### Gap 2: Roofing Compliance Statement Not Auto-Generated
-**Problem:** The packet assembler references `compliance_statement` type but no template generates it
-
-**Solution:** Create a dynamic Roofing Compliance Statement generator with:
-- HVHZ-specific language (Section 1524)
-- Deck attachment confirmation
-- Fastener pattern inclusion
-- Owner/contractor signature areas
-
-### Gap 3: Section 1524 Form Missing Checkbox Logic
-**Problem:** The form is referenced but no intelligent auto-fill for roofing notification checkboxes
-
-**Items to auto-fill:**
-- Aesthetics/Workmanship Reserved
-- Renailing Wood Decks (pre-1994 trigger)
-- Common Roofs Reserved
-- Exposed Ceilings
-- Ponding Water Reserved
-- Overflow Scuppers
-
-### Gap 4: Underlayment P.E. Evaluation Not Sourced
-**Problem:** Boca Raton requires 8-page P.E. evaluation but system can't source these
-
-**Solution:** Enhance product_approvals table with `pe_evaluation_url` column and train AI to extract
-
-### Gap 5: Impact Test Reports (UL 2218) Not Linked
-**Problem:** Metal roofing requires UL 2218 Class 4 hail rating documentation
-
-**Solution:** Add `ul_2218_class` and `impact_test_url` to product_approvals
-
-### Gap 6: Form Templates Not Populated
-**Problem:** `permit_form_templates` has only 4 entries with `is_fillable = false` and no actual PDF files
-
-**Solution:** Upload actual blank PDF forms and create field mappings
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Batch sourcing edge function | Implemented | `batch-source-products` ready |
+| Firecrawl API key | Configured | Connected via connector |
+| Product approvals database | 782 products | Only 2 have PDFs (Underlayment category) |
+| year_built field | In database | Not populated in any projects |
+| Template Manager | Basic implementation | Not organized by building department |
+| Building departments | 17 departments | All three counties covered |
 
 ---
 
-## Implementation Plan
+## Phase 1: Trigger Batch Underlayment Sourcing
 
-### Phase 1: Product Approval PDF Sourcing (Priority: Critical)
+### 1.1 UI Enhancement for BatchProductSourcing
 
-**Task 1.1: Mass Product PDF Sourcing**
-Create admin tool to batch-trigger PDF downloads:
+Enhance the existing component to show real-time progress and auto-select Underlayment:
 
 ```typescript
-// New edge function: batch-source-products
-// Loops through products missing PDFs
-// Uses Firecrawl to search manufacturer sites
-// Downloads and stores in product-approvals bucket
+// Add to BatchProductSourcing.tsx
+- Add "Start with Underlayment" quick action button
+- Show sourcing status per product in real-time
+- Add edge function log streaming for visibility
 ```
 
-**Task 1.2: Source Priority Queue**
-1. Underlayments (highest rejection rate when missing)
-2. Shingles
-3. Metal Roofing
-4. Impact Windows
-5. Impact Doors
+### 1.2 Product Category Alignment
 
-**Documents the system CAN source automatically:**
-- Florida Product Approvals (floridabuilding.org)
-- Miami-Dade NOAs (miamidade.gov/building)
-- Manufacturer installation guides
-- UL listings (ulprospector.com)
+Fix the category filter issue - database has "Underlayment" (55 products) and "underlayment" (17 products):
 
-**Documents YOU need to upload (cannot be auto-sourced):**
-- Signed contracts
-- Certificates of Insurance (COI)
-- Workers Comp certificates
-- Contractor license copies
-- Roof measurement reports
-- Property photos
-- Signed owner authorization letters
+```sql
+-- Normalize categories
+UPDATE product_approvals 
+SET product_category = 'Underlayment' 
+WHERE product_category = 'underlayment';
+```
 
-### Phase 2: Roofing Compliance Statement Generator
+### 1.3 Storage Bucket Verification
 
-**Task 2.1: Create Dynamic Compliance Statement PDF**
+Ensure `product-approvals` bucket exists with public read access for downloaded PDFs.
+
+---
+
+## Phase 2: Year Built Field Integration
+
+### 2.1 Property Appraiser Auto-Population
+
+Enhance the `property-appraiser-lookup` edge function to extract and populate year_built:
 
 ```typescript
-// New function in permit-packet-assembler
-async function generateComplianceStatement(permit: PermitProject): Promise<Uint8Array> {
-  // Uses pdf-lib to create from scratch
-  // Sections:
-  // 1. Property Information
-  // 2. Contractor Certification
-  // 3. HVHZ Declaration (if applicable)
-  // 4. Deck Attachment Statement
-  // 5. Fastener Pattern Table
-  // 6. Product Approval References
-  // 7. Signature blocks (Owner, Qualifier, Notary)
+// In property-appraiser-lookup
+// Currently returns: address, parcel_id, owner_name, legal_description
+// Add: year_built extraction from property appraiser data
+```
+
+### 2.2 UI Integration
+
+The `RoofingQuestions.tsx` already has the year_built field. Enhancement needed:
+
+```typescript
+// Add auto-populate from property appraiser lookup
+// Show visual indicator when year_built < 1994
+// Add tooltip explaining Section 1524 implications
+```
+
+### 2.3 Update Existing Projects
+
+Provide admin tool to batch-update year_built from property appraiser data:
+
+```typescript
+// New component: PropertyDataEnrichment.tsx
+// - Lists projects missing year_built
+// - One-click property appraiser lookup
+// - Updates project with found data
+```
+
+---
+
+## Phase 3: Smart Document Manager by Building Department
+
+### 3.1 New Component: SmartDocumentManager
+
+Create a comprehensive document management interface organized by building department:
+
+```text
++-------------------------------------------+
+| Smart Document Manager                     |
++-------------------------------------------+
+| [Building Department Selector]             |
+|   > Broward County                        |
+|   > City of Fort Lauderdale               |
+|   > Miami-Dade County                     |
+|   > City of Boca Raton                    |
+|   > Palm Beach County                     |
+|   ...                                     |
++-------------------------------------------+
+| Selected: City of Boca Raton              |
++-------------------------------------------+
+| ROOFING DOCUMENTS (6)                     |
+| +---------------------------------------+ |
+| | Permit Application    [AI-Fill] [View]| |
+| | Notice of Commencement[AI-Fill] [View]| |
+| | Section 1524 Form     [AI-Fill] [View]| |
+| | Roofing Compliance    [Generate]      | |
+| | Supplemental A-E      [AI-Fill] [View]| |
+| | Roof-to-Wall Affidavit[Upload]        | |
+| +---------------------------------------+ |
+|                                           |
+| [+ Upload Blank Document]                 |
++-------------------------------------------+
+| WINDOWS/DOORS DOCUMENTS (4)               |
+| +---------------------------------------+ |
+| | Permit Application    [AI-Fill]       | |
+| | NOC                   [AI-Fill]       | |
+| | Energy Compliance     [Upload]        | |
+| | Engineering Drawings  [Upload]        | |
+| +---------------------------------------+ |
++-------------------------------------------+
+```
+
+### 3.2 Drag-and-Drop Upload with AI Analysis
+
+When a blank document is uploaded:
+
+1. Detect jurisdiction from document content (AI analysis)
+2. Extract fillable field names (PDF form fields)
+3. Map to internal data fields
+4. Store in `permit-form-templates` bucket
+5. Link to building department
+
+### 3.3 Smart Document Conversion Flow
+
+```text
+┌─────────────────┐     ┌──────────────────┐     ┌────────────────┐
+│ Upload Blank    │────▶│ AI Field         │────▶│ Store as Smart │
+│ PDF Form        │     │ Detection        │     │ Document       │
+└─────────────────┘     └──────────────────┘     └────────────────┘
+                               │
+                               ▼
+                        ┌──────────────────┐
+                        │ Create Field     │
+                        │ Mappings         │
+                        └──────────────────┘
+                               │
+                               ▼
+                        ┌──────────────────┐
+                        │ Link to Dept +   │
+                        │ Trade Type       │
+                        └──────────────────┘
+```
+
+### 3.4 Database Updates
+
+```sql
+-- Add building_dept_id to permit_form_templates
+ALTER TABLE permit_form_templates 
+ADD COLUMN IF NOT EXISTS building_dept_id UUID REFERENCES permit_building_departments(id);
+
+-- Add trade_type array for multi-trade forms
+-- Already exists: trade_types TEXT[]
+
+-- Add smart document status tracking
+ALTER TABLE permit_form_templates
+ADD COLUMN IF NOT EXISTS analysis_status TEXT DEFAULT 'pending',
+ADD COLUMN IF NOT EXISTS field_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS last_analyzed_at TIMESTAMPTZ;
+```
+
+### 3.5 Integration with AITrainingCenter
+
+Add new "Smart Docs" tab to the AI Training Center:
+
+```typescript
+// AITrainingCenter.tsx tabs:
+// Analytics | Ground Truth | Report Upload | Extracted Products | 
+// PDF Sourcing | Templates | Smart Docs (NEW) | Rejections
+
+<TabsTrigger value="smart-docs">
+  <Sparkles className="h-4 w-4" />
+  Smart Docs
+</TabsTrigger>
+```
+
+---
+
+## Implementation Files
+
+### New Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/permit-queens/admin/SmartDocumentManager.tsx` | Main smart document UI organized by building dept |
+| `src/components/permit-queens/admin/DocumentUploadZone.tsx` | Drag-drop upload with AI analysis |
+| `src/components/permit-queens/admin/PropertyDataEnrichment.tsx` | Batch update year_built from property appraiser |
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `supabase/functions/batch-source-products/index.ts` | Add progress streaming, fix category matching |
+| `supabase/functions/property-appraiser-lookup/index.ts` | Extract and return year_built |
+| `src/components/permit-queens/BatchProductSourcing.tsx` | Add quick-start Underlayment button |
+| `src/components/permit-queens/RoofingQuestions.tsx` | Auto-populate year_built from lookup |
+| `src/components/admin/AITrainingCenter.tsx` | Add Smart Docs tab |
+| `src/components/permit-queens/admin/TemplateManager.tsx` | Add building dept grouping |
+
+### Database Migration
+
+```sql
+-- 1. Normalize product categories
+UPDATE product_approvals SET product_category = 'Underlayment' WHERE product_category = 'underlayment';
+
+-- 2. Add building_dept_id to templates
+ALTER TABLE permit_form_templates ADD COLUMN IF NOT EXISTS building_dept_id UUID REFERENCES permit_building_departments(id);
+ALTER TABLE permit_form_templates ADD COLUMN IF NOT EXISTS analysis_status TEXT DEFAULT 'pending';
+ALTER TABLE permit_form_templates ADD COLUMN IF NOT EXISTS field_count INTEGER DEFAULT 0;
+ALTER TABLE permit_form_templates ADD COLUMN IF NOT EXISTS last_analyzed_at TIMESTAMPTZ;
+
+-- 3. Create index for department lookups
+CREATE INDEX IF NOT EXISTS idx_templates_dept ON permit_form_templates(building_dept_id);
+```
+
+---
+
+## Technical Details
+
+### Smart Document Manager Component Structure
+
+```typescript
+interface SmartDocumentManagerProps {}
+
+// State management
+const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+const [documents, setDocuments] = useState<GroupedDocuments>({});
+const [uploading, setUploading] = useState(false);
+const [analyzing, setAnalyzing] = useState<string | null>(null);
+
+// Document grouping by trade type
+interface GroupedDocuments {
+  [tradeType: string]: SmartDocument[];
+}
+
+interface SmartDocument {
+  id: string;
+  form_name: string;
+  form_type: string;
+  file_path: string;
+  is_fillable: boolean;
+  field_count: number;
+  analysis_status: 'pending' | 'analyzing' | 'complete' | 'error';
+  building_dept_id: string;
+  trade_types: string[];
 }
 ```
 
-**Task 2.2: HVHZ-Specific Language Integration**
-Add FBC Section 1524 boilerplate:
-- "Installation complies with FBC 8th Edition High-Velocity Hurricane Zone requirements"
-- Deck attachment confirmation (6d ring-shank nails @ 6" o.c.)
-- Enhanced fastening for corner/edge zones
-
-### Phase 3: Section 1524 Checkbox Auto-Fill
-
-**Task 3.1: Create Section 1524 Template Mapping**
+### Upload and Analysis Flow
 
 ```typescript
-const SECTION_1524_MAPPINGS = {
-  'aesthetics_reserved': { condition: 'always_check', default: true },
-  'renailing_wood_decks': { 
-    condition: 'year_built < 1994', 
-    field: 'year_built'
-  },
-  'common_roofs': { 
-    condition: 'building_type === "multi_family"',
-    field: 'building_type'
-  },
-  'exposed_ceilings': {
-    condition: 'has_exposed_ceilings',
-    field: 'exposed_ceilings'
-  },
-  'ponding_water': { condition: 'roof_slope === "flat"', field: 'pitch' },
-  'overflow_scuppers': { condition: 'roof_type.includes("flat")', field: 'newMaterial' },
+const handleDocumentUpload = async (file: File, tradeType: string) => {
+  // 1. Upload to storage
+  const fileName = `${selectedDepartment}/${tradeType}/${file.name}`;
+  await supabase.storage.from('permit-form-templates').upload(fileName, file);
+  
+  // 2. Create template record
+  const { data: template } = await supabase.from('permit_form_templates').insert({
+    building_dept_id: selectedDepartment,
+    trade_types: [tradeType],
+    file_path: fileName,
+    analysis_status: 'analyzing'
+  }).select().single();
+  
+  // 3. Trigger AI analysis
+  await supabase.functions.invoke('permit-packet-analyzer', {
+    body: {
+      mode: 'detect_and_analyze',
+      templateId: template.id,
+      fileUrl: publicUrl
+    }
+  });
+  
+  // 4. Update with extracted field mappings
+  // (handled by edge function callback)
 };
 ```
 
-**Task 3.2: Add Missing Trade Questions**
-Update RoofingQuestions.tsx:
-- Year built (for pre-1994 deck check)
-- Building type (single-family, multi-family)
-- Exposed ceilings (yes/no)
-
-### Phase 4: Windows/Doors Packet Structure
-
-**Task 4.1: Create Windows/Doors Packet Structures**
-
-```sql
-INSERT INTO permit_packet_structures (county, trade_type, document_structure) VALUES
-('Miami-Dade', 'windows_doors', '[
-  {"order": 1, "type": "cover_sheet", "source": "generated"},
-  {"order": 2, "type": "permit_application", "source": "auto_fill", "needs_signature": true},
-  {"order": 3, "type": "noc", "source": "auto_fill", "needs_notary": true},
-  {"order": 4, "type": "owner_authorization", "source": "user_upload"},
-  {"order": 5, "type": "energy_calculations", "source": "auto_fill"},
-  {"order": 6, "type": "impact_window_noa", "source": "auto_source", "product_category": "Impact Window"},
-  {"order": 7, "type": "impact_door_noa", "source": "auto_source", "product_category": "Impact Door"},
-  {"order": 8, "type": "engineering_drawings", "source": "conditional", "condition": "if_over_30ft_or_multifamily"}
-]');
-```
-
-**Task 4.2: Add Energy Code Fields**
-Windows/doors require U-factor/SHGC compliance:
-- U-factor ≤ 0.40
-- SHGC ≤ 0.25 (for Climate Zone 1)
-
-### Phase 5: Enhanced AI Learning Loop
-
-**Task 5.1: Improve Field Mapping Extraction**
-
-Current issue: `mappings_learned: 0` on all training samples
-
-Fix the permit-packet-analyzer to:
-1. Look for filled-in text near field labels
-2. Map common patterns (Owner Name → owner_name)
-3. Store mappings even without template_id (use county context)
-
-**Task 5.2: Rejection Pattern Integration**
-
-Add feedback mechanism after permit submission:
-- Was packet approved? ✓/✗
-- If rejected, what was missing?
-- Store in `permit_rejections` table
-- Update AI confidence scoring
-
-### Phase 6: Document Template Population
-
-**Task 6.1: Required Template Uploads**
-
-You need to upload blank PDF forms to `permit-form-templates` bucket:
-
-| Form | Jurisdiction | Priority |
-|------|-------------|----------|
-| Notice of Commencement | Florida Statewide | High |
-| Broward Uniform Building Application | Broward County | High |
-| Miami-Dade HVHZ Roofing Application | Miami-Dade | High |
-| Palm Beach Building Permit Application | Palm Beach | High |
-| Boca Raton Supplemental A-E | Boca Raton | High |
-| Section 1524 Owner Notification | Florida (HVHZ) | High |
-| Roof-to-Wall Affidavit (706.8) | Florida Statewide | Medium |
-| HOA Awareness Affidavit | Broward County | Medium |
-| Owner Authorization Letter | Universal | Medium |
-
-**Task 6.2: Field Mapping Setup**
-
-After template upload, run permit-packet-analyzer on blank forms to:
-1. Extract PDF field names
-2. Create initial mappings to our data fields
-3. Mark signature/notary locations
-
 ---
 
-## Documents Breakdown
-
-### Documents the System Can Auto-Generate:
-1. Cover Sheet (✓ working)
-2. Document Index (✓ working)
-3. Roofing Compliance Statement (needs implementation)
-4. Section 1524 Disclosure (needs checkbox logic)
-5. Energy Compliance Certificate (needs template)
-
-### Documents the System Can Auto-Source:
-1. Florida Product Approvals (floridabuilding.org)
-2. Miami-Dade NOAs (miamidade.gov)
-3. Manufacturer installation guides
-4. UL 2218 impact test reports
-5. Underlayment P.E. evaluations (from manufacturer sites)
-
-### Documents the Contractor Must Upload:
-1. Signed Contract
-2. Certificate of Insurance (COI)
-3. Workers Compensation Certificate
-4. Roof Measurement Report / Layout
-5. Property Photos
-6. Owner Authorization (if not signing digitally)
-7. HOA Approval Letter (if applicable)
-8. Engineering drawings (if required)
-
----
-
-## Technical Architecture Enhancements
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     ENHANCED PERMIT BRAIN                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  INGESTION                                                           │
-│  ├─ permit-packet-analyzer (OCR + Vision)                           │
-│  ├─ batch-source-products (NEW: mass PDF download)                  │
-│  └─ dbpr-license-check / property-appraiser-lookup                  │
-│                                                                      │
-│  INTELLIGENCE                                                        │
-│  ├─ permit-expediter-brain (chat + gap analysis)                    │
-│  ├─ Jurisdiction Rules Engine (packet structures)                   │
-│  ├─ Section 1524 Checkbox Logic (NEW)                               │
-│  └─ Rejection Pattern Learning (permit_rejections)                  │
-│                                                                      │
-│  GENERATION                                                          │
-│  ├─ permit-smart-form-filler (field mapping + transforms)           │
-│  ├─ Roofing Compliance Statement Generator (NEW)                    │
-│  ├─ permit-packet-assembler (merge + page numbers)                  │
-│  └─ SignatureCapture + RON Integration                              │
-│                                                                      │
-│  OUTPUT                                                              │
-│  ├─ Smart Documents (fillable PDFs)                                 │
-│  ├─ Complete Packet ZIP                                             │
-│  ├─ Email to Customer for Signatures                                │
-│  └─ Packet Versioning for Resubmittals                              │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Priority Implementation Order
+## Priority Order
 
 | Priority | Task | Effort | Impact |
 |----------|------|--------|--------|
-| 1 | Batch source product PDFs | 2 days | Critical - packets incomplete without NOAs |
-| 2 | Upload blank form templates | 1 day | Critical - forms can't be filled without templates |
-| 3 | Roofing Compliance Statement generator | 1 day | High - required for HVHZ |
-| 4 | Section 1524 checkbox logic | 1 day | High - reduces rejections |
-| 5 | Windows/doors packet structure | 1 day | Medium - enables trade expansion |
-| 6 | Improve field mapping extraction | 1 day | Medium - better AI learning |
-| 7 | Rejection feedback loop | 2 days | Medium - improves over time |
-| 8 | P.E. Evaluation sourcing | 2 days | Medium - Boca Raton specific |
+| 1 | Run Underlayment batch sourcing | Immediate | Critical - enables NOA population |
+| 2 | Fix category normalization | 5 min | Required for sourcing to work |
+| 3 | Create SmartDocumentManager | 2-3 hours | High - enables organized form management |
+| 4 | Add year_built auto-population | 1 hour | Medium - improves Section 1524 compliance |
+| 5 | Integrate with AITrainingCenter | 30 min | Medium - improves admin workflow |
 
 ---
 
-## Immediate Next Steps
+## Post-Implementation Verification
 
-1. **Run batch product sourcing** - Get PDFs for the 775 products
-2. **Upload form templates** - Provide blank PDFs for each jurisdiction
-3. **Create Roofing Compliance Statement** - Generate as smart document
-4. **Add year_built field** - Enable pre-1994 deck detection
-5. **Test packet generation** - Verify all documents assemble correctly
+After implementation, verify:
 
----
-
-## Summary
-
-Your system has a solid foundation with 75%+ of core functionality implemented. The main gaps are:
-
-1. **No actual PDFs for products** - Need to trigger sourcing
-2. **Form templates not uploaded** - Need blank PDFs
-3. **Roofing Compliance Statement** - Need to generate dynamically
-4. **Section 1524 checkboxes** - Need conditional logic
-5. **Field mappings sparse** - Need better extraction
-
-Once these are addressed, the system will generate complete, submission-ready permit packets with:
-- Auto-filled forms (80-90% fields)
-- Auto-sourced NOAs/FPAs
-- Correct document order per jurisdiction
-- Digital signature support
-- Notarization workflow
-- Version control for resubmittals
+1. **Underlayment sourcing**: Check that PDFs are downloaded to `product-approvals` bucket
+2. **year_built**: Confirm Section 1524 checkbox auto-checks when year < 1994
+3. **Smart docs**: Upload a blank NOC, verify AI detects fields and creates mappings
+4. **Department organization**: Confirm templates display grouped by building department
