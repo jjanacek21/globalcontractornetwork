@@ -6062,7 +6062,10 @@ export type Database = {
           file_url: string
           id: string
           is_active: boolean | null
+          knowledge_items_extracted: number | null
           page_count: number | null
+          processed_at: string | null
+          processing_error: string | null
           processing_status: string | null
           target_county: string | null
           title: string
@@ -6082,7 +6085,10 @@ export type Database = {
           file_url: string
           id?: string
           is_active?: boolean | null
+          knowledge_items_extracted?: number | null
           page_count?: number | null
+          processed_at?: string | null
+          processing_error?: string | null
           processing_status?: string | null
           target_county?: string | null
           title: string
@@ -6102,7 +6108,10 @@ export type Database = {
           file_url?: string
           id?: string
           is_active?: boolean | null
+          knowledge_items_extracted?: number | null
           page_count?: number | null
+          processed_at?: string | null
+          processing_error?: string | null
           processing_status?: string | null
           target_county?: string | null
           title?: string

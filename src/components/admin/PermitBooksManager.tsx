@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Upload, FileText, Trash2, RefreshCw, Loader2, Download, Eye,
-  BookOpen, Search, CheckCircle, XCircle, Clock
+  BookOpen, Search, CheckCircle, XCircle, Clock, Play
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
@@ -97,8 +97,11 @@ export default function PermitBooksManager() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (book: TrainingBook) => {
-      // Delete file from storage
-      const filePath = book.file_url.split("/").pop();
+      // Delete file from storage using the stored file path
+      const filePath = book.file_url.includes('/') 
+        ? book.file_url.split("/").pop() 
+        : book.file_url;
+      
       if (filePath) {
         await supabase.storage.from("permit-training-books").remove([filePath]);
       }
@@ -117,6 +120,25 @@ export default function PermitBooksManager() {
     },
     onError: (error: any) => {
       toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+  
+  // Process book mutation
+  const processMutation = useMutation({
+    mutationFn: async (book: TrainingBook) => {
+      const { data, error } = await supabase.functions.invoke("process-training-book", {
+        body: { bookId: book.id },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["permit-training-books"] });
+      toast.success(data?.message || "Processing started");
+    },
+    onError: (error: any) => {
+      toast.error(`Processing failed: ${error.message}`);
     },
   });
 
@@ -164,12 +186,8 @@ export default function PermitBooksManager() {
       
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("permit-training-books")
-        .getPublicUrl(fileName);
-
-      // Insert database record
+      // Store just the file path (not full URL) for private bucket access
+      // Insert database record with file path
       const { error: dbError } = await supabase
         .from("permit_training_books")
         .insert({
@@ -178,7 +196,7 @@ export default function PermitBooksManager() {
           author: newBook.author || null,
           category: newBook.category,
           target_county: newBook.target_county,
-          file_url: urlData.publicUrl,
+          file_url: fileName, // Store path, not public URL
           file_name: selectedFile.name,
           file_type: fileExt || "unknown",
           file_size_bytes: selectedFile.size,
@@ -447,11 +465,41 @@ export default function PermitBooksManager() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setViewingBook({ url: book.file_url, title: book.title })}
+                            onClick={async () => {
+                              // Generate signed URL for private bucket access
+                              const { data, error } = await supabase.storage
+                                .from('permit-training-books')
+                                .createSignedUrl(book.file_url, 3600); // 1-hour expiry
+                              
+                              if (error) {
+                                toast.error("Failed to load document: " + error.message);
+                                return;
+                              }
+                              
+                              if (data?.signedUrl) {
+                                setViewingBook({ url: data.signedUrl, title: book.title });
+                              }
+                            }}
                             title="View Document"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {(book.processing_status === 'pending' || book.processing_status === 'failed') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => processMutation.mutate(book)}
+                              disabled={processMutation.isPending}
+                              title="Process Now"
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              {processMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
