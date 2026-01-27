@@ -239,6 +239,7 @@ export function SmartDocumentManager() {
               {/* Upload Zone */}
               <DocumentUploadZone 
                 buildingDeptId={selectedDepartment}
+                buildingDeptName={selectedDept?.name || ''}
                 onDocumentUploaded={handleDocumentUploaded}
               />
 

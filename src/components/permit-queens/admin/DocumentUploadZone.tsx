@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 
 interface DocumentUploadZoneProps {
   buildingDeptId: string;
+  buildingDeptName: string;
   onDocumentUploaded: (template: any) => void;
 }
 
@@ -38,7 +39,7 @@ const FORM_TYPES = [
   { value: 'other', label: 'Other' },
 ];
 
-export function DocumentUploadZone({ buildingDeptId, onDocumentUploaded }: DocumentUploadZoneProps) {
+export function DocumentUploadZone({ buildingDeptId, buildingDeptName, onDocumentUploaded }: DocumentUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -105,7 +106,7 @@ export function DocumentUploadZone({ buildingDeptId, onDocumentUploaded }: Docum
 
       if (uploadError) throw uploadError;
 
-      // Create template record using raw insert to handle new columns
+      // Create template record with all required fields in a single insert
       const { data: template, error: insertError } = await supabase
         .from('permit_form_templates')
         .insert({
@@ -113,22 +114,14 @@ export function DocumentUploadZone({ buildingDeptId, onDocumentUploaded }: Docum
           form_type: formType,
           file_path: filePath,
           trade_types: [tradeType],
-          is_fillable: false
+          is_fillable: false,
+          jurisdiction_name: buildingDeptName,
+          building_dept_id: buildingDeptId,
+          field_count: 0,
+          analysis_status: 'analyzing'
         } as any)
         .select()
         .single();
-
-      // Update new columns separately (they may not be in types yet)
-      if (template) {
-        await supabase
-          .from('permit_form_templates')
-          .update({
-            building_dept_id: buildingDeptId,
-            field_count: 0,
-            analysis_status: 'analyzing'
-          } as any)
-          .eq('id', template.id);
-      }
 
       if (insertError) throw insertError;
 
