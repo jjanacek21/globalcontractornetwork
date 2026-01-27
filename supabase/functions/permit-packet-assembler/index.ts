@@ -331,6 +331,39 @@ serve(async (req) => {
     const materialType = permit.material_type || permit.new_roof_type || '';
     const isHVHZ = permit.is_hvhz || false;
     
+    // PART 5: Query learned data from AI training
+    // Fetch fastener patterns for this jurisdiction/material
+    let learnedFastenerPatterns: any[] = [];
+    let learnedJurisdictionRules: any[] = [];
+    
+    try {
+      // Query fastener patterns for this jurisdiction
+      const { data: fastenerData } = await supabase
+        .from('fastener_patterns')
+        .select('*')
+        .or(`county.ilike.%${county}%,training_session_id.not.is.null`)
+        .limit(20);
+      
+      if (fastenerData && fastenerData.length > 0) {
+        learnedFastenerPatterns = fastenerData;
+        console.log(`Found ${fastenerData.length} learned fastener patterns`);
+      }
+      
+      // Query jurisdiction rules (gotchas) for this jurisdiction
+      const { data: rulesData } = await supabase
+        .from('building_department_rules')
+        .select('*')
+        .ilike('county', `%${county}%`)
+        .eq('is_active', true);
+      
+      if (rulesData && rulesData.length > 0) {
+        learnedJurisdictionRules = rulesData;
+        console.log(`Found ${rulesData.length} jurisdiction rules`);
+      }
+    } catch (e) {
+      console.warn('Error fetching learned data:', e);
+    }
+    
     // Try to fetch packet structure from database
     let packetStructure: PacketStructureDocument[] | null = null;
     
@@ -662,9 +695,20 @@ PERMIT DETAILS:
 - Scope: ${permit.scope_of_work || permit.scope_description || 'Not specified'}
 - Valuation: $${permit.estimated_value || permit.valuation || 'TBD'}
 - County: ${permit.county || permit.jurisdiction_county}
+- Is HVHZ: ${isHVHZ ? 'Yes - High Velocity Hurricane Zone' : 'No'}
 
 DOCUMENTS INCLUDED:
 ${documentIndex.map(d => `- ${d.name}: ${d.status}`).join('\n')}
+
+${learnedFastenerPatterns.length > 0 ? `
+LEARNED FASTENER PATTERNS (from AI training):
+${learnedFastenerPatterns.slice(0, 5).map(f => `- ${f.zone_type}: ${f.nail_type || 'standard'} nails, ${f.spacing_inches || 'per code'}" spacing, ${f.nails_per_square || 'per manufacturer'} per square`).join('\n')}
+` : ''}
+
+${learnedJurisdictionRules.length > 0 ? `
+JURISDICTION-SPECIFIC RULES (learned gotchas):
+${learnedJurisdictionRules.slice(0, 5).map(r => `- ${r.rule_type}: ${r.rule_description}`).join('\n')}
+` : ''}
 
 Respond with JSON:
 {

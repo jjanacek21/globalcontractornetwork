@@ -158,7 +158,8 @@ export function CustomSourceManager() {
       if (error) throw error;
 
       if (data?.success) {
-        toast.success(`Crawl complete! Found ${data.documentsFound || 0} documents`);
+        const pdfMsg = data.pdfsDownloaded ? ` (${data.pdfsDownloaded} PDFs downloaded)` : '';
+        toast.success(`Crawl complete! Found ${data.documentsFound || 0} documents${pdfMsg}`);
       } else {
         toast.error(data?.error || 'Crawl failed');
       }

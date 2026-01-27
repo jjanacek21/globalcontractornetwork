@@ -551,11 +551,55 @@ Deno.serve(async (req) => {
 
     let documentsFound = 0;
     const processedDocs: string[] = [];
+    let pdfsDownloaded = 0;
 
     for (const doc of documents.slice(0, 500)) { // Increased limit to 500 per crawl
       try {
         // Use the NOA number as the primary identifier
         const noaNumber = doc.noaNumber?.replace('.', '') || null;
+        
+        // PHASE 2: Download and store the PDF in Supabase Storage
+        let storedPdfUrl: string | null = null;
+        if (doc.pdfUrl) {
+          try {
+            console.log(`Downloading PDF for NOA ${noaNumber}: ${doc.pdfUrl}`);
+            const pdfResponse = await fetch(doc.pdfUrl);
+            
+            if (pdfResponse.ok) {
+              const pdfBuffer = await pdfResponse.arrayBuffer();
+              const pdfBytes = new Uint8Array(pdfBuffer);
+              
+              // Create a safe filename
+              const safeNoaNumber = (noaNumber || `doc-${Date.now()}`).replace(/[^a-zA-Z0-9-]/g, '-');
+              const storagePath = `noa-pdfs/${safeNoaNumber}.pdf`;
+              
+              // Upload to Supabase Storage
+              const { error: uploadError } = await supabase.storage
+                .from('product-approvals')
+                .upload(storagePath, pdfBytes, {
+                  contentType: 'application/pdf',
+                  upsert: true,
+                });
+              
+              if (!uploadError) {
+                // Get public URL since bucket is public
+                const { data: urlData } = supabase.storage
+                  .from('product-approvals')
+                  .getPublicUrl(storagePath);
+                
+                if (urlData?.publicUrl) {
+                  storedPdfUrl = urlData.publicUrl;
+                  pdfsDownloaded++;
+                  console.log(`Stored PDF at: ${storedPdfUrl}`);
+                }
+              } else {
+                console.warn(`Upload error for ${noaNumber}:`, uploadError);
+              }
+            }
+          } catch (pdfErr) {
+            console.warn(`Failed to download PDF for ${noaNumber}:`, pdfErr);
+          }
+        }
         
         // Check if this product already exists
         let existingProduct = null;
@@ -569,12 +613,13 @@ Deno.serve(async (req) => {
         }
         
         if (existingProduct) {
-          // Update existing product with any new info
+          // Update existing product with stored PDF URL
           const { error: updateError } = await supabase
             .from('product_approvals')
             .update({
-              noa_pdf_url: doc.pdfUrl,
-              source_status: 'crawl_discovered',
+              noa_pdf_url: storedPdfUrl || doc.pdfUrl,
+              file_url: storedPdfUrl || doc.pdfUrl,
+              source_status: storedPdfUrl ? 'found' : 'crawl_discovered',
               last_source_attempt: new Date().toISOString(),
               source_website: url,
               ...(doc.expirationDate && { expiration_date: doc.expirationDate }),
@@ -595,7 +640,7 @@ Deno.serve(async (req) => {
             processedDocs.push(doc.pdfUrl);
           }
         } else if (doc.noaNumber && doc.manufacturer) {
-          // Insert new product with full details
+          // Insert new product with stored PDF URL
           const { error: insertError } = await supabase
             .from('product_approvals')
             .insert({
@@ -603,10 +648,11 @@ Deno.serve(async (req) => {
               manufacturer: doc.manufacturer,
               product_name: doc.productName || doc.description?.substring(0, 200) || 'Unknown Product',
               product_category: doc.category || (targetCategory !== 'all' ? targetCategory : 'other'),
-              noa_pdf_url: doc.pdfUrl,
+              noa_pdf_url: storedPdfUrl || doc.pdfUrl,
+              file_url: storedPdfUrl || doc.pdfUrl,
               expiration_date: doc.expirationDate,
               hvhz_approved: doc.hvhzApproved || false,
-              source_status: 'crawl_discovered',
+              source_status: storedPdfUrl ? 'found' : 'crawl_discovered',
               source_website: url,
               last_source_attempt: new Date().toISOString(),
               is_active: true,
@@ -621,6 +667,7 @@ Deno.serve(async (req) => {
               metadata: {
                 crawl_source: 'miami_dade_search',
                 crawl_date: new Date().toISOString(),
+                pdf_stored: !!storedPdfUrl,
               },
             });
 
@@ -640,8 +687,9 @@ Deno.serve(async (req) => {
               manufacturer: doc.manufacturer || 'Unknown',
               product_name: doc.title || 'Discovered Product',
               product_category: doc.category || (targetCategory !== 'all' ? targetCategory : 'other'),
-              noa_pdf_url: doc.pdfUrl,
-              source_status: 'crawl_discovered',
+              noa_pdf_url: storedPdfUrl || doc.pdfUrl,
+              file_url: storedPdfUrl || doc.pdfUrl,
+              source_status: storedPdfUrl ? 'found' : 'crawl_discovered',
               source_website: url,
               last_source_attempt: new Date().toISOString(),
               is_active: true,
@@ -667,12 +715,13 @@ Deno.serve(async (req) => {
       })
       .eq('id', sourceId);
 
-    console.log(`Crawl complete. Found and stored ${documentsFound} documents.`);
+    console.log(`Crawl complete. Found ${documentsFound} documents, downloaded ${pdfsDownloaded} PDFs.`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         documentsFound,
+        pdfsDownloaded,
         totalDiscovered: documents.length,
         siteType: isDynamicSite(url) ? 'dynamic' : 'static',
         isMiamiDadeSearch: isMiamiDadeSearchResults(url),
