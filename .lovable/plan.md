@@ -1,272 +1,208 @@
 
-# Implementation Plan: Remaining Phases for Enhanced Permit Expediting System
+# Plan: Consolidate AI Training Tab and Add Educational Materials Upload
 
 ## Overview
 
-Based on the approved plan, most components have been implemented. Here's what remains to complete the system:
+This plan addresses two requests:
+1. **Remove the "AI Training" tab** from the Permit Expediting section and add it to the main AI Training Center
+2. **Add the ability to upload books/texts** for training people on how to pull construction permits in South Florida
 
-## Current Status Summary
+## Current State Analysis
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| JSON Parsing Fix (Phase 1-3) | **Complete** | `max_tokens` increased to 16000, `extractArrayItems()` helper added, quality scoring updated |
-| SmartDocumentManager | **Complete** | Organized by building department with trade tabs |
-| DocumentUploadZone | **Complete** | Drag-drop with AI analysis trigger |
-| PropertyDataEnrichment | **Complete** | Batch year_built lookup from property appraiser |
-| BatchProductSourcing Quick-Start | **Complete** | Underlayment/Shingle quick buttons added |
-| AITrainingCenter Tabs | **Complete** | Smart Docs and Property Data tabs integrated |
+Based on the screenshots and codebase exploration:
 
-## Remaining Work to Implement
+| Location | Current Tabs |
+|----------|--------------|
+| **Permit Expediting** (`PermitExpeditingTab.tsx`) | Permit Queue, AI Training, Analytics |
+| **AI Training Center** (`AITrainingCenter.tsx`) | Analytics, Ground Truth, Report Upload, Extracted Products, PDF Sourcing, Templates, Rejections, Smart Docs, Property Data |
 
-### Phase 1: Auto-Populate year_built During Permit Creation
+The "AI Training" tab in Permit Expediting contains:
+- Batch/Single upload mode toggle
+- `PermitBatchUploader` component (AI auto-detection for permit packets)
+- `PermitTrainingUploader` component (single file upload)
+- `TrainingSamplesTable` component (list of training samples with retry logic)
 
-Currently, `year_built` is only populated through manual admin enrichment. We should auto-trigger the property appraiser lookup when a user enters an address during permit creation.
+## Implementation Plan
 
-**Changes Required:**
+### Phase 1: Move Permit Training Tab to AI Training Center
 
-1. **Modify `PermitAddressInput.tsx`** (or equivalent address input component)
-   - After successful geocoding/jurisdiction detection, trigger property appraiser lookup in background
-   - Store result in component state to pass to `RoofingQuestions`
+**File Changes:**
 
-2. **Modify `RoofingQuestions.tsx`**
-   - Accept optional `suggestedYearBuilt` prop from parent
-   - Auto-populate `yearBuilt` field when property data is received
-   - Show "auto-detected" indicator with option to override
+| File | Action |
+|------|--------|
+| `src/components/admin/AITrainingCenter.tsx` | Add new "Permit Packets" tab with the content from Permit Expediting |
+| `src/components/admin/PermitExpeditingTab.tsx` | Remove the "AI Training" tab, change tabs to 2-column layout (Queue + Analytics only) |
 
-3. **Create `usePropertyLookup` hook**
-   - Encapsulates the property appraiser lookup logic
-   - Returns loading state, result, and error handling
-   - Debounces lookups to avoid excessive API calls
-
-### Phase 2: Enhanced Address-to-Folio Resolution
-
-The property appraiser lookup currently requires a folio/PCN for reliable results. We need to add address-to-folio resolution for each county.
-
-**Changes to `property-appraiser-lookup` edge function:**
-
-```typescript
-// Add address search capability per county
-const addressSearchUrls: Record<string, (address: string) => string> = {
-  palm_beach: (addr) => `https://www.pbcgov.org/papa/Asps/Search/Search.aspx?q=${encodeURIComponent(addr)}`,
-  broward: (addr) => `https://www.bcpa.net/Property_Search.asp?q=${encodeURIComponent(addr)}`,
-  miami_dade: (addr) => `https://www.miamidade.gov/pa/property_search.asp?address=${encodeURIComponent(addr)}`,
-};
+**New Tab Structure in AI Training Center:**
+```text
+[Analytics] [Ground Truth] [Report Upload] [Extracted Products] [PDF Sourcing]
+[Templates] [Rejections] [Smart Docs] [Property Data] [Permit Packets] [Books & Guides]
 ```
 
-- Scrape search results page to extract folio
-- Then use existing folio-based lookup
-- Cache address-to-folio mappings
+### Phase 2: Create Educational Materials Upload Feature
 
-### Phase 3: Enhanced Section 1524 Compliance UI
+**New Database Table: `permit_training_books`**
 
-Add visual compliance checklist to `RoofingQuestions.tsx` that dynamically updates based on `year_built`:
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `title` | TEXT | Book/guide title |
+| `description` | TEXT | Description of the content |
+| `author` | TEXT | Author name (optional) |
+| `category` | TEXT | Category (FBC Code, Permitting Process, Forms Guide, etc.) |
+| `target_county` | TEXT | Specific county if applicable, or "all" |
+| `file_url` | TEXT | Storage URL |
+| `file_name` | TEXT | Original file name |
+| `file_type` | TEXT | PDF, EPUB, etc. |
+| `file_size_bytes` | INTEGER | File size |
+| `page_count` | INTEGER | Number of pages (if known) |
+| `is_active` | BOOLEAN | Whether visible to users |
+| `processing_status` | TEXT | pending, processing, completed, failed |
+| `extracted_text` | TEXT | AI-extracted text for RAG |
+| `extracted_chapters` | JSONB | Structured chapter breakdown |
+| `created_at` | TIMESTAMPTZ | Upload timestamp |
+| `updated_at` | TIMESTAMPTZ | Last update |
+| `uploaded_by` | UUID | Admin who uploaded |
 
-```typescript
-// Add to RoofingQuestions.tsx
-const section1524Requirements = useMemo(() => {
-  const reqs = [];
-  if (formData.yearBuilt && formData.yearBuilt < 1994) {
-    reqs.push({
-      id: 'deck_renailing',
-      label: 'Deck Renailing Required',
-      description: 'FBC 1524.3 - Pre-1994 wood deck must be renailed with 8d ring-shank nails',
-      required: true,
-      checked: formData.deckAttachmentConfirmed
-    });
-  }
-  // ... additional requirements based on conditions
-  return reqs;
-}, [formData.yearBuilt, formData.deckAttachmentConfirmed, isHVHZ]);
-```
+**New Component: `PermitBooksManager.tsx`**
 
-### Phase 4: Property Cache Table
+Features:
+- Drag-and-drop upload zone for PDFs and text files
+- Category selector (FBC Code, Permitting Process, Building Departments, etc.)
+- County targeting (All Florida, Palm Beach, Broward, Miami-Dade, etc.)
+- AI processing to extract text and generate chapter summaries
+- Table view of uploaded books with status indicators
+- Preview/download functionality
+- Delete/archive options
 
-Create a database table to cache property appraiser results and avoid redundant lookups:
+**New Storage Bucket:**
+- `permit-training-books` - Private bucket for educational materials
 
-```sql
-CREATE TABLE IF NOT EXISTS property_cache (
-  folio TEXT NOT NULL,
-  county TEXT NOT NULL,
-  property_data JSONB NOT NULL,
-  scraped_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (folio, county)
-);
+**Categories for South Florida Permit Training:**
+1. Florida Building Code (FBC)
+2. Permitting Process Guides
+3. Building Department Procedures
+4. Form Completion Tutorials
+5. Inspection Checklists
+6. Trade-Specific Requirements
+7. HVHZ Compliance
+8. NOA/Product Approval Guides
 
-CREATE INDEX idx_property_cache_address ON property_cache 
-  USING gin ((property_data->>'address') gin_trgm_ops);
-```
+### Phase 3: AI Text Extraction (Optional Enhancement)
 
-## Implementation Order
+Add capability to extract and index text from uploaded books for future RAG-based AI assistance:
 
-| Priority | Task | Effort | Impact |
-|----------|------|--------|--------|
-| 1 | Create `property_cache` table | 5 min | Required for Phase 2 |
-| 2 | Create `usePropertyLookup` hook | 30 min | Reusable component |
-| 3 | Update `property-appraiser-lookup` for address search | 45 min | Enables auto-lookup |
-| 4 | Integrate auto-lookup in permit wizard | 30 min | Main user benefit |
-| 5 | Enhanced Section 1524 compliance UI | 20 min | Visual improvement |
+- Parse PDF documents using existing document parsing infrastructure
+- Store extracted text in the database for full-text search
+- Generate chapter summaries using AI
 
 ## Technical Details
 
-### New Hook: `usePropertyLookup.ts`
+### File Modifications
 
-```typescript
-interface PropertyLookupResult {
-  yearBuilt: number | null;
-  ownerName: string | null;
-  legalDescription: string | null;
-  isHVHZ: boolean;
-  loading: boolean;
-  error: string | null;
-}
+**1. `src/components/admin/AITrainingCenter.tsx`**
+- Import new components: `PermitBatchUploader`, `PermitTrainingUploader`, `TrainingSamplesTable`, `PermitBooksManager`
+- Add new tab triggers for "Permit Packets" and "Books & Guides"
+- Add corresponding `TabsContent` sections
+- Add state management for upload mode toggle and refresh triggers
 
-export function usePropertyLookup(
-  address: string | null,
-  county: string | null
-): PropertyLookupResult {
-  const [result, setResult] = useState<PropertyLookupResult>({
-    yearBuilt: null,
-    ownerName: null,
-    legalDescription: null,
-    isHVHZ: false,
-    loading: false,
-    error: null
-  });
+**2. `src/components/admin/PermitExpeditingTab.tsx`**
+- Remove the "training" tab trigger and content
+- Change `TabsList` from 3 columns to 2 columns
+- Remove unused imports (`Brain`, `Upload`, `PermitBatchUploader`, `PermitTrainingUploader`, `TrainingSamplesTable`)
+- Remove state variables: `trainingRefresh`, `trainingMode`
 
-  useEffect(() => {
-    if (!address || !county) return;
-
-    const lookup = async () => {
-      setResult(prev => ({ ...prev, loading: true, error: null }));
-      
-      try {
-        const { data, error } = await supabase.functions.invoke(
-          'property-appraiser-lookup',
-          { body: { address, county } }
-        );
-        
-        if (error) throw error;
-        
-        if (data?.success && data?.data) {
-          setResult({
-            yearBuilt: data.data.yearBuilt,
-            ownerName: data.data.ownerName,
-            legalDescription: data.data.legalDescription,
-            isHVHZ: data.data.isHVHZ || false,
-            loading: false,
-            error: null
-          });
-        } else {
-          setResult(prev => ({ 
-            ...prev, 
-            loading: false, 
-            error: data?.message || 'Lookup failed' 
-          }));
-        }
-      } catch (err) {
-        setResult(prev => ({ 
-          ...prev, 
-          loading: false, 
-          error: err instanceof Error ? err.message : 'Unknown error' 
-        }));
-      }
-    };
-
-    // Debounce the lookup
-    const timer = setTimeout(lookup, 1000);
-    return () => clearTimeout(timer);
-  }, [address, county]);
-
-  return result;
-}
-```
-
-### Integration in PermitQueensNewRequest
-
-```typescript
-// In the permit wizard component
-const { yearBuilt, ownerName, isHVHZ, loading: propertyLoading } = usePropertyLookup(
-  formData.property_address,
-  formData.jurisdiction_county
-);
-
-// Pass to RoofingQuestions
-<RoofingQuestions
-  isHVHZ={isHVHZ || formData.is_hvhz}
-  formData={roofingData}
-  suggestedYearBuilt={yearBuilt}
-  suggestedOwnerName={ownerName}
-  propertyLoading={propertyLoading}
-  onChange={setRoofingData}
-  onComplete={setRoofingComplete}
-/>
-```
-
-### RoofingQuestions Props Update
-
-```typescript
-interface RoofingQuestionsProps {
-  isHVHZ: boolean;
-  formData: RoofingFormData;
-  suggestedYearBuilt?: number | null;  // NEW
-  suggestedOwnerName?: string | null;  // NEW
-  propertyLoading?: boolean;           // NEW
-  onChange: (data: RoofingFormData) => void;
-  onComplete: (isComplete: boolean) => void;
-}
-```
-
-## Files to Create
+### New Files to Create
 
 | File | Purpose |
 |------|---------|
-| `src/hooks/usePropertyLookup.ts` | Reusable hook for property data lookup |
+| `src/components/admin/PermitBooksManager.tsx` | Main component for books/guides upload and management |
 
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/property-appraiser-lookup/index.ts` | Add address-to-folio search, cache integration |
-| `src/components/permit-queens/RoofingQuestions.tsx` | Accept `suggestedYearBuilt` prop, auto-populate, enhanced Section 1524 UI |
-| `src/pages/PermitQueensNewRequest.tsx` | Integrate `usePropertyLookup` hook, pass data to trade questions |
-
-## Database Migration
+### Database Migration
 
 ```sql
--- Create property cache table
-CREATE TABLE IF NOT EXISTS property_cache (
-  folio TEXT NOT NULL,
-  county TEXT NOT NULL,
-  property_data JSONB NOT NULL,
-  scraped_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (folio, county)
+-- Create permit_training_books table
+CREATE TABLE IF NOT EXISTS permit_training_books (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  author TEXT,
+  category TEXT NOT NULL DEFAULT 'general',
+  target_county TEXT DEFAULT 'all',
+  file_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_type TEXT NOT NULL,
+  file_size_bytes INTEGER,
+  page_count INTEGER,
+  is_active BOOLEAN DEFAULT true,
+  processing_status TEXT DEFAULT 'pending',
+  extracted_text TEXT,
+  extracted_chapters JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  uploaded_by UUID REFERENCES auth.users(id)
 );
 
--- Index for address-based lookups
-CREATE INDEX idx_property_cache_address 
-  ON property_cache USING gin ((property_data->>'address') gin_trgm_ops);
-
 -- Enable RLS
-ALTER TABLE property_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permit_training_books ENABLE ROW LEVEL SECURITY;
 
--- Allow read access to authenticated users
-CREATE POLICY "Allow read access to property cache" 
-  ON property_cache FOR SELECT 
+-- Policies
+CREATE POLICY "Allow read access to permit books" 
+  ON permit_training_books FOR SELECT 
   TO authenticated 
   USING (true);
 
--- Allow service role to insert/update
-CREATE POLICY "Allow service role to manage cache" 
-  ON property_cache FOR ALL 
-  TO service_role 
-  USING (true);
+CREATE POLICY "Allow admin management of permit books" 
+  ON permit_training_books FOR ALL 
+  TO authenticated 
+  USING (
+    EXISTS (
+      SELECT 1 FROM permit_admins 
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Update trigger
+CREATE TRIGGER update_permit_training_books_updated_at
+  BEFORE UPDATE ON permit_training_books
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 ```
+
+## UI Preview
+
+After implementation, the AI Training Center will have:
+
+```text
++------------------------------------------------------------------+
+| AI Training Center                                                |
++------------------------------------------------------------------+
+| [Analytics] [Ground Truth] [Report Upload] [Extracted Products]  |
+| [PDF Sourcing] [Templates] [Rejections] [Smart Docs]             |
+| [Property Data] [Permit Packets] [Books & Guides]                |
++------------------------------------------------------------------+
+```
+
+The "Permit Packets" tab will contain the existing batch/single uploader and samples table.
+
+The "Books & Guides" tab will contain:
+- Upload zone for educational PDFs
+- Category and county selectors
+- Table of uploaded materials with processing status
+- Preview and management actions
 
 ## Expected Outcomes
 
-After implementation:
-1. When a user enters an address during permit creation, `year_built` is auto-detected
-2. Section 1524 compliance requirements are dynamically shown based on property age
-3. Property appraiser data is cached, reducing redundant API calls
-4. Pre-1994 homes automatically trigger deck renailing checkbox
-5. Admin enrichment tool becomes a fallback for failed auto-lookups
+1. Cleaner separation of concerns - Permit Expediting focuses on the queue workflow only
+2. All AI training features consolidated in one location
+3. New capability to upload educational materials for permit training
+4. Database storage for extracted text enables future AI-powered search and Q&A
+
+## Files Summary
+
+| Action | File |
+|--------|------|
+| Modify | `src/components/admin/AITrainingCenter.tsx` |
+| Modify | `src/components/admin/PermitExpeditingTab.tsx` |
+| Create | `src/components/admin/PermitBooksManager.tsx` |
+| Create | Database migration for `permit_training_books` table |
