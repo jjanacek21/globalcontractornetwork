@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { CustomSourceManager } from './CustomSourceManager';
 
 interface BatchSourceResult {
   success: boolean;
@@ -277,6 +278,11 @@ export function BatchProductSourcing() {
             product-approvals storage bucket and linked to product records.
           </AlertDescription>
         </Alert>
+
+        {/* Custom Source Manager */}
+        <div className="pt-4 border-t">
+          <CustomSourceManager />
+        </div>
       </CardContent>
     </Card>
   );

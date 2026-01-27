@@ -2148,6 +2148,60 @@ export type Database = {
           },
         ]
       }
+      custom_source_websites: {
+        Row: {
+          crawl_depth: number
+          crawl_status: string
+          created_at: string
+          created_by: string | null
+          document_types: string[]
+          documents_found: number
+          error_message: string | null
+          id: string
+          is_active: boolean
+          last_crawl_at: string | null
+          name: string
+          target_category: string
+          updated_at: string
+          url: string
+          url_pattern: string | null
+        }
+        Insert: {
+          crawl_depth?: number
+          crawl_status?: string
+          created_at?: string
+          created_by?: string | null
+          document_types?: string[]
+          documents_found?: number
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_crawl_at?: string | null
+          name: string
+          target_category?: string
+          updated_at?: string
+          url: string
+          url_pattern?: string | null
+        }
+        Update: {
+          crawl_depth?: number
+          crawl_status?: string
+          created_at?: string
+          created_by?: string | null
+          document_types?: string[]
+          documents_found?: number
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_crawl_at?: string | null
+          name?: string
+          target_category?: string
+          updated_at?: string
+          url?: string
+          url_pattern?: string | null
+        }
+        Relationships: []
+      }
       customer_documents: {
         Row: {
           created_at: string | null
