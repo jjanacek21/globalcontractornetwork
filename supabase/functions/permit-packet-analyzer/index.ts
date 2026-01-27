@@ -537,7 +537,16 @@ CRITICAL JSON FORMATTING RULES:
 3. Do NOT wrap in \`\`\`json code blocks
 4. Use null (not "null" string) for missing values
 5. Ensure all arrays and objects are properly closed
-6. No trailing commas after the last item in arrays or objects`;
+6. No trailing commas after the last item in arrays or objects
+
+PRIORITY ORDER FOR TRUNCATION SAFETY:
+If response approaches token limit, prioritize in this order:
+1. MOST IMPORTANT: productApprovals array - complete all product entries first
+2. fastenerPatterns array - critical for compliance
+3. formFieldMappings array
+4. inspectionSchedule array
+5. jurisdictionRules, tradeSpecificData, packetStructure (least critical)
+Ensure each array has valid complete objects before starting the next section.`;
 
     const userPrompt = `Analyze this completed Florida permit packet and extract ALL structured data:
 
@@ -698,6 +707,66 @@ Return a JSON object with this EXACT structure (no markdown, just JSON):
 
 Extract as much data as possible. If you cannot find a particular field, use null. Be thorough!`;
 
+    // Helper function to extract array items using bracket-aware parsing
+    // This handles truncated JSON by extracting complete objects from partial arrays
+    function extractArrayItems(arrayContent: string): any[] {
+      const items: any[] = [];
+      let depth = 0;
+      let currentItem = '';
+      let inString = false;
+      let escapeNext = false;
+      
+      for (let i = 0; i < arrayContent.length; i++) {
+        const char = arrayContent[i];
+        
+        if (escapeNext) {
+          currentItem += char;
+          escapeNext = false;
+          continue;
+        }
+        
+        if (char === '\\' && inString) {
+          currentItem += char;
+          escapeNext = true;
+          continue;
+        }
+        
+        if (char === '"' && !escapeNext) {
+          inString = !inString;
+        }
+        
+        if (!inString) {
+          if (char === '{') {
+            if (depth === 0) {
+              currentItem = ''; // Start fresh for new object
+            }
+            depth++;
+          }
+          if (char === '}') {
+            depth--;
+            if (depth === 0) {
+              currentItem += char;
+              try {
+                const parsed = JSON.parse(currentItem.trim());
+                items.push(parsed);
+              } catch (e) {
+                // Skip malformed item
+                console.log("[permit-packet-analyzer] Skipped malformed object during bracket-aware extraction");
+              }
+              currentItem = '';
+              continue;
+            }
+          }
+        }
+        
+        if (depth > 0) {
+          currentItem += char;
+        }
+      }
+      
+      return items;
+    }
+
     // Build message content for analysis
     let analysisContent: any[] = [];
     const ext = getFileExtension(fileName || "document.pdf");
@@ -775,7 +844,7 @@ Extract as much data as possible. If you cannot find a particular field, use nul
             { role: "user", content: analysisContent },
           ],
           temperature: 0.2,
-          max_tokens: 8000,
+          max_tokens: 16000, // Increased to reduce truncation likelihood
         }),
       },
       3 // max retries
@@ -864,14 +933,25 @@ Extract as much data as possible. If you cannot find a particular field, use nul
         console.log("[permit-packet-analyzer] Repaired parse failed:", e instanceof Error ? e.message : e);
       }
 
-      // Strategy 5: Try to extract just the productApprovals array if present
-      const productArrayMatch = cleanContent.match(/"productApprovals"\s*:\s*\[([\s\S]*?)\]/);
-      if (productArrayMatch) {
-        console.log("[permit-packet-analyzer] Attempting partial extraction of productApprovals...");
-        try {
-          const partialProducts = JSON.parse('[' + productArrayMatch[1] + ']');
+      // Strategy 5: Bracket-aware extraction of productApprovals from truncated response
+      const productStartMatch = cleanContent.match(/"productApprovals"\s*:\s*\[/);
+      if (productStartMatch && productStartMatch.index !== undefined) {
+        console.log("[permit-packet-analyzer] Attempting bracket-aware extraction of productApprovals...");
+        const startIndex = productStartMatch.index + productStartMatch[0].length;
+        const arrayContent = cleanContent.substring(startIndex);
+        const products = extractArrayItems(arrayContent);
+        
+        if (products.length > 0) {
+          console.log(`[permit-packet-analyzer] Recovered ${products.length} products from truncated response`);
+          
+          // Calculate quality score based on recovery
+          // Estimate total products from response length heuristic
+          const estimatedTotal = Math.max(products.length, Math.floor(cleanContent.length / 500));
+          const recoveryRatio = products.length / estimatedTotal;
+          const qualityScore = recoveryRatio >= 0.9 ? 0.8 : recoveryRatio >= 0.5 ? 0.6 : 0.4;
+          
           return {
-            productApprovals: partialProducts,
+            productApprovals: products,
             formFieldMappings: [],
             jurisdictionRules: [],
             tradeSpecificData: { nailPattern: null, strapSpacing: null, meanRoofHeight: null, roofSlope: null, deckType: null, underlaymentProduct: null, hvhzRequirements: [] },
@@ -880,14 +960,41 @@ Extract as much data as possible. If you cannot find a particular field, use nul
             packetStructure: [],
             extractedFields: {},
             jurisdictionPatterns: [],
-            qualityScore: 0.5,
-            keyFeatures: ["Partial extraction - only product approvals recovered"],
-            exampleDescription: "Partial data extraction",
+            qualityScore: qualityScore,
+            keyFeatures: [`Partial extraction - recovered ${products.length} product approvals`],
+            exampleDescription: "Partial data extraction due to truncated response",
             commonDocuments: [],
-            processingNotes: ["Full JSON parsing failed, recovered productApprovals only"],
+            processingNotes: [`Full JSON parsing failed, recovered ${products.length} productApprovals using bracket-aware extraction`],
           };
+        }
+      }
+      
+      // Strategy 6: Try legacy regex extraction as fallback
+      const productArrayMatch = cleanContent.match(/"productApprovals"\s*:\s*\[([\s\S]*?)\]/);
+      if (productArrayMatch) {
+        console.log("[permit-packet-analyzer] Attempting legacy regex partial extraction...");
+        try {
+          const partialProducts = JSON.parse('[' + productArrayMatch[1] + ']');
+          if (partialProducts.length > 0) {
+            return {
+              productApprovals: partialProducts,
+              formFieldMappings: [],
+              jurisdictionRules: [],
+              tradeSpecificData: { nailPattern: null, strapSpacing: null, meanRoofHeight: null, roofSlope: null, deckType: null, underlaymentProduct: null, hvhzRequirements: [] },
+              fastenerPatterns: [],
+              inspectionSchedule: [],
+              packetStructure: [],
+              extractedFields: {},
+              jurisdictionPatterns: [],
+              qualityScore: 0.5,
+              keyFeatures: ["Partial extraction - only product approvals recovered"],
+              exampleDescription: "Partial data extraction",
+              commonDocuments: [],
+              processingNotes: ["Full JSON parsing failed, recovered productApprovals only"],
+            };
+          }
         } catch (partialError) {
-          console.log("[permit-packet-analyzer] Partial extraction also failed");
+          console.log("[permit-packet-analyzer] Legacy regex extraction also failed");
         }
       }
       
