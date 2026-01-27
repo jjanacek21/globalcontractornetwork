@@ -1,207 +1,193 @@
 
-# NOA Intelligence Engine - Implementation Plan
+# AI Training Center & NOA Intelligence Engine - Complete Fixes
 
-## Executive Summary
+## Issues Identified
 
-Your Python-based NOA scraper design is excellent, but Lovable uses TypeScript/Deno Edge Functions. I'll translate your architecture into our platform while adding enhancements to solve the Miami-Dade crawling issues.
+### Critical Issues
 
-## Current State Analysis
+| Issue | Location | Impact |
+|-------|----------|--------|
+| Wrong API endpoint | `process-training-book` | 404 error, books fail to process |
+| Missing config entry | `supabase/config.toml` | `process-training-book` may not deploy properly |
+| Stuck training records | `permit_packet_training` table | 2 records stuck in "processing" |
+| Stuck training books | `permit_training_books` table | 1 book stuck in "processing", 1 failed |
 
-### Database Status
-| Metric | Value |
-|--------|-------|
-| Total Products | 798 |
-| With PDF URLs | 15 (1.9%) |
-| Pending Status | 748 (93.7%) |
-| Found Status | 15 |
+### Database State
 
-### Why Current Crawling Fails
-The Miami-Dade product search is an **ASP.NET session-based form**:
-1. It requires POST submission with form data
-2. Results are only rendered after form submission with session cookies
-3. Direct URL patterns like `pc-result_app.asp?categorylist=13` return "Error Processing your request"
-4. The Firecrawl "scrape" mode isn't executing the form submission
+**Product Approvals:**
+- 748 pending (93.7%)
+- 15 with PDFs (1.9%)
+- 0 AI-extracted metadata
 
----
+**Training Books:**
+- 1 stuck in "processing"
+- 1 failed (AI analysis failed: 404)
 
-## Solution Architecture (Translated to TypeScript)
-
-Your Python design:
-```
-[ NOA Scraper ] → [ PDF Storage ] → [ Metadata Extraction ] → [ NOA Database ] → [ Vector Store ] → [ Permit AI ]
-```
-
-Lovable implementation:
-```
-[ Edge Function Scraper ] → [ Supabase Storage ] → [ AI Metadata Extraction ] → [ product_approvals Table ] → [ Embedded Search ] → [ permit-packet-assembler ]
-```
+**Training Samples:**
+- 2 stuck in "processing"
+- 4 completed
 
 ---
 
-## Implementation Plan
+## Fix Plan
 
-### Part 1: Fix Miami-Dade Scraping (Critical)
+### Part 1: Fix `process-training-book` Edge Function
 
-The core issue is that Firecrawl can't handle ASP.NET form submissions. We need a different approach:
+**Problem:** The function calls `https://api.lovable.dev/api/v1/chat` which returns 404.
 
-**Option A: Headless Browser Simulation**
-- Use Firecrawl's "action" mode to actually fill and submit the form
-- This requires Firecrawl Pro which may have the capability
-
-**Option B: Known Product List + Direct PDF Lookup**
-- Instead of crawling search results, use a pre-built list of NOA numbers
-- The PDF URL pattern is: `https://www.miamidade.gov/building/library/noa/{NOA_WITH_DASHES}.pdf`
-- We can verify each PDF exists via HEAD request
-
-**Option C: Manual PDF Upload with AI Extraction**
-- Create an admin interface to bulk upload PDFs
-- AI extracts metadata from each uploaded PDF
-- Store in product_approvals with full metadata
-
-**Recommended: Hybrid Approach (B + C)**
-- Build a known-NOA list from existing database entries
-- Attempt to download PDFs for each NOA
-- Allow manual bulk upload as fallback
-- AI extracts/validates metadata from all PDFs
-
-### Part 2: Enhanced Edge Function - `noa-bulk-downloader`
-
-New edge function that:
-1. Accepts a list of NOA numbers (or reads from product_approvals)
-2. Attempts to download each PDF from known URL patterns
-3. Stores PDFs in `product-approvals` bucket
-4. Updates product_approvals with file URLs
-
-**Key Logic (TypeScript equivalent of your Python):**
-```typescript
-// URL patterns to try for each NOA
-const patterns = [
-  (noa: string) => `https://www.miamidade.gov/building/library/noa/${noa.replace('.', '')}.pdf`,
-  (noa: string) => `https://www.miamidade.gov/building/library/noa/${noa}.pdf`,
-];
-
-for (const product of products) {
-  if (!product.noa_number) continue;
-  
-  for (const pattern of patterns) {
-    const url = pattern(product.noa_number);
-    const response = await fetch(url, { method: 'HEAD' });
-    
-    if (response.ok) {
-      // Download and store
-      const pdf = await fetch(url);
-      const buffer = await pdf.arrayBuffer();
-      
-      await supabase.storage
-        .from('product-approvals')
-        .upload(`noa-pdfs/${product.noa_number}.pdf`, buffer);
-      
-      // Update database
-      await supabase.from('product_approvals')
-        .update({ file_url: publicUrl, source_status: 'found' })
-        .eq('id', product.id);
-      break;
-    }
-  }
-}
-```
-
-### Part 3: AI Metadata Extraction (Your pdfplumber equivalent)
-
-Use Lovable AI with vision capability to extract metadata from PDFs:
+**Solution:** Update to use the correct Lovable AI Gateway URL:
 
 ```typescript
-// Extract metadata from PDF using AI vision
-const extractNOAMetadata = async (pdfUrl: string) => {
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Extract NOA metadata from this PDF...' },
-          { type: 'image_url', image_url: { url: pdfUrl } }
-        ]
-      }],
-    }),
-  });
-  
-  return parseAIResponse(response);
-};
+// WRONG (current):
+const aiResponse = await fetch("https://api.lovable.dev/api/v1/chat", {
+
+// CORRECT (fix):
+const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
 ```
 
-### Part 4: Admin Interface - Bulk NOA Manager
+Also need to update the request body structure to match the OpenAI-compatible format the gateway expects.
 
-New admin panel features:
-1. **NOA Number Input** - Paste a list of NOA numbers to attempt download
-2. **Bulk PDF Upload** - Drag-drop multiple PDFs for AI extraction
-3. **Progress Dashboard** - Real-time download/extraction progress
-4. **Validation Queue** - Review AI-extracted metadata before saving
-
-### Part 5: Integration with Permit Packets
-
-When a user selects a product in the wizard:
-1. Check if product has PDF URL
-2. If not, attempt real-time sourcing
-3. Include sourced PDF in packet assembly
-4. Display NOA details on cover sheet
+**File:** `supabase/functions/process-training-book/index.ts`
 
 ---
 
-## Files to Create/Modify
+### Part 2: Add Missing Config Entry
+
+**Problem:** `process-training-book` is not in `supabase/config.toml`
+
+**Solution:** Add the function configuration:
+
+```toml
+[functions.process-training-book]
+verify_jwt = false
+```
+
+**File:** `supabase/config.toml`
+
+---
+
+### Part 3: Fix NOA Metadata Extractor for PDF Processing
+
+**Problem:** The current implementation tries to pass a PDF as an `image_url` which Gemini may not process correctly.
+
+**Solution:** Use the correct content format for PDF files with the Lovable AI Gateway:
+
+```typescript
+// For PDFs, use tool calling to extract structured data instead of vision
+// Or convert PDF to images first before sending to vision model
+```
+
+The extractor should:
+1. Try vision with the PDF URL directly (Gemini 2.5 Flash supports PDF vision)
+2. If that fails, use text-based extraction from the PDF content
+
+**File:** `supabase/functions/noa-metadata-extractor/index.ts`
+
+---
+
+### Part 4: Clean Up Stuck Records
+
+**Problem:** 2 training samples and 1 training book stuck in "processing"
+
+**Solution:** 
+1. Add a database migration or RPC call to reset stuck records
+2. Ensure the TrainingSamplesTable already has cleanup logic (it does via `cleanup_stuck_training_records` RPC)
+3. Add similar cleanup logic for training books
+
+---
+
+### Part 5: Enhance NOA Bulk Downloader
+
+**Current State:** The downloader tries multiple URL patterns but Miami-Dade PDFs are not directly accessible.
+
+**Enhancements:**
+1. Add more manufacturer-specific URL patterns (GAF, CertainTeed, Owens Corning)
+2. Add Florida Building Code product approval database patterns
+3. Improve logging for debugging failed downloads
+
+---
+
+### Part 6: Add Learning Progress Dashboard to NOA Intelligence Tab
+
+Create a visual dashboard showing:
+- Total products in database
+- Products with PDFs vs without
+- Products with AI-extracted metadata
+- Recent extraction activity
+
+**File:** `src/components/permit-queens/admin/NOABulkManager.tsx` (enhance existing stats section)
+
+---
+
+## Files to Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `supabase/functions/noa-bulk-downloader/index.ts` | Create | Batch download NOAs from known patterns |
-| `supabase/functions/noa-metadata-extractor/index.ts` | Create | AI-powered PDF metadata extraction |
-| `src/components/permit-queens/admin/NOABulkManager.tsx` | Create | Admin UI for bulk NOA operations |
-| `src/components/permit-queens/admin/NOAUploadQueue.tsx` | Create | Bulk PDF upload with progress |
-| `supabase/functions/crawl-source-websites/index.ts` | Modify | Add fallback patterns for Miami-Dade |
-| `supabase/config.toml` | Modify | Add new edge function configs |
+| `supabase/functions/process-training-book/index.ts` | Modify | Fix API endpoint URL |
+| `supabase/config.toml` | Modify | Add process-training-book config |
+| `supabase/functions/noa-metadata-extractor/index.ts` | Modify | Fix PDF processing format |
+| `src/components/permit-queens/admin/NOABulkManager.tsx` | Modify | Add AI extraction stats |
+| `src/components/permit-queens/admin/NOAUploadQueue.tsx` | Modify | Improve error handling and display |
 
 ---
 
-## Database Enhancements
+## Implementation Details
 
-Add new columns to track sourcing:
-- `source_attempts` - Count of download attempts
-- `last_verified_at` - When PDF was last verified accessible
-- `ai_extracted_at` - When AI extracted metadata
-- `extraction_confidence` - AI confidence score
+### Fix 1: `process-training-book` API Endpoint
 
----
+```typescript
+// Line 130 - Change from:
+const aiResponse = await fetch("https://api.lovable.dev/api/v1/chat", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${lovableApiKey}`,
+  },
+  body: JSON.stringify({
+    model: "google/gemini-2.5-flash",
+    messages: [/* ... */],
+    max_tokens: 8000,
+    temperature: 0.3,
+  }),
+});
 
-## NOA URL Pattern Research
+// To:
+const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${lovableApiKey}`,
+  },
+  body: JSON.stringify({
+    model: "google/gemini-2.5-flash",
+    messages: [{
+      role: "user",
+      content: [
+        { type: "text", text: extractionPrompt },
+        { 
+          type: "image_url", 
+          image_url: { url: `data:${mimeType};base64,${base64Content}` }
+        }
+      ]
+    }],
+    max_tokens: 8000,
+  }),
+});
+```
 
-Based on testing, the Miami-Dade PDF URL pattern requires:
-1. NOA number WITHOUT the decimal point
-2. Example: `17-0620.02` → `17-062002.pdf`
+### Fix 2: Config.toml Addition
 
-But direct access returns 404. The PDFs are likely:
-1. Behind authentication
-2. Generated on-demand
-3. Accessed only via the pc-view_app.asp page with session state
+```toml
+[functions.process-training-book]
+verify_jwt = false
+```
 
-**Alternative Sources:**
-- Manufacturer websites (GAF, CertainTeed, etc. often host their NOA PDFs)
-- Florida Building Code Product Approval database
-- Direct from testing labs (TAS, AAMA, etc.)
+### Fix 3: Enhanced NOA Stats
 
----
-
-## Immediate Action Items
-
-1. **Create `noa-bulk-downloader` edge function** - Try multiple URL patterns
-2. **Add bulk upload UI** - Allow admin to upload PDFs manually
-3. **Create AI extraction pipeline** - Process uploaded PDFs for metadata
-4. **Build validation queue** - Review and approve extracted data
-5. **Update product selector** - Show PDF status clearly
-6. **Connect to packet assembler** - Use learned data in generation
+Add to `NOABulkManager.tsx`:
+- Count of products with `ai_extracted_at` populated
+- Average extraction confidence score
+- Last extraction timestamp
 
 ---
 
@@ -209,47 +195,27 @@ But direct access returns 404. The PDFs are likely:
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Products with PDFs | 15 (1.9%) | 200+ (25%+) |
-| Successful packet generation | ~7% | 40-60% |
-| Manual PDF sourcing | Required | Automated |
-| AI learning from NOAs | Not happening | Active extraction |
+| Training book processing | 404 errors | Successful extraction |
+| Books stuck in processing | 2 | 0 |
+| NOA metadata extraction | Not working | AI-powered extraction |
+| Edge function deployment | Missing config | Properly configured |
 
 ---
 
-## Technical Notes
+## Testing Steps
 
-### Why Not Python?
-Lovable Edge Functions run on Deno (TypeScript). While your Python architecture is solid, we implement it with:
-- `fetch()` instead of `requests`
-- TypeScript types instead of Python dicts
-- Supabase client instead of psycopg2
-- Lovable AI instead of direct OpenAI calls
+1. **Test book processing:**
+   - Go to AI Training Center > Books & Guides
+   - Click "Process Now" on a pending book
+   - Verify it progresses to "completed" status
 
-### Rate Limiting Considerations
-- Miami-Dade may block rapid requests
-- Add 1-2 second delays between downloads
-- Implement exponential backoff on failures
-- Store failures to retry later
+2. **Test NOA upload extraction:**
+   - Go to AI Training Center > NOA Intelligence
+   - Upload a NOA PDF
+   - Click "Process Files"
+   - Verify metadata is extracted and displayed
 
-### Storage Organization
-```
-product-approvals/
-├── noa-pdfs/
-│   ├── 17-062002.pdf
-│   ├── 21-031202.pdf
-│   └── ...
-├── fl-approvals/
-│   └── ...
-└── manufacturer-specs/
-    └── ...
-```
-
----
-
-## Summary
-
-Your NOA Intelligence Engine concept is exactly what this system needs. The implementation translates your Python architecture to TypeScript/Deno while addressing the Miami-Dade form submission challenge through:
-1. Alternative URL patterns and HEAD request verification
-2. Bulk PDF upload capability as fallback
-3. AI-powered metadata extraction from uploaded PDFs
-4. Integration with the permit packet generator to use learned NOA data
+3. **Test bulk download:**
+   - Click "Download Missing NOAs"
+   - Check console/network logs for attempts
+   - Verify any successful downloads appear in database
