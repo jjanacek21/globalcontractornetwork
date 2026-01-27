@@ -1,6 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+export interface PriorPermitData {
+  owner_name: string | null;
+  owner_email: string | null;
+  owner_phone: string | null;
+  valuation: number | null;
+  permit_type: string | null;
+  created_at: string | null;
+}
 
 export interface SocialLinks {
   facebook?: string;
@@ -175,6 +184,34 @@ export function useContractorProfile(userId: string | null) {
     return updateProfile({ client_references: newRefs });
   };
 
+  // Lookup prior permit data for an address (for auto-fill)
+  const lookupPriorPermit = useCallback(async (address: string): Promise<PriorPermitData | null> => {
+    if (!address || address.length < 5) return null;
+    
+    try {
+      // Normalize address for matching
+      const normalizedAddress = address.toLowerCase().trim();
+      
+      const { data, error } = await supabase
+        .from('permit_projects')
+        .select('owner_name, owner_email, owner_phone, valuation, permit_type, created_at')
+        .ilike('property_address', `%${normalizedAddress}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error looking up prior permit:', error);
+        return null;
+      }
+      
+      return data as PriorPermitData | null;
+    } catch (error) {
+      console.error('Prior permit lookup error:', error);
+      return null;
+    }
+  }, []);
+
   return {
     profile,
     loading,
@@ -185,6 +222,7 @@ export function useContractorProfile(userId: string | null) {
     removeGalleryImage,
     addClientReference,
     removeClientReference,
-    refetch: fetchProfile
+    refetch: fetchProfile,
+    lookupPriorPermit
   };
 }
