@@ -1,401 +1,338 @@
 
-# Permit Expediting Workflow Optimization - TurboTax-Style Efficiency
+# Mobile Optimization + Workflow Refinement + PDF Testing Plan
 
-## Current State Analysis
+## Overview
 
-The existing wizard has **4 steps** with significant data collection:
-
-| Step | Current Content | Issues |
-|------|-----------------|--------|
-| 1. Location & Trade | Address input, permit type selection, jurisdiction detection | Works well but no profile prefill |
-| 2. Project Scope | Owner info, trade questions, material selection | Owner data manual every time |
-| 3. Documents | Document upload, packet preview | Manual "Generate Packet" button required |
-| 4. Review | Summary, packet viewer, signatures, service tier | Gap analysis runs late, too much content |
-
-**Pain Points Identified:**
-- Owner/contractor data manually entered on every permit (no reuse)
-- Valuation requires guesswork (no AI estimation)
-- Packet generation requires manual button click
-- 4 separate steps when content could be consolidated
-- Prior permit data at same address not leveraged
+This plan addresses three interconnected objectives:
+1. **Mobile Optimization**: Add responsive stacked cards, bottom-sheet material selection, and swipe navigation to the permit wizard
+2. **Workflow Refinement**: Eliminate the separate Permit Queens landing page route and integrate seamlessly with the contractor dashboard
+3. **PDF Testing**: Verify end-to-end permit packet generation with viewable PDFs
 
 ---
 
-## Optimized 3-Step Wizard Structure
+## Part 1: Mobile Optimization for Permit Wizard
 
-### New Step 1: Property & Scope (Merged)
+### Current State Analysis
 
-Combines current Step 1 + partial Step 2:
+The existing `PermitQueensNewRequest.tsx` wizard:
+- Uses grid layouts that don't stack well on mobile (`grid-cols-2`, `md:grid-cols-4`)
+- Material selection uses inline `MultiMaterialSelector` with SearchableProductCombobox
+- Navigation is button-based (Previous/Next) without swipe support
 
-**Content:**
-1. Address autocomplete with instant jurisdiction detection (existing)
-2. Permit type selection (Roofing, Windows prominently; others secondary)
-3. Owner info with auto-fill:
-   - Prior permit lookup: If address matches previous permit, auto-suggest owner name/email/phone/valuation
-   - Contractor profile prefill: Auto-fill from logged-in contractor's profile
-   - "Using data from previous permit at this address" badge when applicable
-4. Year built auto-populated from property appraiser
-5. Basic scope questions (work type, size, stories for roofing)
+### Changes Required
 
-**Technical Implementation:**
-- Integrate `lookupPriorPermit()` from `useContractorProfile` hook
-- Add `useEffect` to trigger lookup when address is selected
-- Show "Previously submitted" badge with one-click prefill option
-- Move owner info card from Step 2 to Step 1
+| Component | Change |
+|-----------|--------|
+| `src/pages/PermitQueensNewRequest.tsx` | Add `useIsMobile` hook, wrap cards in mobile-responsive layouts, implement swipe handlers |
+| `src/components/permit-queens/MobileMaterialSheet.tsx` | New component - Bottom sheet for material selection on mobile |
+| `src/components/permit-queens/WizardProgress.tsx` | Make step indicators touch-friendly and responsive |
+| `src/components/permit-queens/MultiMaterialSelector.tsx` | Add mobile-aware variant that opens bottom sheet |
 
----
+### Implementation Details
 
-### New Step 2: Materials & Requirements (Merged)
+#### 1A. Mobile Detection Integration
 
-Combines rest of Step 2 + partial Step 3:
-
-**Content:**
-1. Trade-specific questions (RoofingQuestions, WindowDoorQuestions)
-2. Multi-material selector with inline NOA search
-3. Inline document requirements checklist:
-   - Green checkmarks for auto-sourced NOAs from selected products
-   - Red flags for missing required documents
-   - Upload zone integrated (not separate step)
-4. Section 1524 compliance checkboxes (auto-computed from year_built)
-5. Real-time AI valuation estimation (new feature):
-   - Shows "Estimated valuation: $X-$Y based on roof size and materials"
-   - User can accept or override
-
-**Technical Implementation:**
-- Move `JurisdictionRulesPanel` with `showDocuments={true}` inline
-- Move `SmartDocumentUploader` into this step
-- Create `estimate-permit-valuation` edge function for AI valuation
-- Auto-trigger packet generation when step completes (remove manual button)
-
----
-
-### New Step 3: Review & Submit (Streamlined)
-
-Consolidates Step 4:
-
-**Content:**
-1. Summary card (compact - address, owner, permit type)
-2. Auto-generated packet viewer (no "Generate Packet" button - already generated)
-3. Signature status tracker with inline signing capability
-4. Service tier dropdown (simplified - no grid)
-5. Payment agreement checkbox
-6. Submit button with completeness check
-
-**Technical Implementation:**
-- Move packet generation trigger to Step 2 completion
-- Show packet immediately on Step 3 load (no loading state in most cases)
-- Streamline signature checklist display
-
----
-
-## Technical Changes Required
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/pages/PermitQueensNewRequest.tsx` | Restructure to 3 steps, add prior permit lookup, add auto-generate |
-| `src/components/permit-queens/WizardProgress.tsx` | Update step definitions from 4 to 3 |
-| `src/hooks/useContractorProfile.ts` | Already has `lookupPriorPermit` - integrate into wizard |
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/estimate-permit-valuation/index.ts` | AI-powered valuation estimation |
-
----
-
-## Detailed Implementation
-
-### Phase 1: Prior Permit Auto-Fill Integration
-
-**In `PermitQueensNewRequest.tsx`:**
-
+Add to `PermitQueensNewRequest.tsx`:
 ```typescript
-// Add state for prior permit data
-const [priorPermit, setPriorPermit] = useState<PriorPermitData | null>(null);
-const [showPriorPermitBanner, setShowPriorPermitBanner] = useState(false);
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { MobileMaterialSheet } from "@/components/permit-queens/MobileMaterialSheet";
 
-// Add effect to lookup prior permit when address changes
-useEffect(() => {
-  const lookupPrior = async () => {
-    if (formData.property_address.length > 15) {
-      const result = await lookupPriorPermit(formData.property_address);
-      if (result) {
-        setPriorPermit(result);
-        setShowPriorPermitBanner(true);
-      }
-    }
-  };
-  lookupPrior();
-}, [formData.property_address]);
-
-// Add "Apply prior permit data" function
-const applyPriorPermitData = () => {
-  if (priorPermit) {
-    setFormData(prev => ({
-      ...prev,
-      owner_name: priorPermit.owner_name || prev.owner_name,
-      owner_email: priorPermit.owner_email || prev.owner_email,
-      owner_phone: priorPermit.owner_phone || prev.owner_phone,
-      valuation: priorPermit.valuation || prev.valuation,
-    }));
-    setShowPriorPermitBanner(false);
-    toast.success('Applied data from previous permit');
-  }
-};
+const isMobile = useIsMobile();
 ```
 
-**UI Banner (in Step 1, after address):**
+#### 1B. Responsive Card Layouts
+
+Update grid classes throughout the wizard:
+
+**Step 1 - Permit Types Grid:**
 ```tsx
-{showPriorPermitBanner && priorPermit && (
-  <Alert className="border-primary/30 bg-primary/5">
-    <Sparkles className="h-4 w-4 text-primary" />
-    <AlertDescription className="flex items-center justify-between">
-      <span>
-        <strong>Previous permit found!</strong> Owner: {priorPermit.owner_name} 
-        • Valuation: ${priorPermit.valuation?.toLocaleString()}
-      </span>
-      <Button size="sm" onClick={applyPriorPermitData}>
-        Use This Data
-      </Button>
-    </AlertDescription>
-  </Alert>
-)}
+// Current (lines 645-664)
+<div className="grid grid-cols-2 gap-3 mb-4">
+
+// Changed to:
+<div className={cn(
+  "grid gap-3 mb-4",
+  isMobile ? "grid-cols-1" : "grid-cols-2"
+)}>
 ```
 
----
+**Step 1 - Owner Info Grid:**
+```tsx
+// Current (line 699)
+<CardContent className="grid md:grid-cols-2 gap-4">
 
-### Phase 2: 3-Step Wizard Restructure
+// Changed to:
+<CardContent className={cn(
+  "grid gap-4",
+  isMobile ? "grid-cols-1" : "md:grid-cols-2"
+)}>
+```
 
-**Update WIZARD_STEPS constant:**
+**Step 3 - Summary Grid:**
+```tsx
+// Current (line 866)
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+
+// Changed to:
+<div className={cn(
+  "grid gap-4 text-sm",
+  isMobile ? "grid-cols-1" : "grid-cols-2 md:grid-cols-4"
+)}>
+```
+
+#### 1C. Create Mobile Material Sheet Component
+
+New file: `src/components/permit-queens/MobileMaterialSheet.tsx`
+
+A bottom-sheet drawer that opens when tapping "Select Materials" on mobile:
+- Uses `vaul` Drawer component (already installed)
+- Full-height scrollable list of product categories
+- Category accordion expansion
+- Tap to select, swipe down to close
+- Shows selected count badge
 
 ```typescript
-const WIZARD_STEPS = [
-  { number: 1, title: 'Property & Scope', description: 'Address, owner & project basics' },
-  { number: 2, title: 'Materials & Docs', description: 'Products, requirements & uploads' },
-  { number: 3, title: 'Review & Submit', description: 'Verify and submit request' },
-];
-```
-
-**Step 1 Content (merged):**
-- Keep address input with jurisdiction detection
-- Keep permit type selection
-- ADD owner info card (moved from current Step 2)
-- ADD prior permit banner
-- ADD basic scope questions for the selected trade (work type, size)
-
-**Step 2 Content (merged):**
-- Keep trade-specific questions (RoofingQuestions, etc.)
-- Keep multi-material selector
-- ADD inline document requirements checklist
-- ADD smart document uploader (moved from current Step 3)
-- REMOVE separate "Documents" step
-
-**Step 3 Content (streamlined):**
-- Keep review summary (condensed)
-- Keep packet viewer (auto-generated)
-- Keep signature checklist
-- Keep service tier dropdown
-- Keep payment checkbox
-- Keep submit button
-
----
-
-### Phase 3: Auto-Generate Packet on Step 2 Completion
-
-**Add effect to trigger generation:**
-
-```typescript
-// Auto-generate packet when moving to Step 3
-useEffect(() => {
-  if (currentStep === 3 && !generatedPacket && !generatingPacket) {
-    handleGeneratePacket();
-  }
-}, [currentStep]);
-```
-
-**Update canProceed logic:**
-
-```typescript
-const canProceed = () => {
-  switch (currentStep) {
-    case 1:
-      return formData.property_address && formData.permit_type && formData.owner_name;
-    case 2:
-      return tradeQuestionsComplete;
-    case 3:
-      return formData.complexity_tier && paymentAgreed;
-    default:
-      return false;
-  }
-};
-```
-
----
-
-### Phase 4: AI Valuation Estimation Edge Function
-
-**Create `supabase/functions/estimate-permit-valuation/index.ts`:**
-
-Uses the selected materials, roof size, and jurisdiction to estimate project valuation based on:
-- Roof size (squares) x average cost per square
-- Material type multiplier (shingle vs tile vs metal)
-- HVHZ complexity factor
-- Jurisdiction fee schedules
-
-**Returns:**
-```json
-{
-  "estimated_low": 12000,
-  "estimated_high": 18000,
-  "recommended": 15000,
-  "confidence": "medium",
-  "factors": [
-    "25 squares at $450-$600/square",
-    "Shingle material (standard complexity)",
-    "HVHZ zone (+10% for enhanced materials)"
-  ]
+interface MobileMaterialSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isHVHZ: boolean;
+  roofType: 'steep' | 'flat' | 'mixed';
+  selectedProducts: MultiSelectedProduct[];
+  onProductsChange: (products: MultiSelectedProduct[]) => void;
 }
 ```
 
-**UI Integration:**
-Below the valuation input field, show:
-```tsx
-{valuationEstimate && (
-  <div className="flex items-center gap-2 text-sm">
-    <Sparkles className="h-4 w-4 text-primary" />
-    <span className="text-muted-foreground">
-      AI Estimate: ${valuationEstimate.estimated_low.toLocaleString()} - 
-      ${valuationEstimate.estimated_high.toLocaleString()}
-    </span>
-    <Button 
-      variant="link" 
-      size="sm" 
-      onClick={() => handleFieldChange('valuation', valuationEstimate.recommended)}
-    >
-      Use ${valuationEstimate.recommended.toLocaleString()}
-    </Button>
-  </div>
-)}
+#### 1D. Swipe Navigation Between Steps
+
+Add touch gesture support using `framer-motion` (already installed):
+
+```typescript
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+
+const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const threshold = 100;
+  if (info.offset.x > threshold && currentStep > 1) {
+    prevStep();
+  } else if (info.offset.x < -threshold && currentStep < 3 && canProceed()) {
+    nextStep();
+  }
+};
+
+// Wrap step content
+<AnimatePresence mode="wait">
+  <motion.div
+    key={currentStep}
+    initial={{ opacity: 0, x: isMobile ? 50 : 0 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: isMobile ? -50 : 0 }}
+    drag={isMobile ? "x" : false}
+    dragConstraints={{ left: 0, right: 0 }}
+    onDragEnd={handleDragEnd}
+  >
+    {/* Step content */}
+  </motion.div>
+</AnimatePresence>
+```
+
+#### 1E. Touch-Friendly Progress Indicator
+
+Update `WizardProgress.tsx`:
+- Increase step circle size on mobile (from 10x10 to 12x12)
+- Add tap handlers to allow jumping to completed steps
+- Show only step numbers on mobile, full titles on desktop
+
+```typescript
+const [touchedStep, setTouchedStep] = useState<number | null>(null);
+
+// Make steps tappable (only to completed steps)
+onClick={() => {
+  if (isCompleted) onStepClick?.(step.number);
+}}
 ```
 
 ---
 
-## UI/UX Improvements
+## Part 2: Workflow Refinement - Eliminate Separate Landing Page
 
-### Progress Bar Enhancement
+### Current Routing Analysis
 
-Update `WizardProgress.tsx` to show completion percentage:
-
-```tsx
-// Add completion percentage bar below step indicators
-<div className="mt-4 relative h-2 bg-muted rounded-full overflow-hidden">
-  <div 
-    className="absolute h-full bg-primary transition-all duration-300 ease-out"
-    style={{ width: `${completionPercentage}%` }}
-  />
-</div>
-<p className="text-xs text-muted-foreground text-center mt-1">
-  {completionPercentage}% complete
-</p>
+From `App.tsx`:
+```typescript
+<Route path="/permit-queens" element={<PermitQueens />} />  // Landing page
+<Route path="/permit-queens/auth" element={<PermitQueensAuth />} />
+<Route path="/permit-queens/dashboard" element={<PermitQueensDashboard />} />
 ```
 
-### Inline Validation
+### Flow Change
 
-Add real-time field validation with visual feedback:
-- Green checkmark appears when field is valid
-- Red border + helper text for invalid fields
-- Section completion badges
+**Current Flow:**
+1. User visits `/permit-queens` (landing page)
+2. User clicks "Start Your First Permit" -> `/permit-queens/auth`
+3. User logs in -> `/permit-queens/dashboard`
+4. User clicks "New Permit Request" -> `/permit-queens/new-request`
 
-### Mobile Optimization
+**Optimized Flow:**
+1. Contractor Dashboard shows "Permit Expediting" card
+2. Click -> `/permit-queens/dashboard` (if authenticated)
+3. If not authenticated -> `/permit-queens/auth` with redirect
+4. Dashboard shows permits + "New Request" button
 
-- Stacked cards on mobile (single column)
-- Bottom-sheet style material selection
-- Swipe gesture support for step navigation
+### Changes Required
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Redirect `/permit-queens` to `/permit-queens/dashboard` |
+| `src/pages/PermitQueensDashboard.tsx` | Update auth redirect to check for existing session |
+| `src/pages/MemberDashboard.tsx` | Update link to go directly to dashboard |
+| `src/pages/ContractorDashboard.tsx` | Add Permit Queens quick-access card |
+
+### Implementation Details
+
+#### 2A. Update App.tsx Routing
+
+Change the `/permit-queens` route to redirect:
+```typescript
+// Before
+<Route path="/permit-queens" element={<PermitQueens />} />
+
+// After
+<Route path="/permit-queens" element={<Navigate to="/permit-queens/dashboard" replace />} />
+```
+
+Or modify PermitQueens.tsx to auto-redirect if authenticated:
+```typescript
+useEffect(() => {
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      navigate('/permit-queens/dashboard');
+    }
+  };
+  checkAuth();
+}, []);
+```
+
+#### 2B. Add Permit Queens Card to ContractorDashboard
+
+Add a new tab or card in `ContractorDashboard.tsx`:
+```typescript
+<Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => navigate('/permit-queens/dashboard')}>
+  <CardContent className="p-6 flex items-center gap-4">
+    <Crown className="h-10 w-10 text-amber-500" />
+    <div>
+      <h3 className="font-semibold">Permit Expediting</h3>
+      <p className="text-sm text-muted-foreground">Fast-track your Florida permits</p>
+    </div>
+    <ArrowRight className="ml-auto h-5 w-5 text-muted-foreground" />
+  </CardContent>
+</Card>
+```
 
 ---
 
-## Implementation Phases
+## Part 3: PDF Viewing & Product Approvals Status
 
-| Phase | Changes | Priority |
-|-------|---------|----------|
-| 1 | Prior permit lookup + auto-fill banner | High |
-| 2 | Restructure to 3 steps (move content) | High |
-| 3 | Auto-generate packet on Step 2 completion | High |
-| 4 | AI valuation estimation edge function | Medium |
-| 5 | Progress bar enhancement | Low |
-| 6 | Mobile optimization | Low |
+### Current Database Status
+
+From query results:
+- **Total Products**: 796
+- **With `file_url`**: 15 (1.9%)
+- **With `noa_pdf_url`**: 11 (1.4%)
+- **With `fl_approval_pdf_url`**: 15 (1.9%)
+
+This means most products won't have viewable PDFs in generated packets.
+
+### PDF Flow Analysis
+
+The `permit-packet-assembler` edge function (lines 478-500):
+1. Fetches `product_approvals` for selected product IDs
+2. Looks for PDF URL in order: `file_url` -> `noa_pdf_url` -> `fl_approval_pdf_url` -> passed `file_url`
+3. If URL exists, adds to `documentIndex` with status `auto_sourced`
+4. If no URL, product appears as missing
+
+### Testing Approach
+
+To verify the end-to-end flow:
+
+1. **Identify products with PDFs** - Query products that have file URLs
+2. **Create test permit** - Use the wizard with products that have PDFs
+3. **Verify packet generation** - Check that PDFs are included in document index
+4. **Test PDF viewing** - Confirm PDFViewerDialog opens documents correctly
+
+### Implementation for Testing
+
+Add a test utility or manually verify:
+
+```sql
+-- Find products with available PDFs for testing
+SELECT id, manufacturer, product_name, noa_number, 
+       COALESCE(file_url, noa_pdf_url, fl_approval_pdf_url) as pdf_url
+FROM product_approvals 
+WHERE is_active = true 
+  AND (file_url IS NOT NULL OR noa_pdf_url IS NOT NULL OR fl_approval_pdf_url IS NOT NULL)
+LIMIT 10;
+```
 
 ---
 
-## Data Flow Diagram
+## Files to Create
 
-```text
-Step 1: Property & Scope
-  ├── Address Input
-  │   ├── Mapbox Geocoding (existing)
-  │   ├── Jurisdiction Detection (existing)
-  │   └── Prior Permit Lookup (NEW)
-  │       └── Auto-suggest owner/valuation
-  │
-  ├── Owner Info
-  │   ├── Prior permit prefill (NEW)
-  │   └── Manual override
-  │
-  └── Basic Scope (work type, size)
+| File | Purpose |
+|------|---------|
+| `src/components/permit-queens/MobileMaterialSheet.tsx` | Bottom-sheet material selection for mobile |
 
-Step 2: Materials & Requirements
-  ├── Trade Questions
-  │   └── RoofingQuestions / WindowDoorQuestions
-  │
-  ├── Material Selection
-  │   └── MultiMaterialSelector with NOA lookup
-  │
-  ├── Document Requirements (inline)
-  │   ├── Auto-sourced NOAs (green)
-  │   └── Missing uploads (red)
-  │
-  └── Smart Uploader (moved from Step 3)
-      
-  [ON STEP COMPLETE → Auto-trigger packet generation]
+## Files to Modify
 
-Step 3: Review & Submit
-  ├── Generated Packet (auto-loaded)
-  ├── Signature Checklist
-  ├── Service Tier Selection
-  ├── Payment Agreement
-  └── Submit
-```
+| File | Changes |
+|------|---------|
+| `src/pages/PermitQueensNewRequest.tsx` | Add mobile detection, responsive grids, swipe navigation, mobile material sheet integration |
+| `src/components/permit-queens/WizardProgress.tsx` | Touch-friendly steps, responsive sizing |
+| `src/components/permit-queens/MultiMaterialSelector.tsx` | Add mobile variant prop |
+| `src/App.tsx` | Add redirect from `/permit-queens` to dashboard |
+| `src/pages/PermitQueens.tsx` | Auto-redirect authenticated users |
+| `src/pages/ContractorDashboard.tsx` | Add Permit Queens quick-access card |
+
+---
+
+## Technical Implementation Summary
+
+### Phase 1: Mobile Optimization
+1. Add `useIsMobile` hook to wizard
+2. Create `MobileMaterialSheet` component using Drawer
+3. Update all grid layouts with responsive classes
+4. Add swipe navigation with framer-motion
+5. Make progress indicator touch-friendly
+
+### Phase 2: Workflow Refinement
+1. Update routing to redirect landing page
+2. Add quick-access card to ContractorDashboard
+3. Ensure auth flow preserves redirect intent
+
+### Phase 3: Testing
+1. Query database for products with PDFs
+2. Create test permit using those products
+3. Verify packet generates with PDF documents
+4. Confirm PDF viewing works in modal
 
 ---
 
 ## Expected Outcomes
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Steps to complete | 4 | 3 |
-| Manual data entry | High | Reduced 40-50% via prefill |
-| Packet generation | Manual button | Automatic |
-| Valuation entry | Guesswork | AI-suggested |
-| Prior permit reuse | None | One-click apply |
-| Time to complete | ~10 min | ~5-7 min |
-
----
-
-## Database Changes
-
-**None required** - all features use existing tables:
-- `permit_projects` for prior permit lookup
-- `contractor_profiles` for contractor data
-- `product_approvals` for NOA matching
+| Feature | Before | After |
+|---------|--------|-------|
+| Mobile card layout | 2-column grid always | Stacked on mobile |
+| Material selection | Inline dropdowns | Bottom sheet on mobile |
+| Step navigation | Button-only | Swipe + buttons on mobile |
+| Permit Queens access | Separate landing page | Direct dashboard access |
+| Contractor integration | No integration | Quick-access card |
+| PDF viewing | ERR_BLOCKED_BY_CLIENT | Inline modal viewer |
 
 ---
 
 ## Security Considerations
 
-- Prior permit lookup restricted to user's own permits via RLS
-- Valuation estimation uses sanitized inputs
-- No sensitive data exposed in AI responses
-- Rate limiting on estimation edge function
+- No changes to RLS policies required
+- Mobile optimizations are UI-only
+- Swipe navigation respects `canProceed()` validation
+- Auth flow unchanged (still requires login)
