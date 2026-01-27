@@ -5994,6 +5994,69 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_training_books: {
+        Row: {
+          author: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          extracted_chapters: Json | null
+          extracted_text: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean | null
+          page_count: number | null
+          processing_status: string | null
+          target_county: string | null
+          title: string
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          author?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          extracted_chapters?: Json | null
+          extracted_text?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          page_count?: number | null
+          processing_status?: string | null
+          target_county?: string | null
+          title: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          author?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          extracted_chapters?: Json | null
+          extracted_text?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          page_count?: number | null
+          processing_status?: string | null
+          target_county?: string | null
+          title?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       permit_training_files: {
         Row: {
           created_at: string | null
