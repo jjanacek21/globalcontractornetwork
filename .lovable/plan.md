@@ -1,291 +1,179 @@
 
-# AI Training Center & NOA Intelligence Engine - Comprehensive Fix Plan
+# Fix Smart Document Analyzer & PDF Preview
 
-## Executive Summary
+## Issues Identified
 
-After thorough investigation of the codebase, database state, and edge function logs, I've identified **8 critical systemic issues** preventing the AI Training Center from functioning correctly. The good news is that the architecture is fundamentally sound - these are fixable problems with storage access, API integrations, and data flow.
+### Issue 1: Smart Documents Stuck on "Analyzing"
 
-**Current Database State:**
-- 798 total product approvals (only 15 with PDFs = 1.9%)
-- 645 products stuck in "pending" status
-- 0 AI-extracted metadata (despite having extraction code)
-- 2 training books: 1 pending, 1 failed
-- 0 knowledge items extracted from books
+**Root Cause:** The `DocumentUploadZone.tsx` calls `permit-packet-analyzer` for template analysis, but this function:
+1. Doesn't accept `templateId` in its interface (`AnalyzeRequest`)
+2. Only updates `permit_packet_training` table, not `permit_form_templates`
+3. Never sets `analysis_status` to `complete` or `error`
 
----
+**Evidence:**
+- Document stuck for 650+ minutes in "analyzing" status
+- Edge function logs show it matched a department but didn't update templates
 
-## Root Cause Analysis
+**Solution:** Update `permit-packet-analyzer` to:
+1. Accept `templateId` parameter
+2. Update `permit_form_templates.analysis_status` to `complete` or `error`
+3. Store extracted field count in the template record
 
-### Issue 1: Template PDF Viewing Shows Supabase Error
-**Location:** `src/components/permit-queens/admin/TemplateManager.tsx` lines 180-188
+### Issue 2: PDF Preview Shows Blank
 
-**Problem:** The Template Manager uses `getPublicUrl()` but the `permit-form-templates` bucket is private. Private buckets don't support public URLs.
+**Root Cause:** The signed URL is valid, but PDF rendering in iframes can fail for several reasons:
+1. Missing PDF viewer parameters (`#toolbar=1&view=FitH`)
+2. Some browsers need explicit height/width on the iframe container
+3. The iframe loads but PDF plugin doesn't render
 
-```typescript
-// Current broken code:
-const viewTemplate = async (filePath: string) => {
-  const { data } = supabase.storage
-    .from('permit-form-templates')
-    .getPublicUrl(filePath);  // Returns inaccessible public URL
-  window.open(data.publicUrl, '_blank');  // Redirects to Supabase error page
-};
-```
+**Evidence:** Screenshot shows the dialog opens with title and buttons, but content area is blank
 
-**Fix:** Use `createSignedUrl()` like the PermitBooksManager and SmartDocumentManager already do.
-
----
-
-### Issue 2: Training Books Fail to Process
-**Location:** `supabase/functions/process-training-book/index.ts`
-
-**Problem:** The edge function is deployed but appears to time out or fail silently. Looking at the logs shows "No logs found" which indicates the function may not be receiving requests or is failing before logging.
-
-**Root Causes:**
-1. Large PDF files (900KB+) being converted to base64 exceed Lovable AI context limits
-2. The function uses vision mode (`image_url`) for PDFs which may have size limits
-3. No chunking strategy for large documents
-
-**Fix:** Implement PDF chunking and text extraction before AI processing.
-
----
-
-### Issue 3: NOA Bulk Downloader Returns 0% Success
-**Edge Function Logs:** `[noa-bulk-downloader] Complete. Success: 0, Failed: 100`
-
-**Problem:** All 100 download attempts failed because the Miami-Dade PDF URL patterns don't work:
-- `https://www.miamidade.gov/building/library/noa/17-062002.pdf` returns 404
-- The PDFs are not publicly accessible via predictable URLs
-- Manufacturer fallback URLs (GAF, CertainTeed) also fail
-
-**Root Cause:** Miami-Dade requires session-based access or direct search results, not URL pattern matching.
-
-**Fix:** 
-1. Accept that automatic URL pattern downloading won't work for Miami-Dade
-2. Focus on the manual upload path (`NOAUploadQueue`) with AI extraction
-3. Add support for crawling manufacturer websites that DO have public PDF URLs
-4. Consider using Firecrawl with action mode to submit forms
-
----
-
-### Issue 4: Custom Source Website Crawling Returns "No Documents Found"
-**Location:** `supabase/functions/crawl-source-websites/index.ts`
-
-**Problem:** The function relies on Firecrawl to scrape dynamic ASP.NET pages, but Miami-Dade's form-based search doesn't render results with standard scraping. The HTML table parsing only works if the search results are pre-rendered.
-
-**Evidence:** When you add a Miami-Dade URL, the function:
-1. Calls Firecrawl with `waitFor: 8000ms`
-2. Receives minimal HTML (< 1000 chars) because the form wasn't submitted
-3. Returns "0 documents found"
-
-**Fix:** 
-1. Add pre-built URL lists for known product approvals
-2. Improve error messaging to indicate WHY no documents were found
-3. For Miami-Dade specifically, use direct PDF URLs from the database (when available) rather than crawling
-
----
-
-### Issue 5: Smart Documents Won't Save
-**Location:** `src/components/permit-queens/admin/DocumentUploadZone.tsx` lines 128-140
-
-**Problem:** After uploading to storage, the code tries to get a public URL and trigger analysis:
-```typescript
-const { data: urlData } = supabase.storage
-  .from('permit-form-templates')
-  .getPublicUrl(filePath);  // This returns an inaccessible URL for private bucket
-
-supabase.functions.invoke('permit-packet-analyzer', {
-  body: {
-    fileUrl: urlData.publicUrl  // Analyzer can't access this URL
-  }
-});
-```
-
-**Fix:** Use signed URLs for the analyzer, or have the analyzer fetch the file directly from storage using the service role.
-
----
-
-### Issue 6: Permit Packets Training Not Learning
-**Location:** Training data extraction pipeline
-
-**Problem:** The permit packet training system uploads files but:
-1. The `permit-packet-analyzer` function receives inaccessible URLs
-2. Extracted data isn't being connected to the AI knowledge base
-3. The feedback loop between training and generation is broken
-
-**Fix:** Update the analyzer to fetch files directly from storage using signed URLs.
-
----
-
-### Issue 7: Product Approvals Stuck on "Pending"
-**Location:** `product_approvals` table
-
-**Problem:** 645 products have `source_status = 'pending'` because:
-1. The bulk downloader can't find PDFs automatically (URL patterns don't work)
-2. Manual uploads aren't being processed
-3. There's no fallback to mark products as "needs_manual_upload"
-
-**Fix:** 
-1. Create a status workflow: pending → searching → found/not_found/needs_manual
-2. Allow manual PDF association from uploaded files
-3. Mark products that can't be auto-sourced with helpful status
-
----
-
-### Issue 8: AI Not Learning From Sample Data
-**Root Cause:** The learning pipeline is fragmented:
-1. Books uploaded → processing fails → 0 knowledge items
-2. Permit packets uploaded → analysis fails → no learned patterns
-3. Rejection tracking exists but isn't feeding back
-4. Even when data is in `permit_ai_knowledge`, the packet assembler doesn't query it
-
-**Fix:** Create a unified learning coordinator that:
-1. Ensures each data source flows to `permit_ai_knowledge`
-2. Connects knowledge to packet generation
-3. Tracks learning progress with visible metrics
+**Solution:** Enhance `PDFViewerDialog` to:
+1. Add PDF viewer parameters to the URL (`#toolbar=1&view=FitH`)
+2. Use Google Docs viewer as fallback for cross-origin PDFs
+3. Add explicit dimensions to the iframe
+4. Improve loading state detection
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Fix Storage Access (Critical - Day 1)
+### Part 1: Fix Template Analysis in permit-packet-analyzer
 
-**1.1 Fix Template Manager PDF Viewing**
-- File: `src/components/permit-queens/admin/TemplateManager.tsx`
-- Change `getPublicUrl()` to `createSignedUrl()` 
-- Add PDFViewerDialog for inline viewing instead of window.open
+**File:** `supabase/functions/permit-packet-analyzer/index.ts`
 
-**1.2 Fix Document Upload Zone**
-- File: `src/components/permit-queens/admin/DocumentUploadZone.tsx`
-- Use signed URLs when triggering analysis
-- Store relative file paths, not public URLs
-
-**1.3 Update Permit Packet Analyzer**
-- File: `supabase/functions/permit-packet-analyzer/index.ts`
-- Accept file_path parameter
-- Fetch files from storage using service role
-- Generate signed URLs internally
-
-### Phase 2: Fix Book Processing (Day 1)
-
-**2.1 Improve process-training-book Edge Function**
-- File: `supabase/functions/process-training-book/index.ts`
-- Add file size validation (reject > 10MB for now)
-- Add chunking for large documents
-- Improve error handling with specific error messages
-- Add logging at each step
-- Consider text extraction instead of vision for large PDFs
-
-**2.2 Add Processing Retry Logic**
-- Auto-cleanup stuck records older than 10 minutes
-- Better progress tracking
-
-### Phase 3: Fix NOA Intelligence (Day 2)
-
-**3.1 Improve NOA Bulk Downloader Error Messaging**
-- File: `supabase/functions/noa-bulk-downloader/index.ts`
-- When all patterns fail, return helpful message about manual upload
-- Log which patterns were tried and why they failed
-- Update status to `needs_manual_upload` instead of `not_found`
-
-**3.2 Enhance NOA Upload Queue**
-- File: `src/components/permit-queens/admin/NOAUploadQueue.tsx`
-- The current implementation looks correct
-- Add validation for PDF format before upload
-- Improve AI extraction prompts
-
-**3.3 Fix NOA Metadata Extractor**
-- File: `supabase/functions/noa-metadata-extractor/index.ts`
-- Ensure base64 encoding is correct for PDFs
-- Add structured output validation
-- Test with actual NOA PDFs
-
-### Phase 4: Fix Website Crawling (Day 2)
-
-**4.1 Improve Error Messages**
-- File: `supabase/functions/crawl-source-websites/index.ts`
-- Add specific error for "dynamic site requires form submission"
-- Suggest manual alternatives when crawling fails
-
-**4.2 Add Alternative Data Sources**
-- Create a CSV import feature for bulk product data
-- Add support for manufacturer sitemap URLs
-
-### Phase 5: Connect Learning Pipeline (Day 3)
-
-**5.1 Ensure Knowledge Flows to AI**
-- Verify `permit_ai_knowledge` table is being populated
-- Update `permit-packet-assembler` to query this table
-- Add visible metrics for knowledge item counts
-
-**5.2 Add Learning Dashboard**
-- Show: Books processed, knowledge items, patterns learned
-- Display: Recent learning activity
-- Track: Extraction confidence over time
-
----
-
-## Technical Implementation Details
-
-### Fix 1: Template Manager Signed URL
-
+**Changes:**
+1. Add `templateId` and `filePath` to the `AnalyzeRequest` interface:
 ```typescript
-// Replace viewTemplate function in TemplateManager.tsx
-const viewTemplate = async (filePath: string) => {
-  try {
-    const { data, error } = await supabase.storage
-      .from('permit-form-templates')
-      .createSignedUrl(filePath, 3600);
-    
-    if (error || !data?.signedUrl) {
-      toast.error('Failed to access document');
-      return;
-    }
-    
-    setViewingTemplate({ url: data.signedUrl, name: filePath });
-  } catch (err) {
-    toast.error('Error accessing template');
-  }
-};
-```
-
-### Fix 2: Process Training Book Improvements
-
-```typescript
-// Add file size check and chunking
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-if (fileBuffer.byteLength > MAX_FILE_SIZE) {
-  // For large files, extract text first instead of using vision
-  // Then send text in chunks to AI for knowledge extraction
+interface AnalyzeRequest {
+  mode?: "analyze_only" | "detect_and_analyze";
+  trainingId?: string;
+  templateId?: string;  // NEW: For smart document analysis
+  filePath?: string;    // NEW: For fetching from storage
+  fileUrl?: string;
+  fileContent?: string;
+  fileName?: string;
+  batchId?: string;
 }
 ```
 
-### Fix 3: NOA Downloader Status Updates
-
+2. Extract `templateId` and `filePath` from request:
 ```typescript
-// When no PDFs found, set helpful status
-await supabase
-  .from('product_approvals')
-  .update({
-    source_status: 'needs_manual_upload',
-    source_notes: 'Automatic sourcing failed. Please upload PDF manually via NOA Intelligence tab.',
-    updated_at: new Date().toISOString()
-  })
-  .eq('id', product.id);
+const { 
+  mode = "analyze_only", 
+  trainingId, 
+  templateId,  // NEW
+  filePath,    // NEW
+  fileUrl, 
+  fileContent, 
+  fileName, 
+  batchId 
+} = requestData;
 ```
 
----
+3. Add template update logic after detection in `detect_and_analyze` mode:
+```typescript
+// If this is a template analysis, update the template record
+if (templateId) {
+  await supabase
+    .from("permit_form_templates")
+    .update({
+      analysis_status: "complete",
+      field_count: detectedFieldCount || 0,
+      is_fillable: detectedFieldCount > 0,
+      last_analyzed_at: new Date().toISOString(),
+    })
+    .eq("id", templateId);
+  
+  console.log(`[permit-packet-analyzer] Updated template ${templateId} status to complete`);
+}
+```
 
-## Expected Outcomes After Fixes
+4. Add error handling to update template on failure:
+```typescript
+// In catch block
+if (templateId) {
+  await supabase
+    .from("permit_form_templates")
+    .update({
+      analysis_status: "error",
+      last_analyzed_at: new Date().toISOString(),
+    })
+    .eq("id", templateId);
+}
+```
 
-| Component | Before | After |
-|-----------|--------|-------|
-| Template PDF Viewing | Supabase error page | Working PDF preview |
-| Book Processing | 100% failure | 80%+ success rate |
-| NOA Download | 0% success, confusing errors | Clear status messaging, manual fallback |
-| Smart Docs | Won't save properly | Full save + analysis |
-| Learning Pipeline | Broken, 0 knowledge items | Functional, growing knowledge base |
-| Product Status | 81% stuck pending | Clear actionable statuses |
+### Part 2: Fix PDF Preview in PDFViewerDialog
+
+**File:** `src/components/ui/PDFViewerDialog.tsx`
+
+**Changes:**
+
+1. Add PDF viewer parameters to the URL:
+```typescript
+const getPdfUrl = (url: string) => {
+  // Add PDF viewer parameters for better rendering
+  const separator = url.includes('#') ? '&' : '#';
+  return `${url}${separator}toolbar=1&view=FitH`;
+};
+```
+
+2. Use object tag with fallback for better PDF rendering:
+```tsx
+<object
+  data={getPdfUrl(url)}
+  type="application/pdf"
+  className="w-full h-full"
+  onLoad={handleIframeLoad}
+>
+  {/* Fallback to iframe */}
+  <iframe
+    src={getPdfUrl(url)}
+    className="w-full h-full border-0"
+    onLoad={handleIframeLoad}
+    onError={handleIframeError}
+    title={title}
+  />
+</object>
+```
+
+3. Add explicit height to container:
+```tsx
+<div className="flex-1 min-h-0 relative h-[calc(100%-120px)]">
+```
+
+4. Add Google Docs viewer fallback option:
+```typescript
+const [useGoogleViewer, setUseGoogleViewer] = useState(false);
+
+// If native rendering fails, try Google Docs viewer
+const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+```
+
+### Part 3: Database Migration - Add last_analyzed_at Column
+
+**File:** New migration
+
+**SQL:**
+```sql
+-- Add last_analyzed_at column if not exists
+ALTER TABLE permit_form_templates 
+ADD COLUMN IF NOT EXISTS last_analyzed_at TIMESTAMPTZ;
+
+-- Reset stuck documents so they can be re-analyzed
+UPDATE permit_form_templates 
+SET analysis_status = 'pending'
+WHERE analysis_status = 'analyzing'
+AND created_at < NOW() - INTERVAL '10 minutes';
+```
+
+### Part 4: Update DocumentUploadZone (Minor Fix)
+
+**File:** `src/components/permit-queens/admin/DocumentUploadZone.tsx`
+
+**Changes:**
+- Ensure the function call includes all required parameters
+- The current implementation is correct - just needs the analyzer to accept `templateId`
 
 ---
 
@@ -293,36 +181,38 @@ await supabase
 
 | File | Changes |
 |------|---------|
-| `src/components/permit-queens/admin/TemplateManager.tsx` | Add signed URL + PDFViewerDialog |
-| `src/components/permit-queens/admin/DocumentUploadZone.tsx` | Use signed URLs for analyzer |
-| `supabase/functions/process-training-book/index.ts` | Add chunking, improve error handling |
-| `supabase/functions/noa-bulk-downloader/index.ts` | Better status messages, needs_manual_upload |
-| `supabase/functions/noa-metadata-extractor/index.ts` | Validate PDF processing |
-| `supabase/functions/crawl-source-websites/index.ts` | Better error messages |
-| `supabase/functions/permit-packet-analyzer/index.ts` | Fetch from storage directly |
-| Database migration | Add `needs_manual_upload` status, cleanup stuck records |
+| `supabase/functions/permit-packet-analyzer/index.ts` | Add templateId handling, update template status |
+| `src/components/ui/PDFViewerDialog.tsx` | Fix PDF rendering with object tag and parameters |
+| New migration | Add last_analyzed_at column, reset stuck docs |
 
 ---
 
-## Summary
+## Expected Outcomes
 
-The AI Training Center has the right architecture but is broken due to:
-1. **Private bucket access issues** (using public URLs instead of signed URLs)
-2. **Large file handling** (no chunking for PDFs > 10MB)
-3. **Unrealistic expectations** for automatic PDF sourcing (Miami-Dade URLs don't work)
-4. **Missing error messaging** (failures without explanations)
-5. **Disconnected learning** (data extracted but not used)
+| Issue | Before | After |
+|-------|--------|-------|
+| Smart Docs stuck on "Analyzing" | Permanent "Analyzing" status | Completes or shows error |
+| PDF preview blank | Blank dialog | PDF displays in viewer |
+| Stuck documents | 1 document stuck 650+ mins | Auto-reset to pending |
 
-The fix involves:
-1. Switching all file access to signed URLs
-2. Adding chunking for large documents
-3. Providing clear fallback paths (manual upload)
-4. Improving error messaging throughout
-5. Connecting the learning pipeline end-to-end
+---
 
-After these fixes, the system will:
-- Actually learn from uploaded training materials
-- Show clear status for each product approval
-- Allow manual PDF uploads when automation fails
-- Display PDFs correctly in all viewers
-- Build a growing knowledge base that improves packet generation
+## Technical Notes
+
+### PDF Rendering in iframes
+Different browsers handle PDF rendering differently:
+- Chrome: Uses PDFium, usually works with direct URLs
+- Safari: May need object tag
+- Firefox: Uses pdf.js, usually works
+
+Using both `object` and `iframe` tags provides maximum compatibility.
+
+### Google Docs Viewer Fallback
+For PDFs that can't be rendered natively, Google Docs viewer provides a reliable fallback:
+```
+https://docs.google.com/viewer?url={encoded_pdf_url}&embedded=true
+```
+This works for publicly accessible URLs but may not work with signed URLs that expire.
+
+### Alternative: PDF.js Library
+For complete control, we could integrate PDF.js, but this adds significant complexity and bundle size.
