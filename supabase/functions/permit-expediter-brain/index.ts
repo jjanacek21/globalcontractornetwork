@@ -394,7 +394,7 @@ Packet Ready: ${analysis.packetReady ? 'Yes' : 'No'}` },
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "claude-sonnet-4-20250514",
             messages: [...systemMessages, ...chatMessages],
             stream: true,
           }),

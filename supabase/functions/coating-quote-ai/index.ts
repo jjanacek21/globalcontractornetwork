@@ -70,7 +70,7 @@ Provide your coating recommendation and detailed estimate.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'claude-sonnet-4-20250514',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

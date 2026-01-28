@@ -181,13 +181,19 @@ export function TemplateManager() {
 
 
   const viewTemplate = async (filePath: string, formName: string) => {
+    // Check if file path looks like a placeholder that doesn't exist
+    if (filePath.startsWith('pending/')) {
+      toast.error('This template file is missing. Please re-upload the PDF.');
+      return;
+    }
+    
     try {
       const { data, error } = await supabase.storage
         .from('permit-form-templates')
         .createSignedUrl(filePath, 3600);
       
       if (error || !data?.signedUrl) {
-        toast.error('Failed to access document');
+        toast.error('Failed to access document. The file may be missing from storage.');
         console.error('Signed URL error:', error);
         return;
       }
@@ -392,10 +398,17 @@ export function TemplateManager() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {template.file_path ? (
-                          <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            PDF Uploaded
-                          </Badge>
+                          template.file_path.startsWith('pending/') ? (
+                            <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/30">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              File Missing
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              PDF Uploaded
+                            </Badge>
+                          )
                         ) : (
                           <Badge variant="secondary">No File</Badge>
                         )}

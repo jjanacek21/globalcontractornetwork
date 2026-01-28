@@ -283,7 +283,7 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "claude-sonnet-4-20250514",
           messages: [
             { role: "system", content: detectionSystemPrompt },
             { role: "user", content: messageContent },
@@ -863,7 +863,7 @@ Extract as much data as possible. If you cannot find a particular field, use nul
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "claude-sonnet-4-20250514",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: analysisContent },
