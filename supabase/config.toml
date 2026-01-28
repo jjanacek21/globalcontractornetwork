@@ -152,3 +152,9 @@ verify_jwt = false
 
 [functions.permit-document-search]
 verify_jwt = false
+
+[functions.homeowner-assistant]
+verify_jwt = false
+
+[functions.project-advisor-ai]
+verify_jwt = false

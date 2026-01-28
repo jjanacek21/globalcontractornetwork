@@ -12,11 +12,12 @@ import { useHomeownerProjects, useProjectMessages, HomeownerProject } from "@/ho
 import { 
   Home, ArrowRight, LogOut, Plus, MessageSquare, Calendar,
   ClipboardList, Send, Loader2, MapPin, DollarSign, Clock,
-  CheckCircle, AlertCircle, FileText, User, GraduationCap
+  CheckCircle, AlertCircle, FileText, User, GraduationCap, Sparkles
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { HomeownerAIChat } from "@/components/homeowner/HomeownerAIChat";
 
 const statusColors: Record<string, string> = {
   quote_requested: "bg-blue-100 text-blue-800",
@@ -259,6 +260,22 @@ const HomeownerDashboard = () => {
                   </div>
                 </div>
               </Link>
+
+              {/* AI Project Advisor Card */}
+              <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 hover:border-purple-400/50 transition-all cursor-pointer group">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/30 flex items-center justify-center">
+                    <Sparkles className="h-6 w-6 text-purple-300" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                      AI Project Advisor
+                    </h3>
+                    <p className="text-sm text-white/60">Instant estimates & photo analysis</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-purple-300 group-hover:translate-x-1 transition-all" />
+                </div>
+              </div>
 
               {/* Training Academy Card */}
               <Link to="/academy" className="group">
@@ -516,6 +533,9 @@ const HomeownerDashboard = () => {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* AI Chat Floating Button */}
+        <HomeownerAIChat />
       </div>
     </>
   );
