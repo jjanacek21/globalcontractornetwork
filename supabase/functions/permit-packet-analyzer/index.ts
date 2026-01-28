@@ -10,6 +10,8 @@ const corsHeaders = {
 interface AnalyzeRequest {
   mode?: "analyze_only" | "detect_and_analyze";
   trainingId?: string;
+  templateId?: string;  // For smart document template analysis
+  filePath?: string;    // For fetching from storage directly
   fileUrl?: string;
   fileContent?: string; // Base64 encoded file content
   fileName?: string;
@@ -176,12 +178,13 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const requestData = await req.json() as AnalyzeRequest;
-    const { mode = "analyze_only", trainingId, fileUrl, fileContent, fileName, batchId } = requestData;
+    const { mode = "analyze_only", trainingId, templateId, filePath, fileUrl, fileContent, fileName, batchId } = requestData;
 
     // Store for error handling
     capturedTrainingId = trainingId;
+    let capturedTemplateId = templateId;
 
-    console.log(`[permit-packet-analyzer] Mode: ${mode}, Training ID: ${trainingId || "N/A"}, File: ${fileName || "N/A"}, Has Content: ${!!fileContent}`);
+    console.log(`[permit-packet-analyzer] Mode: ${mode}, Training ID: ${trainingId || "N/A"}, Template ID: ${templateId || "N/A"}, File: ${fileName || "N/A"}, Has Content: ${!!fileContent}`);
 
     // ========================================
     // MODE: DETECT_AND_ANALYZE (OCR/Vision-based auto-detection)
@@ -398,12 +401,34 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
         await supabase.rpc("increment_batch_processed", { batch_id: batchId });
       }
 
+      // If this is a template analysis, update the template record
+      if (templateId) {
+        try {
+          const detectedFieldCount = Object.keys(detectionResult.detected).filter(k => detectionResult.detected[k as keyof typeof detectionResult.detected] !== null).length;
+          
+          await supabase
+            .from("permit_form_templates")
+            .update({
+              analysis_status: "complete",
+              field_count: detectedFieldCount,
+              is_fillable: detectedFieldCount > 0,
+              last_analyzed_at: new Date().toISOString(),
+            })
+            .eq("id", templateId);
+          
+          console.log(`[permit-packet-analyzer] Updated template ${templateId} status to complete with ${detectedFieldCount} fields`);
+        } catch (templateUpdateError) {
+          console.error(`[permit-packet-analyzer] Failed to update template ${templateId}:`, templateUpdateError);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
           mode: "detect_and_analyze",
           detection: detectionResult,
           trainingId,
+          templateId,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
