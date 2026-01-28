@@ -1,221 +1,328 @@
 
-# AI Training Center & NOA Intelligence Engine - Complete Fixes
+# AI Training Center & NOA Intelligence Engine - Comprehensive Fix Plan
 
-## Issues Identified
+## Executive Summary
 
-### Critical Issues
+After thorough investigation of the codebase, database state, and edge function logs, I've identified **8 critical systemic issues** preventing the AI Training Center from functioning correctly. The good news is that the architecture is fundamentally sound - these are fixable problems with storage access, API integrations, and data flow.
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| Wrong API endpoint | `process-training-book` | 404 error, books fail to process |
-| Missing config entry | `supabase/config.toml` | `process-training-book` may not deploy properly |
-| Stuck training records | `permit_packet_training` table | 2 records stuck in "processing" |
-| Stuck training books | `permit_training_books` table | 1 book stuck in "processing", 1 failed |
-
-### Database State
-
-**Product Approvals:**
-- 748 pending (93.7%)
-- 15 with PDFs (1.9%)
-- 0 AI-extracted metadata
-
-**Training Books:**
-- 1 stuck in "processing"
-- 1 failed (AI analysis failed: 404)
-
-**Training Samples:**
-- 2 stuck in "processing"
-- 4 completed
+**Current Database State:**
+- 798 total product approvals (only 15 with PDFs = 1.9%)
+- 645 products stuck in "pending" status
+- 0 AI-extracted metadata (despite having extraction code)
+- 2 training books: 1 pending, 1 failed
+- 0 knowledge items extracted from books
 
 ---
 
-## Fix Plan
+## Root Cause Analysis
 
-### Part 1: Fix `process-training-book` Edge Function
+### Issue 1: Template PDF Viewing Shows Supabase Error
+**Location:** `src/components/permit-queens/admin/TemplateManager.tsx` lines 180-188
 
-**Problem:** The function calls `https://api.lovable.dev/api/v1/chat` which returns 404.
-
-**Solution:** Update to use the correct Lovable AI Gateway URL:
+**Problem:** The Template Manager uses `getPublicUrl()` but the `permit-form-templates` bucket is private. Private buckets don't support public URLs.
 
 ```typescript
-// WRONG (current):
-const aiResponse = await fetch("https://api.lovable.dev/api/v1/chat", {
-
-// CORRECT (fix):
-const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+// Current broken code:
+const viewTemplate = async (filePath: string) => {
+  const { data } = supabase.storage
+    .from('permit-form-templates')
+    .getPublicUrl(filePath);  // Returns inaccessible public URL
+  window.open(data.publicUrl, '_blank');  // Redirects to Supabase error page
+};
 ```
 
-Also need to update the request body structure to match the OpenAI-compatible format the gateway expects.
-
-**File:** `supabase/functions/process-training-book/index.ts`
+**Fix:** Use `createSignedUrl()` like the PermitBooksManager and SmartDocumentManager already do.
 
 ---
 
-### Part 2: Add Missing Config Entry
+### Issue 2: Training Books Fail to Process
+**Location:** `supabase/functions/process-training-book/index.ts`
 
-**Problem:** `process-training-book` is not in `supabase/config.toml`
+**Problem:** The edge function is deployed but appears to time out or fail silently. Looking at the logs shows "No logs found" which indicates the function may not be receiving requests or is failing before logging.
 
-**Solution:** Add the function configuration:
+**Root Causes:**
+1. Large PDF files (900KB+) being converted to base64 exceed Lovable AI context limits
+2. The function uses vision mode (`image_url`) for PDFs which may have size limits
+3. No chunking strategy for large documents
 
-```toml
-[functions.process-training-book]
-verify_jwt = false
-```
-
-**File:** `supabase/config.toml`
+**Fix:** Implement PDF chunking and text extraction before AI processing.
 
 ---
 
-### Part 3: Fix NOA Metadata Extractor for PDF Processing
+### Issue 3: NOA Bulk Downloader Returns 0% Success
+**Edge Function Logs:** `[noa-bulk-downloader] Complete. Success: 0, Failed: 100`
 
-**Problem:** The current implementation tries to pass a PDF as an `image_url` which Gemini may not process correctly.
+**Problem:** All 100 download attempts failed because the Miami-Dade PDF URL patterns don't work:
+- `https://www.miamidade.gov/building/library/noa/17-062002.pdf` returns 404
+- The PDFs are not publicly accessible via predictable URLs
+- Manufacturer fallback URLs (GAF, CertainTeed) also fail
 
-**Solution:** Use the correct content format for PDF files with the Lovable AI Gateway:
+**Root Cause:** Miami-Dade requires session-based access or direct search results, not URL pattern matching.
+
+**Fix:** 
+1. Accept that automatic URL pattern downloading won't work for Miami-Dade
+2. Focus on the manual upload path (`NOAUploadQueue`) with AI extraction
+3. Add support for crawling manufacturer websites that DO have public PDF URLs
+4. Consider using Firecrawl with action mode to submit forms
+
+---
+
+### Issue 4: Custom Source Website Crawling Returns "No Documents Found"
+**Location:** `supabase/functions/crawl-source-websites/index.ts`
+
+**Problem:** The function relies on Firecrawl to scrape dynamic ASP.NET pages, but Miami-Dade's form-based search doesn't render results with standard scraping. The HTML table parsing only works if the search results are pre-rendered.
+
+**Evidence:** When you add a Miami-Dade URL, the function:
+1. Calls Firecrawl with `waitFor: 8000ms`
+2. Receives minimal HTML (< 1000 chars) because the form wasn't submitted
+3. Returns "0 documents found"
+
+**Fix:** 
+1. Add pre-built URL lists for known product approvals
+2. Improve error messaging to indicate WHY no documents were found
+3. For Miami-Dade specifically, use direct PDF URLs from the database (when available) rather than crawling
+
+---
+
+### Issue 5: Smart Documents Won't Save
+**Location:** `src/components/permit-queens/admin/DocumentUploadZone.tsx` lines 128-140
+
+**Problem:** After uploading to storage, the code tries to get a public URL and trigger analysis:
+```typescript
+const { data: urlData } = supabase.storage
+  .from('permit-form-templates')
+  .getPublicUrl(filePath);  // This returns an inaccessible URL for private bucket
+
+supabase.functions.invoke('permit-packet-analyzer', {
+  body: {
+    fileUrl: urlData.publicUrl  // Analyzer can't access this URL
+  }
+});
+```
+
+**Fix:** Use signed URLs for the analyzer, or have the analyzer fetch the file directly from storage using the service role.
+
+---
+
+### Issue 6: Permit Packets Training Not Learning
+**Location:** Training data extraction pipeline
+
+**Problem:** The permit packet training system uploads files but:
+1. The `permit-packet-analyzer` function receives inaccessible URLs
+2. Extracted data isn't being connected to the AI knowledge base
+3. The feedback loop between training and generation is broken
+
+**Fix:** Update the analyzer to fetch files directly from storage using signed URLs.
+
+---
+
+### Issue 7: Product Approvals Stuck on "Pending"
+**Location:** `product_approvals` table
+
+**Problem:** 645 products have `source_status = 'pending'` because:
+1. The bulk downloader can't find PDFs automatically (URL patterns don't work)
+2. Manual uploads aren't being processed
+3. There's no fallback to mark products as "needs_manual_upload"
+
+**Fix:** 
+1. Create a status workflow: pending → searching → found/not_found/needs_manual
+2. Allow manual PDF association from uploaded files
+3. Mark products that can't be auto-sourced with helpful status
+
+---
+
+### Issue 8: AI Not Learning From Sample Data
+**Root Cause:** The learning pipeline is fragmented:
+1. Books uploaded → processing fails → 0 knowledge items
+2. Permit packets uploaded → analysis fails → no learned patterns
+3. Rejection tracking exists but isn't feeding back
+4. Even when data is in `permit_ai_knowledge`, the packet assembler doesn't query it
+
+**Fix:** Create a unified learning coordinator that:
+1. Ensures each data source flows to `permit_ai_knowledge`
+2. Connects knowledge to packet generation
+3. Tracks learning progress with visible metrics
+
+---
+
+## Implementation Plan
+
+### Phase 1: Fix Storage Access (Critical - Day 1)
+
+**1.1 Fix Template Manager PDF Viewing**
+- File: `src/components/permit-queens/admin/TemplateManager.tsx`
+- Change `getPublicUrl()` to `createSignedUrl()` 
+- Add PDFViewerDialog for inline viewing instead of window.open
+
+**1.2 Fix Document Upload Zone**
+- File: `src/components/permit-queens/admin/DocumentUploadZone.tsx`
+- Use signed URLs when triggering analysis
+- Store relative file paths, not public URLs
+
+**1.3 Update Permit Packet Analyzer**
+- File: `supabase/functions/permit-packet-analyzer/index.ts`
+- Accept file_path parameter
+- Fetch files from storage using service role
+- Generate signed URLs internally
+
+### Phase 2: Fix Book Processing (Day 1)
+
+**2.1 Improve process-training-book Edge Function**
+- File: `supabase/functions/process-training-book/index.ts`
+- Add file size validation (reject > 10MB for now)
+- Add chunking for large documents
+- Improve error handling with specific error messages
+- Add logging at each step
+- Consider text extraction instead of vision for large PDFs
+
+**2.2 Add Processing Retry Logic**
+- Auto-cleanup stuck records older than 10 minutes
+- Better progress tracking
+
+### Phase 3: Fix NOA Intelligence (Day 2)
+
+**3.1 Improve NOA Bulk Downloader Error Messaging**
+- File: `supabase/functions/noa-bulk-downloader/index.ts`
+- When all patterns fail, return helpful message about manual upload
+- Log which patterns were tried and why they failed
+- Update status to `needs_manual_upload` instead of `not_found`
+
+**3.2 Enhance NOA Upload Queue**
+- File: `src/components/permit-queens/admin/NOAUploadQueue.tsx`
+- The current implementation looks correct
+- Add validation for PDF format before upload
+- Improve AI extraction prompts
+
+**3.3 Fix NOA Metadata Extractor**
+- File: `supabase/functions/noa-metadata-extractor/index.ts`
+- Ensure base64 encoding is correct for PDFs
+- Add structured output validation
+- Test with actual NOA PDFs
+
+### Phase 4: Fix Website Crawling (Day 2)
+
+**4.1 Improve Error Messages**
+- File: `supabase/functions/crawl-source-websites/index.ts`
+- Add specific error for "dynamic site requires form submission"
+- Suggest manual alternatives when crawling fails
+
+**4.2 Add Alternative Data Sources**
+- Create a CSV import feature for bulk product data
+- Add support for manufacturer sitemap URLs
+
+### Phase 5: Connect Learning Pipeline (Day 3)
+
+**5.1 Ensure Knowledge Flows to AI**
+- Verify `permit_ai_knowledge` table is being populated
+- Update `permit-packet-assembler` to query this table
+- Add visible metrics for knowledge item counts
+
+**5.2 Add Learning Dashboard**
+- Show: Books processed, knowledge items, patterns learned
+- Display: Recent learning activity
+- Track: Extraction confidence over time
+
+---
+
+## Technical Implementation Details
+
+### Fix 1: Template Manager Signed URL
 
 ```typescript
-// For PDFs, use tool calling to extract structured data instead of vision
-// Or convert PDF to images first before sending to vision model
+// Replace viewTemplate function in TemplateManager.tsx
+const viewTemplate = async (filePath: string) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('permit-form-templates')
+      .createSignedUrl(filePath, 3600);
+    
+    if (error || !data?.signedUrl) {
+      toast.error('Failed to access document');
+      return;
+    }
+    
+    setViewingTemplate({ url: data.signedUrl, name: filePath });
+  } catch (err) {
+    toast.error('Error accessing template');
+  }
+};
 ```
 
-The extractor should:
-1. Try vision with the PDF URL directly (Gemini 2.5 Flash supports PDF vision)
-2. If that fails, use text-based extraction from the PDF content
+### Fix 2: Process Training Book Improvements
 
-**File:** `supabase/functions/noa-metadata-extractor/index.ts`
+```typescript
+// Add file size check and chunking
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
----
+if (fileBuffer.byteLength > MAX_FILE_SIZE) {
+  // For large files, extract text first instead of using vision
+  // Then send text in chunks to AI for knowledge extraction
+}
+```
 
-### Part 4: Clean Up Stuck Records
+### Fix 3: NOA Downloader Status Updates
 
-**Problem:** 2 training samples and 1 training book stuck in "processing"
-
-**Solution:** 
-1. Add a database migration or RPC call to reset stuck records
-2. Ensure the TrainingSamplesTable already has cleanup logic (it does via `cleanup_stuck_training_records` RPC)
-3. Add similar cleanup logic for training books
-
----
-
-### Part 5: Enhance NOA Bulk Downloader
-
-**Current State:** The downloader tries multiple URL patterns but Miami-Dade PDFs are not directly accessible.
-
-**Enhancements:**
-1. Add more manufacturer-specific URL patterns (GAF, CertainTeed, Owens Corning)
-2. Add Florida Building Code product approval database patterns
-3. Improve logging for debugging failed downloads
+```typescript
+// When no PDFs found, set helpful status
+await supabase
+  .from('product_approvals')
+  .update({
+    source_status: 'needs_manual_upload',
+    source_notes: 'Automatic sourcing failed. Please upload PDF manually via NOA Intelligence tab.',
+    updated_at: new Date().toISOString()
+  })
+  .eq('id', product.id);
+```
 
 ---
 
-### Part 6: Add Learning Progress Dashboard to NOA Intelligence Tab
+## Expected Outcomes After Fixes
 
-Create a visual dashboard showing:
-- Total products in database
-- Products with PDFs vs without
-- Products with AI-extracted metadata
-- Recent extraction activity
-
-**File:** `src/components/permit-queens/admin/NOABulkManager.tsx` (enhance existing stats section)
+| Component | Before | After |
+|-----------|--------|-------|
+| Template PDF Viewing | Supabase error page | Working PDF preview |
+| Book Processing | 100% failure | 80%+ success rate |
+| NOA Download | 0% success, confusing errors | Clear status messaging, manual fallback |
+| Smart Docs | Won't save properly | Full save + analysis |
+| Learning Pipeline | Broken, 0 knowledge items | Functional, growing knowledge base |
+| Product Status | 81% stuck pending | Clear actionable statuses |
 
 ---
 
 ## Files to Modify
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `supabase/functions/process-training-book/index.ts` | Modify | Fix API endpoint URL |
-| `supabase/config.toml` | Modify | Add process-training-book config |
-| `supabase/functions/noa-metadata-extractor/index.ts` | Modify | Fix PDF processing format |
-| `src/components/permit-queens/admin/NOABulkManager.tsx` | Modify | Add AI extraction stats |
-| `src/components/permit-queens/admin/NOAUploadQueue.tsx` | Modify | Improve error handling and display |
+| File | Changes |
+|------|---------|
+| `src/components/permit-queens/admin/TemplateManager.tsx` | Add signed URL + PDFViewerDialog |
+| `src/components/permit-queens/admin/DocumentUploadZone.tsx` | Use signed URLs for analyzer |
+| `supabase/functions/process-training-book/index.ts` | Add chunking, improve error handling |
+| `supabase/functions/noa-bulk-downloader/index.ts` | Better status messages, needs_manual_upload |
+| `supabase/functions/noa-metadata-extractor/index.ts` | Validate PDF processing |
+| `supabase/functions/crawl-source-websites/index.ts` | Better error messages |
+| `supabase/functions/permit-packet-analyzer/index.ts` | Fetch from storage directly |
+| Database migration | Add `needs_manual_upload` status, cleanup stuck records |
 
 ---
 
-## Implementation Details
+## Summary
 
-### Fix 1: `process-training-book` API Endpoint
+The AI Training Center has the right architecture but is broken due to:
+1. **Private bucket access issues** (using public URLs instead of signed URLs)
+2. **Large file handling** (no chunking for PDFs > 10MB)
+3. **Unrealistic expectations** for automatic PDF sourcing (Miami-Dade URLs don't work)
+4. **Missing error messaging** (failures without explanations)
+5. **Disconnected learning** (data extracted but not used)
 
-```typescript
-// Line 130 - Change from:
-const aiResponse = await fetch("https://api.lovable.dev/api/v1/chat", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${lovableApiKey}`,
-  },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [/* ... */],
-    max_tokens: 8000,
-    temperature: 0.3,
-  }),
-});
+The fix involves:
+1. Switching all file access to signed URLs
+2. Adding chunking for large documents
+3. Providing clear fallback paths (manual upload)
+4. Improving error messaging throughout
+5. Connecting the learning pipeline end-to-end
 
-// To:
-const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${lovableApiKey}`,
-  },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [{
-      role: "user",
-      content: [
-        { type: "text", text: extractionPrompt },
-        { 
-          type: "image_url", 
-          image_url: { url: `data:${mimeType};base64,${base64Content}` }
-        }
-      ]
-    }],
-    max_tokens: 8000,
-  }),
-});
-```
-
-### Fix 2: Config.toml Addition
-
-```toml
-[functions.process-training-book]
-verify_jwt = false
-```
-
-### Fix 3: Enhanced NOA Stats
-
-Add to `NOABulkManager.tsx`:
-- Count of products with `ai_extracted_at` populated
-- Average extraction confidence score
-- Last extraction timestamp
-
----
-
-## Expected Outcomes
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Training book processing | 404 errors | Successful extraction |
-| Books stuck in processing | 2 | 0 |
-| NOA metadata extraction | Not working | AI-powered extraction |
-| Edge function deployment | Missing config | Properly configured |
-
----
-
-## Testing Steps
-
-1. **Test book processing:**
-   - Go to AI Training Center > Books & Guides
-   - Click "Process Now" on a pending book
-   - Verify it progresses to "completed" status
-
-2. **Test NOA upload extraction:**
-   - Go to AI Training Center > NOA Intelligence
-   - Upload a NOA PDF
-   - Click "Process Files"
-   - Verify metadata is extracted and displayed
-
-3. **Test bulk download:**
-   - Click "Download Missing NOAs"
-   - Check console/network logs for attempts
-   - Verify any successful downloads appear in database
+After these fixes, the system will:
+- Actually learn from uploaded training materials
+- Show clear status for each product approval
+- Allow manual PDF uploads when automation fails
+- Display PDFs correctly in all viewers
+- Build a growing knowledge base that improves packet generation
