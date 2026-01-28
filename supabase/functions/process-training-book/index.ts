@@ -282,28 +282,50 @@ Return ONLY the JSON array, no other text.`;
     let knowledgeItems: any[] = [];
     try {
       // Extract JSON from the response (might have markdown code blocks)
-      const jsonMatch = aiText.match(/\[[\s\S]*\]/);
+      let jsonText = aiText;
+      
+      // Remove markdown code blocks if present
+      if (jsonText.includes('```json')) {
+        jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      } else if (jsonText.includes('```')) {
+        jsonText = jsonText.replace(/```\s*/g, '');
+      }
+      
+      // Try multiple extraction strategies
+      const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         knowledgeItems = JSON.parse(jsonMatch[0]);
       } else {
-        throw new Error("No JSON array found in response");
+        // Try to find individual objects and wrap in array
+        const objectMatches = jsonText.match(/\{[^{}]*"title"[^{}]*\}/g);
+        if (objectMatches && objectMatches.length > 0) {
+          console.log(`[process-training-book] Found ${objectMatches.length} individual objects, reconstructing array`);
+          knowledgeItems = objectMatches.map((match: string) => {
+            try { return JSON.parse(match); } catch { return null; }
+          }).filter(Boolean);
+        } else {
+          throw new Error("No JSON array found in response");
+        }
       }
     } catch (parseError) {
       console.error("[process-training-book] Failed to parse AI response:", parseError);
       console.error("[process-training-book] Raw AI text:", aiText.substring(0, 1000));
       
-      await supabase
-        .from("permit_training_books")
-        .update({ 
-          processing_status: "failed", 
-          processing_error: "Failed to parse AI response. The AI may have returned invalid JSON." 
-        })
-        .eq("id", bookId);
-      
-      return new Response(
-        JSON.stringify({ success: false, error: "Failed to parse AI response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Don't fail completely - try to save partial progress
+      if (knowledgeItems.length === 0) {
+        await supabase
+          .from("permit_training_books")
+          .update({ 
+            processing_status: "failed", 
+            processing_error: "Failed to parse AI response. The AI may have returned invalid JSON." 
+          })
+          .eq("id", bookId);
+        
+        return new Response(
+          JSON.stringify({ success: false, error: "Failed to parse AI response" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     console.log(`[process-training-book] Extracted ${knowledgeItems.length} knowledge items`);

@@ -335,6 +335,7 @@ serve(async (req) => {
     // Fetch fastener patterns for this jurisdiction/material
     let learnedFastenerPatterns: any[] = [];
     let learnedJurisdictionRules: any[] = [];
+    let learnedAIKnowledge: any[] = [];
     
     try {
       // Query fastener patterns for this jurisdiction
@@ -359,6 +360,19 @@ serve(async (req) => {
       if (rulesData && rulesData.length > 0) {
         learnedJurisdictionRules = rulesData;
         console.log(`Found ${rulesData.length} jurisdiction rules`);
+      }
+      
+      // CRITICAL: Query AI knowledge learned from training books and permit packets
+      const { data: aiKnowledgeData } = await supabase
+        .from('permit_ai_knowledge')
+        .select('*')
+        .or(`jurisdiction_county.ilike.%${county}%,jurisdiction_county.is.null`)
+        .order('confidence', { ascending: false })
+        .limit(50);
+      
+      if (aiKnowledgeData && aiKnowledgeData.length > 0) {
+        learnedAIKnowledge = aiKnowledgeData;
+        console.log(`Found ${aiKnowledgeData.length} AI knowledge items from training`);
       }
     } catch (e) {
       console.warn('Error fetching learned data:', e);
@@ -686,6 +700,15 @@ Given the permit details, generate:
 
 Use clean, professional formatting. Include all required information.`;
 
+      // Format AI knowledge for prompt
+      const aiKnowledgeContext = learnedAIKnowledge.length > 0 
+        ? `\n\nLEARNED JURISDICTION KNOWLEDGE (from training):\n${learnedAIKnowledge.slice(0, 20).map(k => `- [${k.knowledge_type}] ${k.pattern_description}`).join('\n')}`
+        : '';
+      
+      const fastenerContext = learnedFastenerPatterns.length > 0
+        ? `\n\nLEARNED FASTENER PATTERNS:\n${learnedFastenerPatterns.map(f => `- ${f.pattern_description || f.nails_per_unit + ' nails'} (${f.source || 'training'})`).join('\n')}`
+        : '';
+
       const userPrompt = `Generate a cover sheet and submission notes for this permit packet:
 
 PERMIT DETAILS:
@@ -696,6 +719,8 @@ PERMIT DETAILS:
 - Valuation: $${permit.estimated_value || permit.valuation || 'TBD'}
 - County: ${permit.county || permit.jurisdiction_county}
 - Is HVHZ: ${isHVHZ ? 'Yes - High Velocity Hurricane Zone' : 'No'}
+${aiKnowledgeContext}
+${fastenerContext}
 
 DOCUMENTS INCLUDED:
 ${documentIndex.map(d => `- ${d.name}: ${d.status}`).join('\n')}

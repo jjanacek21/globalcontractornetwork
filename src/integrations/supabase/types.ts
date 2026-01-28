@@ -8837,6 +8837,7 @@ export type Database = {
         Returns: number
       }
       calculate_user_level: { Args: { points: number }; Returns: string }
+      cleanup_stuck_form_templates: { Args: never; Returns: number }
       cleanup_stuck_training_books: { Args: never; Returns: number }
       cleanup_stuck_training_records: { Args: never; Returns: number }
       get_company_role: {
