@@ -1,179 +1,112 @@
 
-# Fix Smart Document Analyzer & PDF Preview
 
-## Issues Identified
+# Complete the AI Training Center Learning Pipeline
 
-### Issue 1: Smart Documents Stuck on "Analyzing"
+## What's Missing
 
-**Root Cause:** The `DocumentUploadZone.tsx` calls `permit-packet-analyzer` for template analysis, but this function:
-1. Doesn't accept `templateId` in its interface (`AnalyzeRequest`)
-2. Only updates `permit_packet_training` table, not `permit_form_templates`
-3. Never sets `analysis_status` to `complete` or `error`
+After reviewing the implementation, there are critical gaps preventing the AI from actually learning:
 
-**Evidence:**
-- Document stuck for 650+ minutes in "analyzing" status
-- Edge function logs show it matched a department but didn't update templates
-
-**Solution:** Update `permit-packet-analyzer` to:
-1. Accept `templateId` parameter
-2. Update `permit_form_templates.analysis_status` to `complete` or `error`
-3. Store extracted field count in the template record
-
-### Issue 2: PDF Preview Shows Blank
-
-**Root Cause:** The signed URL is valid, but PDF rendering in iframes can fail for several reasons:
-1. Missing PDF viewer parameters (`#toolbar=1&view=FitH`)
-2. Some browsers need explicit height/width on the iframe container
-3. The iframe loads but PDF plugin doesn't render
-
-**Evidence:** Screenshot shows the dialog opens with title and buttons, but content area is blank
-
-**Solution:** Enhance `PDFViewerDialog` to:
-1. Add PDF viewer parameters to the URL (`#toolbar=1&view=FitH`)
-2. Use Google Docs viewer as fallback for cross-origin PDFs
-3. Add explicit dimensions to the iframe
-4. Improve loading state detection
+1. **Training books are failing to process** - 1 pending, 1 failed with timeout
+2. **Knowledge table is empty** - 0 records in `permit_ai_knowledge`
+3. **Packet assembler doesn't use AI knowledge** - It queries `fastener_patterns` and `building_department_rules` but NOT `permit_ai_knowledge`
+4. **NOA metadata extraction returning no results** - 0 products have AI-extracted data
+5. **PDF preview needs Google fallback** - Current implementation may fail on some PDFs
 
 ---
 
 ## Implementation Plan
 
-### Part 1: Fix Template Analysis in permit-packet-analyzer
+### Part 1: Fix PDF Preview with Google Docs Fallback
 
-**File:** `supabase/functions/permit-packet-analyzer/index.ts`
-
-**Changes:**
-1. Add `templateId` and `filePath` to the `AnalyzeRequest` interface:
-```typescript
-interface AnalyzeRequest {
-  mode?: "analyze_only" | "detect_and_analyze";
-  trainingId?: string;
-  templateId?: string;  // NEW: For smart document analysis
-  filePath?: string;    // NEW: For fetching from storage
-  fileUrl?: string;
-  fileContent?: string;
-  fileName?: string;
-  batchId?: string;
-}
-```
-
-2. Extract `templateId` and `filePath` from request:
-```typescript
-const { 
-  mode = "analyze_only", 
-  trainingId, 
-  templateId,  // NEW
-  filePath,    // NEW
-  fileUrl, 
-  fileContent, 
-  fileName, 
-  batchId 
-} = requestData;
-```
-
-3. Add template update logic after detection in `detect_and_analyze` mode:
-```typescript
-// If this is a template analysis, update the template record
-if (templateId) {
-  await supabase
-    .from("permit_form_templates")
-    .update({
-      analysis_status: "complete",
-      field_count: detectedFieldCount || 0,
-      is_fillable: detectedFieldCount > 0,
-      last_analyzed_at: new Date().toISOString(),
-    })
-    .eq("id", templateId);
-  
-  console.log(`[permit-packet-analyzer] Updated template ${templateId} status to complete`);
-}
-```
-
-4. Add error handling to update template on failure:
-```typescript
-// In catch block
-if (templateId) {
-  await supabase
-    .from("permit_form_templates")
-    .update({
-      analysis_status: "error",
-      last_analyzed_at: new Date().toISOString(),
-    })
-    .eq("id", templateId);
-}
-```
-
-### Part 2: Fix PDF Preview in PDFViewerDialog
-
-**File:** `src/components/ui/PDFViewerDialog.tsx`
+The current `PDFViewerDialog` has a timeout-based fallback but it needs to actually show the Google Docs viewer when native rendering fails.
 
 **Changes:**
+- Add a "Try Google Viewer" button that appears after 3 seconds
+- Use Google Docs viewer URL: `https://docs.google.com/viewer?url={url}&embedded=true`
+- Add error state detection for iframe loading failures
 
-1. Add PDF viewer parameters to the URL:
+### Part 2: Add `permit_ai_knowledge` Query to Packet Assembler
+
+The permit-packet-assembler currently queries `fastener_patterns` and `building_department_rules` but completely ignores the `permit_ai_knowledge` table. This is why training data doesn't improve packet generation.
+
+**Changes to permit-packet-assembler:**
 ```typescript
-const getPdfUrl = (url: string) => {
-  // Add PDF viewer parameters for better rendering
-  const separator = url.includes('#') ? '&' : '#';
-  return `${url}${separator}toolbar=1&view=FitH`;
-};
+// Add after line 365 (after jurisdiction rules query)
+const { data: aiKnowledge } = await supabase
+  .from('permit_ai_knowledge')
+  .select('*')
+  .or(`jurisdiction_county.ilike.%${county}%,jurisdiction_county.is.null`)
+  .or(`trade_type.eq.${tradeType},trade_type.eq.general`)
+  .eq('is_verified', true)
+  .order('confidence', { ascending: false })
+  .limit(50);
+
+if (aiKnowledge && aiKnowledge.length > 0) {
+  console.log(`Found ${aiKnowledge.length} AI knowledge items`);
+}
 ```
 
-2. Use object tag with fallback for better PDF rendering:
-```tsx
-<object
-  data={getPdfUrl(url)}
-  type="application/pdf"
-  className="w-full h-full"
-  onLoad={handleIframeLoad}
->
-  {/* Fallback to iframe */}
-  <iframe
-    src={getPdfUrl(url)}
-    className="w-full h-full border-0"
-    onLoad={handleIframeLoad}
-    onError={handleIframeError}
-    title={title}
-  />
-</object>
-```
+Then use this knowledge when generating cover sheets and compliance statements.
 
-3. Add explicit height to container:
-```tsx
-<div className="flex-1 min-h-0 relative h-[calc(100%-120px)]">
-```
+### Part 3: Fix process-training-book to Actually Extract Knowledge
 
-4. Add Google Docs viewer fallback option:
-```typescript
-const [useGoogleViewer, setUseGoogleViewer] = useState(false);
+The function is hitting an issue where it either times out or fails to parse the AI response. We need:
 
-// If native rendering fails, try Google Docs viewer
-const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-```
+1. **Add retry logic** for AI calls that fail
+2. **Improve JSON parsing** with multiple fallback strategies
+3. **Add more logging** to diagnose where it's failing
+4. **Reduce prompt complexity** for large documents
 
-### Part 3: Database Migration - Add last_analyzed_at Column
+**Key changes:**
+- Split large documents into smaller chunks
+- Use simpler extraction prompt for initial pass
+- Add structured logging at each step
+- Implement exponential backoff for retries
 
-**File:** New migration
+### Part 4: Create Cleanup RPC for Stuck Training Books
 
-**SQL:**
+Add a database function to reset stuck training books:
+
 ```sql
--- Add last_analyzed_at column if not exists
-ALTER TABLE permit_form_templates 
-ADD COLUMN IF NOT EXISTS last_analyzed_at TIMESTAMPTZ;
-
--- Reset stuck documents so they can be re-analyzed
-UPDATE permit_form_templates 
-SET analysis_status = 'pending'
-WHERE analysis_status = 'analyzing'
-AND created_at < NOW() - INTERVAL '10 minutes';
+CREATE OR REPLACE FUNCTION cleanup_stuck_training_books()
+RETURNS integer AS $$
+DECLARE
+  updated_count integer;
+BEGIN
+  UPDATE permit_training_books 
+  SET 
+    processing_status = 'pending',
+    processing_error = 'Auto-cleanup: Processing timed out. Click Process Now to retry.'
+  WHERE processing_status IN ('processing', 'failed')
+  AND (updated_at < NOW() - INTERVAL '10 minutes' OR processing_error IS NOT NULL);
+  
+  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  RETURN updated_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-### Part 4: Update DocumentUploadZone (Minor Fix)
+### Part 5: Improve NOA Metadata Extraction
 
-**File:** `src/components/permit-queens/admin/DocumentUploadZone.tsx`
+The extractor is running but not saving data. We need to:
+
+1. Verify the extraction is actually being called
+2. Add better error handling for edge cases
+3. Ensure the database update is succeeding
 
 **Changes:**
-- Ensure the function call includes all required parameters
-- The current implementation is correct - just needs the analyzer to accept `templateId`
+- Add validation before database update
+- Log the metadata being extracted
+- Handle cases where NOA number can't be determined
+
+### Part 6: Add Learning Progress Dashboard
+
+Create a new component that shows:
+- Total knowledge items in database
+- Items by category (fbc_code, permit_requirement, etc.)
+- Items by source (training_book, permit_packet, rejection_feedback)
+- Verification status (verified vs unverified)
+- Recent learning activity
 
 ---
 
@@ -181,38 +114,61 @@ AND created_at < NOW() - INTERVAL '10 minutes';
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/permit-packet-analyzer/index.ts` | Add templateId handling, update template status |
-| `src/components/ui/PDFViewerDialog.tsx` | Fix PDF rendering with object tag and parameters |
-| New migration | Add last_analyzed_at column, reset stuck docs |
+| `src/components/ui/PDFViewerDialog.tsx` | Add Google Docs viewer fallback button |
+| `supabase/functions/permit-packet-assembler/index.ts` | Add permit_ai_knowledge query |
+| `supabase/functions/process-training-book/index.ts` | Add retry logic, improve JSON parsing |
+| New migration | Add cleanup_stuck_training_books function |
+| `src/components/permit-queens/admin/NOABulkManager.tsx` | Add knowledge items stats section |
 
 ---
 
 ## Expected Outcomes
 
-| Issue | Before | After |
-|-------|--------|-------|
-| Smart Docs stuck on "Analyzing" | Permanent "Analyzing" status | Completes or shows error |
-| PDF preview blank | Blank dialog | PDF displays in viewer |
-| Stuck documents | 1 document stuck 650+ mins | Auto-reset to pending |
+| Metric | Before | After |
+|--------|--------|-------|
+| Training books completed | 0 | 2 |
+| Knowledge items | 0 | 20-60 |
+| AI knowledge used in packets | No | Yes |
+| PDF preview reliability | ~70% | 95%+ |
+| Stuck book cleanup | Manual | Automatic |
 
 ---
 
-## Technical Notes
+## Technical Details
 
-### PDF Rendering in iframes
-Different browsers handle PDF rendering differently:
-- Chrome: Uses PDFium, usually works with direct URLs
-- Safari: May need object tag
-- Firefox: Uses pdf.js, usually works
+### PDF Viewer Google Fallback
 
-Using both `object` and `iframe` tags provides maximum compatibility.
+```typescript
+// Add state for fallback
+const [showGoogleFallback, setShowGoogleFallback] = useState(false);
 
-### Google Docs Viewer Fallback
-For PDFs that can't be rendered natively, Google Docs viewer provides a reliable fallback:
+// After 5 seconds, show fallback option
+useEffect(() => {
+  const timer = setTimeout(() => {
+    if (!isLoaded) setShowGoogleFallback(true);
+  }, 5000);
+  return () => clearTimeout(timer);
+}, [isLoaded]);
+
+// Google viewer URL
+const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
 ```
-https://docs.google.com/viewer?url={encoded_pdf_url}&embedded=true
-```
-This works for publicly accessible URLs but may not work with signed URLs that expire.
 
-### Alternative: PDF.js Library
-For complete control, we could integrate PDF.js, but this adds significant complexity and bundle size.
+### Packet Assembler Knowledge Integration
+
+The assembler will use knowledge items to:
+1. Add jurisdiction-specific warnings to cover sheet
+2. Include required documents based on learned patterns
+3. Apply correct fastener patterns from training
+4. Flag potential rejection reasons based on past data
+
+### Knowledge Categories to Extract
+
+- `fbc_code` - Florida Building Code references
+- `permit_requirement` - What documents are needed
+- `inspection_checkpoint` - Inspection sequence and requirements
+- `trade_rule` - Trade-specific rules
+- `hvhz_requirement` - High Velocity Hurricane Zone specifics
+- `noa_product` - Product approval patterns
+- `form_instruction` - How to fill specific forms
+
