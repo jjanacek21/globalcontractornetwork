@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Type for content blocks in the AI response
+interface ContentBlock {
+  type: string;
+  text?: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -108,8 +114,8 @@ Find official building/roofing documents with direct PDF download links.`
           responseText = message.content
         } else if (Array.isArray(message.content)) {
           responseText = message.content
-            .filter(c => c.type === 'text')
-            .map(c => c.text)
+            .filter((c: ContentBlock) => c.type === 'text')
+            .map((c: ContentBlock) => c.text)
             .join('\n')
         }
       }
@@ -128,10 +134,11 @@ Find official building/roofing documents with direct PDF download links.`
 
   } catch (error) {
     console.error('Function error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: errorMessage 
       }),
       { 
         status: 500,
