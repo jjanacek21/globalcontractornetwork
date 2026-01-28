@@ -158,3 +158,6 @@ verify_jwt = false
 
 [functions.project-advisor-ai]
 verify_jwt = false
+
+[functions.search-and-store-documents]
+verify_jwt = false
