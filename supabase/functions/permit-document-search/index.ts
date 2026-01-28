@@ -13,15 +13,15 @@ serve(async (req) => {
   try {
     const { documentType, searchQuery, county, manufacturer, productName } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     console.log("Permit document search request:", { documentType, searchQuery, county, manufacturer, productName });
 
     // Build the search prompt based on document type
-    let systemPrompt = `You are an expert Florida building permit document specialist. Your job is to help contractors find the right permit documents, NOAs, and product approvals.
+    const systemPrompt = `You are an expert Florida building permit document specialist. Your job is to help contractors find the right permit documents, NOAs, and product approvals.
 
 You have extensive knowledge of:
 - Miami-Dade County NOA (Notice of Acceptance) system
@@ -69,7 +69,7 @@ Find relevant NOA documents including:
 - Direct links to the NOA PDFs if available
 
 The Miami-Dade NOA search is at: https://www.miamidade.gov/building/pc-search.asp
-NOA PDFs follow pattern: https://www.miamidade.gov/building/library/noa/[NOA_NUMBER].pdf`;
+NOA PDFs follow pattern: https://www.miamidade.gov/building/library/noa/[NOA_NUMBER_without_decimals].pdf`;
 
     } else if (documentType === "County Requirements") {
       userPrompt = `I need to find ${county || "Florida"} County building department requirements for permits.
@@ -105,16 +105,18 @@ ${productName ? `Product: ${productName}` : ""}
 Find relevant official documents from government building departments, product approval agencies, and manufacturer technical documentation.`;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
@@ -127,19 +129,19 @@ Find relevant official documents from government building departments, product a
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (response.status === 401) {
         return new Response(
-          JSON.stringify({ error: "AI service quota exceeded. Please try again later." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Invalid API key. Please check your ANTHROPIC_API_KEY." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("Anthropic API error:", response.status, errorText);
+      throw new Error(`Anthropic API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content = data.content?.[0]?.text || "";
 
     console.log("AI response received, parsing...");
 
