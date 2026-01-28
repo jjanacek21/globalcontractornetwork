@@ -194,11 +194,13 @@ serve(async (req) => {
 
       if (!downloaded) {
         failCount++;
-        // Mark as attempted
+        // Mark as needing manual upload with helpful message
         await supabase
           .from('product_approvals')
           .update({
-            source_status: 'not_found',
+            source_status: 'needs_manual_upload',
+            last_source_attempt: new Date().toISOString(),
+            source_notes: `Auto-sourcing failed after trying ${attemptedUrls.length} URL patterns. Please upload PDF manually via NOA Intelligence tab.`,
             updated_at: new Date().toISOString()
           })
           .eq('id', product.id);

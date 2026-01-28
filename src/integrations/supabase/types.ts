@@ -6365,6 +6365,7 @@ export type Database = {
           product_line: string | null
           product_name: string
           source_attempts: number | null
+          source_notes: string | null
           source_status: string | null
           source_url_fl: string | null
           source_url_noa: string | null
@@ -6405,6 +6406,7 @@ export type Database = {
           product_line?: string | null
           product_name: string
           source_attempts?: number | null
+          source_notes?: string | null
           source_status?: string | null
           source_url_fl?: string | null
           source_url_noa?: string | null
@@ -6445,6 +6447,7 @@ export type Database = {
           product_line?: string | null
           product_name?: string
           source_attempts?: number | null
+          source_notes?: string | null
           source_status?: string | null
           source_url_fl?: string | null
           source_url_noa?: string | null

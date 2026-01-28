@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -76,6 +77,7 @@ export function TemplateManager() {
     requires_notary: false,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -177,23 +179,34 @@ export function TemplateManager() {
     }
   };
 
-  const viewTemplate = async (filePath: string) => {
-    const { data } = supabase.storage
-      .from('permit-form-templates')
-      .getPublicUrl(filePath);
-    
-    if (data?.publicUrl) {
-      window.open(data.publicUrl, '_blank');
+
+  const viewTemplate = async (filePath: string, formName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('permit-form-templates')
+        .createSignedUrl(filePath, 3600);
+      
+      if (error || !data?.signedUrl) {
+        toast.error('Failed to access document');
+        console.error('Signed URL error:', error);
+        return;
+      }
+      
+      setViewingTemplate({ url: data.signedUrl, name: formName });
+    } catch (err) {
+      console.error('View template error:', err);
+      toast.error('Error accessing template');
     }
   };
 
   const analyzeTemplate = async (templateId: string, filePath: string) => {
-    const { data: urlData } = supabase.storage
+    // Generate signed URL for the analyzer
+    const { data: urlData, error: signedError } = await supabase.storage
       .from('permit-form-templates')
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 3600);
 
-    if (!urlData?.publicUrl) {
-      toast.error('No file URL found for this template');
+    if (signedError || !urlData?.signedUrl) {
+      toast.error('Failed to access file for analysis');
       return;
     }
 
@@ -203,7 +216,8 @@ export function TemplateManager() {
       const { data, error } = await supabase.functions.invoke('permit-packet-analyzer', {
         body: {
           mode: 'detect_and_analyze',
-          fileUrl: urlData.publicUrl,
+          fileUrl: urlData.signedUrl,
+          filePath: filePath,
           fileName: `template-${templateId}.pdf`,
         },
       });
@@ -397,7 +411,7 @@ export function TemplateManager() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => viewTemplate(template.file_path)}
+                              onClick={() => viewTemplate(template.file_path, template.form_name)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -461,6 +475,15 @@ export function TemplateManager() {
           </CardContent>
         </Card>
       </div>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingTemplate}
+        onOpenChange={(open) => !open && setViewingTemplate(null)}
+        url={viewingTemplate?.url || ''}
+        title={viewingTemplate?.name || 'Template Preview'}
+        filename={`${viewingTemplate?.name || 'template'}.pdf`}
+      />
     </div>
   );
 }

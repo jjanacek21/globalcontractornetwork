@@ -264,7 +264,9 @@ async function crawlMiamiDadeSearchResults(
     console.log(`Received ${html.length} characters of HTML`);
     
     if (html.length < 1000) {
-      console.log('HTML too short, site may require form submission');
+      console.log('HTML too short, site may require form submission or login');
+      console.log('This is a dynamic ASP.NET site that requires interactive form submission.');
+      console.log('Try: 1) Use a direct search results URL with data, or 2) Upload PDFs manually.');
       return [];
     }
     
@@ -711,7 +713,9 @@ Deno.serve(async (req) => {
         crawl_status: 'completed',
         last_crawl_at: new Date().toISOString(),
         documents_found: documentsFound,
-        error_message: documentsFound === 0 ? 'No documents found. The site may require manual review or different search parameters.' : null,
+        error_message: documentsFound === 0 
+          ? 'No documents found. This may be because: (1) The site requires form submission (like Miami-Dade search), (2) PDFs are behind authentication, or (3) No matching products were found. Try uploading PDFs manually via the NOA Intelligence tab.' 
+          : null,
       })
       .eq('id', sourceId);
 

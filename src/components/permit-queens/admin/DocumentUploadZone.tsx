@@ -125,19 +125,24 @@ export function DocumentUploadZone({ buildingDeptId, buildingDeptName, onDocumen
 
       if (insertError) throw insertError;
 
-      // Get public URL and trigger AI analysis
-      const { data: urlData } = supabase.storage
+      // Get signed URL for AI analysis
+      const { data: urlData, error: signedError } = await supabase.storage
         .from('permit-form-templates')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
 
-      // Trigger analysis in background
-      supabase.functions.invoke('permit-packet-analyzer', {
-        body: {
-          mode: 'detect_and_analyze',
-          templateId: template.id,
-          fileUrl: urlData.publicUrl
-        }
-      }).catch(err => console.warn('Analysis trigger failed:', err));
+      if (signedError || !urlData?.signedUrl) {
+        console.warn('Could not get signed URL for analysis:', signedError);
+      } else {
+        // Trigger analysis in background with signed URL
+        supabase.functions.invoke('permit-packet-analyzer', {
+          body: {
+            mode: 'detect_and_analyze',
+            templateId: template.id,
+            fileUrl: urlData.signedUrl,
+            filePath: filePath
+          }
+        }).catch(err => console.warn('Analysis trigger failed:', err));
+      }
 
       toast.success('Document uploaded successfully', {
         description: 'AI analysis has started to detect fillable fields'
