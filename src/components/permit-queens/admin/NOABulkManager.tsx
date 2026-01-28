@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,8 @@ import {
   Database,
   Zap,
   Brain,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -37,8 +38,14 @@ export function NOABulkManager() {
     pending: number;
     aiExtracted: number;
     avgConfidence: number;
+    knowledgeItems: number;
   } | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  // Load stats on mount
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   const loadStats = async () => {
     setIsLoadingStats(true);
@@ -69,13 +76,19 @@ export function NOABulkManager() {
         avgConfidence = totalConfidence / aiExtracted.length;
       }
 
+      // Get AI knowledge item count
+      const { count: knowledgeCount } = await supabase
+        .from('permit_ai_knowledge')
+        .select('*', { count: 'exact', head: true });
+
       if (!allError && !pdfError && !pendingError && !aiError) {
         setStats({
           total: allProducts?.length || 0,
           withPdf: withPdf?.length || 0,
           pending: pending?.length || 0,
           aiExtracted: aiExtracted?.length || 0,
-          avgConfidence: avgConfidence
+          avgConfidence: avgConfidence,
+          knowledgeItems: knowledgeCount || 0
         });
       }
     } catch (e) {
@@ -160,7 +173,7 @@ export function NOABulkManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats Section */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           {stats && (
             <>
               <div className="p-3 bg-muted/50 rounded-lg text-center">
@@ -187,6 +200,11 @@ export function NOABulkManager() {
                 <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-blue-600" />
                 <div className="text-2xl font-bold text-blue-600">{(stats.avgConfidence * 100).toFixed(0)}%</div>
                 <div className="text-xs text-muted-foreground">Avg Confidence</div>
+              </div>
+              <div className="p-3 bg-indigo-500/10 rounded-lg text-center col-span-2 md:col-span-1">
+                <Sparkles className="h-5 w-5 mx-auto mb-1 text-indigo-600" />
+                <div className="text-2xl font-bold text-indigo-600">{stats.knowledgeItems}</div>
+                <div className="text-xs text-muted-foreground">AI Knowledge Items</div>
               </div>
             </>
           )}
