@@ -1,74 +1,140 @@
 
 
-# Fix search-and-store-documents Edge Function
+# Fix AI Model & Template Viewing Issues
 
-## Problem
+## Overview
 
-The current `search-and-store-documents/index.ts` has TypeScript errors:
-1. Parameter `c` implicitly has `any` type in `.filter()` and `.map()` calls
-2. `error` is of type `unknown` in the catch block
+Two issues need to be addressed:
+1. Update edge functions to use Claude instead of Gemini for AI operations
+2. Fix template viewing by handling missing storage files gracefully
 
-## Solution
+---
 
-Replace the current complex implementation with your simpler, cleaner version that uses the Lovable AI Gateway, with proper TypeScript types added.
+## Issue 1: Switch AI Functions to Claude
 
-## Code to Deploy
+### Functions to Update
 
-Your provided code with TypeScript fixes applied:
+| Function | Current Model | New Model |
+|----------|--------------|-----------|
+| `permit-expediter-brain` | `google/gemini-3-flash-preview` | `claude-sonnet-4-20250514` |
+| `ai-quote-generator` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
+| `process-training-book` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
+| `homeowner-assistant` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
+| `coating-quote-ai` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
+| `permit-gap-detector-ai` | `google/gemini-3-flash-preview` | `claude-sonnet-4-20250514` |
+| `noa-metadata-extractor` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
+| `permit-packet-analyzer` | `google/gemini-2.5-flash` | `claude-sonnet-4-20250514` |
 
+### What Changes
+
+Each function's AI call will change from:
 ```typescript
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Type for content blocks in the response
-interface ContentBlock {
-  type: string;
-  text?: string;
-}
-
-serve(async (req) => {
-  // ... (your code with these fixes)
-
-  // Fix 1: Add type annotation to filter/map
-  responseText = message.content
-    .filter((c: ContentBlock) => c.type === 'text')
-    .map((c: ContentBlock) => c.text)
-    .join('\n')
-
-  // Fix 2: Properly handle unknown error type
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  }
+body: JSON.stringify({
+  model: "google/gemini-2.5-flash",
+  // or "google/gemini-3-flash-preview"
+  ...
 })
 ```
 
-## Key Differences from Current Code
+To:
+```typescript
+body: JSON.stringify({
+  model: "claude-sonnet-4-20250514",
+  ...
+})
+```
 
-| Aspect | Current (Complex) | Your Version (Simple) |
-|--------|-------------------|----------------------|
-| API Used | Anthropic Direct | Lovable AI Gateway |
-| Features | AI + Firecrawl + Storage | AI Search Only |
-| Lines of Code | ~547 | ~120 |
-| Purpose | Full orchestration | Document search |
+---
+
+## Issue 2: Fix Template Viewing
+
+### Root Cause
+
+The database contains templates with placeholder file paths that don't exist in storage:
+- `pending/miami-dade-hvhz-roofing.pdf` - File doesn't exist
+- `pending/florida-noc.pdf` - File doesn't exist
+- `pending/broward-permit-app.pdf` - File doesn't exist
+
+When you click "View" on these templates, the signed URL generation fails with "Object not found (404)".
+
+### Solution: Add File Existence Validation
+
+Update `TemplateManager.tsx` to:
+1. Check if the file actually exists before trying to generate a signed URL
+2. Show a clear "File Missing" status badge for templates with missing files
+3. Allow re-uploading files for templates with missing PDFs
+
+### Code Changes
+
+**File: `src/components/permit-queens/admin/TemplateManager.tsx`**
+
+1. Add validation before viewing:
+```typescript
+const viewTemplate = async (filePath: string, formName: string) => {
+  // Check if file path looks like a placeholder
+  if (filePath.startsWith('pending/')) {
+    toast.error('This template file is missing. Please re-upload the PDF.');
+    return;
+  }
+  
+  try {
+    const { data, error } = await supabase.storage
+      .from('permit-form-templates')
+      .createSignedUrl(filePath, 3600);
+    // ... rest of function
+  }
+};
+```
+
+2. Update status display to show "Missing File" for pending paths:
+```typescript
+{template.file_path ? (
+  template.file_path.startsWith('pending/') ? (
+    <Badge variant="destructive" className="...">
+      <AlertTriangle className="h-3 w-3 mr-1" />
+      File Missing
+    </Badge>
+  ) : (
+    <Badge className="bg-green-500/10 text-green-600 ...">
+      <CheckCircle2 className="h-3 w-3 mr-1" />
+      PDF Uploaded
+    </Badge>
+  )
+) : (
+  <Badge variant="secondary">No File</Badge>
+)}
+```
+
+3. Add a file re-upload button for templates with missing files
+
+---
 
 ## Files to Modify
 
-| File | Action |
-|------|--------|
-| `supabase/functions/search-and-store-documents/index.ts` | Replace with your code + TypeScript fixes |
+| File | Changes |
+|------|---------|
+| `supabase/functions/permit-expediter-brain/index.ts` | Change model to Claude |
+| `supabase/functions/ai-quote-generator/index.ts` | Change model to Claude |
+| `supabase/functions/process-training-book/index.ts` | Change model to Claude |
+| `supabase/functions/homeowner-assistant/index.ts` | Change model to Claude |
+| `supabase/functions/coating-quote-ai/index.ts` | Change model to Claude |
+| `supabase/functions/permit-gap-detector-ai/index.ts` | Change model to Claude |
+| `supabase/functions/noa-metadata-extractor/index.ts` | Change model to Claude |
+| `supabase/functions/permit-packet-analyzer/index.ts` | Change model to Claude |
+| `src/components/permit-queens/admin/TemplateManager.tsx` | Add file validation and missing file handling |
 
-## TypeScript Fixes Applied
+---
 
-1. **ContentBlock interface**: Defines the shape of content blocks in the AI response
-2. **Type annotations**: `(c: ContentBlock)` instead of implicit `any`
-3. **Error handling**: `error instanceof Error ? error.message : 'Unknown error'`
+## Technical Notes
+
+### Claude Model Compatibility
+The Lovable AI Gateway supports Claude models with the same API format as Gemini. No changes needed to the request structure beyond the model name.
+
+### Storage File Paths
+- Old placeholder format: `pending/[name].pdf`
+- New correct format: `[building_dept_uuid]/[trade]/[filename]-[timestamp].pdf`
+
+Templates with `pending/` paths need either:
+1. The actual PDF to be uploaded
+2. The database record to be deleted if the template is no longer needed
 
