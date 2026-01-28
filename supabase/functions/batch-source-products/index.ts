@@ -381,7 +381,76 @@ Deno.serve(async (req) => {
           product.fl_product_approval,
           product.product_category,
         );
+        // If Firecrawl didn't find anything, try Claude web search as fallback
+        if (!foundDocs.noa_url && !foundDocs.fl_url) {
+          console.log("Firecrawl found nothing, trying Claude web search fallback...");
 
+          try {
+            const claudeSearchQuery = product.noa_number
+              ? `Miami-Dade NOA ${product.noa_number} ${product.manufacturer} ${product.product_name} PDF site:miamidade.gov`
+              : `Florida Product Approval ${product.fl_product_approval || ""} ${product.manufacturer} ${product.product_name} PDF site:floridabuilding.org`;
+
+            const claudeResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                messages: [
+                  {
+                    role: "user",
+                    content: `Find the direct PDF download URL for this product approval document:
+${claudeSearchQuery}
+
+Return ONLY the direct PDF URL, nothing else.`,
+                  },
+                ],
+                tools: [
+                  {
+                    type: "web_search_20250305",
+                    name: "web_search",
+                  },
+                ],
+                max_tokens: 1000,
+              }),
+            });
+
+            if (claudeResponse.ok) {
+              const claudeResult = await claudeResponse.json();
+              let responseText = "";
+
+              const messageContent = claudeResult.choices?.[0]?.message?.content;
+              if (typeof messageContent === "string") {
+                responseText = messageContent;
+              } else if (Array.isArray(messageContent)) {
+                responseText = messageContent
+                  .filter((c: any) => c.type === "text")
+                  .map((c: any) => c.text)
+                  .join("\n");
+              }
+
+              // Extract PDF URLs
+              const pdfUrlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+\.pdf/gi;
+              const urls = responseText.match(pdfUrlRegex) || [];
+
+              const noaUrl = urls.find((url) => url.includes("miamidade.gov"));
+              const flUrl = urls.find((url) => url.includes("floridabuilding.org"));
+
+              if (noaUrl) {
+                foundDocs.noa_url = noaUrl;
+                console.log(`✅ Claude found NOA: ${noaUrl}`);
+              }
+              if (flUrl) {
+                foundDocs.fl_url = flUrl;
+                console.log(`✅ Claude found FL approval: ${flUrl}`);
+              }
+            }
+          } catch (claudeError) {
+            console.error("Claude fallback search failed:", claudeError);
+          }
+        }
         const updateData: Record<string, any> = {
           last_source_attempt: new Date().toISOString(),
         };
