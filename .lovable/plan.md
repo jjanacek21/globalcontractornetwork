@@ -1,53 +1,75 @@
 
 
-# Add Anthropic SDK - Options & Recommendation
+# Use Anthropic API for Permit Document Search
 
-## Current Situation
+## Overview
 
-Your project already uses the **Lovable AI Gateway** for AI capabilities, which provides access to Google Gemini and OpenAI GPT-5 models without requiring additional API keys or SDKs.
+Update the `permit-document-search` edge function to use your `ANTHROPIC_API_KEY` directly with Claude models instead of the Lovable AI Gateway.
 
-## Important Technical Consideration
+## What Changes
 
-The `@anthropic-ai/sdk` is a **server-side SDK** - it's designed for Node.js/Deno backends, not browser environments. Using it in frontend React code would:
-- Expose your API key (security risk)
-- Fail due to CORS restrictions
-- Require a backend proxy anyway
+### Edge Function Update
 
-## Options
+The `permit-document-search/index.ts` function will be modified to:
 
-### Option 1: Add to package.json (Limited Utility)
-Add the npm package to the frontend, though it won't work in browser code.
+1. **Use Anthropic API directly** - Call `https://api.anthropic.com/v1/messages` instead of the Lovable AI Gateway
+2. **Use Claude model** - Leverage Claude 3.5 Sonnet (`claude-sonnet-4-20250514`) for permit document searches
+3. **Use your ANTHROPIC_API_KEY** - Already configured in your secrets
 
-```json
-"@anthropic-ai/sdk": "^0.39.0"
-```
+### API Differences
 
-### Option 2: Create Anthropic Edge Function (Recommended if you need Claude)
-Create a new Supabase Edge Function that uses the Anthropic SDK via Deno:
+| Current (Lovable Gateway) | New (Anthropic Direct) |
+|---------------------------|------------------------|
+| `ai.gateway.lovable.dev/v1/chat/completions` | `api.anthropic.com/v1/messages` |
+| OpenAI-compatible format | Anthropic Messages API format |
+| `LOVABLE_API_KEY` | `ANTHROPIC_API_KEY` |
+| `google/gemini-3-flash-preview` | `claude-sonnet-4-20250514` |
+
+## Technical Implementation
 
 ```typescript
-// supabase/functions/anthropic-chat/index.ts
-import Anthropic from "npm:@anthropic-ai/sdk";
-
-const client = new Anthropic({
-  apiKey: Deno.env.get("ANTHROPIC_API_KEY")
+// Before: Lovable AI Gateway
+const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
+  body: JSON.stringify({
+    model: "google/gemini-3-flash-preview",
+    messages: [...]
+  })
 });
 
-// Handle chat requests...
+// After: Anthropic API Direct
+const response = await fetch("https://api.anthropic.com/v1/messages", {
+  headers: {
+    "x-api-key": ANTHROPIC_API_KEY,
+    "anthropic-version": "2023-06-01",
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }]
+  })
+});
 ```
 
-This would require adding your `ANTHROPIC_API_KEY` as a secret.
+## Response Parsing Adjustment
 
-### Option 3: Continue Using Lovable AI Gateway (No Changes)
-Your current implementation already works with powerful AI models. No additional SDK needed.
+Anthropic's response format differs from OpenAI:
+- OpenAI: `data.choices[0].message.content`
+- Anthropic: `data.content[0].text`
 
-## Recommendation
+The parsing logic will be updated accordingly.
 
-If you specifically need **Claude** models (Claude 3.5 Sonnet, Claude 3 Opus, etc.), go with **Option 2** - I'll create an edge function that properly uses the Anthropic SDK.
+## Files to Modify
 
-If you just need general AI capabilities, your existing Lovable AI Gateway integration already provides this without extra setup.
+| File | Change |
+|------|--------|
+| `supabase/functions/permit-document-search/index.ts` | Switch from Lovable Gateway to Anthropic API |
 
----
+## Benefits of Using Claude
 
-**Please let me know which option you'd like to proceed with**, and I'll implement it accordingly.
+- **Your own API key** - Full control over usage and billing
+- **Claude's strengths** - Excellent at structured data extraction and following complex instructions
+- **Direct access** - No intermediary gateway
 
