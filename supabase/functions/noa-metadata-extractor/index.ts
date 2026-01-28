@@ -94,7 +94,7 @@ IMPORTANT: Only return the JSON object, no additional text.`;
     }
 
     const aiPayload = {
-      model: "google/gemini-2.5-flash",
+      model: "claude-sonnet-4-20250514",
       messages: [
         {
           role: "user",

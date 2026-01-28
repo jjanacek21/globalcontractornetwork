@@ -88,7 +88,7 @@ Check all requirements, identify gaps, and calculate completion percentage.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'claude-sonnet-4-20250514',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }

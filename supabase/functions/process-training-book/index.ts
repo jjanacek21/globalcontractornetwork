@@ -233,7 +233,7 @@ Return ONLY the JSON array, no other text.`;
         "Authorization": `Bearer ${lovableApiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-sonnet-4-20250514",
         messages: [
           {
             role: "user",
