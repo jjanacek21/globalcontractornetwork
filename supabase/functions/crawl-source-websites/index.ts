@@ -508,11 +508,39 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { sourceId, url, targetCategory, documentTypes, crawlDepth }: CrawlRequest = await req.json();
+    const requestBody: CrawlRequest = await req.json();
+    let { sourceId, url, targetCategory, documentTypes, crawlDepth } = requestBody;
 
     if (!url || !sourceId) {
       return new Response(
         JSON.stringify({ success: false, error: 'URL and sourceId are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize URL - remove common prefixes users might accidentally include
+    url = url.trim();
+    const prefixesToRemove = ['Enter this URL:', 'URL:', 'Enter URL:', 'Link:'];
+    for (const prefix of prefixesToRemove) {
+      if (url.toLowerCase().startsWith(prefix.toLowerCase())) {
+        url = url.substring(prefix.length).trim();
+      }
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      await supabase
+        .from('custom_source_websites')
+        .update({ 
+          crawl_status: 'error', 
+          error_message: `Invalid URL format: "${url.substring(0, 50)}...". Please enter a valid URL starting with https://` 
+        })
+        .eq('id', sourceId);
+
+      return new Response(
+        JSON.stringify({ success: false, error: `Invalid URL format. Please enter a valid URL starting with https://` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
