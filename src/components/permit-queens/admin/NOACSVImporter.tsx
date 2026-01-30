@@ -55,15 +55,28 @@ export function NOACSVImporter() {
   const [showPreview, setShowPreview] = useState(true);
 
   const parseCSV = (text: string): CSVRow[] => {
-    const lines = text.trim().split('\n');
+    // Remove BOM if present
+    let cleanText = text.replace(/^\uFEFF/, '');
+    
+    // Normalize line endings
+    cleanText = cleanText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    const lines = cleanText.trim().split('\n');
     if (lines.length < 2) return [];
 
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/"/g, ''));
+    // Parse and clean headers
+    const rawHeaders = parseCSVLine(lines[0]);
+    const headers = rawHeaders.map(h => 
+      h.toLowerCase().trim().replace(/"/g, '').replace(/[^\w_-]/g, '_')
+    );
     
-    // Map expected column names
+    console.log('CSV Headers found:', headers);
+    
+    // Map expected column names (more flexible matching)
     const columnMap: Record<string, string> = {
       'noa_number': 'noa_number',
       'noa': 'noa_number',
+      'noa_': 'noa_number',
       'manufacturer': 'manufacturer',
       'applicant': 'manufacturer',
       'subcategory': 'subcategory',
@@ -71,6 +84,7 @@ export function NOACSVImporter() {
       'material': 'material',
       'description': 'description',
       'mdp_minus': 'mdp_minus',
+      'mdp_': 'mdp_minus',
       'mdp-': 'mdp_minus',
       'expires': 'expires',
       'expiration': 'expires',
@@ -82,29 +96,49 @@ export function NOACSVImporter() {
 
     const headerIndices: Record<string, number> = {};
     headers.forEach((h, idx) => {
-      const mapped = columnMap[h];
-      if (mapped) {
-        headerIndices[mapped] = idx;
+      // Try exact match first
+      if (columnMap[h]) {
+        headerIndices[columnMap[h]] = idx;
+      } else {
+        // Try partial match for flexibility
+        for (const [key, mapped] of Object.entries(columnMap)) {
+          if (h.includes(key) || key.includes(h)) {
+            if (!headerIndices[mapped]) {
+              headerIndices[mapped] = idx;
+            }
+          }
+        }
       }
     });
 
+    console.log('Column indices mapped:', headerIndices);
+
     const rows: CSVRow[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = parseCSVLine(line);
       if (values.length === 0) continue;
 
-      rows.push({
-        noa_number: values[headerIndices['noa_number']] || '',
-        manufacturer: values[headerIndices['manufacturer']] || '',
-        subcategory: values[headerIndices['subcategory']] || '',
-        material: values[headerIndices['material']] || '',
-        description: values[headerIndices['description']] || '',
-        mdp_minus: values[headerIndices['mdp_minus']] || '',
-        expires: values[headerIndices['expires']] || '',
-        pdf_url: values[headerIndices['pdf_url']] || '',
-      });
+      const row: CSVRow = {
+        noa_number: (values[headerIndices['noa_number']] || '').trim(),
+        manufacturer: (values[headerIndices['manufacturer']] || '').trim(),
+        subcategory: (values[headerIndices['subcategory']] || '').trim(),
+        material: (values[headerIndices['material']] || '').trim(),
+        description: (values[headerIndices['description']] || '').trim(),
+        mdp_minus: (values[headerIndices['mdp_minus']] || '').trim(),
+        expires: (values[headerIndices['expires']] || '').trim(),
+        pdf_url: (values[headerIndices['pdf_url']] || '').trim(),
+      };
+      
+      // Only add if we have at least some data
+      if (row.noa_number || row.manufacturer || row.description) {
+        rows.push(row);
+      }
     }
 
+    console.log('First parsed row:', rows[0]);
     return rows;
   };
 
