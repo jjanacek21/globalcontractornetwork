@@ -99,36 +99,36 @@ export default function PermitQueensAuth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-amber-500/20 bg-zinc-950/80 backdrop-blur-sm">
+      <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
-          <Link to="/permit-queens" className="flex items-center gap-2 text-amber-500 hover:text-amber-400 transition-colors w-fit">
+          <Link to="/permit-queens" className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors w-fit">
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to Permit Queens</span>
+            <span>Back to Permit Expediting</span>
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md bg-zinc-900/50 border-amber-500/20">
+        <Card className="w-full max-w-md border border-border shadow-lg">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Crown className="h-8 w-8 text-amber-500" />
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Crown className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl text-white">Permit Expediting Portal</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardTitle className="text-2xl text-foreground">Permit Expediting Portal</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Track your permits, documents, and project status
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-zinc-800/50">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black">
+              <TabsList className="grid w-full grid-cols-2 bg-muted">
+                <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   Sign In
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black">
+                <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   Sign Up
                 </TabsTrigger>
               </TabsList>
@@ -136,7 +136,7 @@ export default function PermitQueensAuth() {
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                    <Label htmlFor="email" className="text-foreground">Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -144,11 +144,11 @@ export default function PermitQueensAuth() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-zinc-300">Password</Label>
+                    <Label htmlFor="password" className="text-foreground">Password</Label>
                     <Input
                       id="password"
                       type="password"
@@ -156,12 +156,12 @@ export default function PermitQueensAuth() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                     />
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                     disabled={loading}
                   >
                     {loading ? "Signing in..." : "Sign In"}
@@ -173,7 +173,7 @@ export default function PermitQueensAuth() {
                 <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-zinc-300">First Name</Label>
+                      <Label htmlFor="firstName" className="text-foreground">First Name</Label>
                       <Input
                         id="firstName"
                         type="text"
@@ -181,11 +181,11 @@ export default function PermitQueensAuth() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-zinc-300">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-foreground">Last Name</Label>
                       <Input
                         id="lastName"
                         type="text"
@@ -193,12 +193,12 @@ export default function PermitQueensAuth() {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupEmail" className="text-zinc-300">Email</Label>
+                    <Label htmlFor="signupEmail" className="text-foreground">Email</Label>
                     <Input
                       id="signupEmail"
                       type="email"
@@ -206,11 +206,11 @@ export default function PermitQueensAuth() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupPassword" className="text-zinc-300">Password</Label>
+                    <Label htmlFor="signupPassword" className="text-foreground">Password</Label>
                     <Input
                       id="signupPassword"
                       type="password"
@@ -219,12 +219,12 @@ export default function PermitQueensAuth() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
-                      className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                     />
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                     disabled={loading}
                   >
                     {loading ? "Creating account..." : "Create Account"}
