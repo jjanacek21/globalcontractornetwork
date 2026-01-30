@@ -1,91 +1,117 @@
 
-# Fix Product Update Error: Missing `ul_listing` Column
 
-## Problem
+# Fix Custom Source Website Crawl Error
 
-When saving edits to a product in the "Extracted Products" tab, the operation fails with:
+## Problem Summary
 
-```
-Could not find the 'ul_listing' column of 'product_approvals' in the schema cache
-```
+When clicking the "Play" button to crawl the custom source website, the error "Edge Function returned a non-2xx status code" appears. Investigation revealed two issues:
 
-## Root Cause
+1. **Stale Error Display**: The previous crawl attempt failed because the URL had an accidental prefix (`"Enter this URL:     "`). The database URL was corrected, but the error status from that failed attempt is still displaying in the UI.
 
-The `ExtractedProductsTab.tsx` component uses `ul_listing` as a field name, but the actual database column is named `uil_number`. This is a **field name mismatch**.
+2. **Zero Results from Parse**: Even when the crawl succeeds, the Miami-Dade table parser returns 0 documents. The current search URL may not be returning actual product data.
 
-| Code Uses | Database Has | Purpose |
-|-----------|--------------|---------|
-| `ul_listing` | ❌ Does not exist | - |
-| - | `uil_number` | UL/UIL listing number (text) |
-| - | `ul_listing_url` | URL to UL listing PDF |
+## Root Cause Analysis
+
+| Issue | Cause | Status |
+|-------|-------|--------|
+| Edge function 500 error | URL had prefix text | **Fixed** - URL is now clean |
+| Error still showing | UI showing stale `crawl_status: 'error'` | Need to re-crawl |
+| 0 documents found | Search URL incomplete or no matching products | Needs valid search URL |
 
 ## Solution
 
-Update `ExtractedProductsTab.tsx` to use `uil_number` instead of `ul_listing` throughout:
+### Fix 1: Add Better Error Recovery in Frontend
 
-### Changes Required
+Update `CustomSourceManager.tsx` to show more helpful error messages and clear stale errors before starting a new crawl.
 
-**File: `src/components/admin/ExtractedProductsTab.tsx`**
+**Changes:**
+- Add a loading state that clears error message when starting a new crawl
+- Show more descriptive error messages based on the response
+- Add a tooltip showing the full error message
 
-1. **Update the `ExtractedProduct` type** (line ~31):
-```typescript
-// Change from:
-ul_listing?: string | null;
-// To:
-uil_number?: string | null;
-```
+### Fix 2: Improve Miami-Dade URL Validation
 
-2. **Update the `EditFormData` type** (line ~49):
-```typescript
-// Change from:
-ul_listing: string;
-// To:
-uil_number: string;
-```
+Update the edge function to validate and warn about incomplete Miami-Dade search URLs.
 
-3. **Update initial state** (line ~84):
-```typescript
-// Change from:
-ul_listing: "",
-// To:
-uil_number: "",
-```
+**Changes:**
+- Check if the Miami-Dade URL is a search results page with actual search criteria
+- Log a warning if the URL appears to be a form page rather than a results page
+- Return a helpful message guiding users to use a complete search URL
 
-4. **Update product mapping** (line ~140):
-```typescript
-// Change from:
-ul_listing: (p as { ul_listing?: string | null }).ul_listing ?? null,
-// To:
-uil_number: p.uil_number ?? null,
-```
+### Fix 3: Better Table Parsing Feedback
 
-5. **Update form data initialization** (line ~240):
-```typescript
-// Change from:
-ul_listing: product.ul_listing || "",
-// To:
-uil_number: product.uil_number || "",
-```
+Add logging and feedback about what the parser found in the HTML.
 
-6. **Update the database update call** (line ~258):
-```typescript
-// Change from:
-ul_listing: editFormData.ul_listing || null,
-// To:
-uil_number: editFormData.uil_number || null,
-```
-
-7. **Update any form labels/inputs** that reference "UL Listing" to use `uil_number` as the field key while keeping user-friendly labels like "UL/UIL Number".
+**Changes:**
+- Log sample HTML content for debugging
+- Count tables found vs tables with data
+- Return diagnostic info in the response
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/admin/ExtractedProductsTab.tsx` | Replace all `ul_listing` references with `uil_number` |
+| `src/components/permit-queens/CustomSourceManager.tsx` | Improve error handling, add retry logic, clear stale errors |
+| `supabase/functions/crawl-source-websites/index.ts` | Add Miami-Dade URL validation, improve logging, return diagnostic info |
+
+## Technical Details
+
+### Frontend Changes (CustomSourceManager.tsx)
+
+```typescript
+// Before calling the edge function, clear the previous error
+await supabase
+  .from('custom_source_websites')
+  .update({ 
+    crawl_status: 'crawling', 
+    error_message: null,  // Clear previous error
+    documents_found: 0    // Reset count
+  })
+  .eq('id', source.id);
+
+// After response, show more helpful messages
+if (data?.success) {
+  if (data.totalDiscovered === 0) {
+    toast.warning(`Crawl complete but no documents found. The search may have returned no results.`);
+  } else {
+    toast.success(`Found ${data.documentsFound} documents`);
+  }
+}
+```
+
+### Edge Function Changes
+
+```typescript
+// Add validation for Miami-Dade search URLs
+function validateMiamiDadeSearchUrl(url: string): { valid: boolean; message?: string } {
+  // Check if URL has actual search parameters
+  const hasSearchCriteria = url.includes('AdvancedSearch=Go') && 
+    (url.includes('fldNOA=') || url.includes('Classification='));
+    
+  if (!hasSearchCriteria) {
+    return {
+      valid: false,
+      message: 'This appears to be the search form, not search results. Please perform a search on the Miami-Dade site and copy the URL after results appear.'
+    };
+  }
+  
+  return { valid: true };
+}
+```
+
+## Immediate Workaround
+
+The user can try these steps right now:
+
+1. **Click the Play button again** - The edge function should now work since the URL is clean
+2. **Use a valid search URL** - Go to the Miami-Dade NOA search, perform an actual search (e.g., search for "roofing" products), and copy that results URL
+3. **Update the source URL** - Delete the current source and add a new one with the complete search results URL
 
 ## Expected Outcome
 
-After this fix:
-- Product edits will save successfully to the database
-- The UL/UIL number field will work correctly
-- No more "column not found" errors
+After implementation:
+- Error messages will be cleared when starting a new crawl
+- Users will see helpful guidance if the search returns no results
+- Better logging will help diagnose table parsing issues
+- Miami-Dade URLs will be validated for completeness
+
