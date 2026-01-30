@@ -47,6 +47,39 @@ const MIAMI_DADE_SEARCH_PATTERNS = [
   'search_result',
 ];
 
+// Validate Miami-Dade search URL has actual search criteria
+function validateMiamiDadeSearchUrl(url: string): { valid: boolean; message?: string } {
+  const lowerUrl = url.toLowerCase();
+  
+  // Check if this is a Miami-Dade URL
+  if (!lowerUrl.includes('miamidade.gov')) {
+    return { valid: true }; // Not a Miami-Dade URL, skip validation
+  }
+  
+  // Check if the URL includes search parameters that indicate it's a results page
+  const hasAdvancedSearch = lowerUrl.includes('advancedsearch=go');
+  const hasNoaSearch = /fldnoa=[^&]+[a-z0-9]/i.test(url); // Has actual NOA value
+  const hasClassification = /classification=\d+[^,0]/.test(url); // Has non-zero classification
+  const hasApplicant = /applicant=[^&]+[a-z]/i.test(url); // Has applicant name
+  
+  // If it's a search page but appears to have no real search criteria
+  if (lowerUrl.includes('pc-result_app.asp') || lowerUrl.includes('pc_result')) {
+    if (!hasAdvancedSearch) {
+      return {
+        valid: false,
+        message: 'This URL appears to be the search form, not search results. Please: (1) Go to the Miami-Dade NOA search page, (2) Enter search criteria (e.g., a manufacturer name or NOA number), (3) Click Search, (4) Copy the URL from your browser after results appear.'
+      };
+    }
+    
+    // Check if search has meaningful criteria
+    if (!hasNoaSearch && !hasApplicant) {
+      return { valid: true }; // Allow it but proceed with warning logged above
+    }
+  }
+  
+  return { valid: true };
+}
+
 function isDynamicSite(url: string): boolean {
   const lowerUrl = url.toLowerCase();
   return DYNAMIC_SITE_PATTERNS.some(pattern => lowerUrl.includes(pattern));
@@ -563,6 +596,29 @@ Deno.serve(async (req) => {
     console.log(`Starting crawl for source ${sourceId}: ${url}`);
     console.log(`Target category: ${targetCategory}, Document types: ${documentTypes.join(', ')}`);
     console.log(`Site type: ${isDynamicSite(url) ? 'DYNAMIC' : 'STATIC'}, Miami-Dade Search: ${isMiamiDadeSearchResults(url)}`);
+
+    // Validate Miami-Dade URLs for proper search criteria
+    const urlValidation = validateMiamiDadeSearchUrl(url);
+    if (!urlValidation.valid) {
+      console.log('Miami-Dade URL validation failed:', urlValidation.message);
+      
+      await supabase
+        .from('custom_source_websites')
+        .update({ 
+          crawl_status: 'error', 
+          error_message: urlValidation.message 
+        })
+        .eq('id', sourceId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: urlValidation.message,
+          hint: 'Go to https://www.miamidade.gov/building/pc-searchnoa.asp, perform a search, then copy the URL from the results page.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     await supabase
       .from('custom_source_websites')
