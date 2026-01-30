@@ -13,6 +13,7 @@ import { SmartDocumentManager } from "@/components/permit-queens/admin/SmartDocu
 import { PropertyDataEnrichment } from "@/components/permit-queens/admin/PropertyDataEnrichment";
 import { NOABulkManager } from "@/components/permit-queens/admin/NOABulkManager";
 import { NOAUploadQueue } from "@/components/permit-queens/admin/NOAUploadQueue";
+import { NOACSVImporter } from "@/components/permit-queens/admin/NOACSVImporter";
 import PermitBatchUploader from "./PermitBatchUploader";
 import PermitTrainingUploader from "./PermitTrainingUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
@@ -186,6 +187,7 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="noa-intelligence" className="mt-4">
           <div className="space-y-6">
+            <NOACSVImporter />
             <NOABulkManager />
             <NOAUploadQueue />
           </div>
