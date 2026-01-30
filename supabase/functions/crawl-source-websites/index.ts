@@ -162,50 +162,115 @@ function parseMiamiDadeTable(html: string): ExtractedDocument[] {
   const documents: ExtractedDocument[] = [];
   
   console.log('Parsing Miami-Dade search results HTML table...');
+  console.log(`HTML length: ${html.length} chars`);
   
-  // Find all table rows - the results table has NOA in first column
-  // Match rows that contain NOA patterns
+  // Debug: Show sample of HTML
+  const sampleStart = html.indexOf('<table');
+  const sampleEnd = Math.min(sampleStart + 2000, html.length);
+  if (sampleStart > -1) {
+    console.log(`Found <table> at position ${sampleStart}`);
+    console.log(`Table sample: ${html.substring(sampleStart, sampleEnd).replace(/\s+/g, ' ').substring(0, 500)}`);
+  } else {
+    console.log('No <table> tag found in HTML!');
+    // Check what we do have
+    console.log(`First 500 chars: ${html.substring(0, 500)}`);
+  }
+  
+  // Count tables in the HTML
+  const tableMatches = html.match(/<table[^>]*>/gi);
+  console.log(`Found ${tableMatches?.length || 0} tables in HTML`);
+  
+  // Find all table rows
   const rowPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  const cellPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-  
+  const allRows: string[] = [];
   let rowMatch;
-  let rowCount = 0;
   
   while ((rowMatch = rowPattern.exec(html)) !== null) {
-    const rowContent = rowMatch[1];
-    
-    // Skip header rows (contain <th> or header text)
-    if (rowContent.includes('<th') || rowContent.includes('APPLICANT') || rowContent.includes('CATEGORY')) {
+    allRows.push(rowMatch[1]);
+  }
+  console.log(`Found ${allRows.length} total <tr> rows`);
+  
+  // Debug: Log first few rows to understand structure
+  if (allRows.length > 0) {
+    console.log(`First row sample (stripped): ${allRows[0].replace(/<[^>]+>/g, ' | ').replace(/\s+/g, ' ').substring(0, 300)}`);
+  }
+  if (allRows.length > 1) {
+    console.log(`Second row sample (stripped): ${allRows[1].replace(/<[^>]+>/g, ' | ').replace(/\s+/g, ' ').substring(0, 300)}`);
+  }
+  if (allRows.length > 2) {
+    console.log(`Third row sample (stripped): ${allRows[2].replace(/<[^>]+>/g, ' | ').replace(/\s+/g, ' ').substring(0, 300)}`);
+  }
+  
+  // NOA patterns - Miami-Dade uses formats like "24-0101.01", "23-0525.05", etc.
+  // Also try without dashes: "240101.01" or with different separators
+  const noaPatterns = [
+    /(\d{2}-\d{4}\.\d{2})/,           // Standard: 24-0101.01
+    /(\d{2}\s*-\s*\d{4}\s*\.\s*\d{2})/, // With spaces: 24 - 0101 . 01
+    /(\d{6,8}\.\d{2})/,                // No dash: 240101.01
+    /NOA[:\s#]*(\d{2}-?\d{4}\.?\d{2})/i, // With NOA prefix
+    /(\d{2}-\d{4}-\d{2})/,             // Dash variant: 24-0101-01
+  ];
+  
+  let rowCount = 0;
+  let skippedNoPattern = 0;
+  let skippedTooFewCells = 0;
+  
+  for (const rowContent of allRows) {
+    // Skip header rows
+    if (rowContent.includes('<th') || 
+        rowContent.toUpperCase().includes('>APPLICANT<') || 
+        rowContent.toUpperCase().includes('>NOA<') ||
+        rowContent.toUpperCase().includes('>CATEGORY<')) {
       continue;
     }
     
-    // Check if this row has an NOA number pattern
-    const noaMatch = rowContent.match(/(\d{2}-\d{4}\.\d{2})/);
-    if (!noaMatch) continue;
+    // Try all NOA patterns
+    let noaNumber: string | null = null;
+    for (const pattern of noaPatterns) {
+      const match = rowContent.match(pattern);
+      if (match) {
+        noaNumber = match[1].replace(/\s+/g, ''); // Remove any spaces
+        break;
+      }
+    }
+    
+    if (!noaNumber) {
+      skippedNoPattern++;
+      continue;
+    }
     
     rowCount++;
-    const noaNumber = noaMatch[1];
     
-    // Extract all cells
+    // Extract all cells using a fresh regex for each row
+    const cellPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
     const cells: string[] = [];
     let cellMatch;
     while ((cellMatch = cellPattern.exec(rowContent)) !== null) {
-      // Strip HTML tags and decode entities
       let cellText = cellMatch[1]
         .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#\d+;/g, '')
         .replace(/\s+/g, ' ')
         .trim();
       cells.push(cellText);
     }
-    // Reset regex for next row
-    cellPattern.lastIndex = 0;
     
-    if (cells.length < 7) continue;
+    // Debug first matching row
+    if (rowCount === 1) {
+      console.log(`First data row has ${cells.length} cells: ${JSON.stringify(cells.slice(0, 5))}`);
+    }
     
-    // Parse cells based on Miami-Dade table structure:
-    // NOA | APPLICANT | CATEGORY | SUBCATEGORY | MATERIAL | DESCRIPTION | IMPACT | MDP+ | MDP- | CLASS_DESC | EXPIRES
+    if (cells.length < 5) {
+      skippedTooFewCells++;
+      continue;
+    }
+    
+    // Parse cells - Miami-Dade table structure (from their search results):
+    // [0] NOA | [1] APPLICANT | [2] CATEGORY | [3] SUBCATEGORY | [4] MATERIAL | 
+    // [5] DESCRIPTION | [6] IMPACT | [7] MDP+ | [8] MDP- | [9] CLASS_DESC | [10] EXPIRES
     const manufacturer = cells[1] || '';
     const category = cells[2] || '';
     const subcategory = cells[3] || '';
@@ -217,18 +282,25 @@ function parseMiamiDadeTable(html: string): ExtractedDocument[] {
     const classification = cells[9] || '';
     const expires = cells[10] || '';
     
-    // Build the PDF URL
-    const pdfUrl = `https://www.miamidade.gov/building/library/noa/${noaNumber.replace('.', '')}.pdf`;
+    // Normalize NOA number format to XX-XXXX.XX
+    let normalizedNoa = noaNumber;
+    if (!noaNumber.includes('-') && noaNumber.length >= 8) {
+      normalizedNoa = `${noaNumber.substring(0, 2)}-${noaNumber.substring(2)}`;
+    }
+    
+    // Build the PDF URL - remove dots and dashes for the filename
+    const noaForUrl = normalizedNoa.replace(/[-\.]/g, '');
+    const pdfUrl = `https://www.miamidade.gov/building/library/noa/${noaForUrl}.pdf`;
     
     // Check if HVHZ approved based on classification
     const hvhzApproved = classification.toLowerCase().includes('high velocity') || 
                          classification.toLowerCase().includes('hvhz') ||
-                         classification.toLowerCase().includes('hurricane zone');
+                         classification.toLowerCase().includes('hurricane');
     
     documents.push({
-      noaNumber,
+      noaNumber: normalizedNoa,
       pdfUrl,
-      title: `NOA ${noaNumber}`,
+      title: `NOA ${normalizedNoa}`,
       manufacturer: manufacturer.replace(/\s+/g, ' ').trim(),
       productName: description.substring(0, 200),
       category: mapCategory(category),
@@ -244,7 +316,14 @@ function parseMiamiDadeTable(html: string): ExtractedDocument[] {
     });
   }
   
-  console.log(`Parsed ${rowCount} product rows from table, extracted ${documents.length} valid documents`);
+  console.log(`Parsing summary: ${allRows.length} rows, ${rowCount} with NOA pattern, ${skippedNoPattern} skipped (no pattern), ${skippedTooFewCells} skipped (too few cells)`);
+  console.log(`Extracted ${documents.length} valid documents`);
+  
+  // Log sample documents
+  if (documents.length > 0) {
+    console.log(`Sample document: ${JSON.stringify(documents[0])}`);
+  }
+  
   return documents;
 }
 
@@ -271,8 +350,9 @@ async function crawlMiamiDadeSearchResults(
   console.log('Crawling Miami-Dade search results page:', url);
   
   try {
-    // Scrape the search results page with full HTML
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    // First try: Scrape with rawHtml format and extended wait time
+    console.log('Attempting Firecrawl scrape with extended wait...');
+    let scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${firecrawlApiKey}`,
@@ -280,27 +360,83 @@ async function crawlMiamiDadeSearchResults(
       },
       body: JSON.stringify({
         url,
-        formats: ['html', 'rawHtml'],
+        formats: ['rawHtml', 'html', 'markdown'],
         onlyMainContent: false,
-        waitFor: 8000, // Wait longer for ASP.NET to render
+        waitFor: 15000, // Wait 15 seconds for ASP.NET to fully render
+        timeout: 60000, // Allow up to 60 seconds total
       }),
     });
 
-    const scrapeData = await scrapeResponse.json();
+    let scrapeData = await scrapeResponse.json();
+    console.log('Firecrawl response status:', scrapeResponse.status);
     
     if (!scrapeResponse.ok || !scrapeData.success) {
-      console.error('Scrape failed:', scrapeData);
-      throw new Error(scrapeData.error || 'Failed to scrape Miami-Dade search results');
+      console.error('First scrape attempt failed:', scrapeData);
+      
+      // Retry with different settings
+      console.log('Retrying with alternative settings...');
+      scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${firecrawlApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url,
+          formats: ['html'],
+          onlyMainContent: false,
+          waitFor: 20000,
+        }),
+      });
+      scrapeData = await scrapeResponse.json();
+      
+      if (!scrapeResponse.ok || !scrapeData.success) {
+        console.error('Retry also failed:', scrapeData);
+        throw new Error(scrapeData.error || 'Failed to scrape Miami-Dade search results');
+      }
     }
 
-    const html = scrapeData.data?.rawHtml || scrapeData.data?.html || '';
+    // Try rawHtml first, then html, then content from data
+    const html = scrapeData.data?.rawHtml || scrapeData.data?.html || scrapeData.rawHtml || scrapeData.html || '';
     console.log(`Received ${html.length} characters of HTML`);
     
-    if (html.length < 1000) {
-      console.log('HTML too short, site may require form submission or login');
-      console.log('This is a dynamic ASP.NET site that requires interactive form submission.');
-      console.log('Try: 1) Use a direct search results URL with data, or 2) Upload PDFs manually.');
+    // Debug: Check what keys are available in scrapeData
+    console.log('Scrape data keys:', Object.keys(scrapeData || {}).join(', '));
+    if (scrapeData.data) {
+      console.log('Scrape data.data keys:', Object.keys(scrapeData.data || {}).join(', '));
+    }
+    
+    // Check if the HTML contains the table or if we got a JavaScript shell
+    const hasTable = html.toLowerCase().includes('<table');
+    const hasNOAPattern = /\d{2}-\d{4}\.\d{2}/.test(html);
+    const hasGridData = html.toLowerCase().includes('datagrid') || html.toLowerCase().includes('gridview');
+    
+    console.log(`HTML analysis: hasTable=${hasTable}, hasNOAPattern=${hasNOAPattern}, hasGridData=${hasGridData}`);
+    
+    if (html.length < 5000 && !hasTable) {
+      console.log('HTML too short and no table found. This ASP.NET site may require form POST submission.');
+      console.log('The Miami-Dade search requires a form submission, not a direct URL load.');
+      console.log('Recommendation: Upload PDFs manually via the NOA Intelligence tab.');
+      
+      // Return early with diagnostic info
       return [];
+    }
+    
+    // The Miami-Dade site uses ASP.NET postback - the table is NOT rendered via GET URL
+    // Even with JavaScript rendering, the search results require a form POST with ViewState
+    if (!hasTable && !hasNOAPattern) {
+      console.log('No table or NOA pattern found. HTML preview (1000 chars):', 
+        html.substring(0, 1000).replace(/\s+/g, ' '));
+      
+      // Check if this is the search form page (no results loaded)
+      if (html.includes('pc-searchnoa.asp') || html.includes('AdvancedSearch')) {
+        console.log('Detected Miami-Dade search form page without results.');
+        console.log('This ASP.NET site requires a server-side form POST to return results.');
+        console.log('The URL with GET parameters does not trigger the search - it needs ViewState and form data.');
+        
+        // Return with clear message
+        return [];
+      }
     }
     
     // Parse the HTML table
@@ -791,15 +927,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Create specific error message based on site type
+    let errorMessage: string | null = null;
+    if (documentsFound === 0) {
+      if (isMiamiDadeSearchResults(url)) {
+        errorMessage = 'Miami-Dade NOA search requires server-side form submission (ASP.NET PostBack). The URL with GET parameters cannot load results. Please use the NOA Intelligence tab to upload PDFs manually, or use the Document Search feature to find specific NOAs.';
+      } else {
+        errorMessage = 'No documents found. This may be because: (1) The site requires login/authentication, (2) PDFs are loaded dynamically via JavaScript, or (3) No matching products exist. Try uploading PDFs manually.';
+      }
+    }
+
     await supabase
       .from('custom_source_websites')
       .update({
         crawl_status: 'completed',
         last_crawl_at: new Date().toISOString(),
         documents_found: documentsFound,
-        error_message: documentsFound === 0 
-          ? 'No documents found. This may be because: (1) The site requires form submission (like Miami-Dade search), (2) PDFs are behind authentication, or (3) No matching products were found. Try uploading PDFs manually via the NOA Intelligence tab.' 
-          : null,
+        error_message: errorMessage,
       })
       .eq('id', sourceId);
 
