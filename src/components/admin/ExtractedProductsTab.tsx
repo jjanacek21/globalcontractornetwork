@@ -28,7 +28,7 @@ interface ExtractedProduct {
   product_category: string | null;
   noa_number: string | null;
   fl_product_approval: string | null;
-  ul_listing?: string | null;
+  uil_number?: string | null;
   hvhz_approved: boolean | null;
   source_status: string | null;
   is_active: boolean | null;
@@ -46,7 +46,7 @@ interface EditFormData {
   product_category: string;
   noa_number: string;
   fl_product_approval: string;
-  ul_listing: string;
+  uil_number: string;
   hvhz_approved: boolean;
 }
 
@@ -81,7 +81,7 @@ export default function ExtractedProductsTab() {
     product_category: "",
     noa_number: "",
     fl_product_approval: "",
-    ul_listing: "",
+    uil_number: "",
     hvhz_approved: false,
   });
   const [saving, setSaving] = useState(false);
@@ -137,7 +137,7 @@ export default function ExtractedProductsTab() {
           product_category: p.product_category,
           noa_number: p.noa_number,
           fl_product_approval: p.fl_product_approval,
-          ul_listing: (p as { ul_listing?: string | null }).ul_listing ?? null,
+          uil_number: p.uil_number ?? null,
           hvhz_approved: p.hvhz_approved,
           source_status: p.source_status,
           is_active: p.is_active,
@@ -237,7 +237,7 @@ export default function ExtractedProductsTab() {
       product_category: product.product_category || "",
       noa_number: product.noa_number || "",
       fl_product_approval: product.fl_product_approval || "",
-      ul_listing: product.ul_listing || "",
+      uil_number: product.uil_number || "",
       hvhz_approved: product.hvhz_approved || false,
     });
   };
@@ -255,7 +255,7 @@ export default function ExtractedProductsTab() {
           product_category: editFormData.product_category || null,
           noa_number: editFormData.noa_number || null,
           fl_product_approval: editFormData.fl_product_approval || null,
-          ul_listing: editFormData.ul_listing || null,
+          uil_number: editFormData.uil_number || null,
           hvhz_approved: editFormData.hvhz_approved,
         })
         .eq("id", editingProduct.id);
