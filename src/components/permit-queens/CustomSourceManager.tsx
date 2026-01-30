@@ -20,6 +20,7 @@ import {
   Clock,
   FileText
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -137,11 +138,22 @@ export function CustomSourceManager() {
     setCrawlingId(source.id);
     
     try {
-      // Update status to crawling
+      // Clear previous error and reset count before starting new crawl
       await supabase
         .from('custom_source_websites')
-        .update({ crawl_status: 'crawling', error_message: null } as any)
+        .update({ 
+          crawl_status: 'crawling', 
+          error_message: null,
+          documents_found: 0 
+        } as any)
         .eq('id', source.id);
+
+      // Update local state immediately for better UX
+      setSources(prev => prev.map(s => 
+        s.id === source.id 
+          ? { ...s, crawl_status: 'crawling', error_message: null } 
+          : s
+      ));
 
       toast.info(`Starting crawl of ${source.name}...`);
 
@@ -158,8 +170,20 @@ export function CustomSourceManager() {
       if (error) throw error;
 
       if (data?.success) {
-        const pdfMsg = data.pdfsDownloaded ? ` (${data.pdfsDownloaded} PDFs downloaded)` : '';
-        toast.success(`Crawl complete! Found ${data.documentsFound || 0} documents${pdfMsg}`);
+        if (data.documentsFound === 0 && data.totalDiscovered === 0) {
+          toast.warning(
+            `Crawl complete but no documents found. The search URL may not have returned results. Try using a Miami-Dade search results URL with actual product data.`,
+            { duration: 8000 }
+          );
+        } else if (data.documentsFound === 0 && data.totalDiscovered > 0) {
+          toast.warning(
+            `Found ${data.totalDiscovered} items but couldn't save any. The products may already exist or lack required data.`,
+            { duration: 6000 }
+          );
+        } else {
+          const pdfMsg = data.pdfsDownloaded ? ` (${data.pdfsDownloaded} PDFs downloaded)` : '';
+          toast.success(`Crawl complete! Found ${data.documentsFound || 0} documents${pdfMsg}`);
+        }
       } else {
         toast.error(data?.error || 'Crawl failed');
       }
@@ -167,14 +191,15 @@ export function CustomSourceManager() {
       fetchSources();
     } catch (err) {
       console.error('Crawl error:', err);
-      toast.error('Failed to start crawl');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Crawl failed: ${errorMessage}`);
       
       // Update status to error
       await supabase
         .from('custom_source_websites')
         .update({ 
           crawl_status: 'error', 
-          error_message: err instanceof Error ? err.message : 'Unknown error' 
+          error_message: errorMessage 
         } as any)
         .eq('id', source.id);
       
@@ -378,10 +403,21 @@ export function CustomSourceManager() {
                       <Badge variant="outline">{source.target_category}</Badge>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(source.crawl_status)}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            {getStatusBadge(source.crawl_status)}
+                          </div>
+                        </TooltipTrigger>
+                        {source.error_message && (
+                          <TooltipContent side="bottom" className="max-w-[300px]">
+                            <p className="text-xs">{source.error_message}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                       {source.error_message && (
-                        <div className="text-xs text-destructive mt-1 max-w-[200px] truncate" title={source.error_message}>
-                          {source.error_message}
+                        <div className="text-xs text-destructive mt-1 max-w-[200px] truncate">
+                          {source.error_message.substring(0, 50)}...
                         </div>
                       )}
                     </TableCell>
