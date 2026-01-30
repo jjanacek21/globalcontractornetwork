@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Crown, ShieldCheck, LogOut, Search, FileText, Users, Clock, CheckCircle, Filter, Building2 } from "lucide-react";
 import { format } from "date-fns";
+import { StatCard3D } from "@/components/crm-ui";
 
 interface PermitProject {
   id: string;
@@ -37,14 +38,14 @@ interface PermitContractor {
 }
 
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  documents_submitted: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  documents_approved: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  pending_payment: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  permit_delivered: "bg-green-500/20 text-green-400 border-green-500/30",
-  inspection_scheduled: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  inspection_passed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  complete: "bg-green-600/20 text-green-300 border-green-500/30"
+  pending: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  documents_submitted: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  documents_approved: "bg-purple-500/10 text-purple-600 border-purple-500/30",
+  pending_payment: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+  permit_delivered: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  inspection_scheduled: "bg-cyan-500/10 text-cyan-600 border-cyan-500/30",
+  inspection_passed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  complete: "bg-emerald-600/10 text-emerald-700 border-emerald-500/30"
 };
 
 const statusLabels: Record<string, string> = {
@@ -193,35 +194,39 @@ export default function PermitQueensAdminDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-slate-400">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800">
+      <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Crown className="h-8 w-8 text-amber-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                <Crown className="h-5 w-5 text-primary-foreground" />
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Permit Expediting</h1>
-                <p className="text-sm text-amber-500 flex items-center gap-1">
+                <h1 className="text-xl font-bold text-foreground">Permit Expediting</h1>
+                <p className="text-sm text-primary flex items-center gap-1">
                   <ShieldCheck className="h-4 w-4" /> Admin Dashboard
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate("/permit-queens/admin/building-departments")} className="border-slate-700 text-slate-300">
-              <Building2 className="h-4 w-4 mr-2" />
-              Building Depts
-            </Button>
-            <Button variant="outline" onClick={handleSignOut} className="border-slate-700 text-slate-300">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => navigate("/permit-queens/admin/building-departments")} className="border-border text-foreground">
+                <Building2 className="h-4 w-4 mr-2" />
+                Building Depts
+              </Button>
+              <Button variant="outline" onClick={handleSignOut} className="border-border text-foreground">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -229,56 +234,36 @@ export default function PermitQueensAdminDashboard() {
       <main className="container mx-auto px-4 py-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-amber-500" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{totalProjects}</p>
-                  <p className="text-sm text-slate-400">Total Projects</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-8 w-8 text-yellow-500" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{pendingProjects}</p>
-                  <p className="text-sm text-slate-400">Pending</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{completedProjects}</p>
-                  <p className="text-sm text-slate-400">Completed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-900 border-slate-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Users className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{totalContractors}</p>
-                  <p className="text-sm text-slate-400">Contractors</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard3D
+            title="Total Projects"
+            value={totalProjects}
+            icon={FileText}
+            color="primary"
+          />
+          <StatCard3D
+            title="Pending"
+            value={pendingProjects}
+            icon={Clock}
+            color="warning"
+          />
+          <StatCard3D
+            title="Completed"
+            value={completedProjects}
+            icon={CheckCircle}
+            color="success"
+          />
+          <StatCard3D
+            title="Contractors"
+            value={totalContractors}
+            icon={Users}
+            color="primary"
+          />
         </div>
 
         {/* Filters */}
-        <Card className="bg-slate-900 border-slate-800 mb-6">
+        <Card className="border border-border mb-6">
           <CardHeader className="pb-4">
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Filter className="h-5 w-5" />
               Filter Projects
             </CardTitle>
@@ -287,20 +272,20 @@ export default function PermitQueensAdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div className="lg:col-span-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search customer, address, contractor..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10 bg-slate-800 border-slate-700 text-white"
+                    className="pl-10 bg-background border-border text-foreground"
                   />
                 </div>
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="all">All Status</SelectItem>
                   {Object.entries(statusLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -308,10 +293,10 @@ export default function PermitQueensAdminDashboard() {
                 </SelectContent>
               </Select>
               <Select value={serviceTypeFilter} onValueChange={setServiceTypeFilter}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue placeholder="Service Type" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="all">All Services</SelectItem>
                   {serviceTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
@@ -319,10 +304,10 @@ export default function PermitQueensAdminDashboard() {
                 </SelectContent>
               </Select>
               <Select value={contractorFilter} onValueChange={setContractorFilter}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue placeholder="Contractor" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="all">All Contractors</SelectItem>
                   {contractors.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
@@ -334,7 +319,7 @@ export default function PermitQueensAdminDashboard() {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white"
+                  className="bg-background border-border text-foreground"
                   placeholder="From"
                 />
               </div>
@@ -344,10 +329,10 @@ export default function PermitQueensAdminDashboard() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white w-auto"
+                className="bg-background border-border text-foreground w-auto"
                 placeholder="To"
               />
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Showing {filteredProjects.length} of {projects.length} projects
               </p>
             </div>
@@ -355,55 +340,55 @@ export default function PermitQueensAdminDashboard() {
         </Card>
 
         {/* Projects Table */}
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="border border-border">
           <CardHeader>
-            <CardTitle className="text-white">All Projects</CardTitle>
+            <CardTitle className="text-foreground">All Projects</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-slate-400">Loading projects...</div>
+              <div className="text-center py-8 text-muted-foreground">Loading projects...</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-slate-800">
-                      <TableHead className="text-slate-400">Customer</TableHead>
-                      <TableHead className="text-slate-400">Property</TableHead>
-                      <TableHead className="text-slate-400">Service</TableHead>
-                      <TableHead className="text-slate-400">Contractor</TableHead>
-                      <TableHead className="text-slate-400">Status</TableHead>
-                      <TableHead className="text-slate-400">Created</TableHead>
-                      <TableHead className="text-slate-400">Actions</TableHead>
+                    <TableRow className="border-border">
+                      <TableHead className="text-muted-foreground">Customer</TableHead>
+                      <TableHead className="text-muted-foreground">Property</TableHead>
+                      <TableHead className="text-muted-foreground">Service</TableHead>
+                      <TableHead className="text-muted-foreground">Contractor</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground">Created</TableHead>
+                      <TableHead className="text-muted-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProjects.map((project) => (
-                      <TableRow key={project.id} className="border-slate-800">
+                      <TableRow key={project.id} className="border-border">
                         <TableCell>
                           <div>
-                            <p className="font-medium text-white">{project.customer_name}</p>
-                            <p className="text-sm text-slate-400">{project.customer_email}</p>
+                            <p className="font-medium text-foreground">{project.customer_name}</p>
+                            <p className="text-sm text-muted-foreground">{project.customer_email}</p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="text-white">{project.property_address}</p>
-                            <p className="text-sm text-slate-400">{project.city}, {project.state} {project.zip_code}</p>
+                            <p className="text-foreground">{project.property_address}</p>
+                            <p className="text-sm text-muted-foreground">{project.city}, {project.state} {project.zip_code}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="text-white">{project.service_type}</TableCell>
+                        <TableCell className="text-foreground">{project.service_type}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-slate-400" />
-                            <span className="text-white">{getContractorName(project.contractor_id, project.user_id)}</span>
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">{getContractorName(project.contractor_id, project.user_id)}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[project.status] || "bg-slate-500/20 text-slate-400"}>
+                          <Badge className={statusColors[project.status] || "bg-muted text-muted-foreground"}>
                             {statusLabels[project.status] || project.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-400">
+                        <TableCell className="text-muted-foreground">
                           {format(new Date(project.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
@@ -411,10 +396,10 @@ export default function PermitQueensAdminDashboard() {
                             value={project.status}
                             onValueChange={(value) => updateProjectStatus(project.id, value)}
                           >
-                            <SelectTrigger className="w-[140px] bg-slate-800 border-slate-700 text-white">
+                            <SelectTrigger className="w-[140px] bg-background border-border text-foreground">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-slate-800 border-slate-700">
+                            <SelectContent className="bg-background border-border">
                               {Object.entries(statusLabels).map(([value, label]) => (
                                 <SelectItem key={value} value={value}>{label}</SelectItem>
                               ))}

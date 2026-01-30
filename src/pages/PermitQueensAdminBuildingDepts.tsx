@@ -13,6 +13,7 @@ import { Crown, ShieldCheck, LogOut, Search, Building2, MapPin, Phone, Globe, Pl
 import { DepartmentEditor } from "@/components/permit-queens/admin/DepartmentEditor";
 import { DepartmentDocuments } from "@/components/permit-queens/admin/DepartmentDocuments";
 import { RequiredInfoChecklist } from "@/components/permit-queens/admin/RequiredInfoChecklist";
+import { StatCard3D } from "@/components/crm-ui";
 
 interface BuildingDepartment {
   id: string;
@@ -176,23 +177,25 @@ export default function PermitQueensAdminBuildingDepts() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-slate-400">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800">
+      <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Crown className="h-8 w-8 text-amber-500" />
+              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                <Crown className="h-5 w-5 text-primary-foreground" />
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Permit Queens</h1>
-                <p className="text-sm text-amber-500 flex items-center gap-1">
+                <h1 className="text-xl font-bold text-foreground">Permit Expediting</h1>
+                <p className="text-sm text-primary flex items-center gap-1">
                   <ShieldCheck className="h-4 w-4" /> Building Departments
                 </p>
               </div>
@@ -201,12 +204,12 @@ export default function PermitQueensAdminBuildingDepts() {
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/permit-queens/admin/dashboard")} 
-                className="border-slate-700 text-slate-300"
+                className="border-border text-foreground"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
-              <Button variant="outline" onClick={handleSignOut} className="border-slate-700 text-slate-300">
+              <Button variant="outline" onClick={handleSignOut} className="border-border text-foreground">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
@@ -217,13 +220,13 @@ export default function PermitQueensAdminBuildingDepts() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-slate-800 border-slate-700 mb-6">
-            <TabsTrigger value="list" className="data-[state=active]:bg-amber-600">
+          <TabsList className="bg-muted border-border mb-6">
+            <TabsTrigger value="list" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Building2 className="h-4 w-4 mr-2" />
               All Departments
             </TabsTrigger>
             {selectedDept && (
-              <TabsTrigger value="details" className="data-[state=active]:bg-amber-600">
+              <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <FileText className="h-4 w-4 mr-2" />
                 {selectedDept.city || selectedDept.county} Details
               </TabsTrigger>
@@ -233,72 +236,52 @@ export default function PermitQueensAdminBuildingDepts() {
           <TabsContent value="list">
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="h-8 w-8 text-amber-500" />
-                    <div>
-                      <p className="text-2xl font-bold text-white">{totalDepts}</p>
-                      <p className="text-sm text-slate-400">Total Departments</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-8 w-8 text-orange-500" />
-                    <div>
-                      <p className="text-2xl font-bold text-white">{hvhzDepts}</p>
-                      <p className="text-sm text-slate-400">HVHZ Zones</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-8 w-8 text-green-500" />
-                    <div>
-                      <p className="text-2xl font-bold text-white">{deptWithZips}</p>
-                      <p className="text-sm text-slate-400">With ZIP Codes</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-slate-900 border-slate-800">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-8 w-8 text-blue-500" />
-                    <div>
-                      <p className="text-2xl font-bold text-white">{totalZips}</p>
-                      <p className="text-sm text-slate-400">ZIP Codes Mapped</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard3D
+                title="Total Departments"
+                value={totalDepts}
+                icon={Building2}
+                color="primary"
+              />
+              <StatCard3D
+                title="HVHZ Zones"
+                value={hvhzDepts}
+                icon={AlertTriangle}
+                color="warning"
+              />
+              <StatCard3D
+                title="With ZIP Codes"
+                value={deptWithZips}
+                icon={MapPin}
+                color="success"
+              />
+              <StatCard3D
+                title="ZIP Codes Mapped"
+                value={totalZips}
+                icon={Globe}
+                color="primary"
+              />
             </div>
 
             {/* Filters */}
-            <Card className="bg-slate-900 border-slate-800 mb-6">
+            <Card className="border border-border mb-6">
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-4 items-center">
                   <div className="flex-1 min-w-[200px]">
                     <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Search by name, county, city, or ZIP..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 bg-slate-800 border-slate-700 text-white"
+                        className="pl-10 bg-background border-border text-foreground"
                       />
                     </div>
                   </div>
                   <Select value={countyFilter} onValueChange={setCountyFilter}>
-                    <SelectTrigger className="w-[180px] bg-slate-800 border-slate-700 text-white">
+                    <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
                       <SelectValue placeholder="County" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 max-h-60">
+                    <SelectContent className="bg-background border-border max-h-60">
                       <SelectItem value="all">All Counties</SelectItem>
                       {counties.map(county => (
                         <SelectItem key={county} value={county}>{county}</SelectItem>
@@ -306,16 +289,16 @@ export default function PermitQueensAdminBuildingDepts() {
                     </SelectContent>
                   </Select>
                   <Select value={hvhzFilter} onValueChange={setHvhzFilter}>
-                    <SelectTrigger className="w-[150px] bg-slate-800 border-slate-700 text-white">
+                    <SelectTrigger className="w-[150px] bg-background border-border text-foreground">
                       <SelectValue placeholder="HVHZ Status" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectContent className="bg-background border-border">
                       <SelectItem value="all">All Zones</SelectItem>
                       <SelectItem value="hvhz">HVHZ Only</SelectItem>
                       <SelectItem value="non-hvhz">Non-HVHZ</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleAddDepartment} className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={handleAddDepartment} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Department
                   </Button>
@@ -324,47 +307,47 @@ export default function PermitQueensAdminBuildingDepts() {
             </Card>
 
             {/* Departments Table */}
-            <Card className="bg-slate-900 border-slate-800">
+            <Card className="border border-border">
               <CardHeader>
-                <CardTitle className="text-white flex items-center justify-between">
+                <CardTitle className="text-foreground flex items-center justify-between">
                   <span>Building Departments ({filteredDepartments.length})</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="text-center py-8 text-slate-400">Loading departments...</div>
+                  <div className="text-center py-8 text-muted-foreground">Loading departments...</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-slate-800">
-                          <TableHead className="text-slate-400">County</TableHead>
-                          <TableHead className="text-slate-400">City/Dept</TableHead>
-                          <TableHead className="text-slate-400">Contact</TableHead>
-                          <TableHead className="text-slate-400">ZIP Codes</TableHead>
-                          <TableHead className="text-slate-400">Status</TableHead>
-                          <TableHead className="text-slate-400">Actions</TableHead>
+                        <TableRow className="border-border">
+                          <TableHead className="text-muted-foreground">County</TableHead>
+                          <TableHead className="text-muted-foreground">City/Dept</TableHead>
+                          <TableHead className="text-muted-foreground">Contact</TableHead>
+                          <TableHead className="text-muted-foreground">ZIP Codes</TableHead>
+                          <TableHead className="text-muted-foreground">Status</TableHead>
+                          <TableHead className="text-muted-foreground">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredDepartments.map((dept) => (
-                          <TableRow key={dept.id} className="border-slate-800">
-                            <TableCell className="text-white font-medium">{dept.county}</TableCell>
+                          <TableRow key={dept.id} className="border-border">
+                            <TableCell className="text-foreground font-medium">{dept.county}</TableCell>
                             <TableCell>
                               <div>
-                                <p className="text-white">{dept.city || 'County-wide'}</p>
-                                <p className="text-sm text-slate-400">{dept.name}</p>
+                                <p className="text-foreground">{dept.city || 'County-wide'}</p>
+                                <p className="text-sm text-muted-foreground">{dept.name}</p>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
                                 {dept.phone && (
-                                  <p className="text-sm text-slate-300 flex items-center gap-1">
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
                                     <Phone className="h-3 w-3" /> {dept.phone}
                                   </p>
                                 )}
                                 {dept.website && (
-                                  <a href={dept.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline flex items-center gap-1">
+                                  <a href={dept.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
                                     <Globe className="h-3 w-3" /> Website
                                   </a>
                                 )}
@@ -374,23 +357,23 @@ export default function PermitQueensAdminBuildingDepts() {
                               {dept.zip_codes && dept.zip_codes.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {dept.zip_codes.slice(0, 3).map(zip => (
-                                    <Badge key={zip} variant="secondary" className="bg-slate-700 text-xs">
+                                    <Badge key={zip} variant="secondary" className="bg-muted text-muted-foreground text-xs">
                                       {zip}
                                     </Badge>
                                   ))}
                                   {dept.zip_codes.length > 3 && (
-                                    <Badge variant="secondary" className="bg-slate-700 text-xs">
+                                    <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
                                       +{dept.zip_codes.length - 3} more
                                     </Badge>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-slate-500 text-sm">None</span>
+                                <span className="text-muted-foreground text-sm">None</span>
                               )}
                             </TableCell>
                             <TableCell>
                               {dept.is_hvhz && (
-                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                                <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/30">
                                   HVHZ
                                 </Badge>
                               )}
@@ -400,7 +383,7 @@ export default function PermitQueensAdminBuildingDepts() {
                                 <Button variant="ghost" size="sm" onClick={() => handleEditDepartment(dept)}>
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleViewDetails(dept)} className="text-amber-400 hover:text-amber-300">
+                                <Button variant="ghost" size="sm" onClick={() => handleViewDetails(dept)} className="text-primary hover:text-primary/80">
                                   <FileText className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -417,70 +400,68 @@ export default function PermitQueensAdminBuildingDepts() {
 
           <TabsContent value="details">
             {selectedDept && (
-              <div className="space-y-6">
-                {/* Department Info Header */}
-                <Card className="bg-slate-900 border-slate-800">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Department Info */}
+                <Card className="border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      {selectedDept.city || selectedDept.county} Building Department
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h2 className="text-2xl font-bold text-white">{selectedDept.name}</h2>
-                        <p className="text-slate-400">
-                          {selectedDept.city ? `${selectedDept.city}, ` : ''}{selectedDept.county} County
-                        </p>
-                        <div className="flex gap-2 mt-2">
-                          {selectedDept.is_hvhz && (
-                            <Badge className="bg-orange-500/20 text-orange-400">HVHZ Zone</Badge>
-                          )}
-                          <Badge variant="secondary" className="bg-slate-700">
-                            {selectedDept.zip_codes?.length || 0} ZIP codes
-                          </Badge>
-                        </div>
+                        <p className="text-sm text-muted-foreground">County</p>
+                        <p className="font-medium text-foreground">{selectedDept.county}</p>
                       </div>
-                      <Button onClick={() => handleEditDepartment(selectedDept)} variant="outline" className="border-slate-600">
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Edit Info
-                      </Button>
+                      <div>
+                        <p className="text-sm text-muted-foreground">City</p>
+                        <p className="font-medium text-foreground">{selectedDept.city || 'County-wide'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <p className="font-medium text-foreground">{selectedDept.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">HVHZ Status</p>
+                        {selectedDept.is_hvhz ? (
+                          <Badge className="bg-orange-500/10 text-orange-600">HVHZ Zone</Badge>
+                        ) : (
+                          <Badge variant="secondary">Standard</Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                      {selectedDept.phone && (
-                        <div>
-                          <p className="text-sm text-slate-400">Phone</p>
-                          <p className="text-white">{selectedDept.phone}</p>
-                        </div>
-                      )}
-                      {selectedDept.email && (
-                        <div>
-                          <p className="text-sm text-slate-400">Email</p>
-                          <p className="text-white">{selectedDept.email}</p>
-                        </div>
-                      )}
-                      {selectedDept.hours && (
-                        <div>
-                          <p className="text-sm text-slate-400">Hours</p>
-                          <p className="text-white">{selectedDept.hours}</p>
-                        </div>
-                      )}
-                      {selectedDept.processing_time && (
-                        <div>
-                          <p className="text-sm text-slate-400">Processing Time</p>
-                          <p className="text-white">{selectedDept.processing_time}</p>
-                        </div>
-                      )}
-                    </div>
+                    {selectedDept.website && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Website</p>
+                        <a href={selectedDept.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {selectedDept.website}
+                        </a>
+                      </div>
+                    )}
+                    {selectedDept.notes && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Notes</p>
+                        <p className="text-foreground">{selectedDept.notes}</p>
+                      </div>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleEditDepartment(selectedDept)}
+                      className="w-full"
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit Department
+                    </Button>
                   </CardContent>
                 </Card>
 
-                {/* Documents Section */}
-                <DepartmentDocuments 
-                  departmentId={selectedDept.id} 
-                  departmentName={selectedDept.city || selectedDept.county} 
-                />
-
-                {/* Required Info Checklist */}
-                <RequiredInfoChecklist 
-                  departmentId={selectedDept.id} 
-                  departmentName={selectedDept.city || selectedDept.county} 
-                />
+                {/* Documents and Checklists */}
+                <div className="space-y-6">
+                  <DepartmentDocuments departmentId={selectedDept.id} departmentName={selectedDept.city || selectedDept.county} />
+                  <RequiredInfoChecklist departmentId={selectedDept.id} departmentName={selectedDept.city || selectedDept.county} />
+                </div>
               </div>
             )}
           </TabsContent>
@@ -491,8 +472,8 @@ export default function PermitQueensAdminBuildingDepts() {
       <DepartmentEditor
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
-        onSave={handleSaveDepartment}
         department={editingDept}
+        onSave={handleSaveDepartment}
       />
     </div>
   );

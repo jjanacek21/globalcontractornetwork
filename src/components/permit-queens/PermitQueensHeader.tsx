@@ -29,25 +29,25 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
-            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => navigate("/member/dashboard")}
           >
             <Home className="h-4 w-4 mr-1" />
             Dashboard
           </Button>
           <Link to="/permit-queens" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-              <Crown className="h-6 w-6 text-white" />
+            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+              <Crown className="h-6 w-6 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-white">Permit Queens</span>
-              <span className="text-xs text-slate-400">AI Permit Intelligence</span>
+              <span className="text-lg font-bold text-foreground">Permit Expediting</span>
+              <span className="text-xs text-muted-foreground">Contractor Portal</span>
             </div>
           </Link>
         </div>
@@ -58,8 +58,8 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             <button
               key={link.href}
               onClick={() => scrollToSection(link.href)}
-              className={`text-sm font-medium transition-colors hover:text-emerald-400 ${
-                activeSection === link.href ? "text-emerald-400" : "text-slate-300"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                activeSection === link.href ? "text-primary" : "text-muted-foreground"
               }`}
             >
               {link.label}
@@ -70,13 +70,13 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
-            className="hidden md:inline-flex border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+            className="hidden md:inline-flex border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => navigate("/permit-queens/auth")}
           >
             Client Login
           </Button>
           <Button 
-            className="hidden md:inline-flex bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+            className="hidden md:inline-flex bg-primary hover:bg-primary/90 text-primary-foreground"
             onClick={() => scrollToSection("#contact")}
           >
             Get Started
@@ -86,7 +86,7 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-white"
+            className="lg:hidden text-foreground"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -96,13 +96,13 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-slate-900 border-t border-slate-800">
+        <div className="lg:hidden bg-background border-t border-border">
           <nav className="container py-4 flex flex-col gap-2">
             {navLinks.map((link) => (
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-left px-4 py-2 text-sm text-slate-300 hover:text-emerald-400 hover:bg-slate-800 rounded-md transition-colors"
+                className="text-left px-4 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors"
               >
                 {link.label}
               </button>
@@ -110,13 +110,13 @@ export function PermitQueensHeader({ activeSection }: PermitQueensHeaderProps) {
             <div className="flex flex-col gap-2 mt-4 px-4">
               <Button 
                 variant="outline" 
-                className="w-full border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                className="w-full border-primary/50 text-primary hover:bg-primary/10"
                 onClick={() => navigate("/permit-queens/auth")}
               >
                 Client Login
               </Button>
               <Button 
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => scrollToSection("#contact")}
               >
                 Get Started

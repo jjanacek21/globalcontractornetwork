@@ -19,6 +19,7 @@ import { AddProjectDialog } from "@/components/permit-pros/AddProjectDialog";
 import { ProjectsTable } from "@/components/permit-pros/ProjectsTable";
 import { ProjectDetailsDialog } from "@/components/permit-pros/ProjectDetailsDialog";
 import { ProjectActionsDialog } from "@/components/permit-pros/ProjectActionsDialog";
+import { StatCard3D } from "@/components/crm-ui";
 
 interface PermitProject {
   id: string;
@@ -103,8 +104,8 @@ export default function PermitQueensDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen hero-gradient-bg flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(45,90%,55%)]" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -119,158 +120,128 @@ export default function PermitQueensDashboard() {
   ).length;
 
   return (
-    <div className="min-h-screen hero-gradient-bg relative">
-      {/* Grid Pattern Overlay */}
-      <div className="grid-pattern-dark absolute inset-0" />
-      
-      {/* Gold Orbs */}
-      <div className="gold-orb gold-orb-1" />
-      <div className="gold-orb gold-orb-2" />
-      
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="border-b border-white/10 bg-[hsl(0,0%,5%)] backdrop-blur-lg sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="icon-container-gold !w-10 !h-10 !rounded-full">
-                <Crown className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">Permit Expediting</h1>
-                <p className="text-xs text-white/50">Contractor Portal</p>
-              </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+              <Crown className="h-5 w-5 text-primary-foreground" />
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleSignOut}
-              className="text-white hover:text-[hsl(45,90%,55%)] hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="container mx-auto px-4 py-8">
-          {/* Welcome Section */}
-          <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Welcome back, {firstName}!
-              </h2>
-              <p className="text-white/60">
-                Track your permits and project status from your dashboard.
-              </p>
+              <h1 className="text-lg font-bold text-foreground">Permit Expediting</h1>
+              <p className="text-xs text-muted-foreground">Contractor Portal</p>
             </div>
-            <Button 
-              onClick={() => navigate('/permit-queens/new-request')}
-              className="btn-gold"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Permit Request
-            </Button>
           </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleSignOut}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </header>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="premium-card-dark">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60">Pending Permits</p>
-                    <p className="text-3xl font-bold text-white">{pendingCount}</p>
-                  </div>
-                  <div className="icon-container-gold">
-                    <Clock className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="premium-card-dark">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60">Completed</p>
-                    <p className="text-3xl font-bold text-white">{completedCount}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-[hsl(142,70%,45%)]/20 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-[hsl(142,70%,45%)]" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="premium-card-dark">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60">Action Required</p>
-                    <p className="text-3xl font-bold text-white">{actionRequiredCount}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-[hsl(0,70%,50%)]/20 flex items-center justify-center">
-                    <AlertCircle className="h-6 w-6 text-[hsl(0,70%,50%)]" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Welcome back, {firstName}!
+            </h2>
+            <p className="text-muted-foreground">
+              Track your permits and project status from your dashboard.
+            </p>
           </div>
+          <Button 
+            onClick={() => navigate('/permit-queens/new-request')}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Permit Request
+          </Button>
+        </div>
 
-          {/* Projects Table */}
-          <Card className="premium-card-dark mb-8">
-            <CardHeader>
-              <CardTitle className="text-white">Your Projects</CardTitle>
-              <CardDescription className="text-white/50">
-                View and manage your permit applications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(45,90%,55%)] mx-auto" />
-                </div>
-              ) : (
-                <ProjectsTable 
-                  projects={projects} 
-                  onRefresh={fetchProjects}
-                  onViewProject={setSelectedProject}
-                  onAction={(projectId, action) => {
-                    setActionProjectId(projectId);
-                    setActionType(action);
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <StatCard3D
+            title="Pending Permits"
+            value={pendingCount}
+            icon={Clock}
+            color="warning"
+          />
+          
+          <StatCard3D
+            title="Completed"
+            value={completedCount}
+            icon={CheckCircle2}
+            color="success"
+          />
+          
+          <StatCard3D
+            title="Action Required"
+            value={actionRequiredCount}
+            icon={AlertCircle}
+            color="danger"
+          />
+        </div>
 
-          {/* Contact Support */}
-          <Card className="premium-card-dark">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-[hsl(45,90%,55%)]" />
-                Need Help?
-              </CardTitle>
-              <CardDescription className="text-white/50">
-                Contact our team for assistance with your permits
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-                <Phone className="h-5 w-5 text-[hsl(45,90%,55%)]" />
-                <div>
-                  <p className="text-sm text-white/50">Phone</p>
-                  <p className="text-white font-medium">(561) 555-PERM</p>
-                </div>
+        {/* Projects Table */}
+        <Card className="mb-8 border border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-foreground">Your Projects</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              View and manage your permit applications
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
               </div>
-              <Button className="btn-gold">
-                Request Callback
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+            ) : (
+              <ProjectsTable 
+                projects={projects} 
+                onRefresh={fetchProjects}
+                onViewProject={setSelectedProject}
+                onAction={(projectId, action) => {
+                  setActionProjectId(projectId);
+                  setActionType(action);
+                }}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Contact Support */}
+        <Card className="border border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Need Help?
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Contact our team for assistance with your permits
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted border border-border">
+              <Phone className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Phone</p>
+                <p className="text-foreground font-medium">(561) 555-PERM</p>
+              </div>
+            </div>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              Request Callback
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
 
       {/* Add Project Dialog */}
       <AddProjectDialog
