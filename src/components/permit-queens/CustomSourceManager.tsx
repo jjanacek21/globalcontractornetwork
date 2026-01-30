@@ -363,7 +363,13 @@ export function CustomSourceManager() {
                           rel="noopener noreferrer"
                           className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                         >
-                          {new URL(source.url).hostname}
+                          {(() => {
+                            try {
+                              return new URL(source.url).hostname;
+                            } catch {
+                              return source.url || 'Invalid URL';
+                            }
+                          })()}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       </div>
