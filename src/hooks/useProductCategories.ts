@@ -150,17 +150,36 @@ export function useProductCategories() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data, error: fetchError } = await supabase
-          .from('product_approvals')
-          .select('product_category')
-          .not('product_category', 'is', null)
-          .not('product_category', 'eq', '');
+        // Fetch ALL products to get accurate category counts
+        // Supabase default limit is 1000 rows, so we need to paginate or fetch more
+        let allData: { product_category: string | null }[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
 
-        if (fetchError) throw fetchError;
+        while (hasMore) {
+          const { data, error: fetchError } = await supabase
+            .from('product_approvals')
+            .select('product_category')
+            .eq('is_active', true)
+            .not('product_category', 'is', null)
+            .not('product_category', 'eq', '')
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+          if (fetchError) throw fetchError;
+
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            hasMore = data.length === pageSize;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
 
         // Count occurrences of each category
         const categoryMap: Record<string, number> = {};
-        (data || []).forEach((row) => {
+        allData.forEach((row) => {
           const cat = row.product_category?.trim();
           if (cat) {
             categoryMap[cat] = (categoryMap[cat] || 0) + 1;
@@ -194,6 +213,7 @@ export function useProductCategories() {
           const catLower = cat.category.toLowerCase();
           return config.matchPatterns.some(
             (pattern) =>
+              catLower === pattern.toLowerCase() || // Exact match (case-insensitive)
               catLower.includes(pattern.toLowerCase()) ||
               pattern.toLowerCase().includes(catLower)
           );
