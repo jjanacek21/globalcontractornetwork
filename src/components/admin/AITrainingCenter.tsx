@@ -129,6 +129,7 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="batch-sourcing" className="mt-4">
           <div className="space-y-6">
+            <ManufacturerNOASearch />
             <NOACSVImporter />
             <BatchProductSourcing />
           </div>
@@ -191,7 +192,6 @@ const AITrainingCenter = () => {
         </TabsContent>
         <TabsContent value="noa-intelligence" className="mt-4">
           <div className="space-y-6">
-            <ManufacturerNOASearch />
             <NOABulkManager />
             <NOAUploadQueue />
           </div>
