@@ -1,5 +1,8 @@
 project_id = "ujalvgknnbsxqpujxvwk"
 
+[functions.download-noa-pdfs]
+verify_jwt = false
+
 [functions.permit-packet-analyzer]
 verify_jwt = false
 
