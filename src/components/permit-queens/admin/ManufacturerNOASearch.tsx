@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 import { 
   Search, 
   Building2, 
@@ -50,6 +51,7 @@ export function ManufacturerNOASearch() {
   });
   const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
+  const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
 
   const handleSearch = async () => {
     if (!manufacturer.trim()) {
@@ -375,10 +377,15 @@ export function ManufacturerNOASearch() {
                       </div>
                     </div>
                     {result.pdf_url && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={result.pdf_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setViewingPdf({
+                          url: result.pdf_url!,
+                          title: `${result.manufacturer} - ${result.noa_number}`
+                        })}
+                      >
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -398,6 +405,14 @@ export function ManufacturerNOASearch() {
           </AlertDescription>
         </Alert>
       </CardContent>
+
+      <PDFViewerDialog
+        open={!!viewingPdf}
+        onOpenChange={(open) => !open && setViewingPdf(null)}
+        url={viewingPdf?.url || ''}
+        title={viewingPdf?.title || 'NOA Document'}
+        filename={`${viewingPdf?.title?.replace(/[^a-zA-Z0-9]/g, '_') || 'noa'}.pdf`}
+      />
     </Card>
   );
 }
