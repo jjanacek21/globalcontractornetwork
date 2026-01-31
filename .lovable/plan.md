@@ -1,77 +1,79 @@
 
-# Fix ManufacturerNOASearch - Edge Function Not Extracting Data
+
+# Fix PDF Preview in ManufacturerNOASearch
 
 ## Problem Identified
-The logs reveal that Firecrawl is successfully returning results (70 total across 3 searches), but the edge function is extracting **0 NOA products**. Two issues exist:
+The PDF preview no longer works because the edge function is now returning **landing page URLs** (HTML pages) instead of **direct PDF file URLs**. 
 
-1. **Regex pattern too strict**: The NOA number extraction regex only matches a very specific format (`\d{2}-\d{4}\.\d{2}`) and misses variations
-2. **PDF URL logic too restrictive**: Only captures URLs ending in `.pdf`, but search results return landing pages with PDF links embedded
+**Example of what's being returned:**
+- `https://www.miamidade.gov/apps/dpmbuilding/search/results.aspx?...` (HTML page)
 
-## Solution
+**What the PDFViewerDialog expects:**
+- `https://www.miamidade.gov/building/noa-documents/21-1234.01.pdf` (Direct PDF)
 
-### Fix 1: Improve NOA Number Extraction Regex
-Update the regex to capture more NOA formats:
-- `21-0123.01` (current format)
-- `21-1234.02` 
-- `NOA No. 21-1234.01`
-- `NOA# 21-1234.01`
+The Google Docs viewer fallback only works with actual PDF file URLs, not HTML landing pages.
 
-Also add extraction for product names and better data parsing from Firecrawl results.
+## Solution Options
 
-### Fix 2: Better PDF URL Handling
-Instead of only capturing URLs with `.pdf` extension:
-- Extract any URL from the result as a reference
-- The PDFViewerDialog will work with landing pages too (using Google Docs viewer fallback)
-- Store the page URL so users can navigate to find the PDF
-
-### Fix 3: Add Fallback Data Extraction
-Parse additional data patterns from the content:
-- Product names from page titles
-- Expiration dates if mentioned
-- Category information
-
-## Implementation Changes
-
-### File: `supabase/functions/search-manufacturer-noas/index.ts`
-
-**1. Update NOA regex pattern (multiple locations)**:
-```typescript
-// Old: /NOA\s*(?:No\.?\s*)?(\d{2}-\d{4}\.\d{2})/gi
-// New: Handle more formats
-const noaPatterns = [
-  /NOA\s*(?:No\.?\s*)?#?\s*(\d{2}-\d{4}\.\d{2})/gi,  // Standard format
-  /(\d{2}-\d{4}\.\d{2})/gi,                           // Just the number
-];
+### Option A: Construct Direct PDF URLs (Recommended)
+Miami-Dade uses a predictable URL pattern for NOA PDFs:
+```
+https://www.miamidade.gov/building/noa-documents/{NOA_NUMBER}.pdf
 ```
 
-**2. Improve PDF URL extraction**:
+Update the edge function to construct the correct PDF URL based on the NOA number instead of using the search result URL.
+
+### Option B: Add "Open in New Tab" Fallback
+For URLs that aren't direct PDFs, provide a button to open the landing page in a new browser tab so users can navigate to the PDF manually.
+
+## Implementation Plan
+
+### Step 1: Update Edge Function PDF URL Logic
+Modify `supabase/functions/search-manufacturer-noas/index.ts`:
+
 ```typescript
-// Store any URL from results, not just .pdf URLs
-pdf_url: result.url || null,  // Instead of checking for .pdf
+// Helper function to construct Miami-Dade NOA PDF URL
+function getMiamiDadePdfUrl(noaNumber: string): string {
+  // Miami-Dade stores NOA PDFs at a predictable location
+  return `https://www.miamidade.gov/building/noa-documents/${noaNumber}.pdf`;
+}
 ```
 
-**3. Add better product name parsing**:
+Then use this function when adding Miami-Dade results:
 ```typescript
-// Extract meaningful product names from titles
-const productName = result.title?.split(' - ')[0] || 
-                   result.title?.split('|')[0]?.trim() ||
-                   `${manufacturer} Product`;
+pdf_url: getMiamiDadePdfUrl(noaNumber), // Direct PDF URL
 ```
 
-**4. Add logging to debug why extraction fails**:
-```typescript
-console.log(`Processing result: ${result.title}, URL: ${result.url}`);
-console.log(`Content preview: ${result.content?.substring(0, 200)}`);
-```
+### Step 2: Add Fallback "Open Page" Button for Non-PDF URLs
+Update `ManufacturerNOASearch.tsx` to detect non-PDF URLs and show an alternative "Open Page" button that opens in a new tab.
+
+### Step 3: Improve PDFViewerDialog URL Detection
+Update the viewer to better detect when a URL is not a direct PDF and show appropriate messaging.
 
 ## Files to Modify
+
 | File | Change |
 |------|--------|
-| `supabase/functions/search-manufacturer-noas/index.ts` | Fix regex patterns, improve URL extraction, add debugging |
+| `supabase/functions/search-manufacturer-noas/index.ts` | Add helper to construct direct Miami-Dade PDF URLs, use for pdf_url field |
+| `src/components/permit-queens/admin/ManufacturerNOASearch.tsx` | Add fallback "Open in New Tab" button for non-PDF URLs |
+
+## Technical Details
+
+### Miami-Dade NOA PDF URL Pattern
+Based on the official Miami-Dade NOA database, PDFs are stored at:
+```
+https://www.miamidade.gov/building/noa-documents/{NOA-NUMBER}.pdf
+```
+
+Example:
+- NOA Number: `21-0123.01`
+- PDF URL: `https://www.miamidade.gov/building/noa-documents/21-0123.01.pdf`
+
+### Florida Building Approvals
+Florida Building uses a different system - we may need to store the landing page URL and provide an "Open in Browser" option for these.
 
 ## Expected Outcome
-After this fix:
-- The search will extract NOA products from Firecrawl results
-- Results will include page URLs that users can view
-- PDFViewerDialog will show the landing pages (which often contain embedded PDFs or links to them)
-- Users can find the actual PDF documents from these pages
+- Clicking "View PDF" for Miami-Dade NOAs will open the actual PDF document
+- For other sources (Florida Building, manufacturer sites), a fallback option to open in new tab will be available
+- The PDF preview will work reliably again
+
