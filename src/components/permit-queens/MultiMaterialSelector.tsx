@@ -41,7 +41,7 @@ interface MultiMaterialSelectorProps {
 }
 
 // Category configuration for display and filtering
-// Updated to match actual database product_category values
+// Updated to match actual database product_category values exactly
 const CATEGORY_CONFIG: Record<string, { 
   label: string; 
   dbCategories: string[]; 
@@ -54,11 +54,18 @@ const CATEGORY_CONFIG: Record<string, {
   roof_covering: {
     label: 'Roof Covering',
     dbCategories: [
-      'Shingles', 'shingles', 
-      'Metal Roofing', 'Metal Panel', 'metal',
-      'Roof Tile', 'tiles', 
-      'Stone Coated Steel', 'Metal Tile Panels', 
-      'Roofing Slate', 'roof_covering'
+      // Shingles (68 + 5 + 4 = 77)
+      'Shingles', 'shingles', 'shingle',
+      // Metal (877 + 14 + 7 = 898)
+      'Metal Roofing', 'metal', 'Metal Tile Panels',
+      // Tile (96 + 2 = 98)
+      'Roof Tile', 'tiles',
+      // Stone Coated (32)
+      'Stone Coated Steel',
+      // Slate (10)
+      'Roofing Slate',
+      // Legacy
+      'roof_covering'
     ],
     icon: Home,
     color: 'bg-green-500',
@@ -69,10 +76,14 @@ const CATEGORY_CONFIG: Record<string, {
   flat_roofing: {
     label: 'Flat/Low-Slope Roofing',
     dbCategories: [
-      'Flat Roofing - TPO', 'Flat Roofing - EPDM', 'Flat Roofing - PVC', 'Flat Roofing - Modified Bitumen',
+      // Flat Roofing specific (31 + 13 + 10 + 10 + 1 = 65)
+      'Flat Roofing - Modified Bitumen', 'Flat Roofing - TPO', 'Flat Roofing - PVC', 'Flat Roofing - EPDM', 'flat_roof',
+      // System types (160 + 121 + 35 + 34 + 26 = 376)
       'Single Ply Roof Systems', 'Modified Bitumen Roof Systems', 
       'Built Up Roofing', 'Spray Applied Polyurethene Roof Sys',
-      'Liquid Applied Roof Systems', 'Roof Coating', 'Waterproofing'
+      'Liquid Applied Roof Systems',
+      // Coatings (138 + 64 = 202)
+      'Roof Coating', 'Waterproofing'
     ],
     icon: Layers,
     color: 'bg-purple-500',
@@ -83,9 +94,10 @@ const CATEGORY_CONFIG: Record<string, {
   underlayment: {
     label: 'Underlayment',
     dbCategories: [
-      'Underlayment', 'underlayment', 
-      'Self-Adhered Underlayment', 'Synthetic Underlayment',
-      'Roofing Insulation'
+      // Underlayment (190 + 2 = 192)
+      'Underlayment', 'underlayment',
+      // Insulation (23 + 9 = 32)
+      'Roofing Insulation', 'Insulation'
     ],
     icon: Layers,
     color: 'bg-blue-500',
@@ -95,7 +107,12 @@ const CATEGORY_CONFIG: Record<string, {
   },
   deck_fasteners: {
     label: 'Deck Fasteners',
-    dbCategories: ['Deck Fasteners', 'Fasteners'],
+    dbCategories: [
+      // Deck Fasteners (8)
+      'Deck Fasteners',
+      // Deck (4 + 1 = 5)
+      'Deck - Roof', 'Deck - Floor'
+    ],
     icon: Hammer,
     color: 'bg-orange-500',
     required: true,
@@ -104,7 +121,10 @@ const CATEGORY_CONFIG: Record<string, {
   },
   cap_tabs: {
     label: 'Cap Tabs / Caps',
-    dbCategories: ['Cap Tabs'],
+    dbCategories: [
+      // Cap Tabs (11)
+      'Cap Tabs'
+    ],
     icon: CircleDot,
     color: 'bg-yellow-500',
     required: true,
@@ -113,7 +133,12 @@ const CATEGORY_CONFIG: Record<string, {
   },
   roofing_fasteners: {
     label: 'Roofing Fasteners',
-    dbCategories: ['Roofing Fasteners', 'Fasteners'],
+    dbCategories: [
+      // Roofing Fasteners (12)
+      'Roofing Fasteners',
+      // General Fasteners (38)
+      'Fasteners'
+    ],
     icon: Hammer,
     color: 'bg-red-500',
     required: true,
@@ -122,7 +147,10 @@ const CATEGORY_CONFIG: Record<string, {
   },
   ventilation: {
     label: 'Ventilation',
-    dbCategories: ['Ventilation'],
+    dbCategories: [
+      // Ventilation (75 + 5 = 80)
+      'Ventilation', 'Roof Ventilation'
+    ],
     icon: Layers,
     color: 'bg-teal-500',
     required: false,
