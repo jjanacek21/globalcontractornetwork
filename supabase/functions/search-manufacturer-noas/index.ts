@@ -20,23 +20,49 @@ interface NOAResult {
 function extractNOANumbers(content: string): string[] {
   const noaNumbers: string[] = [];
   
-  // Multiple patterns to catch different NOA formats
+  if (!content) {
+    console.log('extractNOANumbers: No content provided');
+    return noaNumbers;
+  }
+  
+  // Multiple patterns to catch different NOA formats - ordered from most specific to least
   const patterns = [
     /NOA\s*(?:No\.?\s*)?#?\s*(\d{2}-\d{4}\.\d{2})/gi,  // NOA No. 21-1234.01, NOA# 21-1234.01
-    /(?:^|\s)(\d{2}-\d{4}\.\d{2})(?:\s|$|[,;.])/gm,    // Standalone: 21-1234.01
     /NOA[:\s]+(\d{2}-\d{4}\.\d{2})/gi,                  // NOA: 21-1234.01
+    /Notice\s+of\s+Acceptance[:\s#]*(\d{2}-\d{4}\.\d{2})/gi, // Notice of Acceptance: 21-1234.01
+    /(?:^|[\s,;(])(\d{2}-\d{4}\.\d{2})(?:[\s,;).]|$)/gm,    // Standalone with various delimiters
+    /[#:](\d{2}-\d{4}\.\d{2})/gi,                       // #21-1234.01 or :21-1234.01
   ];
   
+  console.log(`extractNOANumbers: Scanning content (${content.length} chars)`);
+  
   for (const pattern of patterns) {
+    // Reset lastIndex for global patterns
+    pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(content)) !== null) {
       const noaNumber = match[1];
       if (noaNumber && !noaNumbers.includes(noaNumber)) {
+        console.log(`  Found NOA: ${noaNumber} (pattern: ${pattern.source})`);
         noaNumbers.push(noaNumber);
       }
     }
   }
   
+  // Also try a very loose pattern as fallback
+  if (noaNumbers.length === 0) {
+    const loosePattern = /(\d{2}-\d{4}\.\d{2})/g;
+    let match;
+    while ((match = loosePattern.exec(content)) !== null) {
+      const noaNumber = match[1];
+      if (noaNumber && !noaNumbers.includes(noaNumber)) {
+        console.log(`  Found NOA (loose): ${noaNumber}`);
+        noaNumbers.push(noaNumber);
+      }
+    }
+  }
+  
+  console.log(`extractNOANumbers: Found ${noaNumbers.length} NOA numbers`);
   return noaNumbers;
 }
 
@@ -44,16 +70,21 @@ function extractNOANumbers(content: string): string[] {
 function extractFLNumbers(content: string): string[] {
   const flNumbers: string[] = [];
   
+  if (!content) return flNumbers;
+  
   const patterns = [
     /FL\s*[#:]?\s*(\d{5,}(?:-R\d+)?)/gi,  // FL 12345, FL# 12345, FL: 12345-R1
     /Florida\s+(?:Product\s+)?Approval\s*[#:]?\s*(\d{5,})/gi,
+    /FBC\s*[#:]?\s*(\d{5,})/gi,  // Florida Building Code approval
   ];
   
   for (const pattern of patterns) {
+    pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(content)) !== null) {
       const flNumber = `FL${match[1]}`;
       if (!flNumbers.includes(flNumber)) {
+        console.log(`  Found FL number: ${flNumber}`);
         flNumbers.push(flNumber);
       }
     }
@@ -63,11 +94,13 @@ function extractFLNumbers(content: string): string[] {
 }
 
 // Helper function to parse product name from title/content
-function parseProductName(title: string | undefined, manufacturer: string): string {
-  if (!title) return `${manufacturer} Product`;
+function parseProductName(title: string | undefined, manufacturer: string, content?: string): string {
+  if (!title && !content) return `${manufacturer} Product`;
+  
+  const source = title || '';
   
   // Clean up common patterns
-  let name = title
+  let name = source
     .split(' - ')[0]
     .split(' | ')[0]
     .split(' :: ')[0]
@@ -76,9 +109,21 @@ function parseProductName(title: string | undefined, manufacturer: string): stri
     .replace(/Miami[- ]Dade/gi, '')
     .replace(/Product Approval/gi, '')
     .replace(/Florida Building/gi, '')
+    .replace(/County/gi, '')
+    .replace(/Search Results?/gi, '')
+    .replace(/PDF/gi, '')
     .trim();
   
-  // If name is too short or empty, use manufacturer
+  // If name is too short or empty, try to extract from content
+  if (name.length < 3 && content) {
+    // Look for product-related keywords in content
+    const productMatch = content.match(/(?:product|system|coating|shingle|tile|membrane)[:\s]+([A-Za-z0-9\s\-]+)/i);
+    if (productMatch) {
+      name = productMatch[1].trim().substring(0, 100);
+    }
+  }
+  
+  // If still empty, use manufacturer
   if (name.length < 3) {
     return `${manufacturer} Product`;
   }
@@ -137,35 +182,61 @@ serve(async (req) => {
         console.log(`Miami-Dade search found ${searchData.data?.length || 0} results`);
         
         for (const result of searchData.data || []) {
-          console.log(`Processing result: ${result.title}`);
-          console.log(`URL: ${result.url}`);
-          console.log(`Content preview: ${result.content?.substring(0, 300)}`);
+          console.log(`\n--- Processing Miami-Dade result ---`);
+          console.log(`Title: ${result.title || 'No title'}`);
+          console.log(`URL: ${result.url || 'No URL'}`);
           
-          // Extract NOA numbers from content
-          const noaNumbers = extractNOANumbers(result.content || '');
-          console.log(`Extracted NOA numbers: ${noaNumbers.join(', ') || 'none'}`);
+          // Combine title and content for extraction
+          const combinedContent = `${result.title || ''} ${result.content || ''}`;
+          console.log(`Combined content length: ${combinedContent.length} chars`);
+          console.log(`Content preview: ${combinedContent.substring(0, 500)}`);
           
-          for (const noaNumber of noaNumbers) {
-            if (!results.find(r => r.noa_number === noaNumber)) {
-              results.push({
-                noa_number: noaNumber,
-                product_name: parseProductName(result.title, manufacturer),
-                manufacturer: manufacturer,
-                category: 'Roofing',
-                expiration_date: null,
-                hvhz_approved: true, // Miami-Dade NOAs are HVHZ by default
-                pdf_url: result.url || null, // Store the page URL, not just .pdf
-              });
+          // Extract NOA numbers from combined content
+          const noaNumbers = extractNOANumbers(combinedContent);
+          
+          if (noaNumbers.length > 0) {
+            for (const noaNumber of noaNumbers) {
+              if (!results.find(r => r.noa_number === noaNumber)) {
+                const productName = parseProductName(result.title, manufacturer, result.content);
+                console.log(`Adding NOA: ${noaNumber}, Product: ${productName}`);
+                results.push({
+                  noa_number: noaNumber,
+                  product_name: productName,
+                  manufacturer: manufacturer,
+                  category: 'Roofing',
+                  expiration_date: null,
+                  hvhz_approved: true, // Miami-Dade NOAs are HVHZ by default
+                  pdf_url: result.url || null, // Store the page URL
+                });
+              }
             }
-          }
-          
-          // If no NOA numbers found but result seems relevant, still include the URL
-          if (noaNumbers.length === 0 && result.url && result.title?.toLowerCase().includes('noa')) {
-            console.log(`No NOA number extracted, but URL seems relevant: ${result.url}`);
+          } else {
+            // If no NOA found but URL contains NOA-related content, create entry from URL
+            if (result.url) {
+              const urlNoaMatch = result.url.match(/(\d{2}-\d{4}\.\d{2})/);
+              if (urlNoaMatch) {
+                const noaNumber = urlNoaMatch[1];
+                if (!results.find(r => r.noa_number === noaNumber)) {
+                  console.log(`Found NOA in URL: ${noaNumber}`);
+                  results.push({
+                    noa_number: noaNumber,
+                    product_name: parseProductName(result.title, manufacturer, result.content),
+                    manufacturer: manufacturer,
+                    category: 'Roofing',
+                    expiration_date: null,
+                    hvhz_approved: true,
+                    pdf_url: result.url,
+                  });
+                }
+              } else {
+                console.log(`No NOA pattern found in content or URL`);
+              }
+            }
           }
         }
       } else {
-        console.error('Miami-Dade Firecrawl search failed:', await firecrawlResponse.text());
+        const errorText = await firecrawlResponse.text();
+        console.error('Miami-Dade Firecrawl search failed:', errorText);
       }
     } catch (err) {
       console.error('Miami-Dade search error:', err);
@@ -193,24 +264,47 @@ serve(async (req) => {
         console.log(`Florida Building search found ${flData.data?.length || 0} results`);
         
         for (const result of flData.data || []) {
-          console.log(`Processing FL result: ${result.title}`);
-          console.log(`URL: ${result.url}`);
+          console.log(`\n--- Processing FL result ---`);
+          console.log(`Title: ${result.title || 'No title'}`);
+          console.log(`URL: ${result.url || 'No URL'}`);
+          
+          const combinedContent = `${result.title || ''} ${result.content || ''}`;
+          console.log(`Content preview: ${combinedContent.substring(0, 500)}`);
           
           // Extract FL approval numbers
-          const flNumbers = extractFLNumbers(result.content || '');
-          console.log(`Extracted FL numbers: ${flNumbers.join(', ') || 'none'}`);
+          const flNumbers = extractFLNumbers(combinedContent);
+          
+          // Also check for NOA numbers in Florida Building results
+          const noaNumbers = extractNOANumbers(combinedContent);
           
           for (const flNumber of flNumbers) {
             if (!results.find(r => r.fl_approval_number === flNumber)) {
+              console.log(`Adding FL: ${flNumber}`);
               results.push({
                 noa_number: flNumber,
-                product_name: parseProductName(result.title, manufacturer),
+                product_name: parseProductName(result.title, manufacturer, result.content),
                 manufacturer: manufacturer,
                 category: 'Roofing',
                 expiration_date: null,
                 hvhz_approved: false,
                 pdf_url: result.url || null,
                 fl_approval_number: flNumber,
+              });
+            }
+          }
+          
+          // Add any NOA numbers found in FL Building results
+          for (const noaNumber of noaNumbers) {
+            if (!results.find(r => r.noa_number === noaNumber)) {
+              console.log(`Adding NOA from FL site: ${noaNumber}`);
+              results.push({
+                noa_number: noaNumber,
+                product_name: parseProductName(result.title, manufacturer, result.content),
+                manufacturer: manufacturer,
+                category: 'Roofing',
+                expiration_date: null,
+                hvhz_approved: false,
+                pdf_url: result.url || null,
               });
             }
           }
@@ -261,16 +355,21 @@ serve(async (req) => {
           console.log(`Manufacturer site search found ${siteData.data?.length || 0} results`);
           
           for (const result of siteData.data || []) {
-            console.log(`Processing manufacturer result: ${result.title}`);
+            console.log(`\n--- Processing manufacturer result ---`);
+            console.log(`Title: ${result.title || 'No title'}`);
+            console.log(`URL: ${result.url || 'No URL'}`);
             
-            const noaNumbers = extractNOANumbers(result.content || '');
-            console.log(`Extracted NOA numbers: ${noaNumbers.join(', ') || 'none'}`);
+            const combinedContent = `${result.title || ''} ${result.content || ''}`;
+            console.log(`Content preview: ${combinedContent.substring(0, 500)}`);
+            
+            const noaNumbers = extractNOANumbers(combinedContent);
             
             for (const noaNumber of noaNumbers) {
               if (!results.find(r => r.noa_number === noaNumber)) {
+                console.log(`Adding NOA from manufacturer site: ${noaNumber}`);
                 results.push({
                   noa_number: noaNumber,
-                  product_name: parseProductName(result.title, matchedSite[0]),
+                  product_name: parseProductName(result.title, matchedSite[0], result.content),
                   manufacturer: matchedSite[0],
                   category: 'Roofing',
                   expiration_date: null,
@@ -280,6 +379,8 @@ serve(async (req) => {
               }
             }
           }
+        } else {
+          console.error('Manufacturer site search failed:', await siteResponse.text());
         }
       } catch (err) {
         console.error('Manufacturer site search error:', err);
