@@ -1,117 +1,134 @@
 
-
-# Fix Custom Source Website Crawl Error
+# Fix "Download NOA PDFs" Feature
 
 ## Problem Summary
+The "Download 100 PDFs" button is not working due to a schema mismatch between what the code expects and what actually exists in the database.
 
-When clicking the "Play" button to crawl the custom source website, the error "Edge Function returned a non-2xx status code" appears. Investigation revealed two issues:
+## Root Cause
+1. The CSV importer saved external Miami-Dade URLs directly to the `file_url` column (1,800 records)
+2. The edge function `download-noa-pdfs` is looking for a non-existent `pdf_url` column
+3. The stats query in `NOABulkManager.tsx` is also querying the wrong column
+4. Result: The button shows "0 PDFs ready to download" and is disabled
 
-1. **Stale Error Display**: The previous crawl attempt failed because the URL had an accidental prefix (`"Enter this URL:     "`). The database URL was corrected, but the error status from that failed attempt is still displaying in the UI.
+## Database Reality
+- **External Miami-Dade URLs**: Stored in `file_url` (1,800 records contain `miamidade.gov` links)
+- **`pdf_url` column**: Does not exist in the schema
+- **Internal storage URLs**: Also go to `file_url` (Supabase storage URLs)
 
-2. **Zero Results from Parse**: Even when the crawl succeeds, the Miami-Dade table parser returns 0 documents. The current search URL may not be returning actual product data.
+## Solution Overview
 
-## Root Cause Analysis
+### 1. Update Edge Function (`download-noa-pdfs`)
+Change the query logic to find records where `file_url` contains an external Miami-Dade URL (not yet cached to internal storage):
 
-| Issue | Cause | Status |
-|-------|-------|--------|
-| Edge function 500 error | URL had prefix text | **Fixed** - URL is now clean |
-| Error still showing | UI showing stale `crawl_status: 'error'` | Need to re-crawl |
-| 0 documents found | Search URL incomplete or no matching products | Needs valid search URL |
+```text
+Current (broken):
+  - Looks for: pdf_url IS NOT NULL AND file_url IS NULL
+  
+Fixed:
+  - Looks for: file_url LIKE '%miamidade.gov%' (external URL present)
+  - Downloads the PDF from the external URL
+  - Uploads to Supabase storage
+  - Updates file_url with the internal storage URL
+```
 
-## Solution
+Add comprehensive logging at each step for debugging.
 
-### Fix 1: Add Better Error Recovery in Frontend
+### 2. Update Stats Query (`NOABulkManager.tsx`)
+Fix the "X PDFs ready to download" counter to correctly identify records with external URLs:
 
-Update `CustomSourceManager.tsx` to show more helpful error messages and clear stale errors before starting a new crawl.
+```text
+Current (broken):
+  - Counts: pdf_url IS NOT NULL AND file_url IS NULL
+  
+Fixed:
+  - Counts: file_url LIKE '%miamidade.gov%'
+```
 
-**Changes:**
-- Add a loading state that clears error message when starting a new crawl
-- Show more descriptive error messages based on the response
-- Add a tooltip showing the full error message
+### 3. Add User Feedback
+- **Loading state**: Already exists (`isDownloadingFromUrls`) but add console logs
+- **Toast on start**: Shows "Starting download of X PDFs..."
+- **Toast on complete**: Shows "Downloaded X of Y PDFs. Z failed."
+- **Console logging**: Add detailed logs for debugging
 
-### Fix 2: Improve Miami-Dade URL Validation
+---
 
-Update the edge function to validate and warn about incomplete Miami-Dade search URLs.
+## Technical Details
 
-**Changes:**
-- Check if the Miami-Dade URL is a search results page with actual search criteria
-- Log a warning if the URL appears to be a form page rather than a results page
-- Return a helpful message guiding users to use a complete search URL
+### Edge Function Changes (`download-noa-pdfs/index.ts`)
 
-### Fix 3: Better Table Parsing Feedback
+**Query Update:**
+```typescript
+// Find records with external Miami-Dade URLs that need caching
+const { data: products } = await supabase
+  .from('product_approvals')
+  .select('id, noa_number, manufacturer, file_url')
+  .ilike('file_url', '%miamidade.gov%')  // External URL
+  .limit(limit);
+```
 
-Add logging and feedback about what the parser found in the HTML.
+**Add Start/End Logging:**
+```typescript
+console.log(`[download-noa-pdfs] Starting download. Limit: ${limit}`);
+console.log(`[download-noa-pdfs] Found ${products.length} external PDFs to cache`);
+// ... processing ...
+console.log(`[download-noa-pdfs] Complete. Success: ${successCount}, Failed: ${failCount}`);
+```
 
-**Changes:**
-- Log sample HTML content for debugging
-- Count tables found vs tables with data
-- Return diagnostic info in the response
+### Frontend Changes (`NOABulkManager.tsx`)
+
+**Fix Stats Query:**
+```typescript
+// Count external Miami-Dade URLs needing caching
+const { count: externalPdfCount } = await supabase
+  .from('product_approvals')
+  .select('*', { count: 'exact', head: true })
+  .ilike('file_url', '%miamidade.gov%');
+
+setStats({
+  ...stats,
+  withPdfUrl: externalPdfCount || 0,  // Now shows 1800
+});
+```
+
+**Add Console Logging:**
+```typescript
+const handleDownloadFromUrls = async (batchSize: number) => {
+  console.log(`[NOABulkManager] Starting download of ${batchSize} PDFs`);
+  setIsDownloadingFromUrls(true);
+  
+  toast.info(`Starting download of up to ${batchSize} NOA PDFs...`);
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('download-noa-pdfs', {
+      body: { limit: batchSize }
+    });
+    
+    console.log('[NOABulkManager] Response:', data);
+    
+    if (data.success) {
+      toast.success(`Downloaded ${data.downloaded} of ${data.processed} PDFs. ${data.failed} failed.`);
+    }
+  } catch (error) {
+    console.error('[NOABulkManager] Error:', error);
+    toast.error(`Download failed: ${error.message}`);
+  } finally {
+    setIsDownloadingFromUrls(false);
+  }
+};
+```
+
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/permit-queens/CustomSourceManager.tsx` | Improve error handling, add retry logic, clear stale errors |
-| `supabase/functions/crawl-source-websites/index.ts` | Add Miami-Dade URL validation, improve logging, return diagnostic info |
-
-## Technical Details
-
-### Frontend Changes (CustomSourceManager.tsx)
-
-```typescript
-// Before calling the edge function, clear the previous error
-await supabase
-  .from('custom_source_websites')
-  .update({ 
-    crawl_status: 'crawling', 
-    error_message: null,  // Clear previous error
-    documents_found: 0    // Reset count
-  })
-  .eq('id', source.id);
-
-// After response, show more helpful messages
-if (data?.success) {
-  if (data.totalDiscovered === 0) {
-    toast.warning(`Crawl complete but no documents found. The search may have returned no results.`);
-  } else {
-    toast.success(`Found ${data.documentsFound} documents`);
-  }
-}
-```
-
-### Edge Function Changes
-
-```typescript
-// Add validation for Miami-Dade search URLs
-function validateMiamiDadeSearchUrl(url: string): { valid: boolean; message?: string } {
-  // Check if URL has actual search parameters
-  const hasSearchCriteria = url.includes('AdvancedSearch=Go') && 
-    (url.includes('fldNOA=') || url.includes('Classification='));
-    
-  if (!hasSearchCriteria) {
-    return {
-      valid: false,
-      message: 'This appears to be the search form, not search results. Please perform a search on the Miami-Dade site and copy the URL after results appear.'
-    };
-  }
-  
-  return { valid: true };
-}
-```
-
-## Immediate Workaround
-
-The user can try these steps right now:
-
-1. **Click the Play button again** - The edge function should now work since the URL is clean
-2. **Use a valid search URL** - Go to the Miami-Dade NOA search, perform an actual search (e.g., search for "roofing" products), and copy that results URL
-3. **Update the source URL** - Delete the current source and add a new one with the complete search results URL
+| `supabase/functions/download-noa-pdfs/index.ts` | Update query to use `file_url ILIKE '%miamidade.gov%'`, enhance logging |
+| `src/components/permit-queens/admin/NOABulkManager.tsx` | Fix stats query, add console logging, improve toast messages |
 
 ## Expected Outcome
-
-After implementation:
-- Error messages will be cleared when starting a new crawl
-- Users will see helpful guidance if the search returns no results
-- Better logging will help diagnose table parsing issues
-- Miami-Dade URLs will be validated for completeness
-
+- The stats will show "1,800 PDFs ready to download"
+- Clicking "Download 100 PDFs" will trigger the edge function
+- Console will show detailed progress logs
+- Toast notifications will appear at start and completion
+- PDFs will be downloaded from Miami-Dade and stored in Supabase storage
