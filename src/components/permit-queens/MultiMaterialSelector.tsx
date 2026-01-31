@@ -67,7 +67,7 @@ export function MultiMaterialSelector({
     return !!(product.file_url || product.noa_pdf_url || product.fl_approval_pdf_url);
   };
 
-  // Get products for a specific material category, sorted with PDFs first
+  // Get products for a specific material category, sorted by premium_tier then PDFs
   const getProductsForCategory = (categoryGroup: CategoryGroup) => {
     if (!categoryGroup.dbCategories.length) return [];
     
@@ -79,11 +79,18 @@ export function MultiMaterialSelector({
     });
 
     return filtered.sort((a, b) => {
-      // Sort products with PDFs first
+      // Sort by premium_tier first (highest first)
+      const aTier = a.premium_tier || 0;
+      const bTier = b.premium_tier || 0;
+      if (bTier !== aTier) return bTier - aTier;
+      
+      // Then by PDF availability
       const aPdf = hasPdf(a);
       const bPdf = hasPdf(b);
       if (aPdf && !bPdf) return -1;
       if (!aPdf && bPdf) return 1;
+      
+      // Then alphabetically
       return a.product_name.localeCompare(b.product_name);
     });
   };

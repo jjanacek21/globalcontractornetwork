@@ -49,10 +49,12 @@ export function useProductApprovals() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      // Fetch with premium_tier ordering: top manufacturers first
       const { data, error: fetchError } = await supabase
         .from('product_approvals')
         .select('*')
         .eq('is_active', true)
+        .order('premium_tier', { ascending: false })
         .order('manufacturer', { ascending: true });
 
       if (fetchError) throw fetchError;
@@ -153,21 +155,35 @@ export function useProductApprovals() {
     return { type: null, number: null, pdfUrl: null };
   };
 
-  // Group products by manufacturer
+  // Group products by manufacturer, sorted by premium_tier
   const getProductsByManufacturer = (categoryProducts: ProductApproval[]) => {
-    const groups: Record<string, ProductApproval[]> = {};
+    const groups: Record<string, { products: ProductApproval[]; maxTier: number }> = {};
     
     categoryProducts.forEach(product => {
       const mfr = product.manufacturer || 'Other';
-      if (!groups[mfr]) groups[mfr] = [];
-      groups[mfr].push(product);
+      if (!groups[mfr]) {
+        groups[mfr] = { products: [], maxTier: 0 };
+      }
+      groups[mfr].products.push(product);
+      groups[mfr].maxTier = Math.max(groups[mfr].maxTier, product.premium_tier || 0);
     });
 
+    // Sort manufacturers by premium_tier (highest first), then alphabetically
     return Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([manufacturer, products]) => ({
+      .sort(([aName, aData], [bName, bData]) => {
+        if (bData.maxTier !== aData.maxTier) return bData.maxTier - aData.maxTier;
+        return aName.localeCompare(bName);
+      })
+      .map(([manufacturer, data]) => ({
         manufacturer,
-        products: products.sort((a, b) => a.product_name.localeCompare(b.product_name))
+        products: data.products.sort((a, b) => {
+          // Within manufacturer: PDFs first, then by name
+          const aPdf = hasPdf(a);
+          const bPdf = hasPdf(b);
+          if (aPdf && !bPdf) return -1;
+          if (!aPdf && bPdf) return 1;
+          return a.product_name.localeCompare(b.product_name);
+        })
       }));
   };
 
