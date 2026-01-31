@@ -1,66 +1,75 @@
 
 
-# Move ManufacturerNOASearch to PDF Sourcing Tab
+# Fix PDF Viewer in ManufacturerNOASearch Component
 
-## Overview
-The `ManufacturerNOASearch` component already exists with full functionality. The user wants it moved from the "NOA Intelligence" tab to the "PDF Sourcing" tab for better workflow organization.
+## Problem
+The "View PDF" button in the Manufacturer NOA Search results is using a direct link (`<a href={result.pdf_url} target="_blank">`) which:
+1. Tries to redirect to external URLs that may be blocked by CORS policies
+2. Doesn't match the project's established pattern of using inline PDF preview
+3. Breaks for Miami-Dade and Florida Building government sites that require the Google Docs viewer fallback
 
-## Current State
-- **Component**: `src/components/permit-queens/admin/ManufacturerNOASearch.tsx` - fully functional
-- **Edge Function**: `supabase/functions/search-manufacturer-noas/index.ts` - already deployed
-- **Current Location**: NOA Intelligence tab (line 194 in AITrainingCenter.tsx)
+## Solution
+Replace the direct link with the `PDFViewerDialog` component used throughout the rest of the application. This component:
+- Shows PDFs inline in a modal dialog
+- Automatically falls back to Google Docs viewer for government domains (miamidade.gov, floridabuilding.org)
+- Provides download functionality
+- Handles CORS issues gracefully
 
-## Existing Features (Already Built)
-The ManufacturerNOASearch component includes:
-1. Search input with manufacturer name
-2. Quick search buttons for GAF, Polyglass, CertainTeed, Owens Corning, Johns Manville, IKO, Boral
-3. Results displayed in a scrollable list with checkboxes
-4. Select All / Deselect All functionality
-5. Export to CSV button
-6. Import Selected to database button
-7. Duplicate detection during import
+## Implementation Steps
 
-## Implementation Plan
-
-### Step 1: Update AITrainingCenter.tsx
-Move the `ManufacturerNOASearch` component from the NOA Intelligence tab to the PDF Sourcing tab (batch-sourcing).
-
-**Current PDF Sourcing tab (lines 130-135):**
+### Step 1: Add State for PDF Viewing
+Add a new state variable to track which PDF is being viewed:
 ```tsx
-<TabsContent value="batch-sourcing" className="mt-4">
-  <div className="space-y-6">
-    <NOACSVImporter />
-    <BatchProductSourcing />
-  </div>
-</TabsContent>
+const [viewingPdf, setViewingPdf] = useState<{
+  url: string;
+  title: string;
+} | null>(null);
 ```
 
-**Updated PDF Sourcing tab:**
+### Step 2: Update the View Button
+Replace the direct link with a button that opens the dialog:
 ```tsx
-<TabsContent value="batch-sourcing" className="mt-4">
-  <div className="space-y-6">
-    <ManufacturerNOASearch />
-    <NOACSVImporter />
-    <BatchProductSourcing />
-  </div>
-</TabsContent>
+{result.pdf_url && (
+  <Button 
+    variant="ghost" 
+    size="sm" 
+    onClick={() => setViewingPdf({
+      url: result.pdf_url!,
+      title: `${result.manufacturer} - ${result.noa_number}`
+    })}
+  >
+    <ExternalLink className="h-4 w-4" />
+  </Button>
+)}
 ```
 
-**Updated NOA Intelligence tab (remove ManufacturerNOASearch):**
+### Step 3: Add PDFViewerDialog Component
+Add the dialog component at the bottom of the return statement:
 ```tsx
-<TabsContent value="noa-intelligence" className="mt-4">
-  <div className="space-y-6">
-    <NOABulkManager />
-    <NOAUploadQueue />
-  </div>
-</TabsContent>
+<PDFViewerDialog
+  open={!!viewingPdf}
+  onOpenChange={(open) => !open && setViewingPdf(null)}
+  url={viewingPdf?.url || ''}
+  title={viewingPdf?.title || 'NOA Document'}
+  filename={`${viewingPdf?.title?.replace(/[^a-zA-Z0-9]/g, '_') || 'noa'}.pdf`}
+/>
+```
+
+### Step 4: Add Import
+Add the PDFViewerDialog import at the top of the file:
+```tsx
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 ```
 
 ## Files to Modify
 | File | Change |
 |------|--------|
-| `src/components/admin/AITrainingCenter.tsx` | Move ManufacturerNOASearch from NOA Intelligence to PDF Sourcing tab |
+| `src/components/permit-queens/admin/ManufacturerNOASearch.tsx` | Add PDFViewerDialog import, state, and component |
 
-## Summary
-This is a simple relocation - the component and edge function are already complete. The only change needed is updating the tab placement in AITrainingCenter.tsx to put the Manufacturer Search feature at the top of the PDF Sourcing tab workflow.
+## Result
+After this fix:
+- Clicking "View PDF" will open an inline preview modal
+- Government domain PDFs will automatically use the Google Docs viewer fallback
+- Users can download the PDF directly from the viewer
+- The experience matches all other PDF viewing in the application
 
