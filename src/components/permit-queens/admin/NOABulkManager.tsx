@@ -36,11 +36,14 @@ export function NOABulkManager() {
     total: number;
     withPdf: number;
     pending: number;
+    withPdfUrl: number;
     aiExtracted: number;
     avgConfidence: number;
     knowledgeItems: number;
   } | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [isDownloadingFromUrls, setIsDownloadingFromUrls] = useState(false);
+  const [urlDownloadResults, setUrlDownloadResults] = useState<DownloadResult[]>([]);
 
   // Load stats on mount
   useEffect(() => {
@@ -64,6 +67,13 @@ export function NOABulkManager() {
         .select('id', { count: 'exact' })
         .eq('source_status', 'pending');
 
+      // Products that have pdf_url but no file_url (ready to download)
+      const { data: withPdfUrl, error: pdfUrlError } = await supabase
+        .from('product_approvals')
+        .select('id', { count: 'exact' })
+        .not('pdf_url', 'is', null)
+        .is('file_url', null);
+
       const { data: aiExtracted, error: aiError } = await supabase
         .from('product_approvals')
         .select('id, extraction_confidence', { count: 'exact' })
@@ -81,11 +91,12 @@ export function NOABulkManager() {
         .from('permit_ai_knowledge')
         .select('*', { count: 'exact', head: true });
 
-      if (!allError && !pdfError && !pendingError && !aiError) {
+      if (!allError && !pdfError && !pendingError && !aiError && !pdfUrlError) {
         setStats({
           total: allProducts?.length || 0,
           withPdf: withPdf?.length || 0,
           pending: pending?.length || 0,
+          withPdfUrl: withPdfUrl?.length || 0,
           aiExtracted: aiExtracted?.length || 0,
           avgConfidence: avgConfidence,
           knowledgeItems: knowledgeCount || 0
@@ -157,8 +168,47 @@ export function NOABulkManager() {
     }
   };
 
+  // Download PDFs from stored pdf_url values
+  const handleDownloadFromUrls = async (batchSize: number = 100) => {
+    setIsDownloadingFromUrls(true);
+    setUrlDownloadResults([]);
+
+    try {
+      toast.info(`Starting download of up to ${batchSize} NOA PDFs from stored URLs...`);
+
+      const { data, error } = await supabase.functions.invoke('download-noa-pdfs', {
+        body: { limit: batchSize }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.success) {
+        setUrlDownloadResults(data.results || []);
+        
+        toast.success(
+          `Downloaded ${data.downloaded} of ${data.processed} PDFs. ${data.failed} failed.`
+        );
+        
+        // Refresh stats
+        loadStats();
+      } else {
+        throw new Error(data.error || 'Download failed');
+      }
+
+    } catch (error) {
+      console.error('URL download error:', error);
+      toast.error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDownloadingFromUrls(false);
+    }
+  };
+
   const successCount = results.filter(r => r.success).length;
   const failCount = results.filter(r => !r.success).length;
+  const urlSuccessCount = urlDownloadResults.filter(r => r.success).length;
+  const urlFailCount = urlDownloadResults.filter(r => !r.success).length;
 
   return (
     <Card>
@@ -222,15 +272,112 @@ export function NOABulkManager() {
           </Button>
         </div>
 
+        {/* Download All NOA PDFs from URLs */}
+        <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Download All NOA PDFs
+          </h4>
+          <p className="text-sm text-muted-foreground mb-3">
+            Downloads PDFs from the Miami-Dade URLs stored in your imported records and saves them to Supabase storage.
+            {stats && stats.withPdfUrl > 0 && (
+              <span className="block mt-1 font-medium text-primary">
+                {stats.withPdfUrl} PDFs ready to download!
+              </span>
+            )}
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleDownloadFromUrls(100)}
+              disabled={isDownloadingFromUrls || (stats?.withPdfUrl || 0) === 0}
+              variant="default"
+            >
+              {isDownloadingFromUrls ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download 100 PDFs
+                </>
+              )}
+            </Button>
+            <Button 
+              onClick={() => handleDownloadFromUrls(500)}
+              disabled={isDownloadingFromUrls || (stats?.withPdfUrl || 0) === 0}
+              variant="outline"
+            >
+              {isDownloadingFromUrls ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Download 500 PDFs
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* URL Download Results */}
+        {urlDownloadResults.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Download Results</h4>
+              <div className="flex gap-2">
+                <Badge className="bg-green-500/10 text-green-600">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {urlSuccessCount} Downloaded
+                </Badge>
+                <Badge variant="outline" className="text-red-600">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  {urlFailCount} Failed
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="border rounded-lg max-h-64 overflow-y-auto divide-y">
+              {urlDownloadResults.map((result, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    {result.success ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="font-mono">{result.noaNumber}</span>
+                    {result.error && (
+                      <span className="text-xs text-red-500">({result.error})</span>
+                    )}
+                  </div>
+                  {result.success && result.fileUrl && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={result.fileUrl} target="_blank" rel="noopener noreferrer">
+                        View PDF
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Download from Database */}
         <div className="p-4 bg-muted/50 rounded-lg">
-          <h4 className="font-medium mb-2">Auto-Download Missing PDFs</h4>
+          <h4 className="font-medium mb-2">Auto-Source Missing PDFs (Pattern Matching)</h4>
           <p className="text-sm text-muted-foreground mb-3">
-            Attempts to find and download PDFs for products in the database that don't have one yet.
+            Attempts to find PDFs by generating URL patterns from NOA numbers. Use this for records that don't have a pdf_url yet.
           </p>
           <Button 
             onClick={() => handleBulkDownload(true)}
             disabled={isDownloading}
+            variant="outline"
           >
             {isDownloading ? (
               <>
@@ -240,7 +387,7 @@ export function NOABulkManager() {
             ) : (
               <>
                 <Zap className="h-4 w-4 mr-2" />
-                Download Missing NOAs (up to 100)
+                Auto-Source NOAs (up to 100)
               </>
             )}
           </Button>
