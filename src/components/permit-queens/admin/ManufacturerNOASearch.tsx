@@ -377,16 +377,27 @@ export function ManufacturerNOASearch() {
                       </div>
                     </div>
                     {result.pdf_url && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setViewingPdf({
-                          url: result.pdf_url!,
-                          title: `${result.manufacturer} - ${result.noa_number}`
-                        })}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setViewingPdf({
+                            url: result.pdf_url!,
+                            title: `${result.manufacturer} - ${result.noa_number}`
+                          })}
+                          title="View PDF"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(result.pdf_url!, '_blank')}
+                          title="Open in new tab"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}

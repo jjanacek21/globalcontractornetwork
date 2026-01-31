@@ -16,6 +16,11 @@ interface NOAResult {
   fl_approval_number?: string;
 }
 
+// Helper function to construct direct Miami-Dade NOA PDF URL
+function getMiamiDadePdfUrl(noaNumber: string): string {
+  return `https://www.miamidade.gov/building/noa-documents/${noaNumber}.pdf`;
+}
+
 // Helper function to extract NOA numbers from content
 function extractNOANumbers(content: string): string[] {
   const noaNumbers: string[] = [];
@@ -206,7 +211,7 @@ serve(async (req) => {
                   category: 'Roofing',
                   expiration_date: null,
                   hvhz_approved: true, // Miami-Dade NOAs are HVHZ by default
-                  pdf_url: result.url || null, // Store the page URL
+                  pdf_url: getMiamiDadePdfUrl(noaNumber), // Direct PDF URL
                 });
               }
             }
@@ -225,7 +230,7 @@ serve(async (req) => {
                     category: 'Roofing',
                     expiration_date: null,
                     hvhz_approved: true,
-                    pdf_url: result.url,
+                    pdf_url: getMiamiDadePdfUrl(noaNumber), // Direct PDF URL
                   });
                 }
               } else {
