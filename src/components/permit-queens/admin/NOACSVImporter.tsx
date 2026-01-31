@@ -298,7 +298,8 @@ export function NOACSVImporter() {
   };
 
   const handleImport = async () => {
-    const rowsToImport = parsedRows.filter(r => selectedRows.has(r.id));
+    // Filter to only selected rows that are not duplicates
+    const rowsToImport = parsedRows.filter(r => selectedRows.has(r.id) && !r.isDuplicate);
     
     if (rowsToImport.length === 0) {
       toast.error('No rows selected for import');
@@ -341,21 +342,25 @@ export function NOACSVImporter() {
       }));
 
       try {
+        // Use regular INSERT - duplicates are already filtered out during parsing
         const { data, error } = await supabase
           .from('product_approvals')
-          .upsert(insertData, { 
-            onConflict: 'noa_number',
-            ignoreDuplicates: false 
-          })
+          .insert(insertData)
           .select();
 
         if (error) {
-          console.error('Batch insert error:', error);
-          result.failed += batch.length;
-          result.errors.push({
-            row: batchIdx * batchSize,
-            error: error.message,
-          });
+          // Handle duplicate key errors gracefully
+          if (error.code === '23505') {
+            console.warn('Some records already exist, counting as duplicates');
+            result.duplicates += batch.length;
+          } else {
+            console.error('Batch insert error:', error);
+            result.failed += batch.length;
+            result.errors.push({
+              row: batchIdx * batchSize,
+              error: error.message,
+            });
+          }
         } else {
           result.success += data?.length || 0;
         }
@@ -372,6 +377,9 @@ export function NOACSVImporter() {
 
     if (result.success > 0) {
       toast.success(`Successfully imported ${result.success} NOA records`);
+    }
+    if (result.duplicates > 0) {
+      toast.info(`${result.duplicates} records were already in database`);
     }
     if (result.failed > 0) {
       toast.error(`Failed to import ${result.failed} records`);
