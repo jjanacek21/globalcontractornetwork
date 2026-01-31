@@ -71,21 +71,21 @@ export function MultiMaterialSelector({
   const getProductsForCategory = (categoryGroup: CategoryGroup) => {
     if (!categoryGroup.dbCategories.length) return [];
     
-    return products
-      .filter(p => {
-        const productCat = p.product_category?.trim() || '';
-        return categoryGroup.dbCategories.some(dbCat => 
-          productCat.toLowerCase() === dbCat.toLowerCase()
-        );
-      })
-      .sort((a, b) => {
-        // Sort products with PDFs first
-        const aPdf = hasPdf(a);
-        const bPdf = hasPdf(b);
-        if (aPdf && !bPdf) return -1;
-        if (!aPdf && bPdf) return 1;
-        return a.product_name.localeCompare(b.product_name);
-      });
+    const filtered = products.filter(p => {
+      const productCat = p.product_category?.trim() || '';
+      return categoryGroup.dbCategories.some(dbCat => 
+        productCat.toLowerCase() === dbCat.toLowerCase()
+      );
+    });
+
+    return filtered.sort((a, b) => {
+      // Sort products with PDFs first
+      const aPdf = hasPdf(a);
+      const bPdf = hasPdf(b);
+      if (aPdf && !bPdf) return -1;
+      if (!aPdf && bPdf) return 1;
+      return a.product_name.localeCompare(b.product_name);
+    });
   };
 
   // Get selected products for a category
