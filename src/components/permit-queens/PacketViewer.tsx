@@ -142,28 +142,32 @@ export function PacketViewer({
 
   const handleDownload = async () => {
     if (!packet.packetPdfUrl) {
-      // Fallback: print cover sheet HTML
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-          <head>
-            <title>Permit Packet Cover Sheet</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 40px; }
-              @media print { .no-print { display: none; } }
-            </style>
-          </head>
-          <body>
-            ${packet.coverSheetHtml}
-            <div class="no-print" style="margin-top: 20px;">
-              <button onclick="window.print()">Print</button>
-            </div>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
+      // Fallback: create blob from cover sheet HTML and trigger download
+      const htmlContent = `
+        <html>
+        <head>
+          <title>Permit Packet Cover Sheet</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+          </style>
+        </head>
+        <body>
+          ${packet.coverSheetHtml}
+        </body>
+        </html>
+      `;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `permit-cover-sheet-${packet.packetId || 'download'}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(blobUrl);
+      toast.success('Cover sheet downloaded');
       return;
     }
 
