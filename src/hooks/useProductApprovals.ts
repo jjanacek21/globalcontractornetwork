@@ -49,16 +49,34 @@ export function useProductApprovals() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      // Fetch with premium_tier ordering: top manufacturers first
-      const { data, error: fetchError } = await supabase
-        .from('product_approvals')
-        .select('*')
-        .eq('is_active', true)
-        .order('premium_tier', { ascending: false })
-        .order('manufacturer', { ascending: true });
+      
+      // Paginate to fetch ALL products (Supabase default limit is 1000)
+      let allProducts: ProductApproval[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (fetchError) throw fetchError;
-      setProducts(data || []);
+      while (hasMore) {
+        const { data, error: fetchError } = await supabase
+          .from('product_approvals')
+          .select('*')
+          .eq('is_active', true)
+          .order('premium_tier', { ascending: false })
+          .order('manufacturer', { ascending: true })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (fetchError) throw fetchError;
+
+        if (data && data.length > 0) {
+          allProducts = [...allProducts, data as unknown as ProductApproval[]].flat();
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setProducts(allProducts);
     } catch (err) {
       console.error('Error fetching products:', err);
       setError('Failed to load product approvals');
