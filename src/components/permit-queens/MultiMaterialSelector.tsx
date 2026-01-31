@@ -20,7 +20,8 @@ export type MaterialCategory =
   | 'underlayment'
   | 'deck_fasteners'
   | 'cap_tabs'
-  | 'roofing_fasteners';
+  | 'roofing_fasteners'
+  | 'ventilation';
 
 export interface MultiSelectedProduct {
   id: string;
@@ -40,6 +41,7 @@ interface MultiMaterialSelectorProps {
 }
 
 // Category configuration for display and filtering
+// Updated to match actual database product_category values
 const CATEGORY_CONFIG: Record<string, { 
   label: string; 
   dbCategories: string[]; 
@@ -51,7 +53,13 @@ const CATEGORY_CONFIG: Record<string, {
 }> = {
   roof_covering: {
     label: 'Roof Covering',
-    dbCategories: ['Shingles', 'shingles', 'Metal Roofing', 'Metal Panel', 'Roof Tile', 'tiles', 'Stone Coated Steel', 'Metal Tile Panels', 'roof_covering'],
+    dbCategories: [
+      'Shingles', 'shingles', 
+      'Metal Roofing', 'Metal Panel', 'metal',
+      'Roof Tile', 'tiles', 
+      'Stone Coated Steel', 'Metal Tile Panels', 
+      'Roofing Slate', 'roof_covering'
+    ],
     icon: Home,
     color: 'bg-green-500',
     required: true,
@@ -60,16 +68,25 @@ const CATEGORY_CONFIG: Record<string, {
   },
   flat_roofing: {
     label: 'Flat/Low-Slope Roofing',
-    dbCategories: ['Flat Roofing - TPO', 'Flat Roofing - EPDM', 'Flat Roofing - PVC', 'Flat Roofing - Modified Bitumen'],
+    dbCategories: [
+      'Flat Roofing - TPO', 'Flat Roofing - EPDM', 'Flat Roofing - PVC', 'Flat Roofing - Modified Bitumen',
+      'Single Ply Roof Systems', 'Modified Bitumen Roof Systems', 
+      'Built Up Roofing', 'Spray Applied Polyurethene Roof Sys',
+      'Liquid Applied Roof Systems', 'Roof Coating', 'Waterproofing'
+    ],
     icon: Layers,
     color: 'bg-purple-500',
     required: false,
     allowMultiple: true,
-    description: 'For flat or low-slope roof sections (TPO, EPDM, modified bitumen, torch-down)'
+    description: 'For flat or low-slope roof sections (TPO, EPDM, modified bitumen, coatings)'
   },
   underlayment: {
     label: 'Underlayment',
-    dbCategories: ['Underlayment', 'underlayment', 'Self-Adhered Underlayment', 'Synthetic Underlayment'],
+    dbCategories: [
+      'Underlayment', 'underlayment', 
+      'Self-Adhered Underlayment', 'Synthetic Underlayment',
+      'Roofing Insulation'
+    ],
     icon: Layers,
     color: 'bg-blue-500',
     required: true,
@@ -78,7 +95,7 @@ const CATEGORY_CONFIG: Record<string, {
   },
   deck_fasteners: {
     label: 'Deck Fasteners',
-    dbCategories: ['Deck Fasteners'],
+    dbCategories: ['Deck Fasteners', 'Fasteners'],
     icon: Hammer,
     color: 'bg-orange-500',
     required: true,
@@ -96,12 +113,21 @@ const CATEGORY_CONFIG: Record<string, {
   },
   roofing_fasteners: {
     label: 'Roofing Fasteners',
-    dbCategories: ['Roofing Fasteners'],
+    dbCategories: ['Roofing Fasteners', 'Fasteners'],
     icon: Hammer,
     color: 'bg-red-500',
     required: true,
     allowMultiple: false,
     description: 'For attaching roof covering'
+  },
+  ventilation: {
+    label: 'Ventilation',
+    dbCategories: ['Ventilation'],
+    icon: Layers,
+    color: 'bg-teal-500',
+    required: false,
+    allowMultiple: true,
+    description: 'Ridge vents, turbines, and roof ventilation'
   }
 };
 

@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { ProductApproval } from '@/hooks/useProductApprovals';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  CheckCircle2, X, FileText, ShieldCheck, Calendar, ExternalLink, AlertTriangle 
+  CheckCircle2, X, FileText, ShieldCheck, Calendar, Eye, AlertTriangle 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 interface ApprovalInfoCardProps {
   product: ProductApproval;
@@ -25,6 +27,7 @@ export function ApprovalInfoCard({
   isExpired,
   isExpiringSoon,
 }: ApprovalInfoCardProps) {
+  const [viewingPdf, setViewingPdf] = useState(false);
   const expired = isExpired?.(product) ?? false;
   const expiringSoon = isExpiringSoon?.(product) ?? false;
 
@@ -139,9 +142,9 @@ export function ApprovalInfoCard({
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1.5"
-                  onClick={() => window.open(product.file_url!, '_blank')}
+                  onClick={() => setViewingPdf(true)}
                 >
-                  <ExternalLink className="h-3 w-3" />
+                  <Eye className="h-3 w-3" />
                   View {isHVHZ && product.noa_number ? 'NOA' : 'Approval'} PDF
                 </Button>
               )}
@@ -160,6 +163,15 @@ export function ApprovalInfoCard({
           )}
         </div>
       </CardContent>
+
+      {/* Inline PDF Viewer */}
+      <PDFViewerDialog
+        open={viewingPdf}
+        onOpenChange={setViewingPdf}
+        url={product.file_url || ''}
+        title={`${product.product_name} - ${isHVHZ && product.noa_number ? 'NOA' : 'Approval'}`}
+        filename={`${product.noa_number || product.fl_product_approval || 'approval'}.pdf`}
+      />
     </Card>
   );
 }
