@@ -19,6 +19,7 @@ export interface CategoryGroup {
 
 // High-level category groupings that map multiple DB categories
 // Use EXACT database category names for reliable matching
+// Use EXACT database category names (case-insensitive matching applied in hook)
 const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { matchPatterns: string[] }> = {
   roof_covering: {
     id: 'roof_covering',
@@ -28,10 +29,15 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: true,
     allowMultiple: true,
     description: 'Primary roofing material (shingles, tile, metal)',
-    // Exact DB category names (case-insensitive matching)
+    // Exact DB category names from product_approvals table
     matchPatterns: [
-      'shingles', 'shingle', 'metal roofing', 'metal', 'metal tile panels',
-      'roof tile', 'tiles', 'stone coated steel', 'roofing slate', 'roof_covering'
+      'Shingles', 'shingles', 'shingle',
+      'Metal Roofing', 'metal',
+      'Metal Tile Panels',
+      'Roof Tile', 'tiles',
+      'Stone Coated Steel',
+      'Roofing Slate',
+      'roof_covering'
     ],
   },
   flat_roofing: {
@@ -43,11 +49,15 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     allowMultiple: true,
     description: 'For flat or low-slope roof sections (TPO, EPDM, modified bitumen, coatings)',
     matchPatterns: [
-      'flat roofing - tpo', 'flat roofing - epdm', 'flat roofing - pvc',
-      'flat roofing - modified bitumen', 'flat_roof',
-      'single ply roof systems', 'modified bitumen roof systems',
-      'built up roofing', 'spray applied polyurethene roof sys',
-      'liquid applied roof systems', 'roof coating', 'waterproofing'
+      'Flat Roofing - TPO', 'Flat Roofing - EPDM', 'Flat Roofing - PVC',
+      'Flat Roofing - Modified Bitumen', 'flat_roof',
+      'Single Ply Roof Systems',
+      'Modified Bitumen Roof Systems',
+      'Built Up Roofing',
+      'Spray Applied Polyurethene Roof Sys',
+      'Liquid Applied Roof Systems',
+      'Roof Coating',
+      'Waterproofing'
     ],
   },
   underlayment: {
@@ -58,7 +68,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: true,
     allowMultiple: true,
     description: 'Protective layer under roof covering (synthetic, peel & stick, felt)',
-    matchPatterns: ['underlayment', 'roofing insulation', 'insulation'],
+    matchPatterns: ['Underlayment', 'underlayment', 'Roofing Insulation', 'Insulation'],
   },
   deck_fasteners: {
     id: 'deck_fasteners',
@@ -68,7 +78,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: true,
     allowMultiple: false,
     description: 'Nails or screws for attaching to deck',
-    matchPatterns: ['deck fasteners', 'deck - roof', 'deck - floor'],
+    matchPatterns: ['Deck Fasteners', 'Deck - Roof', 'Deck - Floor'],
   },
   cap_tabs: {
     id: 'cap_tabs',
@@ -78,7 +88,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: true,
     allowMultiple: false,
     description: 'Tin tabs, plastic or metal caps',
-    matchPatterns: ['cap tabs'],  // Exact match for the DB category
+    matchPatterns: ['Cap Tabs'],
   },
   roofing_fasteners: {
     id: 'roofing_fasteners',
@@ -88,7 +98,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: true,
     allowMultiple: false,
     description: 'For attaching roof covering',
-    matchPatterns: ['roofing fasteners', 'fasteners'],
+    matchPatterns: ['Roofing Fasteners', 'Fasteners'],
   },
   ventilation: {
     id: 'ventilation',
@@ -98,7 +108,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: false,
     allowMultiple: true,
     description: 'Ridge vents, turbines, and roof ventilation',
-    matchPatterns: ['ventilation', 'roof ventilation'],
+    matchPatterns: ['Ventilation', 'Roof Ventilation'],
   },
   sealants: {
     id: 'sealants',
@@ -108,7 +118,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: false,
     allowMultiple: true,
     description: 'Roof sealants, adhesives, and flashing',
-    matchPatterns: ['sealants & adhesives', 'adhesive', 'flashing'],
+    matchPatterns: ['Sealants & Adhesives', 'adhesive', 'Flashing'],
   },
   skylights: {
     id: 'skylights',
@@ -118,7 +128,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: false,
     allowMultiple: true,
     description: 'Skylights and roof windows',
-    matchPatterns: ['skylights', 'skylight'],
+    matchPatterns: ['Skylights', 'skylight'],
   },
   gutters: {
     id: 'gutters',
@@ -128,7 +138,7 @@ const CATEGORY_GROUPS: Record<string, Omit<CategoryGroup, 'dbCategories'> & { ma
     required: false,
     allowMultiple: true,
     description: 'Gutter systems and downspouts',
-    matchPatterns: ['gutters & downspouts'],
+    matchPatterns: ['Gutters & Downspouts'],
   },
 };
 
