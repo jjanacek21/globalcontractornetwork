@@ -181,12 +181,14 @@ export function MultiMaterialSelector({
     if (!config) return [];
     
     return products
-      .filter(p => 
-        config.dbCategories.some(dbCat => 
-          p.product_category?.toLowerCase().includes(dbCat.toLowerCase()) ||
-          dbCat.toLowerCase().includes(p.product_category?.toLowerCase() || '')
-        )
-      )
+      .filter(p => {
+        const productCat = p.product_category?.toLowerCase().trim() || '';
+        // Match if product category exactly matches or is contained in any dbCategory (case-insensitive)
+        return config.dbCategories.some(dbCat => {
+          const dbCatLower = dbCat.toLowerCase().trim();
+          return productCat === dbCatLower || productCat.includes(dbCatLower) || dbCatLower.includes(productCat);
+        });
+      })
       .sort((a, b) => {
         // Sort products with PDFs first
         const aPdf = hasPdf(a);

@@ -33,14 +33,21 @@ export function PDFViewerDialog({
   const [useGoogleViewer, setUseGoogleViewer] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Check if URL is from Miami-Dade or other external government site that needs Google viewer
+  const isExternalGov = useCallback((baseUrl: string) => {
+    if (!baseUrl) return false;
+    return baseUrl.includes('miamidade.gov') || baseUrl.includes('floridabuilding.org');
+  }, []);
+
   useEffect(() => {
     if (open && url) {
       setLoading(true);
       setError(false);
-      setUseGoogleViewer(false);
+      // Auto-use Google viewer for external government sites (CORS issues)
+      setUseGoogleViewer(isExternalGov(url));
       setRetryCount(0);
     }
-  }, [open, url]);
+  }, [open, url, isExternalGov]);
 
   // Add PDF viewer parameters for better rendering
   const getPdfUrl = useCallback((baseUrl: string) => {
