@@ -12,14 +12,15 @@ import {
   AlertCircle,
   Plus,
   Phone,
-  Building2
+  Building2,
+  FileText,
+  ArrowRight
 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { AddProjectDialog } from "@/components/permit-pros/AddProjectDialog";
-import { ProjectsTable } from "@/components/permit-pros/ProjectsTable";
+import { ProjectsList } from "@/components/permit-queens/ProjectsList";
 import { ProjectDetailsDialog } from "@/components/permit-pros/ProjectDetailsDialog";
 import { ProjectActionsDialog } from "@/components/permit-pros/ProjectActionsDialog";
-import { StatCard3D } from "@/components/crm-ui";
 
 interface PermitProject {
   id: string;
@@ -166,37 +167,86 @@ export default function PermitQueensDashboard() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatCard3D
-            title="Pending Permits"
-            value={pendingCount}
-            icon={Clock}
-            color="warning"
-          />
+        {/* Stats Grid - Large & Prominent */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {/* Pending - Most Prominent */}
+          <Card className="relative overflow-hidden border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-700">Pending Permits</p>
+                  <p className="text-4xl font-bold text-amber-900 mt-1">{pendingCount}</p>
+                </div>
+                <div className="h-14 w-14 rounded-full bg-amber-200/50 flex items-center justify-center">
+                  <Clock className="h-7 w-7 text-amber-700" />
+                </div>
+              </div>
+              {pendingCount > 0 && (
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto mt-3 text-amber-700 hover:text-amber-900"
+                  onClick={() => {/* Filter pending */}}
+                >
+                  View pending <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+            </CardContent>
+          </Card>
           
-          <StatCard3D
-            title="Completed"
-            value={completedCount}
-            icon={CheckCircle2}
-            color="success"
-          />
+          {/* Completed */}
+          <Card className="relative overflow-hidden border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-emerald-700">Completed</p>
+                  <p className="text-4xl font-bold text-emerald-900 mt-1">{completedCount}</p>
+                </div>
+                <div className="h-14 w-14 rounded-full bg-emerald-200/50 flex items-center justify-center">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-700" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
-          <StatCard3D
-            title="Action Required"
-            value={actionRequiredCount}
-            icon={AlertCircle}
-            color="danger"
-          />
+          {/* Action Required */}
+          <Card className={`relative overflow-hidden border-2 ${actionRequiredCount > 0 ? 'border-red-300 bg-gradient-to-br from-red-50 to-red-100 animate-pulse' : 'border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100'}`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${actionRequiredCount > 0 ? 'text-red-700' : 'text-slate-600'}`}>
+                    Action Required
+                  </p>
+                  <p className={`text-4xl font-bold mt-1 ${actionRequiredCount > 0 ? 'text-red-900' : 'text-slate-800'}`}>
+                    {actionRequiredCount}
+                  </p>
+                </div>
+                <div className={`h-14 w-14 rounded-full flex items-center justify-center ${actionRequiredCount > 0 ? 'bg-red-200/50' : 'bg-slate-200/50'}`}>
+                  <AlertCircle className={`h-7 w-7 ${actionRequiredCount > 0 ? 'text-red-700' : 'text-slate-600'}`} />
+                </div>
+              </div>
+              {actionRequiredCount > 0 && (
+                <p className="text-xs text-red-600 mt-2 font-medium">
+                  ⚠️ Needs your attention
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Projects Table */}
+        {/* Projects List */}
         <Card className="mb-8 border border-border shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-foreground">Your Projects</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              View and manage your permit applications
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Your Permit Projects
+                </CardTitle>
+                <CardDescription className="text-muted-foreground mt-1">
+                  View and manage your permit applications
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -204,7 +254,7 @@ export default function PermitQueensDashboard() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
               </div>
             ) : (
-              <ProjectsTable 
+              <ProjectsList 
                 projects={projects} 
                 onRefresh={fetchProjects}
                 onViewProject={setSelectedProject}
