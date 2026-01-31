@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -8,20 +8,15 @@ import {
   Plus, Shield, Hammer, Layers, Home, CircleDot, Check, Loader2
 } from 'lucide-react';
 import { useProductApprovals, ProductApproval } from '@/hooks/useProductApprovals';
+import { useProductCategories, CategoryGroup } from '@/hooks/useProductCategories';
 import { SearchableProductCombobox } from './SearchableProductCombobox';
 import { ApprovalInfoCard } from './ApprovalInfoCard';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 // Extended category type for multi-material selection
-export type MaterialCategory = 
-  | 'roof_covering'
-  | 'flat_roofing'
-  | 'underlayment'
-  | 'deck_fasteners'
-  | 'cap_tabs'
-  | 'roofing_fasteners'
-  | 'ventilation';
+export type MaterialCategory = string;
 
 export interface MultiSelectedProduct {
   id: string;
@@ -40,124 +35,18 @@ interface MultiMaterialSelectorProps {
   onRoofTypeChange?: (type: 'steep' | 'flat' | 'mixed') => void;
 }
 
-// Category configuration for display and filtering
-// Updated to match actual database product_category values exactly
-const CATEGORY_CONFIG: Record<string, { 
-  label: string; 
-  dbCategories: string[]; 
-  icon: typeof Layers;
-  color: string;
-  required: boolean;
-  allowMultiple: boolean;
-  description: string;
-}> = {
-  roof_covering: {
-    label: 'Roof Covering',
-    dbCategories: [
-      // Shingles (68 + 5 + 4 = 77)
-      'Shingles', 'shingles', 'shingle',
-      // Metal (877 + 14 + 7 = 898)
-      'Metal Roofing', 'metal', 'Metal Tile Panels',
-      // Tile (96 + 2 = 98)
-      'Roof Tile', 'tiles',
-      // Stone Coated (32)
-      'Stone Coated Steel',
-      // Slate (10)
-      'Roofing Slate',
-      // Legacy
-      'roof_covering'
-    ],
-    icon: Home,
-    color: 'bg-green-500',
-    required: true,
-    allowMultiple: true,
-    description: 'Primary roofing material (shingles, tile, metal)'
-  },
-  flat_roofing: {
-    label: 'Flat/Low-Slope Roofing',
-    dbCategories: [
-      // Flat Roofing specific (31 + 13 + 10 + 10 + 1 = 65)
-      'Flat Roofing - Modified Bitumen', 'Flat Roofing - TPO', 'Flat Roofing - PVC', 'Flat Roofing - EPDM', 'flat_roof',
-      // System types (160 + 121 + 35 + 34 + 26 = 376)
-      'Single Ply Roof Systems', 'Modified Bitumen Roof Systems', 
-      'Built Up Roofing', 'Spray Applied Polyurethene Roof Sys',
-      'Liquid Applied Roof Systems',
-      // Coatings (138 + 64 = 202)
-      'Roof Coating', 'Waterproofing'
-    ],
-    icon: Layers,
-    color: 'bg-purple-500',
-    required: false,
-    allowMultiple: true,
-    description: 'For flat or low-slope roof sections (TPO, EPDM, modified bitumen, coatings)'
-  },
-  underlayment: {
-    label: 'Underlayment',
-    dbCategories: [
-      // Underlayment (190 + 2 = 192)
-      'Underlayment', 'underlayment',
-      // Insulation (23 + 9 = 32)
-      'Roofing Insulation', 'Insulation'
-    ],
-    icon: Layers,
-    color: 'bg-blue-500',
-    required: true,
-    allowMultiple: true,
-    description: 'Protective layer under roof covering (synthetic, peel & stick, felt)'
-  },
-  deck_fasteners: {
-    label: 'Deck Fasteners',
-    dbCategories: [
-      // Deck Fasteners (8)
-      'Deck Fasteners',
-      // Deck (4 + 1 = 5)
-      'Deck - Roof', 'Deck - Floor'
-    ],
-    icon: Hammer,
-    color: 'bg-orange-500',
-    required: true,
-    allowMultiple: false,
-    description: 'Nails or screws for attaching to deck'
-  },
-  cap_tabs: {
-    label: 'Cap Tabs / Caps',
-    dbCategories: [
-      // Cap Tabs (11)
-      'Cap Tabs'
-    ],
-    icon: CircleDot,
-    color: 'bg-yellow-500',
-    required: true,
-    allowMultiple: false,
-    description: 'Tin tabs, plastic or metal caps'
-  },
-  roofing_fasteners: {
-    label: 'Roofing Fasteners',
-    dbCategories: [
-      // Roofing Fasteners (12)
-      'Roofing Fasteners',
-      // General Fasteners (38)
-      'Fasteners'
-    ],
-    icon: Hammer,
-    color: 'bg-red-500',
-    required: true,
-    allowMultiple: false,
-    description: 'For attaching roof covering'
-  },
-  ventilation: {
-    label: 'Ventilation',
-    dbCategories: [
-      // Ventilation (75 + 5 = 80)
-      'Ventilation', 'Roof Ventilation'
-    ],
-    icon: Layers,
-    color: 'bg-teal-500',
-    required: false,
-    allowMultiple: true,
-    description: 'Ridge vents, turbines, and roof ventilation'
-  }
+// Icon mapping for category groups
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Home,
+  Layers,
+  Hammer,
+  CircleDot,
+  Shield,
 };
+
+function getIcon(iconName: string) {
+  return ICON_MAP[iconName] || Layers;
+}
 
 export function MultiMaterialSelector({ 
   isHVHZ, 
@@ -166,9 +55,12 @@ export function MultiMaterialSelector({
   onProductsChange,
   onRoofTypeChange
 }: MultiMaterialSelectorProps) {
-  const { products, loading, isExpired, isExpiringSoon, refetch } = useProductApprovals();
+  const { products, loading: productsLoading, isExpired, isExpiringSoon, refetch } = useProductApprovals();
+  const { categoryGroups, loading: categoriesLoading, ungroupedCategories } = useProductCategories();
   const [showAddDropdown, setShowAddDropdown] = useState<Record<string, boolean>>({});
   const [sourcingProducts, setSourcingProducts] = useState<Set<string>>(new Set());
+
+  const loading = productsLoading || categoriesLoading;
 
   // Helper to check if product has a PDF
   const hasPdf = (product: ProductApproval) => {
@@ -176,18 +68,15 @@ export function MultiMaterialSelector({
   };
 
   // Get products for a specific material category, sorted with PDFs first
-  const getProductsForCategory = (category: MaterialCategory) => {
-    const config = CATEGORY_CONFIG[category];
-    if (!config) return [];
+  const getProductsForCategory = (categoryGroup: CategoryGroup) => {
+    if (!categoryGroup.dbCategories.length) return [];
     
     return products
       .filter(p => {
-        const productCat = p.product_category?.toLowerCase().trim() || '';
-        // Match if product category exactly matches or is contained in any dbCategory (case-insensitive)
-        return config.dbCategories.some(dbCat => {
-          const dbCatLower = dbCat.toLowerCase().trim();
-          return productCat === dbCatLower || productCat.includes(dbCatLower) || dbCatLower.includes(productCat);
-        });
+        const productCat = p.product_category?.trim() || '';
+        return categoryGroup.dbCategories.some(dbCat => 
+          productCat.toLowerCase() === dbCat.toLowerCase()
+        );
       })
       .sort((a, b) => {
         // Sort products with PDFs first
@@ -200,14 +89,14 @@ export function MultiMaterialSelector({
   };
 
   // Get selected products for a category
-  const getSelectedForCategory = (category: MaterialCategory) => {
-    return selectedProducts.filter(p => p.category === category);
+  const getSelectedForCategory = (categoryId: string) => {
+    return selectedProducts.filter(p => p.category === categoryId);
   };
 
   // Trigger background PDF sourcing for a product
   const triggerBackgroundSourcing = async (product: ProductApproval) => {
-    if (hasPdf(product)) return; // Already has PDF
-    if (sourcingProducts.has(product.id)) return; // Already sourcing
+    if (hasPdf(product)) return;
+    if (sourcingProducts.has(product.id)) return;
     
     setSourcingProducts(prev => new Set(prev).add(product.id));
     
@@ -221,7 +110,6 @@ export function MultiMaterialSelector({
         console.warn('Background sourcing failed:', error);
       } else if (data?.success && data?.fileUrl) {
         toast.success(`PDF sourced for ${product.product_name}`);
-        // Refresh product list to get updated URL
         refetch();
       }
     } catch (e) {
@@ -236,81 +124,78 @@ export function MultiMaterialSelector({
   };
 
   // Add a product selection
-  const addProduct = (product: ProductApproval, category: MaterialCategory) => {
-    const config = CATEGORY_CONFIG[category];
+  const addProduct = (product: ProductApproval, categoryId: string, allowMultiple: boolean) => {
     const newProduct: MultiSelectedProduct = {
       id: product.id,
       product,
-      category,
+      category: categoryId,
     };
 
-    if (config?.allowMultiple) {
-      // Check if already selected
-      const exists = selectedProducts.some(p => p.id === product.id && p.category === category);
+    if (allowMultiple) {
+      const exists = selectedProducts.some(p => p.id === product.id && p.category === categoryId);
       if (!exists) {
         onProductsChange([...selectedProducts, newProduct]);
       }
     } else {
-      // Replace existing selection for this category
-      const filtered = selectedProducts.filter(p => p.category !== category);
+      const filtered = selectedProducts.filter(p => p.category !== categoryId);
       onProductsChange([...filtered, newProduct]);
     }
     
-    // If product doesn't have a PDF, trigger background sourcing
     if (!hasPdf(product)) {
       triggerBackgroundSourcing(product);
     }
     
-    // Hide the add dropdown after selection
-    setShowAddDropdown(prev => ({ ...prev, [category]: false }));
+    setShowAddDropdown(prev => ({ ...prev, [categoryId]: false }));
   };
 
   // Remove a specific product
-  const removeProduct = (productId: string, category: MaterialCategory) => {
-    onProductsChange(selectedProducts.filter(p => !(p.id === productId && p.category === category)));
+  const removeProduct = (productId: string, categoryId: string) => {
+    onProductsChange(selectedProducts.filter(p => !(p.id === productId && p.category === categoryId)));
   };
 
-  // Determine which categories to show based on roof type
+  // Filter categories based on roof type
   const visibleCategories = useMemo(() => {
-    const categories = Object.keys(CATEGORY_CONFIG) as MaterialCategory[];
-    
     if (roofType === 'steep') {
-      return categories.filter(c => c !== 'flat_roofing');
+      return categoryGroups.filter(c => c.id !== 'flat_roofing');
     }
     if (roofType === 'flat') {
-      return categories.filter(c => c !== 'roof_covering');
+      return categoryGroups.filter(c => c.id !== 'roof_covering');
     }
-    return categories; // Mixed shows all
-  }, [roofType]);
+    return categoryGroups;
+  }, [roofType, categoryGroups]);
 
-  const renderCategorySection = (category: MaterialCategory) => {
-    const config = CATEGORY_CONFIG[category];
-    const categoryProducts = getProductsForCategory(category);
-    const selected = getSelectedForCategory(category);
-    const Icon = config.icon;
-    const showingAddDropdown = showAddDropdown[category];
+  const renderCategorySection = (categoryGroup: CategoryGroup) => {
+    const categoryProducts = getProductsForCategory(categoryGroup);
+    const selected = getSelectedForCategory(categoryGroup.id);
+    const Icon = getIcon(categoryGroup.icon);
+    const showingAddDropdown = showAddDropdown[categoryGroup.id];
     
-    // Filter out already selected products from the dropdown
     const availableProducts = categoryProducts.filter(
       p => !selected.some(s => s.id === p.id)
     );
 
+    // Skip if no products in this category
+    if (categoryProducts.length === 0) return null;
+
     return (
-      <div key={category} className="space-y-3">
+      <div key={categoryGroup.id} className="space-y-3">
         {/* Category Header */}
         <div className="flex items-center gap-3">
-          <div className={`h-8 w-8 rounded-full ${config.color} flex items-center justify-center`}>
+          <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", categoryGroup.color)}>
             <Icon className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">{config.label}</Label>
-              {config.required && <span className="text-destructive">*</span>}
-              {config.allowMultiple && (
+              <Label className="text-sm font-medium">{categoryGroup.label}</Label>
+              {categoryGroup.required && <span className="text-destructive">*</span>}
+              {categoryGroup.allowMultiple && (
                 <Badge variant="secondary" className="text-[10px]">Multi-select</Badge>
               )}
+              <Badge variant="outline" className="text-[10px]">
+                {categoryProducts.length} products
+              </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">{config.description}</p>
+            <p className="text-xs text-muted-foreground">{categoryGroup.description}</p>
           </div>
           <Badge variant={selected.length > 0 ? 'default' : 'secondary'} className="shrink-0">
             {selected.length} selected
@@ -318,15 +203,15 @@ export function MultiMaterialSelector({
         </div>
 
         {/* Main dropdown (show when no selection or single-select) */}
-        {(selected.length === 0 || (!config.allowMultiple && selected.length === 0)) && (
+        {(selected.length === 0 || (!categoryGroup.allowMultiple && selected.length === 0)) && (
           <SearchableProductCombobox
             products={categoryProducts}
             selectedProduct={null}
-            onSelect={(product) => product && addProduct(product, category)}
-            placeholder={`Search ${config.label.toLowerCase()}...`}
-            label={config.label}
+            onSelect={(product) => product && addProduct(product, categoryGroup.id, categoryGroup.allowMultiple)}
+            placeholder={`Search ${categoryGroup.label.toLowerCase()}...`}
+            label={categoryGroup.label}
             isHVHZ={isHVHZ}
-            required={config.required}
+            required={categoryGroup.required}
             isExpired={isExpired}
             isExpiringSoon={isExpiringSoon}
           />
@@ -337,10 +222,10 @@ export function MultiMaterialSelector({
           <div className="space-y-2">
             {selected.map(sel => (
               <ApprovalInfoCard
-                key={`${sel.id}-${category}`}
+                key={`${sel.id}-${categoryGroup.id}`}
                 product={sel.product}
                 isHVHZ={isHVHZ}
-                onRemove={() => removeProduct(sel.id, category)}
+                onRemove={() => removeProduct(sel.id, categoryGroup.id)}
                 showRemoveButton={true}
                 isExpired={isExpired}
                 isExpiringSoon={isExpiringSoon}
@@ -350,16 +235,16 @@ export function MultiMaterialSelector({
         )}
 
         {/* Add Another button for multi-select categories */}
-        {config.allowMultiple && selected.length > 0 && (
+        {categoryGroup.allowMultiple && selected.length > 0 && (
           <div className="space-y-2">
             {showingAddDropdown ? (
               <div className="space-y-2">
                 <SearchableProductCombobox
                   products={availableProducts}
                   selectedProduct={null}
-                  onSelect={(product) => product && addProduct(product, category)}
-                  placeholder={`Search ${config.label.toLowerCase()}...`}
-                  label={config.label}
+                  onSelect={(product) => product && addProduct(product, categoryGroup.id, categoryGroup.allowMultiple)}
+                  placeholder={`Search ${categoryGroup.label.toLowerCase()}...`}
+                  label={categoryGroup.label}
                   isHVHZ={isHVHZ}
                   isExpired={isExpired}
                   isExpiringSoon={isExpiringSoon}
@@ -367,7 +252,7 @@ export function MultiMaterialSelector({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAddDropdown(prev => ({ ...prev, [category]: false }))}
+                  onClick={() => setShowAddDropdown(prev => ({ ...prev, [categoryGroup.id]: false }))}
                   className="text-xs"
                 >
                   Cancel
@@ -377,24 +262,24 @@ export function MultiMaterialSelector({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowAddDropdown(prev => ({ ...prev, [category]: true }))}
+                onClick={() => setShowAddDropdown(prev => ({ ...prev, [categoryGroup.id]: true }))}
                 className="text-xs gap-1.5"
                 disabled={availableProducts.length === 0}
               >
                 <Plus className="h-3 w-3" />
-                Add another {config.label.toLowerCase()}
+                Add another {categoryGroup.label.toLowerCase()}
               </Button>
             )}
           </div>
         )}
 
         {/* Single-select: show dropdown to change selection */}
-        {!config.allowMultiple && selected.length > 0 && (
+        {!categoryGroup.allowMultiple && selected.length > 0 && (
           <div className="pt-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => removeProduct(selected[0].id, category)}
+              onClick={() => removeProduct(selected[0].id, categoryGroup.id)}
               className="text-xs text-muted-foreground"
             >
               Change selection
@@ -409,6 +294,7 @@ export function MultiMaterialSelector({
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
           Loading product approvals...
         </CardContent>
       </Card>
@@ -473,18 +359,20 @@ export function MultiMaterialSelector({
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {visibleCategories.map(category => {
-                const config = CATEGORY_CONFIG[category];
-                const selected = getSelectedForCategory(category);
-                const Icon = config.icon;
+              {visibleCategories.map(categoryGroup => {
+                const selected = getSelectedForCategory(categoryGroup.id);
+                const Icon = getIcon(categoryGroup.icon);
+                const productCount = getProductsForCategory(categoryGroup).length;
+                
+                if (productCount === 0) return null;
                 
                 return (
-                  <div key={category} className="p-3 border rounded-lg">
+                  <div key={categoryGroup.id} className="p-3 border rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={`h-6 w-6 rounded-full ${config.color} flex items-center justify-center`}>
+                      <div className={cn("h-6 w-6 rounded-full flex items-center justify-center", categoryGroup.color)}>
                         <Icon className="h-3 w-3 text-white" />
                       </div>
-                      <span className="font-medium text-sm">{config.label}</span>
+                      <span className="font-medium text-sm">{categoryGroup.label}</span>
                     </div>
                     {selected.length > 0 ? (
                       <div className="space-y-1">
@@ -503,7 +391,7 @@ export function MultiMaterialSelector({
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        {config.required ? 'Required - not selected' : 'Optional - not selected'}
+                        {categoryGroup.required ? 'Required - not selected' : 'Optional - not selected'}
                       </p>
                     )}
                   </div>
@@ -520,10 +408,15 @@ export function MultiMaterialSelector({
           <CardTitle className="text-lg">Material Selection</CardTitle>
           <CardDescription>
             Search and select products with valid Florida product approvals for each category
+            {ungroupedCategories.length > 0 && (
+              <span className="block text-xs mt-1">
+                + {ungroupedCategories.length} additional categories available
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {visibleCategories.map(category => renderCategorySection(category))}
+          {visibleCategories.map(categoryGroup => renderCategorySection(categoryGroup))}
         </CardContent>
       </Card>
     </div>

@@ -11,12 +11,12 @@ import {
   Loader2, 
   PenTool, 
   AlertTriangle,
-  ExternalLink,
   Package,
   Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 interface PacketDocument {
   id: string;
@@ -140,9 +140,30 @@ export function PacketDownloader({
     }
   };
 
-  const downloadPacket = () => {
-    if (packetUrl) {
-      window.open(packetUrl, '_blank');
+  const [viewingPacket, setViewingPacket] = useState(false);
+
+  const downloadPacket = async () => {
+    if (!packetUrl) return;
+    
+    try {
+      const response = await fetch(packetUrl);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = 'permit-packet.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(blobUrl);
+      toast.success('Download started');
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error('Failed to download packet');
     }
   };
 
@@ -246,6 +267,10 @@ export function PacketDownloader({
             </Button>
           ) : (
             <>
+              <Button onClick={() => setViewingPacket(true)} variant="outline" className="flex-1">
+                <FileText className="h-4 w-4 mr-2" />
+                View Packet
+              </Button>
               <Button onClick={downloadPacket} className="flex-1">
                 <Download className="h-4 w-4 mr-2" />
                 Download Packet
@@ -263,6 +288,15 @@ export function PacketDownloader({
           </p>
         )}
       </CardContent>
+
+      {/* Inline PDF Viewer */}
+      <PDFViewerDialog
+        open={viewingPacket}
+        onOpenChange={setViewingPacket}
+        url={packetUrl || ''}
+        title="Permit Packet"
+        filename="permit-packet.pdf"
+      />
     </Card>
   );
 }

@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { User, MapPin, Phone, Mail, FileText, Image, CheckCircle2, XCircle, Upload, ClipboardCheck, RefreshCw, Home } from "lucide-react";
+import { User, MapPin, Phone, Mail, FileText, Image, CheckCircle2, XCircle, Upload, ClipboardCheck, RefreshCw, Home, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { PDFViewerDialog } from "@/components/ui/PDFViewerDialog";
 
 interface PermitProject {
   id: string;
@@ -79,6 +80,7 @@ const STATUS_LABELS: Record<string, string> = {
 export function ProjectDetailsDialog({ project, open, onOpenChange, onAction }: ProjectDetailsDialogProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     if (project && open) {
@@ -106,13 +108,13 @@ export function ProjectDetailsDialog({ project, open, onOpenChange, onAction }: 
     }
   };
 
-  const getDocumentUrl = async (filePath: string) => {
+  const viewDocument = async (filePath: string, docName: string) => {
     const { data } = await supabase.storage
       .from('permit-documents')
       .createSignedUrl(filePath, 3600);
     
     if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
+      setViewingDocument({ url: data.signedUrl, name: docName });
     }
   };
 
@@ -366,10 +368,10 @@ export function ProjectDetailsDialog({ project, open, onOpenChange, onAction }: 
                       {docs.map((doc) => (
                         <button
                           key={doc.id}
-                          onClick={() => getDocumentUrl(doc.file_path)}
+                          onClick={() => viewDocument(doc.file_path, doc.file_name)}
                           className="flex items-center gap-2 p-2 bg-zinc-700/50 rounded hover:bg-zinc-700 transition-colors text-left"
                         >
-                          <FileText className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                          <Eye className="h-4 w-4 text-amber-500 flex-shrink-0" />
                           <span className="text-sm text-zinc-300 truncate">{doc.file_name}</span>
                         </button>
                       ))}
@@ -381,6 +383,15 @@ export function ProjectDetailsDialog({ project, open, onOpenChange, onAction }: 
           </div>
         </div>
       </DialogContent>
+
+      {/* PDF Viewer */}
+      <PDFViewerDialog
+        open={!!viewingDocument}
+        onOpenChange={(open) => !open && setViewingDocument(null)}
+        url={viewingDocument?.url || ''}
+        title={viewingDocument?.name || 'Document'}
+        filename={viewingDocument?.name || 'document.pdf'}
+      />
     </Dialog>
   );
 }

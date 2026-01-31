@@ -12,8 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Upload, FileUp, Search, Trash2, ExternalLink, FileText, CheckCircle } from "lucide-react";
+import { Upload, FileUp, Search, Trash2, Eye, FileText, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
+import { PDFViewerDialog } from "@/components/ui/PDFViewerDialog";
 
 interface TrainingSession {
   id: string;
@@ -46,6 +47,7 @@ export default function ReportUploadCenter() {
   const [loading, setLoading] = useState(true);
   const [uploadedReports, setUploadedReports] = useState<UploadedReport[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewingReport, setViewingReport] = useState<{ url: string; name: string } | null>(null);
 
   // Upload form state
   const [addressSearch, setAddressSearch] = useState("");
@@ -376,9 +378,12 @@ export default function ReportUploadCenter() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(report.report_url!, "_blank")}
+                              onClick={() => setViewingReport({ 
+                                url: report.report_url!, 
+                                name: `${report.report_type || 'Report'} - ${report.address}` 
+                              })}
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
@@ -550,6 +555,15 @@ export default function ReportUploadCenter() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PDF Viewer */}
+      <PDFViewerDialog
+        open={!!viewingReport}
+        onOpenChange={(open) => !open && setViewingReport(null)}
+        url={viewingReport?.url || ''}
+        title={viewingReport?.name || 'Report'}
+        filename="report.pdf"
+      />
     </div>
   );
 }

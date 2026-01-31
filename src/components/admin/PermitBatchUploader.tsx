@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { usePermitBatchUpload, QueuedFile } from "@/hooks/usePermitBatchUpload";
 import { cn } from "@/lib/utils";
+import { PDFViewerDialog } from "@/components/ui/PDFViewerDialog";
 
 interface PermitBatchUploaderProps {
   onBatchComplete?: () => void;
@@ -104,6 +105,7 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [storageReady, setStorageReady] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [viewingPdf, setViewingPdf] = useState<{ url: string; name: string } | null>(null);
 
   const {
     queue,
@@ -453,7 +455,10 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => window.open(item.storageUrl, "_blank")}
+                                  onClick={() => setViewingPdf({ 
+                                    url: item.storageUrl!, 
+                                    name: item.file?.name || 'Document'
+                                  })}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -559,6 +564,15 @@ export default function PermitBatchUploader({ onBatchComplete }: PermitBatchUplo
           </div>
         )}
       </CardContent>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={!!viewingPdf}
+        onOpenChange={(open) => !open && setViewingPdf(null)}
+        url={viewingPdf?.url || ''}
+        title={viewingPdf?.name || 'Document'}
+        filename="document.pdf"
+      />
     </Card>
   );
 }

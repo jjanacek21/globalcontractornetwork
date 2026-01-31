@@ -156,7 +156,23 @@ export function FormPreviewDialog({
             Close
           </Button>
           {previewUrl && (
-            <Button onClick={() => window.open(previewUrl, '_blank')}>
+            <Button onClick={async () => {
+              try {
+                const response = await fetch(previewUrl);
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `${documentName}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+              } catch (err) {
+                console.error('Download error:', err);
+              }
+            }}>
               <Download className="h-4 w-4 mr-2" />
               Download Preview
             </Button>

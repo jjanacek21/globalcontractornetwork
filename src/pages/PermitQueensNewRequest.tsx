@@ -1076,9 +1076,23 @@ export default function PermitQueensNewRequest() {
                   onSignatureComplete={(id) => {
                     toast.success('Signature recorded');
                   }}
-                  onDownloadForSigning={(req) => {
+                  onDownloadForSigning={async (req) => {
                     if (req.documentUrl) {
-                      window.open(req.documentUrl, '_blank');
+                      try {
+                        const response = await fetch(req.documentUrl);
+                        if (!response.ok) throw new Error('Download failed');
+                        const blob = await response.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = `${req.documentType || 'document'}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                      } catch (err) {
+                        toast.error('Failed to download document');
+                      }
                     } else {
                       toast.info('Document will be available after packet generation');
                     }
