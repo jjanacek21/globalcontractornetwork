@@ -37,6 +37,7 @@ export function ProductApprovalVerifier({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
+  const [manufacturerSearch, setManufacturerSearch] = useState('');
   const [hvhzOnly, setHvhzOnly] = useState(false);
   const [validOnly, setValidOnly] = useState(true);
   const [hasDocumentsOnly, setHasDocumentsOnly] = useState(false);
@@ -44,6 +45,12 @@ export function ProductApprovalVerifier({
   const categories = getCategories();
   const manufacturers = getManufacturers();
 
+  // Filter manufacturers based on search input
+  const filteredManufacturers = useMemo(() => {
+    if (!manufacturerSearch) return [];
+    const search = manufacturerSearch.toLowerCase();
+    return manufacturers.filter(m => m.toLowerCase().includes(search));
+  }, [manufacturers, manufacturerSearch]);
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       // Search query - check NOA, FL Product Approval, manufacturer, product name
@@ -157,17 +164,64 @@ export function ProductApprovalVerifier({
             </SelectContent>
           </Select>
 
-          <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-            <SelectTrigger>
-              <SelectValue placeholder="Manufacturer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Manufacturers</SelectItem>
-              {manufacturers.map(mfr => (
-                <SelectItem key={mfr} value={mfr}>{mfr}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search manufacturer..."
+              value={manufacturerSearch}
+              onChange={(e) => setManufacturerSearch(e.target.value)}
+              className="pl-10"
+            />
+            {manufacturerSearch && filteredManufacturers.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                  onClick={() => {
+                    setSelectedManufacturer('all');
+                    setManufacturerSearch('');
+                  }}
+                >
+                  All Manufacturers
+                </button>
+                {filteredManufacturers.slice(0, 20).map(mfr => (
+                  <button
+                    key={mfr}
+                    type="button"
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-sm hover:bg-accent",
+                      selectedManufacturer === mfr && "bg-accent"
+                    )}
+                    onClick={() => {
+                      setSelectedManufacturer(mfr);
+                      setManufacturerSearch('');
+                    }}
+                  >
+                    {mfr}
+                  </button>
+                ))}
+                {filteredManufacturers.length > 20 && (
+                  <p className="px-3 py-2 text-xs text-muted-foreground">
+                    +{filteredManufacturers.length - 20} more...
+                  </p>
+                )}
+              </div>
+            )}
+            {selectedManufacturer !== 'all' && !manufacturerSearch && (
+              <div className="absolute z-50 w-full mt-1">
+                <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                  {selectedManufacturer}
+                  <button
+                    type="button"
+                    className="ml-1 hover:text-destructive"
+                    onClick={() => setSelectedManufacturer('all')}
+                  >
+                    ×
+                  </button>
+                </Badge>
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
