@@ -16,7 +16,9 @@ import {
   Shield,
   Trash2,
   Eye,
-  Plus
+  Plus,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { useProductApprovals, ProductApproval } from '@/hooks/useProductApprovals';
 import { supabase } from '@/integrations/supabase/client';
@@ -131,6 +133,20 @@ export function ProductApprovalDocuments({ onRefresh }: ProductApprovalDocuments
   const productsWithDocs = products.filter(p => p.file_url).length;
   const productsWithoutDocs = products.filter(p => !p.file_url).length;
 
+  // Helper to check if URL is external (Miami-Dade, etc.) vs internal storage
+  const isExternalUrl = (url: string | null): boolean => {
+    if (!url) return false;
+    return url.includes('miamidade.gov') || url.includes('floridabuilding.org');
+  };
+
+  // Helper to check if URL is internal Supabase storage
+  const isInternalStorage = (url: string | null): boolean => {
+    if (!url) return false;
+    return url.includes('supabase') || url.includes('ujalvgknnbsxqpujxvwk');
+  };
+
+  const productsWithExternalUrls = products.filter(p => isExternalUrl(p.file_url)).length;
+
   if (loading) {
     return (
       <Card>
@@ -155,7 +171,7 @@ export function ProductApprovalDocuments({ onRefresh }: ProductApprovalDocuments
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <p className="text-2xl font-bold">{products.length}</p>
             <p className="text-sm text-muted-foreground">Total Products</p>
@@ -163,6 +179,10 @@ export function ProductApprovalDocuments({ onRefresh }: ProductApprovalDocuments
           <div className="text-center p-4 bg-green-500/10 rounded-lg">
             <p className="text-2xl font-bold text-green-600">{productsWithDocs}</p>
             <p className="text-sm text-muted-foreground">With NOA Docs</p>
+          </div>
+          <div className="text-center p-4 bg-yellow-500/10 rounded-lg">
+            <p className="text-2xl font-bold text-yellow-600">{productsWithExternalUrls}</p>
+            <p className="text-sm text-muted-foreground">External URLs</p>
           </div>
           <div className="text-center p-4 bg-orange-500/10 rounded-lg">
             <p className="text-2xl font-bold text-orange-600">{productsWithoutDocs}</p>
@@ -205,13 +225,20 @@ export function ProductApprovalDocuments({ onRefresh }: ProductApprovalDocuments
             filteredProducts.map(product => (
               <div key={product.id} className="flex items-center justify-between p-4 hover:bg-muted/50">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium truncate">{product.product_name}</p>
                     {product.file_url ? (
-                      <Badge variant="secondary" className="bg-green-500/10 text-green-600">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Has NOA
-                      </Badge>
+                      isInternalStorage(product.file_url) ? (
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-600">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          External URL
+                        </Badge>
+                      )
                     ) : (
                       <Badge variant="outline" className="text-muted-foreground">
                         No Document
@@ -243,6 +270,13 @@ export function ProductApprovalDocuments({ onRefresh }: ProductApprovalDocuments
                           View
                         </a>
                       </Button>
+                      {isExternalUrl(product.file_url) && (
+                        <Button variant="ghost" size="sm" asChild title="Open external source">
+                          <a href={product.file_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          </a>
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="sm"

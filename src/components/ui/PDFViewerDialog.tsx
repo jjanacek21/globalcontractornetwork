@@ -39,6 +39,21 @@ export function PDFViewerDialog({
     return baseUrl.includes('miamidade.gov') || baseUrl.includes('floridabuilding.org');
   }, []);
 
+  // Extract NOA number from Miami-Dade URL for search fallback
+  const extractNoaNumber = useCallback((baseUrl: string): string | null => {
+    if (!baseUrl || !baseUrl.includes('miamidade.gov')) return null;
+    const match = baseUrl.match(/\/noa\/(\d+)\.pdf$/i);
+    return match ? match[1] : null;
+  }, []);
+
+  // Get Miami-Dade NOA search URL
+  const getMiamiDadeSearchUrl = useCallback((noaNumber: string | null): string => {
+    if (noaNumber) {
+      return `https://www.miamidade.gov/apps/dpmbuilding/search/results.aspx?AdvancedSearch=Go&IncludeExpired=true&NOANumber=${noaNumber}`;
+    }
+    return 'https://www.miamidade.gov/building/product-control.asp';
+  }, []);
+
   useEffect(() => {
     if (open && url) {
       setLoading(true);
@@ -179,9 +194,18 @@ export function PDFViewerDialog({
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center space-y-4 p-4">
-                <p className="text-destructive font-medium">Failed to load document</p>
+                <p className="text-destructive font-medium">
+                  {isExternalGov(url) ? 'Document Not Found' : 'Failed to load document'}
+                </p>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  The PDF viewer couldn't display this document. You can try again, use an alternative viewer, or download the file directly.
+                  {isExternalGov(url) ? (
+                    <>
+                      This document may no longer exist on the government server, or the URL may be incorrect.
+                      {extractNoaNumber(url) && ' You can search for it directly on Miami-Dade\'s NOA database.'}
+                    </>
+                  ) : (
+                    'The PDF viewer couldn\'t display this document. You can try again, use an alternative viewer, or download the file directly.'
+                  )}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   <Button variant="outline" onClick={handleRetry}>
@@ -191,6 +215,17 @@ export function PDFViewerDialog({
                   {!useGoogleViewer && (
                     <Button variant="outline" onClick={handleTryGoogleViewer}>
                       Try Google Viewer
+                    </Button>
+                  )}
+                  {isExternalGov(url) && (
+                    <Button variant="outline" asChild>
+                      <a 
+                        href={getMiamiDadeSearchUrl(extractNoaNumber(url))} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        Search Miami-Dade
+                      </a>
                     </Button>
                   )}
                   <Button onClick={handleDownload} disabled={downloading}>
