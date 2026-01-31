@@ -8862,6 +8862,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: boolean
       }
+      is_permit_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       normalize_address: { Args: { addr: string }; Returns: string }
     }
