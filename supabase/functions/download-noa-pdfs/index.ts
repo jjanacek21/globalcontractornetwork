@@ -29,12 +29,12 @@ serve(async (req) => {
 
     console.log(`[download-noa-pdfs] Starting download. Limit: ${limit}`);
 
-    // Build query - find records that have pdf_url but no stored file
+    // Build query - find records with external Miami-Dade URLs (not yet cached internally)
+    // External URLs contain 'miamidade.gov', internal storage URLs contain 'supabase'
     let query = supabase
       .from('product_approvals')
-      .select('id, noa_number, manufacturer, pdf_url, file_url')
-      .not('pdf_url', 'is', null)
-      .is('file_url', null)
+      .select('id, noa_number, manufacturer, file_url')
+      .ilike('file_url', '%miamidade.gov%')
       .limit(limit);
 
     if (productIds?.length > 0) {
@@ -47,17 +47,18 @@ serve(async (req) => {
       throw new Error(`Failed to fetch products: ${fetchError.message}`);
     }
 
-    console.log(`[download-noa-pdfs] Found ${products?.length || 0} products with pdf_url but no stored PDF`);
+    console.log(`[download-noa-pdfs] Found ${products?.length || 0} products with external Miami-Dade URLs to cache`);
 
     const results: DownloadResult[] = [];
     let successCount = 0;
     let failCount = 0;
 
     for (const product of products || []) {
-      const pdfUrl = product.pdf_url;
+      // Use file_url which contains the external Miami-Dade URL
+      const pdfUrl = product.file_url;
       const noaNumber = product.noa_number || 'unknown';
 
-      if (!pdfUrl) continue;
+      if (!pdfUrl || !pdfUrl.includes('miamidade.gov')) continue;
 
       try {
         console.log(`[download-noa-pdfs] Downloading ${noaNumber} from ${pdfUrl}`);

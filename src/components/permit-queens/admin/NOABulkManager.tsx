@@ -67,12 +67,11 @@ export function NOABulkManager() {
         .select('id', { count: 'exact' })
         .eq('source_status', 'pending');
 
-      // Products that have pdf_url but no file_url (ready to download)
-      const { data: withPdfUrl, error: pdfUrlError } = await supabase
+      // Products that have external Miami-Dade URLs (ready to download and cache)
+      const { count: externalPdfCount, error: pdfUrlError } = await supabase
         .from('product_approvals')
-        .select('id', { count: 'exact' })
-        .not('pdf_url', 'is', null)
-        .is('file_url', null);
+        .select('*', { count: 'exact', head: true })
+        .ilike('file_url', '%miamidade.gov%');
 
       const { data: aiExtracted, error: aiError } = await supabase
         .from('product_approvals')
@@ -96,7 +95,7 @@ export function NOABulkManager() {
           total: allProducts?.length || 0,
           withPdf: withPdf?.length || 0,
           pending: pending?.length || 0,
-          withPdfUrl: withPdfUrl?.length || 0,
+          withPdfUrl: externalPdfCount || 0,
           aiExtracted: aiExtracted?.length || 0,
           avgConfidence: avgConfidence,
           knowledgeItems: knowledgeCount || 0
@@ -168,37 +167,42 @@ export function NOABulkManager() {
     }
   };
 
-  // Download PDFs from stored pdf_url values
+  // Download PDFs from stored external Miami-Dade URLs and cache to internal storage
   const handleDownloadFromUrls = async (batchSize: number = 100) => {
+    console.log(`[NOABulkManager] Starting download of ${batchSize} PDFs from external URLs`);
     setIsDownloadingFromUrls(true);
     setUrlDownloadResults([]);
 
     try {
-      toast.info(`Starting download of up to ${batchSize} NOA PDFs from stored URLs...`);
+      toast.info(`Starting download of up to ${batchSize} NOA PDFs...`);
 
+      console.log('[NOABulkManager] Invoking download-noa-pdfs edge function...');
       const { data, error } = await supabase.functions.invoke('download-noa-pdfs', {
         body: { limit: batchSize }
       });
 
+      console.log('[NOABulkManager] Response:', { data, error });
+
       if (error) {
+        console.error('[NOABulkManager] Edge function error:', error);
         throw error;
       }
 
-      if (data.success) {
+      if (data?.success) {
         setUrlDownloadResults(data.results || []);
         
-        toast.success(
-          `Downloaded ${data.downloaded} of ${data.processed} PDFs. ${data.failed} failed.`
-        );
+        const successMsg = `Downloaded ${data.downloaded} of ${data.processed} PDFs. ${data.failed} failed.`;
+        console.log('[NOABulkManager]', successMsg);
+        toast.success(successMsg);
         
         // Refresh stats
         loadStats();
       } else {
-        throw new Error(data.error || 'Download failed');
+        throw new Error(data?.error || 'Download failed');
       }
 
     } catch (error) {
-      console.error('URL download error:', error);
+      console.error('[NOABulkManager] URL download error:', error);
       toast.error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsDownloadingFromUrls(false);
