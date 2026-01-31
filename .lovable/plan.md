@@ -1,79 +1,119 @@
 
+# Fix PDF Preview Issues in Product Approvals
 
-# Fix PDF Preview in ManufacturerNOASearch
+## Problem Summary
 
-## Problem Identified
-The PDF preview no longer works because the edge function is now returning **landing page URLs** (HTML pages) instead of **direct PDF file URLs**. 
+Based on my investigation, there are **multiple root causes** for why some NOA previews work and others show "No preview available":
 
-**Example of what's being returned:**
-- `https://www.miamidade.gov/apps/dpmbuilding/search/results.aspx?...` (HTML page)
+### Issue 1: Miami-Dade PDF URLs Return 404 for Some Products
 
-**What the PDFViewerDialog expects:**
-- `https://www.miamidade.gov/building/noa-documents/21-1234.01.pdf` (Direct PDF)
+Some products have correctly formatted URLs that point to **non-existent files** on Miami-Dade's server. The PDFViewerDialog correctly uses the Google Docs viewer fallback for government sites, but if the underlying PDF doesn't exist, Google Docs displays "No preview available."
 
-The Google Docs viewer fallback only works with actual PDF file URLs, not HTML landing pages.
+**Evidence:**
+- "GAF - Timberline AS II" has URL `https://www.miamidade.gov/building/library/productcontrol/noa/21031202.pdf` - works
+- "CertainTeed - Grand Manor" has URL `https://www.miamidade.gov/building/library/productcontrol/noa/20045605.pdf` - shows "No preview available" (likely 404)
 
-## Solution Options
+### Issue 2: Malformed Miami-Dade URLs
 
-### Option A: Construct Direct PDF URLs (Recommended)
-Miami-Dade uses a predictable URL pattern for NOA PDFs:
+3 products have incorrectly formatted URLs with extra prefixes that will never resolve:
+- `https://www.miamidade.gov/building/library/productcontrol/noa/No: 25012112.pdf` (contains spaces and colon)
+- `https://www.miamidade.gov/building/library/productcontrol/noa/NOA22070609.pdf` (contains "NOA" prefix)
+
+### Issue 3: 627 Products Have No PDF URL
+
+These products have `file_url = NULL` and show no preview option at all.
+
+---
+
+## Solution Plan
+
+### Step 1: Fix Malformed URLs (Database Cleanup)
+
+Create a migration to correct the 3 malformed Miami-Dade URLs by extracting just the NOA number digits:
+
+```sql
+-- Fix URLs with "No: " prefix
+UPDATE product_approvals 
+SET file_url = REGEXP_REPLACE(file_url, 'No: ', '')
+WHERE file_url LIKE '%miamidade.gov%/noa/No: %';
+
+-- Fix URLs with "NOA" prefix in the filename
+UPDATE product_approvals 
+SET file_url = REGEXP_REPLACE(
+  file_url, 
+  '/noa/NOA([0-9]+)\.pdf', 
+  '/noa/\1.pdf'
+)
+WHERE file_url LIKE '%miamidade.gov%/noa/NOA%';
 ```
-https://www.miamidade.gov/building/noa-documents/{NOA_NUMBER}.pdf
-```
 
-Update the edge function to construct the correct PDF URL based on the NOA number instead of using the search result URL.
+### Step 2: Improve PDFViewerDialog Error Handling
 
-### Option B: Add "Open in New Tab" Fallback
-For URLs that aren't direct PDFs, provide a button to open the landing page in a new browser tab so users can navigate to the PDF manually.
+Update the `PDFViewerDialog` component to:
+1. **Detect 404 errors** when the Google Docs viewer fails (currently shows generic "No preview")
+2. **Show clearer messaging** like "Document not found at Miami-Dade" with the option to search for it
+3. **Add "Search Miami-Dade NOA" button** that links directly to the search page
 
-## Implementation Plan
+### Step 3: Add URL Validation in ProductApprovalsManagement
 
-### Step 1: Update Edge Function PDF URL Logic
-Modify `supabase/functions/search-manufacturer-noas/index.ts`:
+Update the admin table to show a **warning badge** when a product has:
+- A Miami-Dade URL that hasn't been verified
+- A malformed URL pattern
 
-```typescript
-// Helper function to construct Miami-Dade NOA PDF URL
-function getMiamiDadePdfUrl(noaNumber: string): string {
-  // Miami-Dade stores NOA PDFs at a predictable location
-  return `https://www.miamidade.gov/building/noa-documents/${noaNumber}.pdf`;
-}
-```
+### Step 4: Add Bulk PDF Verification Tool (Optional)
 
-Then use this function when adding Miami-Dade results:
-```typescript
-pdf_url: getMiamiDadePdfUrl(noaNumber), // Direct PDF URL
-```
+Create a new admin tool that:
+1. Checks all Miami-Dade URLs to see if they return 200 or 404
+2. Flags products with broken URLs
+3. Attempts to construct correct URLs using the NOA number
 
-### Step 2: Add Fallback "Open Page" Button for Non-PDF URLs
-Update `ManufacturerNOASearch.tsx` to detect non-PDF URLs and show an alternative "Open Page" button that opens in a new tab.
-
-### Step 3: Improve PDFViewerDialog URL Detection
-Update the viewer to better detect when a URL is not a direct PDF and show appropriate messaging.
+---
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/search-manufacturer-noas/index.ts` | Add helper to construct direct Miami-Dade PDF URLs, use for pdf_url field |
-| `src/components/permit-queens/admin/ManufacturerNOASearch.tsx` | Add fallback "Open in New Tab" button for non-PDF URLs |
+| Database Migration | Fix 3 malformed URLs |
+| `src/components/ui/PDFViewerDialog.tsx` | Improve error detection and messaging for 404s |
+| `src/components/admin/ProductApprovalsManagement.tsx` | Add warning badge for unverified URLs |
+
+---
 
 ## Technical Details
 
-### Miami-Dade NOA PDF URL Pattern
-Based on the official Miami-Dade NOA database, PDFs are stored at:
+### Miami-Dade PDF URL Pattern
+
+The correct pattern is:
 ```
-https://www.miamidade.gov/building/noa-documents/{NOA-NUMBER}.pdf
+https://www.miamidade.gov/building/library/productcontrol/noa/{NOA_NUMBER_WITHOUT_DASHES_OR_DOTS}.pdf
 ```
 
-Example:
-- NOA Number: `21-0123.01`
-- PDF URL: `https://www.miamidade.gov/building/noa-documents/21-0123.01.pdf`
+For NOA number `21-0312.02`, the file is `21031202.pdf`.
 
-### Florida Building Approvals
-Florida Building uses a different system - we may need to store the landing page URL and provide an "Open in Browser" option for these.
+### Google Docs Viewer Behavior
+
+When Google Docs viewer encounters a 404 or inaccessible PDF, it displays "No preview available" rather than an error. The PDFViewerDialog currently cannot distinguish between:
+- A loading PDF
+- A 404 PDF
+- A CORS-blocked PDF
+
+### Current Statistics
+
+| Status | Count |
+|--------|-------|
+| Total Products | 2,481 |
+| With PDF URL | 1,854 |
+| Internal Storage (verified) | 1,127 |
+| Miami-Dade URLs (may be 404) | 726 |
+| Malformed URLs | 3 |
+| Missing URL entirely | 627 |
+
+---
 
 ## Expected Outcome
-- Clicking "View PDF" for Miami-Dade NOAs will open the actual PDF document
-- For other sources (Florida Building, manufacturer sites), a fallback option to open in new tab will be available
-- The PDF preview will work reliably again
 
+After implementing these fixes:
+1. The 3 malformed URLs will be corrected and may display properly
+2. Users will see clearer error messages when PDFs are unavailable
+3. Admins can identify which products need their PDFs re-sourced
+4. Long-term: A verification tool can flag broken external URLs for replacement
