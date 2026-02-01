@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase
+  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -281,6 +281,14 @@ const MemberDashboard = () => {
       description: "Browse and bid on homeowner job requests",
       link: "/job-board",
       color: "bg-green-500/10 text-green-600",
+      category: "business" as ServiceCategory
+    },
+    {
+      icon: MapPinned,
+      title: "Door to Door World",
+      description: "GPS-tracked canvassing with gamified challenges",
+      link: "/door-to-door",
+      color: "bg-purple-600/10 text-purple-600",
       category: "business" as ServiceCategory
     }
   ];

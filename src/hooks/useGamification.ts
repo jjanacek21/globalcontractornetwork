@@ -92,6 +92,16 @@ export const POINT_VALUES = {
   full_verification: 300,
   client_reference: 25,
   recruit_contractor: 100,
+  // Door to Door points
+  door_knock_base: 5,
+  door_not_home: 2,
+  door_go_back: 3,
+  door_interested: 10,
+  door_customer_info: 20,
+  door_appointment: 50,
+  door_inspection: 75,
+  door_contract: 200,
+  door_video_verification: 25,
 };
 
 export function useGamification(userId?: string) {
