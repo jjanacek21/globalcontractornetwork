@@ -6,16 +6,25 @@ import { ArrowLeft, MapPin } from "lucide-react";
 import { DoorToDoorMap } from "@/components/door-to-door/DoorToDoorMap";
 import { SessionControls } from "@/components/door-to-door/SessionControls";
 import { SessionStats } from "@/components/door-to-door/SessionStats";
-import { DoorKnockPanel } from "@/components/door-to-door/DoorKnockPanel";
-import { DwellTimeIndicator } from "@/components/door-to-door/DwellTimeIndicator";
+import { PropertySidePanel } from "@/components/door-to-door/PropertySidePanel";
 import { VideoVerificationModal } from "@/components/door-to-door/VideoVerificationModal";
 import { useDoorToDoorSession, type DoorDisposition } from "@/hooks/useDoorToDoorSession";
+import { usePropertyDispositions, generateLatLngHash, type PropertyDisposition } from "@/hooks/usePropertyDispositions";
 import { useGPSTracking } from "@/hooks/useGPSTracking";
 import { useToast } from "@/hooks/use-toast";
-import type { CustomerInfo } from "@/components/door-to-door/CustomerInfoForm";
 
-const DWELL_TIME_REQUIRED = 20; // 20 seconds
 const VIDEO_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+interface SelectedProperty {
+  lat: number;
+  lng: number;
+  address?: string;
+  disposition?: PropertyDisposition;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  notes?: string;
+}
 
 export default function DoorToDoor() {
   const navigate = useNavigate();
@@ -25,13 +34,12 @@ export default function DoorToDoor() {
   const [loading, setLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   
-  // Door knock flow states
-  const [pendingKnockLocation, setPendingKnockLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [showDwellTimer, setShowDwellTimer] = useState(false);
-  const [showKnockPanel, setShowKnockPanel] = useState(false);
-  const [showVideoModal, setShowVideoModal] = useState(false);
+  // Side panel state
+  const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   
-  // Video check timer
+  // Video modal state
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const [lastVideoCheck, setLastVideoCheck] = useState<number>(Date.now());
 
   // Session hook
@@ -48,16 +56,23 @@ export default function DoorToDoor() {
     saveLocation
   } = useDoorToDoorSession(userId || undefined);
 
+  // Property dispositions hook
+  const {
+    properties,
+    loading: propertiesLoading,
+    fetchPropertiesInBounds,
+    setPropertyDisposition,
+    generatePropertyGrid,
+  } = usePropertyDispositions(userId || undefined);
+
   // GPS tracking hook
   const {
     position,
     error: gpsError,
-    isTracking,
     route,
     startTracking,
     stopTracking,
     clearRoute,
-    getCurrentPosition
   } = useGPSTracking({
     onPositionChange: (pos) => {
       if (activeSession) {
@@ -97,10 +112,34 @@ export default function DoorToDoor() {
       if (now - lastVideoCheck >= VIDEO_CHECK_INTERVAL) {
         setShowVideoModal(true);
       }
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [activeSession, lastVideoCheck]);
+
+  // Handle bounds change - fetch properties and generate grid
+  const handleBoundsChange = useCallback(async (bounds: { north: number; south: number; east: number; west: number }) => {
+    if (!userId) return;
+
+    // Fetch existing dispositions
+    const existingProperties = await fetchPropertiesInBounds(bounds);
+    
+    // Generate grid points for the visible area (only if we don't have many existing)
+    if ((existingProperties?.length || 0) < 50) {
+      const gridPoints = generatePropertyGrid(bounds, 0.0003); // ~30 meter spacing
+      
+      // Add grid points that don't already exist
+      const existingHashes = new Set((existingProperties || []).map(p => p.latLngHash));
+      const newPoints = gridPoints
+        .filter(p => !existingHashes.has(p.latLngHash))
+        .slice(0, 100); // Limit to 100 new points per view
+      
+      // Create placeholder properties for grid points
+      for (const point of newPoints) {
+        await setPropertyDisposition(point.lat, point.lng, 'not_contacted', {});
+      }
+    }
+  }, [userId, fetchPropertiesInBounds, generatePropertyGrid, setPropertyDisposition]);
 
   // Handle start session
   const handleStartSession = async () => {
@@ -120,55 +159,80 @@ export default function DoorToDoor() {
     setSessionStartTime(null);
   };
 
-  // Handle knock door button or map click
-  const handleKnockDoor = async () => {
-    if (!position) {
-      toast({
-        title: "GPS Required",
-        description: "Please wait for GPS lock to record a door knock",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setPendingKnockLocation({ lat: position.lat, lng: position.lng });
-    setShowDwellTimer(true);
+  // Handle property click from map
+  const handlePropertyClick = (property: { lat: number; lng: number; address?: string; existingData?: any }) => {
+    setSelectedProperty({
+      lat: property.lat,
+      lng: property.lng,
+      address: property.address,
+      disposition: property.existingData?.disposition || 'not_contacted',
+      customerName: property.existingData?.customerName,
+      customerPhone: property.existingData?.customerPhone,
+      customerEmail: property.existingData?.customerEmail,
+      notes: property.existingData?.notes,
+    });
+    setIsPanelOpen(true);
   };
 
-  // Handle map click
-  const handleMapClick = (lat: number, lng: number) => {
-    if (!activeSession) return;
-    setPendingKnockLocation({ lat, lng });
-    setShowDwellTimer(true);
+  // Handle map click (for adding new property markers)
+  const handleMapClick = async (lat: number, lng: number) => {
+    // Create a new property marker at this location
+    await setPropertyDisposition(lat, lng, 'not_contacted', {});
+    
+    // Open the panel for this new property
+    setSelectedProperty({
+      lat,
+      lng,
+      disposition: 'not_contacted',
+    });
+    setIsPanelOpen(true);
   };
 
-  // Handle dwell time complete
-  const handleDwellComplete = () => {
-    setShowDwellTimer(false);
-    setShowKnockPanel(true);
-  };
+  // Handle disposition save from panel
+  const handleSaveDisposition = async (
+    disposition: PropertyDisposition,
+    customerInfo: { name?: string; phone?: string; email?: string; notes?: string }
+  ) => {
+    if (!selectedProperty) return;
 
-  // Handle dwell time cancel
-  const handleDwellCancel = () => {
-    setShowDwellTimer(false);
-    setPendingKnockLocation(null);
-  };
-
-  // Handle knock panel submit
-  const handleKnockSubmit = async (disposition: DoorDisposition, customerInfo?: CustomerInfo) => {
-    if (!pendingKnockLocation) return;
-
-    await recordDoorKnock(
-      pendingKnockLocation.lat,
-      pendingKnockLocation.lng,
+    await setPropertyDisposition(
+      selectedProperty.lat,
+      selectedProperty.lng,
       disposition,
-      DWELL_TIME_REQUIRED,
       customerInfo,
-      customerInfo?.notes
+      selectedProperty.address
     );
 
-    setShowKnockPanel(false);
-    setPendingKnockLocation(null);
+    // Also record as a door knock for session tracking
+    if (activeSession && disposition !== 'not_contacted') {
+      await recordDoorKnock(
+        selectedProperty.lat,
+        selectedProperty.lng,
+        disposition as DoorDisposition,
+        0, // No dwell time for this workflow
+        customerInfo.name || customerInfo.phone || customerInfo.email ? {
+          name: customerInfo.name || '',
+          phone: customerInfo.phone,
+          email: customerInfo.email,
+        } : undefined,
+        customerInfo.notes
+      );
+    }
+
+    // Update selected property state
+    setSelectedProperty(prev => prev ? {
+      ...prev,
+      disposition,
+      customerName: customerInfo.name,
+      customerPhone: customerInfo.phone,
+      customerEmail: customerInfo.email,
+      notes: customerInfo.notes,
+    } : null);
+
+    toast({
+      title: "Saved",
+      description: `Property marked as ${disposition.replace('_', ' ')}`,
+    });
   };
 
   // Handle video upload
@@ -178,6 +242,19 @@ export default function DoorToDoor() {
       setLastVideoCheck(Date.now());
     }
     return success;
+  };
+
+  // Handle knock door button
+  const handleKnockDoor = async () => {
+    if (!position) {
+      toast({
+        title: "GPS Required",
+        description: "Please wait for GPS lock",
+        variant: "destructive"
+      });
+      return;
+    }
+    handleMapClick(position.lat, position.lng);
   };
 
   if (loading || sessionLoading) {
@@ -225,8 +302,11 @@ export default function DoorToDoor() {
         position={position}
         route={route}
         doorKnocks={doorKnocks}
+        properties={properties}
         onMapClick={handleMapClick}
+        onPropertyClick={handlePropertyClick}
         isSessionActive={!!activeSession}
+        onBoundsChange={handleBoundsChange}
       />
 
       {/* Session Controls */}
@@ -238,25 +318,14 @@ export default function DoorToDoor() {
         canKnock={!!position}
       />
 
-      {/* Dwell Time Indicator */}
-      {showDwellTimer && (
-        <DwellTimeIndicator
-          requiredSeconds={DWELL_TIME_REQUIRED}
-          onComplete={handleDwellComplete}
-          onCancel={handleDwellCancel}
-        />
-      )}
-
-      {/* Door Knock Panel */}
-      {showKnockPanel && (
-        <DoorKnockPanel
-          onSubmit={handleKnockSubmit}
-          onClose={() => {
-            setShowKnockPanel(false);
-            setPendingKnockLocation(null);
-          }}
-        />
-      )}
+      {/* Property Side Panel */}
+      <PropertySidePanel
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        property={selectedProperty}
+        onSave={handleSaveDisposition}
+        loading={propertiesLoading}
+      />
 
       {/* Video Verification Modal */}
       {activeSession && userId && (
