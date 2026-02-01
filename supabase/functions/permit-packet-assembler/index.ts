@@ -209,12 +209,15 @@ async function mergePdfDocuments(
   supabase: any
 ): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
+  let successfulMerges = 0;
+  let failedMerges: string[] = [];
   
   // Add cover sheet
   try {
     const coverPdf = await PDFDocument.load(coverSheetBytes);
     const coverPages = await mergedPdf.copyPages(coverPdf, coverPdf.getPageIndices());
     coverPages.forEach(page => mergedPdf.addPage(page));
+    console.log('Cover sheet added successfully');
   } catch (e) {
     console.warn('Could not add cover sheet:', e);
   }
@@ -224,22 +227,82 @@ async function mergePdfDocuments(
     if (!url) continue;
     
     try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
+      console.log(`Attempting to fetch PDF: ${url}`);
       
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('pdf')) {
-        console.log(`Skipping non-PDF: ${url}`);
+      // Handle Supabase storage paths
+      let fetchUrl = url;
+      if (!url.startsWith('http')) {
+        // This is a storage path, generate signed URL
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('permit-documents')
+          .createSignedUrl(url, 3600); // 1 hour
+        
+        if (signedError || !signedData?.signedUrl) {
+          console.warn(`Could not create signed URL for ${url}:`, signedError);
+          failedMerges.push(url);
+          continue;
+        }
+        fetchUrl = signedData.signedUrl;
+        console.log(`Using signed URL for storage path`);
+      }
+      
+      // Try fetching with custom headers for government sites
+      const isGovSite = fetchUrl.includes('miamidade.gov') || fetchUrl.includes('floridabuilding.org');
+      
+      const response = await fetch(fetchUrl, {
+        headers: isGovSite ? {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/pdf,*/*',
+        } : {},
+      });
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch ${fetchUrl}: ${response.status} ${response.statusText}`);
+        failedMerges.push(url);
+        continue;
+      }
+      
+      const contentType = response.headers.get('content-type') || '';
+      // Be more lenient with content-type checking for government sites
+      if (!contentType.includes('pdf') && !contentType.includes('octet-stream') && !isGovSite) {
+        console.log(`Skipping non-PDF (${contentType}): ${url}`);
+        failedMerges.push(url);
         continue;
       }
       
       const pdfBytes = await response.arrayBuffer();
+      
+      // Validate it's actually a PDF by checking magic bytes
+      const header = new Uint8Array(pdfBytes.slice(0, 5));
+      const pdfMagic = String.fromCharCode(...header);
+      if (!pdfMagic.startsWith('%PDF')) {
+        console.warn(`Not a valid PDF file: ${url}`);
+        failedMerges.push(url);
+        continue;
+      }
+      
       const srcPdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+      const pageCount = srcPdf.getPageCount();
+      
+      if (pageCount === 0) {
+        console.warn(`PDF has no pages: ${url}`);
+        failedMerges.push(url);
+        continue;
+      }
+      
       const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
       pages.forEach(page => mergedPdf.addPage(page));
+      successfulMerges++;
+      console.log(`Successfully merged ${pageCount} pages from: ${url.substring(0, 80)}...`);
     } catch (e) {
       console.warn(`Could not add document from ${url}:`, e);
+      failedMerges.push(url);
     }
+  }
+  
+  console.log(`PDF merge complete: ${successfulMerges} successful, ${failedMerges.length} failed`);
+  if (failedMerges.length > 0) {
+    console.log('Failed URLs:', failedMerges.slice(0, 5).join(', '));
   }
   
   // Add page numbers
