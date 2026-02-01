@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+import { Loader2, Download, Maximize2, Minimize2, RefreshCw, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -32,17 +32,21 @@ export function PDFViewerDialog({
   const [downloading, setDownloading] = useState(false);
   const [useGoogleViewer, setUseGoogleViewer] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [loadTimeout, setLoadTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Check if URL is from Miami-Dade or other external government site that needs Google viewer
   const isExternalGov = useCallback((baseUrl: string) => {
     if (!baseUrl) return false;
-    return baseUrl.includes('miamidade.gov') || baseUrl.includes('floridabuilding.org');
+    return baseUrl.includes('miamidade.gov') || 
+           baseUrl.includes('floridabuilding.org') ||
+           baseUrl.includes('.gov/');
   }, []);
 
   // Extract NOA number from Miami-Dade URL for search fallback
   const extractNoaNumber = useCallback((baseUrl: string): string | null => {
     if (!baseUrl || !baseUrl.includes('miamidade.gov')) return null;
-    const match = baseUrl.match(/\/noa\/(\d+)\.pdf$/i);
+    // Match patterns like /noa/12345.pdf or /noa-documents/12345.pdf
+    const match = baseUrl.match(/\/(?:noa|noa-documents)\/(\d+[-\d]*[A-Z]?)\.pdf$/i);
     return match ? match[1] : null;
   }, []);
 
@@ -54,13 +58,28 @@ export function PDFViewerDialog({
     return 'https://www.miamidade.gov/building/product-control.asp';
   }, []);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadTimeout) clearTimeout(loadTimeout);
+    };
+  }, [loadTimeout]);
+
   useEffect(() => {
     if (open && url) {
       setLoading(true);
       setError(false);
-      // Auto-use Google viewer for external government sites (CORS issues)
-      setUseGoogleViewer(isExternalGov(url));
       setRetryCount(0);
+      
+      // For external government sites, immediately use Google viewer to avoid CORS issues
+      const shouldUseGoogle = isExternalGov(url);
+      setUseGoogleViewer(shouldUseGoogle);
+      
+      // Set a timeout to auto-complete loading after 8 seconds (in case onLoad doesn't fire)
+      const timeout = setTimeout(() => {
+        setLoading(false);
+      }, 8000);
+      setLoadTimeout(timeout);
     }
   }, [open, url, isExternalGov]);
 
@@ -79,25 +98,29 @@ export function PDFViewerDialog({
   }, []);
 
   const handleLoad = () => {
+    if (loadTimeout) clearTimeout(loadTimeout);
     setLoading(false);
     setError(false);
   };
 
   const handleError = () => {
-    console.log('[PDFViewerDialog] Load error, retry count:', retryCount);
+    console.log('[PDFViewerDialog] Load error, retry count:', retryCount, 'url:', url?.substring(0, 50));
     
     if (retryCount === 0 && !useGoogleViewer) {
-      // First failure - try without parameters
+      // First failure - try Google viewer
       setRetryCount(1);
+      setUseGoogleViewer(true);
       setLoading(true);
-    } else if (retryCount === 1 && !useGoogleViewer) {
-      // Second failure - the PDF might just be loading slowly, wait longer
+    } else if (retryCount === 1) {
+      // Second failure with Google viewer - try plain URL
       setRetryCount(2);
-      // Set a timeout to stop loading after 5 more seconds
-      setTimeout(() => {
+      setLoading(true);
+      // Wait for potential slow loading
+      const timeout = setTimeout(() => {
         setLoading(false);
         // Don't set error - the PDF might actually be displaying
       }, 5000);
+      setLoadTimeout(timeout);
     } else {
       setLoading(false);
       setError(true);
@@ -109,6 +132,11 @@ export function PDFViewerDialog({
     setLoading(true);
     setRetryCount(0);
     setUseGoogleViewer(false);
+    
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+    setLoadTimeout(timeout);
   };
 
   const handleTryGoogleViewer = () => {
@@ -116,6 +144,17 @@ export function PDFViewerDialog({
     setLoading(true);
     setUseGoogleViewer(true);
     setRetryCount(0);
+    
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+    setLoadTimeout(timeout);
+  };
+
+  const handleOpenInNewTab = () => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleDownload = async () => {
@@ -123,6 +162,21 @@ export function PDFViewerDialog({
     
     setDownloading(true);
     try {
+      // For external government sites, use direct link since fetch may be blocked
+      if (isExternalGov(url)) {
+        // Create a link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.download = filename;
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Download started in new tab');
+        return;
+      }
+      
       const response = await fetch(url);
       if (!response.ok) throw new Error('Download failed');
       
@@ -140,7 +194,9 @@ export function PDFViewerDialog({
       toast.success('Download started');
     } catch (err) {
       console.error('Download error:', err);
-      toast.error('Failed to download document');
+      // Fallback - open in new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+      toast.info('Opening document in new tab');
     } finally {
       setDownloading(false);
     }
@@ -149,7 +205,9 @@ export function PDFViewerDialog({
   if (!url) return null;
 
   // Determine which URL to use
-  const displayUrl = useGoogleViewer ? getGoogleViewerUrl(url) : (retryCount === 1 ? url : getPdfUrl(url));
+  const displayUrl = useGoogleViewer 
+    ? getGoogleViewerUrl(url) 
+    : (retryCount >= 2 ? url : getPdfUrl(url));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,6 +224,15 @@ export function PDFViewerDialog({
             {title}
           </DialogTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleOpenInNewTab}
+              className="h-8 w-8"
+              title="Open in new tab"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -186,25 +253,32 @@ export function PDFViewerDialog({
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading document...</p>
+                <p className="text-sm text-muted-foreground">
+                  {useGoogleViewer ? 'Loading via Google Docs viewer...' : 'Loading document...'}
+                </p>
+                {isExternalGov(url) && (
+                  <p className="text-xs text-muted-foreground">
+                    External government document may take longer
+                  </p>
+                )}
               </div>
             </div>
           )}
 
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-4 p-4">
+              <div className="text-center space-y-4 p-4 max-w-md">
                 <p className="text-destructive font-medium">
-                  {isExternalGov(url) ? 'Document Not Found' : 'Failed to load document'}
+                  {isExternalGov(url) ? 'Document Not Found or Unavailable' : 'Failed to load document'}
                 </p>
-                <p className="text-sm text-muted-foreground max-w-md">
+                <p className="text-sm text-muted-foreground">
                   {isExternalGov(url) ? (
                     <>
-                      This document may no longer exist on the government server, or the URL may be incorrect.
-                      {extractNoaNumber(url) && ' You can search for it directly on Miami-Dade\'s NOA database.'}
+                      This document may not exist on the government server, or it may be temporarily unavailable.
+                      {extractNoaNumber(url) && ' Try searching for it directly on the official database.'}
                     </>
                   ) : (
-                    'The PDF viewer couldn\'t display this document. You can try again, use an alternative viewer, or download the file directly.'
+                    'The PDF viewer couldn\'t display this document. You can try again, use Google Docs viewer, or open it in a new tab.'
                   )}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
@@ -214,10 +288,14 @@ export function PDFViewerDialog({
                   </Button>
                   {!useGoogleViewer && (
                     <Button variant="outline" onClick={handleTryGoogleViewer}>
-                      Try Google Viewer
+                      Google Viewer
                     </Button>
                   )}
-                  {isExternalGov(url) && (
+                  <Button variant="outline" onClick={handleOpenInNewTab}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                  {isExternalGov(url) && extractNoaNumber(url) && (
                     <Button variant="outline" asChild>
                       <a 
                         href={getMiamiDadeSearchUrl(extractNoaNumber(url))} 
@@ -228,47 +306,33 @@ export function PDFViewerDialog({
                       </a>
                     </Button>
                   )}
-                  <Button onClick={handleDownload} disabled={downloading}>
-                    {downloading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 mr-2" />
-                    )}
-                    Download Instead
-                  </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <object
-              data={displayUrl}
-              type="application/pdf"
-              className="w-full h-full"
+            <iframe
+              src={displayUrl}
+              className="w-full h-full border-0"
               onLoad={handleLoad}
-            >
-              {/* Fallback to iframe if object tag doesn't work */}
-              <iframe
-                src={displayUrl}
-                className="w-full h-full border-0"
-                onLoad={handleLoad}
-                onError={handleError}
-                title={title}
-                sandbox="allow-scripts allow-same-origin"
-              />
-            </object>
+              onError={handleError}
+              title={title}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              allow="fullscreen"
+            />
           )}
         </div>
 
         <DialogFooter className="px-4 py-3 border-t flex-shrink-0">
           <div className="flex items-center gap-2 w-full justify-between">
-            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {useGoogleViewer && 'Using Google Docs viewer'}
+            <span className="text-xs text-muted-foreground truncate max-w-[250px]">
+              {useGoogleViewer && 'Using Google Docs viewer • '}
+              {isExternalGov(url) && 'External document'}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
-              <Button onClick={handleDownload} disabled={downloading || error}>
+              <Button onClick={handleDownload} disabled={downloading}>
                 {downloading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
