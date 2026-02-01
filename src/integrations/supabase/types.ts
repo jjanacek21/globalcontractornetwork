@@ -6883,6 +6883,54 @@ export type Database = {
         }
         Relationships: []
       }
+      property_dispositions: {
+        Row: {
+          address: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          disposition: string
+          id: string
+          lat: number
+          lat_lng_hash: string
+          lng: number
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          disposition?: string
+          id?: string
+          lat: number
+          lat_lng_hash: string
+          lng: number
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          disposition?: string
+          id?: string
+          lat?: number
+          lat_lng_hash?: string
+          lng?: number
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
           answers: Json | null
