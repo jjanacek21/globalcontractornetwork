@@ -1,141 +1,277 @@
 
-# Fix PDF Preview Chrome Blocking Issues
+# Door to Door World - Gamified Field Sales Tracking System
 
-## Problem Summary
+## Overview
 
-PDF previews are being blocked in Chrome due to multiple technical issues:
+This plan implements a comprehensive "Door to Door World" feature - a GPS-tracked, gamified canvassing system for contractors to track door knocking activities, earn points, and verify their field work.
 
-1. **CORS Blocking Direct Downloads**: The download button uses `fetch()` which fails for external government URLs
-2. **404 Detection Missing**: When Miami-Dade returns a 404 error page (HTML), Google Docs viewer shows "No preview available" 
-3. **No Content-Type Validation**: The viewer doesn't check if the URL returns HTML vs PDF before attempting to render
-4. **Iframe Sandbox Restrictions**: The current sandbox settings may restrict some PDF viewer functionality
+## Architecture
+
+### Database Schema (New Tables Required)
+
+The following 5 tables need to be created (the user mentioned they are "already created" but they do not exist in the database):
+
+**1. field_sessions** - Track canvassing sessions
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References profiles |
+| started_at | timestamptz | Session start time |
+| ended_at | timestamptz | Session end time (null if active) |
+| total_doors | integer | Total doors knocked |
+| total_points | integer | Points earned this session |
+| route_geojson | jsonb | GeoJSON LineString of walked route |
+| is_active | boolean | Whether session is currently active |
+
+**2. door_knocks** - Individual door knock records
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| session_id | uuid | References field_sessions |
+| user_id | uuid | References profiles |
+| lat | numeric | Latitude |
+| lng | numeric | Longitude |
+| address | text | Reverse geocoded address |
+| disposition | text | not_home, not_interested, go_back, interested, needs_inspection, appointment_set, contract_signed |
+| dwell_time_seconds | integer | Time spent at door (20s minimum) |
+| customer_name | text | Optional customer info |
+| customer_phone | text | Optional |
+| customer_email | text | Optional |
+| appointment_date | timestamptz | If appointment was set |
+| points_awarded | integer | Points given for this knock |
+| notes | text | Optional notes |
+| created_at | timestamptz | When door was knocked |
+
+**3. video_verifications** - 30-minute video check-ins
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| session_id | uuid | References field_sessions |
+| user_id | uuid | References profiles |
+| video_url | text | URL to uploaded video |
+| duration_seconds | integer | Video duration |
+| points_awarded | integer | Default 25 |
+| created_at | timestamptz | When recorded |
+
+**4. door_to_door_stats** - Aggregate user statistics
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References profiles (unique) |
+| total_sessions | integer | Lifetime session count |
+| total_doors | integer | Lifetime doors knocked |
+| total_points | integer | Lifetime D2D points |
+| total_appointments | integer | Appointments set |
+| total_contracts | integer | Contracts signed |
+| total_verifications | integer | Video verifications |
+| current_streak_days | integer | Consecutive work days |
+| longest_streak_days | integer | Best streak |
+| updated_at | timestamptz | Last update |
+
+**5. user_locations** - Real-time GPS tracking
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | References profiles |
+| session_id | uuid | References field_sessions |
+| lat | numeric | Latitude |
+| lng | numeric | Longitude |
+| accuracy | numeric | GPS accuracy in meters |
+| created_at | timestamptz | Timestamp |
 
 ---
 
-## Solution Plan
+## Points System Integration
 
-### Step 1: Implement Content-Type Validation (Recommended Fix)
+Points earned from door-to-door activities will be integrated with the existing `user_gamification` table using the `awardPoints` function from `useGamification` hook:
 
-Add a pre-flight check to verify the URL returns a PDF, not HTML:
+| Activity | Points |
+|----------|--------|
+| Door knocked (base) | 5 pts |
+| Not home | +2 pts |
+| Go back (callback) | +3 pts |
+| Interested | +10 pts |
+| Customer info entered | +20 pts |
+| Appointment set | +50 pts |
+| Inspection completed | +75 pts |
+| Contract signed | +200 pts |
+| Video verification | +25 pts |
 
+---
+
+## Component Structure
+
+```
+src/
+  pages/
+    DoorToDoor.tsx                    # Main page with full-screen map
+  components/
+    door-to-door/
+      DoorToDoorMap.tsx               # Mapbox map with GPS tracking
+      SessionControls.tsx             # Start/Stop session buttons
+      DoorKnockPanel.tsx              # Disposition selection after dwell time
+      CustomerInfoForm.tsx            # Name, phone, email, appointment
+      VideoVerificationModal.tsx      # 30-minute video prompt
+      DoorKnockMarker.tsx             # Clickable pin component
+      SessionStats.tsx                # Real-time session statistics
+      RoutePathLayer.tsx              # Draws walked route on map
+      DwellTimeIndicator.tsx          # 20-second countdown UI
+```
+
+---
+
+## Feature Implementation Details
+
+### 1. Service Card Addition (MemberDashboard.tsx)
+
+Add to the services array:
 ```typescript
-async function validatePdfUrl(url: string): Promise<{valid: boolean; error?: string}> {
-  try {
-    // Use HEAD request to check content-type without downloading full file
-    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-    // If we can get headers, check content-type
-    const contentType = response.headers.get('content-type');
-    if (contentType && !contentType.includes('application/pdf')) {
-      return { valid: false, error: 'URL returns HTML, not PDF' };
-    }
-    return { valid: true };
-  } catch {
-    // CORS blocked - assume valid and let Google viewer handle it
-    return { valid: true };
-  }
+{
+  icon: DoorOpen,
+  title: "Door to Door World",
+  description: "GPS-tracked canvassing with gamified challenges",
+  link: "/door-to-door",
+  color: "bg-purple-600/10 text-purple-600",
+  category: "business" as ServiceCategory
 }
 ```
 
-### Step 2: Fix Download for External URLs
-
-Replace the fetch-based download with a direct link approach that works for external URLs:
+### 2. Route Registration (App.tsx)
 
 ```typescript
-const handleDownload = async () => {
-  if (isExternalGov(url)) {
-    // For external government sites, open in new tab (bypass CORS)
-    window.open(url, '_blank');
-    toast.info('Opening PDF in new tab for download');
-    return;
-  }
-  // Keep existing fetch-based download for internal files
-  // ... existing code
-};
+import DoorToDoor from "./pages/DoorToDoor";
+// ...
+<Route path="/door-to-door" element={
+  <ProtectedRoute redirectTo="/network-login">
+    <DoorToDoor />
+  </ProtectedRoute>
+} />
 ```
 
-### Step 3: Add Proactive Error Detection
+### 3. Main Page Layout (DoorToDoor.tsx)
 
-Update the iframe to detect when Google Docs viewer fails:
+- Full-height Mapbox map (satellite-streets style)
+- Floating "Start Session" / "Stop Session" button
+- Real-time GPS location marker
+- Route line drawn as user walks
+- Pins for each door knocked (color-coded by disposition)
+- Floating "Knock Door" button (when session active)
+- Bottom sheet for session stats
+- Video verification modal (triggered every 30 minutes)
 
-```typescript
-// Add onLoad handler that checks for Google Docs error messages
-const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
-  setLoading(false);
-  // Google Docs viewer displays specific text when PDF is unavailable
-  // We can't read iframe content due to cross-origin, but we can show a hint
-};
-```
+### 4. Door Knock Flow
 
-### Step 4: Add Direct "Open in New Tab" Button
+1. User taps map or "Knock Door" button
+2. 20-second dwell timer starts (circular progress indicator)
+3. After 20s, disposition panel slides up
+4. User selects disposition from list
+5. Optional: Enter customer info form expands
+6. Points awarded and animated notification
+7. Door pin appears on map with disposition color
 
-Add a prominent "Open in Browser" button that bypasses all viewer restrictions:
+### 5. GPS Route Tracking
 
-```typescript
-<Button variant="secondary" onClick={() => window.open(url, '_blank')}>
-  <ExternalLink className="h-4 w-4 mr-2" />
-  Open in Browser
-</Button>
-```
+- Use `navigator.geolocation.watchPosition()` with high accuracy
+- Store coordinates in `user_locations` table every 5 seconds
+- Build GeoJSON LineString for route visualization
+- Draw route as a blue line on the map
 
-### Step 5: Remove Restrictive Sandbox Attribute
+### 6. Video Verification System
 
-For PDF viewers, the sandbox attribute can cause issues. Update to allow more PDF functionality:
+- Track session start time
+- Every 30 minutes, show modal: "Time for a check-in!"
+- Modal has record button (uses device camera)
+- 15-second minimum video
+- Upload to Supabase Storage bucket `door-to-door-videos`
+- Award 25 points on successful upload
 
-```typescript
-// Change from:
-sandbox="allow-scripts allow-same-origin"
+### 7. Disposition Color Coding
 
-// To:
-sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-```
+| Disposition | Color | Icon |
+|-------------|-------|------|
+| Not Home | Gray | 🚪 |
+| Not Interested | Red | ❌ |
+| Go Back | Yellow | 🔄 |
+| Interested | Blue | 👍 |
+| Needs Inspection | Orange | 🔍 |
+| Appointment Set | Green | 📅 |
+| Contract Signed | Gold | ✅ |
 
 ---
 
-## Files to Modify
+## UI/UX Design
 
-| File | Change |
-|------|--------|
-| `src/components/ui/PDFViewerDialog.tsx` | Add content validation, fix download for external URLs, add "Open in Browser" button, update sandbox settings |
+- **Green color scheme** to match existing app theme
+- **Mobile-first** design (primary use case is in the field)
+- **Large tap targets** for easy use while walking
+- **Haptic feedback** on door knock registration
+- **Celebration animations** for high-value dispositions
+- **Real-time stats counter** visible during session
 
 ---
 
 ## Technical Details
 
-### Why Chrome Blocks These PDFs
+### 1. Mapbox Integration
 
-1. **CORS Policy**: External government sites don't include `Access-Control-Allow-Origin` headers
-2. **Mixed Content**: Some Miami-Dade URLs may be HTTP (not HTTPS)
-3. **X-Frame-Options**: Some government sites set `X-Frame-Options: DENY` which prevents embedding
-4. **Content-Type Mismatch**: 404 pages return HTML with `text/html` content-type
+Using existing `VITE_MAPBOX_TOKEN` environment variable (already configured)
 
-### Google Docs Viewer Limitations
+### 2. Hooks to Create
 
-The Google Docs viewer (`https://docs.google.com/viewer?url=...`) has these known issues:
-- Cannot render PDFs larger than 25MB
-- Cannot access password-protected PDFs
-- Shows "No preview available" for any error condition
-- Has rate limits that can trigger temporary blocks
+- `useDoorToDoorSession` - Manage active session state
+- `useGPSTracking` - Handle geolocation watching
+- `useDoorKnocks` - CRUD operations for door knocks
+- `useVideoVerification` - Handle video recording/upload
 
-### Recommended Fallback Strategy
+### 3. Storage Bucket
 
-```
-1. Try direct object/iframe embed
-   ↓ (fails due to CORS)
-2. Try Google Docs viewer
-   ↓ (fails due to 404 or rate limit)
-3. Show "Open in Browser" button
-   ↓ (user clicks)
-4. PDF opens in new tab where browser can render it natively
-```
+Create `door-to-door-videos` bucket for video verifications (public: false)
 
 ---
 
-## Expected Outcome
+## Files to Create
 
-After implementing these fixes:
+| File | Purpose |
+|------|---------|
+| `src/pages/DoorToDoor.tsx` | Main page component |
+| `src/components/door-to-door/DoorToDoorMap.tsx` | Map with GPS tracking |
+| `src/components/door-to-door/SessionControls.tsx` | Start/Stop buttons |
+| `src/components/door-to-door/DoorKnockPanel.tsx` | Disposition selection |
+| `src/components/door-to-door/CustomerInfoForm.tsx` | Customer data entry |
+| `src/components/door-to-door/VideoVerificationModal.tsx` | Video check-in |
+| `src/components/door-to-door/SessionStats.tsx` | Live session stats |
+| `src/components/door-to-door/DwellTimeIndicator.tsx` | 20s countdown |
+| `src/hooks/useDoorToDoorSession.ts` | Session management hook |
+| `src/hooks/useGPSTracking.ts` | GPS tracking hook |
 
-1. **Download button works** for external government PDFs (opens in new tab)
-2. **Better error messaging** when PDFs are unavailable
-3. **"Open in Browser" button** always available as reliable fallback
-4. **Fewer sandbox restrictions** for better PDF rendering
-5. **Clearer user experience** with actionable next steps when preview fails
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/MemberDashboard.tsx` | Add Door to Door service card |
+| `src/components/landing/ContractorTools.tsx` | Add Door to Door tool card |
+| `src/App.tsx` | Add /door-to-door route |
+| `src/hooks/useGamification.ts` | Add door-to-door point constants |
+
+---
+
+## Database Migrations
+
+1. Create `door_to_door_disposition` enum type
+2. Create `field_sessions` table with RLS
+3. Create `door_knocks` table with RLS
+4. Create `video_verifications` table with RLS
+5. Create `door_to_door_stats` table with RLS
+6. Create `user_locations` table with RLS
+7. Create storage bucket for videos
+8. Add trigger to update `door_to_door_stats` on new knock
+9. Add trigger to award points to `user_gamification`
+
+---
+
+## Security Considerations
+
+- All tables have RLS policies restricting access to own data
+- Video uploads authenticated and stored privately
+- GPS data only visible to session owner
+- Points transactions logged for audit trail
