@@ -2325,6 +2325,128 @@ export type Database = {
           },
         ]
       }
+      door_knocks: {
+        Row: {
+          address: string | null
+          appointment_date: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          disposition: Database["public"]["Enums"]["door_to_door_disposition"]
+          dwell_time_seconds: number
+          id: string
+          lat: number
+          lng: number
+          notes: string | null
+          points_awarded: number
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          appointment_date?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          disposition: Database["public"]["Enums"]["door_to_door_disposition"]
+          dwell_time_seconds?: number
+          id?: string
+          lat: number
+          lng: number
+          notes?: string | null
+          points_awarded?: number
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          appointment_date?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          disposition?: Database["public"]["Enums"]["door_to_door_disposition"]
+          dwell_time_seconds?: number
+          id?: string
+          lat?: number
+          lng?: number
+          notes?: string | null
+          points_awarded?: number
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_knocks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "door_knocks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      door_to_door_stats: {
+        Row: {
+          current_streak_days: number
+          id: string
+          last_active_date: string | null
+          longest_streak_days: number
+          total_appointments: number
+          total_contracts: number
+          total_doors: number
+          total_points: number
+          total_sessions: number
+          total_verifications: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak_days?: number
+          id?: string
+          last_active_date?: string | null
+          longest_streak_days?: number
+          total_appointments?: number
+          total_contracts?: number
+          total_doors?: number
+          total_points?: number
+          total_sessions?: number
+          total_verifications?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak_days?: number
+          id?: string
+          last_active_date?: string | null
+          longest_streak_days?: number
+          total_appointments?: number
+          total_contracts?: number
+          total_doors?: number
+          total_points?: number
+          total_sessions?: number
+          total_verifications?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_to_door_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_line_items: {
         Row: {
           created_at: string | null
@@ -2663,6 +2785,50 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          route_geojson: Json | null
+          started_at: string
+          total_doors: number
+          total_points: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          route_geojson?: Json | null
+          started_at?: string
+          total_doors?: number
+          total_points?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          route_geojson?: Json | null
+          started_at?: string
+          total_doors?: number
+          total_points?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -8513,6 +8679,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_locations: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_locations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_locations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -8535,6 +8746,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_verifications: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          points_awarded: number
+          session_id: string
+          user_id: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds: number
+          id?: string
+          points_awarded?: number
+          session_id: string
+          user_id: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          points_awarded?: number
+          session_id?: string
+          user_id?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_verifications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_verifications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -8897,6 +9153,14 @@ export type Database = {
         | "invalid"
         | "needs_signature"
         | "needs_review"
+      door_to_door_disposition:
+        | "not_home"
+        | "not_interested"
+        | "go_back"
+        | "interested"
+        | "needs_inspection"
+        | "appointment_set"
+        | "contract_signed"
       inspection_recommendation:
         | "repair"
         | "partial_replacement"
@@ -9142,6 +9406,15 @@ export const Constants = {
         "invalid",
         "needs_signature",
         "needs_review",
+      ],
+      door_to_door_disposition: [
+        "not_home",
+        "not_interested",
+        "go_back",
+        "interested",
+        "needs_inspection",
+        "appointment_set",
+        "contract_signed",
       ],
       inspection_recommendation: [
         "repair",

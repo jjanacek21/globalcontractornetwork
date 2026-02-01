@@ -13,7 +13,8 @@ import {
   DollarSign,
   Building2,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  MapPinned
 } from "lucide-react";
 
 const tools = [
@@ -80,6 +81,14 @@ const tools = [
     link: "/join?type=contractor",
     color: "from-yellow-500 to-yellow-600",
     badge: "Earn $$$"
+  },
+  {
+    icon: MapPinned,
+    title: "Door to Door World",
+    description: "GPS-tracked canvassing with gamified challenges. Earn points for every door you knock.",
+    link: "/door-to-door",
+    color: "from-purple-500 to-purple-600",
+    badge: "New"
   }
 ];
 
