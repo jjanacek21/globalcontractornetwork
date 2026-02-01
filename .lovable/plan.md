@@ -1,71 +1,93 @@
 
-# Fix PDF Preview Issues in Product Approvals
+# Fix PDF Preview Chrome Blocking Issues
 
 ## Problem Summary
 
-Based on my investigation, there are **multiple root causes** for why some NOA previews work and others show "No preview available":
+PDF previews are being blocked in Chrome due to multiple technical issues:
 
-### Issue 1: Miami-Dade PDF URLs Return 404 for Some Products
-
-Some products have correctly formatted URLs that point to **non-existent files** on Miami-Dade's server. The PDFViewerDialog correctly uses the Google Docs viewer fallback for government sites, but if the underlying PDF doesn't exist, Google Docs displays "No preview available."
-
-**Evidence:**
-- "GAF - Timberline AS II" has URL `https://www.miamidade.gov/building/library/productcontrol/noa/21031202.pdf` - works
-- "CertainTeed - Grand Manor" has URL `https://www.miamidade.gov/building/library/productcontrol/noa/20045605.pdf` - shows "No preview available" (likely 404)
-
-### Issue 2: Malformed Miami-Dade URLs
-
-3 products have incorrectly formatted URLs with extra prefixes that will never resolve:
-- `https://www.miamidade.gov/building/library/productcontrol/noa/No: 25012112.pdf` (contains spaces and colon)
-- `https://www.miamidade.gov/building/library/productcontrol/noa/NOA22070609.pdf` (contains "NOA" prefix)
-
-### Issue 3: 627 Products Have No PDF URL
-
-These products have `file_url = NULL` and show no preview option at all.
+1. **CORS Blocking Direct Downloads**: The download button uses `fetch()` which fails for external government URLs
+2. **404 Detection Missing**: When Miami-Dade returns a 404 error page (HTML), Google Docs viewer shows "No preview available" 
+3. **No Content-Type Validation**: The viewer doesn't check if the URL returns HTML vs PDF before attempting to render
+4. **Iframe Sandbox Restrictions**: The current sandbox settings may restrict some PDF viewer functionality
 
 ---
 
 ## Solution Plan
 
-### Step 1: Fix Malformed URLs (Database Cleanup)
+### Step 1: Implement Content-Type Validation (Recommended Fix)
 
-Create a migration to correct the 3 malformed Miami-Dade URLs by extracting just the NOA number digits:
+Add a pre-flight check to verify the URL returns a PDF, not HTML:
 
-```sql
--- Fix URLs with "No: " prefix
-UPDATE product_approvals 
-SET file_url = REGEXP_REPLACE(file_url, 'No: ', '')
-WHERE file_url LIKE '%miamidade.gov%/noa/No: %';
-
--- Fix URLs with "NOA" prefix in the filename
-UPDATE product_approvals 
-SET file_url = REGEXP_REPLACE(
-  file_url, 
-  '/noa/NOA([0-9]+)\.pdf', 
-  '/noa/\1.pdf'
-)
-WHERE file_url LIKE '%miamidade.gov%/noa/NOA%';
+```typescript
+async function validatePdfUrl(url: string): Promise<{valid: boolean; error?: string}> {
+  try {
+    // Use HEAD request to check content-type without downloading full file
+    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+    // If we can get headers, check content-type
+    const contentType = response.headers.get('content-type');
+    if (contentType && !contentType.includes('application/pdf')) {
+      return { valid: false, error: 'URL returns HTML, not PDF' };
+    }
+    return { valid: true };
+  } catch {
+    // CORS blocked - assume valid and let Google viewer handle it
+    return { valid: true };
+  }
+}
 ```
 
-### Step 2: Improve PDFViewerDialog Error Handling
+### Step 2: Fix Download for External URLs
 
-Update the `PDFViewerDialog` component to:
-1. **Detect 404 errors** when the Google Docs viewer fails (currently shows generic "No preview")
-2. **Show clearer messaging** like "Document not found at Miami-Dade" with the option to search for it
-3. **Add "Search Miami-Dade NOA" button** that links directly to the search page
+Replace the fetch-based download with a direct link approach that works for external URLs:
 
-### Step 3: Add URL Validation in ProductApprovalsManagement
+```typescript
+const handleDownload = async () => {
+  if (isExternalGov(url)) {
+    // For external government sites, open in new tab (bypass CORS)
+    window.open(url, '_blank');
+    toast.info('Opening PDF in new tab for download');
+    return;
+  }
+  // Keep existing fetch-based download for internal files
+  // ... existing code
+};
+```
 
-Update the admin table to show a **warning badge** when a product has:
-- A Miami-Dade URL that hasn't been verified
-- A malformed URL pattern
+### Step 3: Add Proactive Error Detection
 
-### Step 4: Add Bulk PDF Verification Tool (Optional)
+Update the iframe to detect when Google Docs viewer fails:
 
-Create a new admin tool that:
-1. Checks all Miami-Dade URLs to see if they return 200 or 404
-2. Flags products with broken URLs
-3. Attempts to construct correct URLs using the NOA number
+```typescript
+// Add onLoad handler that checks for Google Docs error messages
+const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
+  setLoading(false);
+  // Google Docs viewer displays specific text when PDF is unavailable
+  // We can't read iframe content due to cross-origin, but we can show a hint
+};
+```
+
+### Step 4: Add Direct "Open in New Tab" Button
+
+Add a prominent "Open in Browser" button that bypasses all viewer restrictions:
+
+```typescript
+<Button variant="secondary" onClick={() => window.open(url, '_blank')}>
+  <ExternalLink className="h-4 w-4 mr-2" />
+  Open in Browser
+</Button>
+```
+
+### Step 5: Remove Restrictive Sandbox Attribute
+
+For PDF viewers, the sandbox attribute can cause issues. Update to allow more PDF functionality:
+
+```typescript
+// Change from:
+sandbox="allow-scripts allow-same-origin"
+
+// To:
+sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+```
 
 ---
 
@@ -73,47 +95,47 @@ Create a new admin tool that:
 
 | File | Change |
 |------|--------|
-| Database Migration | Fix 3 malformed URLs |
-| `src/components/ui/PDFViewerDialog.tsx` | Improve error detection and messaging for 404s |
-| `src/components/admin/ProductApprovalsManagement.tsx` | Add warning badge for unverified URLs |
+| `src/components/ui/PDFViewerDialog.tsx` | Add content validation, fix download for external URLs, add "Open in Browser" button, update sandbox settings |
 
 ---
 
 ## Technical Details
 
-### Miami-Dade PDF URL Pattern
+### Why Chrome Blocks These PDFs
 
-The correct pattern is:
+1. **CORS Policy**: External government sites don't include `Access-Control-Allow-Origin` headers
+2. **Mixed Content**: Some Miami-Dade URLs may be HTTP (not HTTPS)
+3. **X-Frame-Options**: Some government sites set `X-Frame-Options: DENY` which prevents embedding
+4. **Content-Type Mismatch**: 404 pages return HTML with `text/html` content-type
+
+### Google Docs Viewer Limitations
+
+The Google Docs viewer (`https://docs.google.com/viewer?url=...`) has these known issues:
+- Cannot render PDFs larger than 25MB
+- Cannot access password-protected PDFs
+- Shows "No preview available" for any error condition
+- Has rate limits that can trigger temporary blocks
+
+### Recommended Fallback Strategy
+
 ```
-https://www.miamidade.gov/building/library/productcontrol/noa/{NOA_NUMBER_WITHOUT_DASHES_OR_DOTS}.pdf
+1. Try direct object/iframe embed
+   ↓ (fails due to CORS)
+2. Try Google Docs viewer
+   ↓ (fails due to 404 or rate limit)
+3. Show "Open in Browser" button
+   ↓ (user clicks)
+4. PDF opens in new tab where browser can render it natively
 ```
-
-For NOA number `21-0312.02`, the file is `21031202.pdf`.
-
-### Google Docs Viewer Behavior
-
-When Google Docs viewer encounters a 404 or inaccessible PDF, it displays "No preview available" rather than an error. The PDFViewerDialog currently cannot distinguish between:
-- A loading PDF
-- A 404 PDF
-- A CORS-blocked PDF
-
-### Current Statistics
-
-| Status | Count |
-|--------|-------|
-| Total Products | 2,481 |
-| With PDF URL | 1,854 |
-| Internal Storage (verified) | 1,127 |
-| Miami-Dade URLs (may be 404) | 726 |
-| Malformed URLs | 3 |
-| Missing URL entirely | 627 |
 
 ---
 
 ## Expected Outcome
 
 After implementing these fixes:
-1. The 3 malformed URLs will be corrected and may display properly
-2. Users will see clearer error messages when PDFs are unavailable
-3. Admins can identify which products need their PDFs re-sourced
-4. Long-term: A verification tool can flag broken external URLs for replacement
+
+1. **Download button works** for external government PDFs (opens in new tab)
+2. **Better error messaging** when PDFs are unavailable
+3. **"Open in Browser" button** always available as reliable fallback
+4. **Fewer sandbox restrictions** for better PDF rendering
+5. **Clearer user experience** with actionable next steps when preview fails
