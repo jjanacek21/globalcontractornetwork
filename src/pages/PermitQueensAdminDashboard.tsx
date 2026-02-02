@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Crown, ShieldCheck, LogOut, Search, FileText, Users, Clock, CheckCircle, Filter, Building2 } from "lucide-react";
+import { Crown, ShieldCheck, LogOut, Search, FileText, Users, Clock, CheckCircle, Filter, Building2, Brain } from "lucide-react";
 import { format } from "date-fns";
 import { StatCard3D } from "@/components/crm-ui";
 
@@ -218,6 +218,10 @@ export default function PermitQueensAdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={() => navigate("/permit-queens/admin/ai-intelligence")} className="border-border text-foreground">
+                <Brain className="h-4 w-4 mr-2" />
+                AI Intelligence
+              </Button>
               <Button variant="outline" onClick={() => navigate("/permit-queens/admin/building-departments")} className="border-border text-foreground">
                 <Building2 className="h-4 w-4 mr-2" />
                 Building Depts
