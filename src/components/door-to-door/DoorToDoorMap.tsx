@@ -16,7 +16,8 @@ interface DoorToDoorMapProps {
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 
+  'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 
 const DISPOSITION_COLORS: Record<DoorDisposition, string> = {
   not_home: '#64748b',

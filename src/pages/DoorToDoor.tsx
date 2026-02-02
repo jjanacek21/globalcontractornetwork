@@ -143,11 +143,30 @@ export default function DoorToDoor() {
 
   // Handle start session
   const handleStartSession = async () => {
-    const session = await startSession();
-    if (session) {
-      startTracking();
-      setSessionStartTime(new Date());
-      setLastVideoCheck(Date.now());
+    try {
+      const session = await startSession();
+      if (session) {
+        startTracking();
+        setSessionStartTime(new Date());
+        setLastVideoCheck(Date.now());
+        toast({
+          title: "Session Started",
+          description: "GPS tracking active. Good luck canvassing!",
+        });
+      } else {
+        toast({
+          title: "Session Error",
+          description: "Could not start session. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Session start error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start session. Check your connection.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -291,9 +310,22 @@ export default function DoorToDoor() {
 
       {/* GPS Error Banner */}
       {gpsError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-600 text-white rounded-full text-sm font-medium shadow-lg flex items-center gap-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-destructive text-destructive-foreground rounded-full text-sm font-medium shadow-lg flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           {gpsError}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="ml-2 h-6 px-2 text-xs"
+            onClick={() => {
+              toast({
+                title: "GPS Permission Required",
+                description: "Please enable location access in your browser settings and refresh the page.",
+              });
+            }}
+          >
+            Help
+          </Button>
         </div>
       )}
 
