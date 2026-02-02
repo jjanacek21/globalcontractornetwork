@@ -19,15 +19,7 @@ interface DoorToDoorMapProps {
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 
   'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 
-const DISPOSITION_COLORS: Record<DoorDisposition, string> = {
-  not_home: '#64748b',
-  not_interested: '#dc2626',
-  go_back: '#d97706',
-  interested: '#2563eb',
-  needs_inspection: '#ea580c',
-  appointment_set: '#16a34a',
-  contract_signed: '#eab308',
-};
+// Use the shared color function from DispositionQuickBar
 
 export function DoorToDoorMap({
   position,

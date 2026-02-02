@@ -210,7 +210,15 @@ export default function DoorToDoor() {
   // Handle disposition save from panel
   const handleSaveDisposition = async (
     disposition: PropertyDisposition,
-    customerInfo: { name?: string; phone?: string; email?: string; notes?: string }
+    customerInfo: { name?: string; phone?: string; email?: string; notes?: string },
+    extraData?: {
+      roofType?: string;
+      roofCondition?: string;
+      insuranceClaim?: boolean;
+      stormDate?: string;
+      priority?: string;
+      tags?: string[];
+    }
   ) => {
     if (!selectedProperty) return;
 
@@ -219,7 +227,9 @@ export default function DoorToDoor() {
       selectedProperty.lng,
       disposition,
       customerInfo,
-      selectedProperty.address
+      selectedProperty.address,
+      activeSession?.id,
+      extraData
     );
 
     // Also record as a door knock for session tracking
@@ -246,11 +256,12 @@ export default function DoorToDoor() {
       customerPhone: customerInfo.phone,
       customerEmail: customerInfo.email,
       notes: customerInfo.notes,
+      ...extraData,
     } : null);
 
     toast({
       title: "Saved",
-      description: `Property marked as ${disposition.replace('_', ' ')}`,
+      description: `Property marked as ${disposition.replace(/_/g, ' ')}`,
     });
   };
 
@@ -357,6 +368,7 @@ export default function DoorToDoor() {
         property={selectedProperty}
         onSave={handleSaveDisposition}
         loading={propertiesLoading}
+        userId={userId || undefined}
       />
 
       {/* Video Verification Modal */}

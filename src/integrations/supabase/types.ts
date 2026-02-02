@@ -6892,10 +6892,16 @@ export type Database = {
           customer_phone: string | null
           disposition: string
           id: string
+          insurance_claim: boolean | null
           lat: number
           lat_lng_hash: string
           lng: number
           notes: string | null
+          priority: string | null
+          roof_condition: string | null
+          roof_type: string | null
+          storm_date: string | null
+          tags: string[] | null
           updated_at: string
           user_id: string
         }
@@ -6907,10 +6913,16 @@ export type Database = {
           customer_phone?: string | null
           disposition?: string
           id?: string
+          insurance_claim?: boolean | null
           lat: number
           lat_lng_hash: string
           lng: number
           notes?: string | null
+          priority?: string | null
+          roof_condition?: string | null
+          roof_type?: string | null
+          storm_date?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -6922,14 +6934,131 @@ export type Database = {
           customer_phone?: string | null
           disposition?: string
           id?: string
+          insurance_claim?: boolean | null
           lat?: number
           lat_lng_hash?: string
           lng?: number
           notes?: string | null
+          priority?: string | null
+          roof_condition?: string | null
+          roof_type?: string | null
+          storm_date?: string | null
+          tags?: string[] | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      property_notes: {
+        Row: {
+          created_at: string | null
+          id: string
+          note: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          note: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          note?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_notes_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_dispositions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_photos: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          id: string
+          photo_type: string | null
+          photo_url: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          photo_type?: string | null
+          photo_url: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          photo_type?: string | null
+          photo_url?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_photos_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_dispositions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_residents: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          name: string | null
+          phone: string | null
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name?: string | null
+          phone?: string | null
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name?: string | null
+          phone?: string | null
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_residents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_dispositions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quiz_attempts: {
         Row: {
