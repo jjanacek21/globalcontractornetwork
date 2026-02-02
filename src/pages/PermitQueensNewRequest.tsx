@@ -196,6 +196,14 @@ export default function PermitQueensNewRequest() {
               pipeline_status: 'draft',
               status: 'draft',
               user_id: user.id,
+              selected_products: selectedMaterials.map(m => ({
+                id: m.product.id,
+                manufacturer: m.product.manufacturer,
+                product_name: m.product.product_name,
+                noa_number: m.product.noa_number,
+                file_url: m.product.file_url,
+                category: m.category,
+              })),
             })
             .select()
             .single();
@@ -472,6 +480,14 @@ export default function PermitQueensNewRequest() {
             pipeline_status: 'intake',
             status: 'pending',
             user_id: user.id,
+            selected_products: selectedMaterials.map(m => ({
+              id: m.product.id,
+              manufacturer: m.product.manufacturer,
+              product_name: m.product.product_name,
+              noa_number: m.product.noa_number,
+              file_url: m.product.file_url,
+              category: m.category,
+            })),
           })
           .select()
           .single();
@@ -547,6 +563,14 @@ export default function PermitQueensNewRequest() {
           .update({
             complexity_tier: formData.complexity_tier,
             pipeline_status: 'intake',
+            selected_products: selectedMaterials.map(m => ({
+              id: m.product.id,
+              manufacturer: m.product.manufacturer,
+              product_name: m.product.product_name,
+              noa_number: m.product.noa_number,
+              file_url: m.product.file_url,
+              category: m.category,
+            })),
           })
           .eq('id', tempPermitId);
         

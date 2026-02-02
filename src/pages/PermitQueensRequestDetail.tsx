@@ -139,10 +139,14 @@ function PermitQueensRequestDetailInner() {
     setGeneratingPacket(true);
     
     try {
+      // Get selected products from the permit record to include NOAs in the packet
+      const selectedProducts = (permit as any).selected_products || [];
+      
       const { data, error } = await supabase.functions.invoke('permit-packet-assembler', {
         body: { 
           permitRequestId: permit.id, 
           generateCoverSheet: true,
+          selectedProducts: selectedProducts,
           uploadedDocuments: documents.map(d => ({
             type: d.document_type,
             name: d.file_name,
