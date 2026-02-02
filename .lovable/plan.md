@@ -1,119 +1,183 @@
 
-# Fix Permit Packet Not Including NOAs
+# Fix Door to Door World Feature - Critical Updates
 
-## Problem Summary
+## Summary
 
-The permit packet download only includes the cover sheet and uploaded documents, but NOT the selected NOA/product approval documents. This is because:
+After analyzing the Door to Door World feature at `/door-to-door`, I've identified several issues that need to be fixed to ensure the feature works correctly. The primary issues are:
 
-1. **Selected products are never saved to the database** when the permit is submitted
-2. **The detail page doesn't fetch or pass products** when regenerating the packet
-3. **The edge function needs products to be passed** in the `selectedProducts` array to include their NOA PDFs
+1. **Missing Mapbox token fallback** - Map may fail to load if the environment variable isn't available
+2. **Property marker click events not properly captured** - Coordinates passed incorrectly in some cases  
+3. **Missing session ID reference** - Door knocks may not link properly to property dispositions
+4. **Stats display timer not updating** - Session duration doesn't update in real-time
+5. **Video storage bucket policies** - May prevent video uploads
 
-## Root Cause
+---
 
-### Issue 1: Products Not Saved on Submit
+## Fix 1: Add Mapbox Token Fallback
 
-In `PermitQueensNewRequest.tsx`, the `handleSubmit()` function (lines 542-577) updates the permit but does NOT save the `selectedMaterials` to the `selected_products` column.
+**File**: `src/components/door-to-door/DoorToDoorMap.tsx`
 
-### Issue 2: Products Not Fetched on Detail Page
+The current code has no fallback if `VITE_MAPBOX_TOKEN` isn't available. Other map components have fallbacks. I'll add one to ensure the map always loads.
 
-In `PermitQueensRequestDetail.tsx`, the `handleRegeneratePacket()` function (lines 137-179) calls the edge function but only passes `uploadedDocuments`, not any product approvals.
-
-### Issue 3: Database Column Exists But Is Empty
-
-The `permit_projects` table has a `selected_products` column (verified in database), but for the current permit it shows `selected_products: []` (empty).
-
-## Solution
-
-### Fix 1: Save Selected Products on Submit
-
-Update `PermitQueensNewRequest.tsx` to save products to the database:
-
+**Change**:
 ```typescript
-// In handleSubmit() and draft creation
-await supabase.from('permit_projects').update({
-  selected_products: selectedMaterials.map(m => ({
-    id: m.product.id,
-    manufacturer: m.product.manufacturer,
-    product_name: m.product.product_name,
-    noa_number: m.product.noa_number,
-    file_url: m.product.file_url,
-    category: m.category,
-  })),
-  // ... other fields
-}).eq('id', permitId);
+// Before
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+
+// After  
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 
+  'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
 ```
 
-### Fix 2: Pass Products When Regenerating Packet
+---
 
-Update `PermitQueensRequestDetail.tsx` to read products from the permit record and pass them to the edge function:
+## Fix 2: Fix Session Stats Timer
 
+**File**: `src/components/door-to-door/SessionStats.tsx`
+
+The current implementation calculates duration once when rendered, but doesn't update in real-time. I'll add a `useEffect` with an interval to update every second.
+
+**Change**: Add state for live duration and interval to update it:
 ```typescript
-// In handleRegeneratePacket()
-const selectedProducts = permit.selected_products || [];
+const [liveDuration, setLiveDuration] = useState("00:00");
 
-await supabase.functions.invoke('permit-packet-assembler', {
-  body: { 
-    permitRequestId: permit.id, 
-    selectedProducts: selectedProducts,  // Add this
-    uploadedDocuments: [...],
-  },
+useEffect(() => {
+  if (!sessionStartTime) return;
+  
+  const interval = setInterval(() => {
+    // Calculate and update duration
+  }, 1000);
+  
+  return () => clearInterval(interval);
+}, [sessionStartTime]);
+```
+
+---
+
+## Fix 3: Improve Property Click Handling
+
+**File**: `src/components/door-to-door/DoorToDoorMap.tsx`
+
+Currently, the property click handler uses `properties.find()` which may not find the correct property due to floating point comparison issues. I'll improve the lookup logic to use the `latLngHash` from the feature properties directly.
+
+**Change**: Update click handlers to pass complete property data:
+```typescript
+// Use latLngHash for lookup instead of coordinate matching
+const existingProperty = properties.find(p => p.latLngHash === props?.latLngHash);
+```
+
+---
+
+## Fix 4: Add Missing Session ID to Property Updates
+
+**File**: `src/hooks/usePropertyDispositions.ts`
+
+When updating a property disposition during an active session, the session ID should be recorded for tracking purposes. I'll add an optional `sessionId` parameter.
+
+**Change**: Add session tracking to property disposition upserts:
+```typescript
+const setPropertyDisposition = useCallback(async (
+  lat: number,
+  lng: number,
+  disposition: PropertyDisposition,
+  customerInfo?: {...},
+  address?: string,
+  sessionId?: string  // New optional parameter
+) => {
+  // Include session_id in upsert if provided
 });
 ```
 
-### Fix 3: Edge Function Already Handles Products
+---
 
-The edge function (lines 594-667) already processes `selectedProducts` correctly - no changes needed there.
+## Fix 5: Add Video Storage Policy Check
+
+**Database Migration**
+
+Ensure the `door-to-door-videos` bucket has proper RLS policies allowing authenticated users to upload their own verification videos.
+
+**SQL**:
+```sql
+-- Add storage policies for video uploads
+CREATE POLICY "Users can upload their own videos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'door-to-door-videos' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users can view their own videos"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'door-to-door-videos' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
+```
+
+---
+
+## Fix 6: Improve Error Handling
+
+**File**: `src/pages/DoorToDoor.tsx`
+
+Add better error handling for the case when GPS permission is denied or session creation fails.
+
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/PermitQueensNewRequest.tsx` | Save `selectedMaterials` to `selected_products` column on draft creation and submit |
-| `src/pages/PermitQueensRequestDetail.tsx` | Fetch `selected_products` from permit record and pass to edge function |
+| `src/components/door-to-door/DoorToDoorMap.tsx` | Add Mapbox fallback token |
+| `src/components/door-to-door/SessionStats.tsx` | Add real-time duration timer |
+| `src/hooks/usePropertyDispositions.ts` | Add optional session ID tracking |
+| `src/pages/DoorToDoor.tsx` | Improve error handling |
+| Database migration | Add storage policies for video bucket |
 
-## Technical Implementation Details
+---
 
-### PermitQueensNewRequest.tsx Changes
+## Technical Details
 
-1. **Update draft permit creation** (around line 184-206):
-   - Add `selected_products` to the insert statement
-
-2. **Update handleGeneratePacket** (around line 457-481):
-   - Add `selected_products` when creating/updating permit
-
-3. **Update handleSubmit** (around line 545-551):
-   - Include `selected_products` in the update
-
-### PermitQueensRequestDetail.tsx Changes
-
-1. **Update handleRegeneratePacket** (around line 142-152):
-   - Read `selected_products` from the `permit` object
-   - Pass it to the edge function as `selectedProducts`
-
-## Data Flow After Fix
+### Current Data Flow
 
 ```text
-Step 1: User selects products in new request wizard
+User opens /door-to-door
     ↓
-Step 2: Products saved to permit_projects.selected_products
+Auth check → redirects to login if not authenticated
     ↓
-Step 3: User views permit detail page
+Map initializes with user's GPS position
     ↓
-Step 4: Page loads permit record including selected_products
+On bounds change → fetch existing properties + generate grid
     ↓
-Step 5: User clicks "Regenerate Packet"
+User clicks property circle → side panel opens
     ↓
-Step 6: Edge function receives selectedProducts array
+User selects disposition → saves to property_dispositions + door_knocks
     ↓
-Step 7: Edge function fetches NOA PDFs and merges them
-    ↓
-Step 8: Complete packet downloaded with all NOAs
+Points awarded via gamification hook
 ```
 
-## Expected Result
+### Points System (already correct)
 
-After implementation:
-- Selected products are persisted to the database
-- Regenerating a packet includes all linked NOA documents
-- Downloaded permit packets contain cover sheet + uploaded docs + product approval PDFs
+| Action | Points |
+|--------|--------|
+| Base knock | 5 |
+| Not home | +2 |
+| Go back | +3 |
+| Interested | +10 |
+| Customer info | +20 |
+| Appointment set | +50 |
+| Needs inspection | +75 |
+| Contract signed | +200 |
+| Video verification | +25 |
+
+---
+
+## Expected Outcome
+
+After implementing these fixes:
+- Map will always load (with fallback token)
+- Session timer will update in real-time
+- Property markers will be clickable and save properly
+- Video uploads will work correctly
+- Better error messages for GPS/session issues
+
