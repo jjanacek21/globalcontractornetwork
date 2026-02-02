@@ -125,11 +125,19 @@ export function FormPreviewDialog({
           )}
           
           {!loading && !previewError && previewUrl && (
-            <iframe 
-              src={previewUrl} 
-              className="w-full h-full min-h-[500px]" 
-              title={`Preview: ${documentName}`}
-            />
+            /* Use object tag with iframe fallback for Chrome PDF plugin support */
+            <object
+              data={`${previewUrl}#toolbar=1&view=FitH`}
+              type="application/pdf"
+              className="w-full h-full min-h-[500px]"
+            >
+              <iframe 
+                src={previewUrl} 
+                className="w-full h-full min-h-[500px]" 
+                title={`Preview: ${documentName}`}
+                allow="fullscreen"
+              />
+            </object>
           )}
           
           {!loading && !previewError && !previewUrl && (
