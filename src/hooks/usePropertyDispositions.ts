@@ -8,8 +8,22 @@ export type PropertyDisposition =
   | 'not_interested' 
   | 'go_back' 
   | 'interested' 
-  | 'needs_inspection' 
-  | 'appointment_set' 
+  | 'need_inspection'
+  | 'storm_damage'
+  | 'unqualified'
+  | 'canvass_lead'
+  | 'new_roof'
+  | 'follow_up'
+  | 'waiting'
+  | 'already_solar'
+  | 'opportunity'
+  | 'commercial'
+  | 'inspected'
+  | 'old_roof'
+  | 'won'
+  // Legacy support
+  | 'needs_inspection'
+  | 'appointment_set'
   | 'contract_signed';
 
 export interface PropertyData {
@@ -23,6 +37,12 @@ export interface PropertyData {
   customerPhone?: string;
   customerEmail?: string;
   notes?: string;
+  roofType?: string;
+  roofCondition?: string;
+  insuranceClaim?: boolean;
+  stormDate?: string;
+  priority?: string;
+  tags?: string[];
 }
 
 interface Bounds {
@@ -71,6 +91,12 @@ export function usePropertyDispositions(userId?: string) {
         customerPhone: p.customer_phone || undefined,
         customerEmail: p.customer_email || undefined,
         notes: p.notes || undefined,
+        roofType: p.roof_type || undefined,
+        roofCondition: p.roof_condition || undefined,
+        insuranceClaim: p.insurance_claim || false,
+        stormDate: p.storm_date || undefined,
+        priority: p.priority || 'normal',
+        tags: p.tags || [],
       }));
 
       setProperties(mapped);
@@ -93,7 +119,15 @@ export function usePropertyDispositions(userId?: string) {
       notes?: string;
     },
     address?: string,
-    sessionId?: string
+    sessionId?: string,
+    extraData?: {
+      roofType?: string;
+      roofCondition?: string;
+      insuranceClaim?: boolean;
+      stormDate?: string;
+      priority?: string;
+      tags?: string[];
+    }
   ) => {
     if (!userId) return null;
 
@@ -115,6 +149,12 @@ export function usePropertyDispositions(userId?: string) {
           customer_phone: customerInfo?.phone || null,
           customer_email: customerInfo?.email || null,
           notes: customerInfo?.notes || null,
+          roof_type: extraData?.roofType || null,
+          roof_condition: extraData?.roofCondition || null,
+          insurance_claim: extraData?.insuranceClaim || false,
+          storm_date: extraData?.stormDate || null,
+          priority: extraData?.priority || 'normal',
+          tags: extraData?.tags || null,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,lat_lng_hash',
@@ -138,6 +178,12 @@ export function usePropertyDispositions(userId?: string) {
           customerPhone: data.customer_phone || undefined,
           customerEmail: data.customer_email || undefined,
           notes: data.notes || undefined,
+          roofType: data.roof_type || undefined,
+          roofCondition: data.roof_condition || undefined,
+          insuranceClaim: data.insurance_claim || false,
+          stormDate: data.storm_date || undefined,
+          priority: data.priority || 'normal',
+          tags: data.tags || [],
         };
 
         if (existing >= 0) {

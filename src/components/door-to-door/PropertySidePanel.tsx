@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, User, Phone, Mail, StickyNote, Plus } from 'lucide-react';
+import { X, MapPin, Home, FileText, Image, Tag, MessageSquare, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { DispositionQuickBar, getDispositionColor } from './DispositionQuickBar';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { DispositionQuickBar, getDispositionColor, getDispositionConfig } from './DispositionQuickBar';
+import { PropertyResidents } from './PropertyResidents';
+import { PropertyPhotos } from './PropertyPhotos';
+import { PropertyTags } from './PropertyTags';
+import { NotesHistory } from './NotesHistory';
 import type { PropertyDisposition, PropertyData } from '@/hooks/usePropertyDispositions';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +26,13 @@ interface PropertySidePanelProps {
     customerPhone?: string;
     customerEmail?: string;
     notes?: string;
+    id?: string;
+    roofType?: string;
+    roofCondition?: string;
+    insuranceClaim?: boolean;
+    stormDate?: string;
+    priority?: string;
+    tags?: string[];
   } | null;
   onSave: (
     disposition: PropertyDisposition,
@@ -28,9 +41,18 @@ interface PropertySidePanelProps {
       phone?: string;
       email?: string;
       notes?: string;
+    },
+    extraData?: {
+      roofType?: string;
+      roofCondition?: string;
+      insuranceClaim?: boolean;
+      stormDate?: string;
+      priority?: string;
+      tags?: string[];
     }
   ) => void;
   loading?: boolean;
+  userId?: string;
 }
 
 export function PropertySidePanel({
@@ -38,14 +60,21 @@ export function PropertySidePanel({
   onClose,
   property,
   onSave,
-  loading
+  loading,
+  userId
 }: PropertySidePanelProps) {
   const [disposition, setDisposition] = useState<PropertyDisposition>('not_contacted');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [roofType, setRoofType] = useState('');
+  const [roofCondition, setRoofCondition] = useState('');
+  const [insuranceClaim, setInsuranceClaim] = useState(false);
+  const [stormDate, setStormDate] = useState('');
+  const [priority, setPriority] = useState('normal');
+  const [tags, setTags] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('disposition');
 
   // Update form when property changes
   useEffect(() => {
@@ -55,7 +84,13 @@ export function PropertySidePanel({
       setCustomerPhone(property.customerPhone || '');
       setCustomerEmail(property.customerEmail || '');
       setNotes(property.notes || '');
-      setShowCustomerForm(!!property.customerName || !!property.customerPhone || !!property.customerEmail);
+      setRoofType(property.roofType || '');
+      setRoofCondition(property.roofCondition || '');
+      setInsuranceClaim(property.insuranceClaim || false);
+      setStormDate(property.stormDate || '');
+      setPriority(property.priority || 'normal');
+      setTags(property.tags || []);
+      setActiveTab('disposition');
     }
   }, [property]);
 
@@ -67,6 +102,13 @@ export function PropertySidePanel({
       phone: customerPhone || undefined,
       email: customerEmail || undefined,
       notes: notes || undefined,
+    }, {
+      roofType: roofType || undefined,
+      roofCondition: roofCondition || undefined,
+      insuranceClaim,
+      stormDate: stormDate || undefined,
+      priority,
+      tags,
     });
   };
 
@@ -76,10 +118,19 @@ export function PropertySidePanel({
       phone: customerPhone || undefined,
       email: customerEmail || undefined,
       notes: notes || undefined,
+    }, {
+      roofType: roofType || undefined,
+      roofCondition: roofCondition || undefined,
+      insuranceClaim,
+      stormDate: stormDate || undefined,
+      priority,
+      tags,
     });
   };
 
   if (!property) return null;
+
+  const dispositionConfig = getDispositionConfig(disposition);
 
   return (
     <>
@@ -95,7 +146,7 @@ export function PropertySidePanel({
       {/* Panel */}
       <div 
         className={cn(
-          "fixed top-0 right-0 h-full w-full sm:w-[380px] bg-background shadow-2xl z-50 transition-transform duration-200 ease-out overflow-hidden flex flex-col",
+          "fixed top-0 right-0 h-full w-full sm:w-[420px] bg-background shadow-2xl z-50 transition-transform duration-200 ease-out overflow-hidden flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
@@ -112,9 +163,17 @@ export function PropertySidePanel({
                     : 'transparent'
                 }}
               />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {disposition.replace('_', ' ')}
+              <span 
+                className="text-xs font-medium uppercase tracking-wide"
+                style={{ color: getDispositionColor(disposition) }}
+              >
+                {dispositionConfig?.label || disposition.replace(/_/g, ' ')}
               </span>
+              {dispositionConfig?.points && dispositionConfig.points > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  +{dispositionConfig.points} pts
+                </span>
+              )}
             </div>
             <div className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
@@ -138,99 +197,174 @@ export function PropertySidePanel({
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Quick Disposition */}
-          <div className="p-4 border-b">
-            <h3 className="text-sm font-semibold mb-3">Quick Disposition</h3>
-            <DispositionQuickBar 
-              currentDisposition={disposition}
-              onSelect={handleDispositionSelect}
-              disabled={loading}
-            />
-          </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="w-full justify-start px-4 pt-2 bg-transparent border-b rounded-none h-auto gap-0">
+            <TabsTrigger value="disposition" className="rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+              <Home className="w-4 h-4 mr-1" />
+              Status
+            </TabsTrigger>
+            <TabsTrigger value="details" className="rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+              <FileText className="w-4 h-4 mr-1" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+              <Image className="w-4 h-4 mr-1" />
+              Photos
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
+              <MessageSquare className="w-4 h-4 mr-1" />
+              Notes
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Customer Info */}
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Customer Info</h3>
-              {!showCustomerForm && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowCustomerForm(true)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Customer
-                </Button>
-              )}
-            </div>
-            
-            {showCustomerForm && (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="customerName" className="text-xs flex items-center gap-1.5">
-                    <User className="w-3 h-3" />
-                    Name
-                  </Label>
-                  <Input
-                    id="customerName"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Homeowner name"
-                    className="h-9"
+          {/* Tab Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Disposition Tab */}
+            <TabsContent value="disposition" className="m-0 p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Quick Disposition</h3>
+                <DispositionQuickBar 
+                  currentDisposition={disposition}
+                  onSelect={handleDispositionSelect}
+                  disabled={loading}
+                  compact
+                />
+              </div>
+
+              {/* Priority */}
+              <div className="space-y-2">
+                <Label className="text-xs">Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Tag className="w-3 h-3" />
+                  Tags
+                </Label>
+                <PropertyTags 
+                  tags={tags} 
+                  onChange={setTags}
+                  disabled={loading}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Details Tab */}
+            <TabsContent value="details" className="m-0 p-4 space-y-4">
+              {/* Residents */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">Residents</h3>
+                <PropertyResidents
+                  propertyId={property.id}
+                  userId={userId}
+                  initialName={customerName}
+                  initialPhone={customerPhone}
+                  initialEmail={customerEmail}
+                />
+              </div>
+
+              {/* Project Info */}
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="text-sm font-semibold">Project Info</h3>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Roof Type</Label>
+                    <Select value={roofType} onValueChange={setRoofType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="shingle">Shingle</SelectItem>
+                        <SelectItem value="tile">Tile</SelectItem>
+                        <SelectItem value="metal">Metal</SelectItem>
+                        <SelectItem value="flat">Flat</SelectItem>
+                        <SelectItem value="slate">Slate</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Roof Condition</Label>
+                    <Select value={roofCondition} onValueChange={setRoofCondition}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
+                        <SelectItem value="damaged">Damaged</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Insurance Claim</Label>
+                  <Switch
+                    checked={insuranceClaim}
+                    onCheckedChange={setInsuranceClaim}
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="customerPhone" className="text-xs flex items-center gap-1.5">
-                    <Phone className="w-3 h-3" />
-                    Phone
-                  </Label>
+                  <Label className="text-xs">Storm Date</Label>
                   <Input
-                    id="customerPhone"
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="(555) 123-4567"
-                    className="h-9"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="customerEmail" className="text-xs flex items-center gap-1.5">
-                    <Mail className="w-3 h-3" />
-                    Email
-                  </Label>
-                  <Input
-                    id="customerEmail"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="email@example.com"
+                    type="date"
+                    value={stormDate}
+                    onChange={(e) => setStormDate(e.target.value)}
                     className="h-9"
                   />
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Notes */}
-          <div className="p-4">
-            <div className="flex items-center gap-1.5 mb-3">
-              <StickyNote className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold">Notes</h3>
-            </div>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes about this property..."
-              rows={4}
-              className="resize-none"
-            />
+              {/* Proposals link */}
+              <div className="pt-4 border-t">
+                <Button variant="outline" className="w-full justify-between" disabled>
+                  <span className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Create Proposal
+                  </span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Photos Tab */}
+            <TabsContent value="photos" className="m-0 p-4">
+              <PropertyPhotos
+                propertyId={property.id}
+                userId={userId}
+              />
+            </TabsContent>
+
+            {/* Notes Tab */}
+            <TabsContent value="notes" className="m-0 p-4">
+              <NotesHistory
+                propertyId={property.id}
+                userId={userId}
+                currentNote={notes}
+                onCurrentNoteChange={setNotes}
+              />
+            </TabsContent>
           </div>
-        </div>
+        </Tabs>
 
         {/* Footer */}
         <div className="p-4 border-t bg-muted/30">

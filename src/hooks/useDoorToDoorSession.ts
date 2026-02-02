@@ -8,6 +8,20 @@ export type DoorDisposition =
   | 'not_interested'
   | 'go_back'
   | 'interested'
+  | 'need_inspection'
+  | 'storm_damage'
+  | 'unqualified'
+  | 'canvass_lead'
+  | 'new_roof'
+  | 'follow_up'
+  | 'waiting'
+  | 'already_solar'
+  | 'opportunity'
+  | 'commercial'
+  | 'inspected'
+  | 'old_roof'
+  | 'won'
+  // Legacy support
   | 'needs_inspection'
   | 'appointment_set'
   | 'contract_signed';
@@ -52,17 +66,32 @@ export interface DoorToDooorStats {
   longest_streak_days: number;
 }
 
-// Points configuration
+// Points configuration - expanded for 18 dispositions
 export const DOOR_POINTS = {
   base_knock: 5,
   not_home: 2,
   not_interested: 0,
   go_back: 3,
   interested: 10,
-  customer_info: 20,
-  appointment_set: 50,
+  need_inspection: 75,
+  storm_damage: 15,
+  unqualified: 0,
+  canvass_lead: 25,
+  new_roof: 50,
+  follow_up: 5,
+  waiting: 5,
+  already_solar: 0,
+  opportunity: 30,
+  commercial: 10,
+  inspected: 100,
+  old_roof: 10,
+  won: 200,
+  // Legacy support
   needs_inspection: 75,
+  appointment_set: 50,
   contract_signed: 200,
+  // Bonus points
+  customer_info: 20,
   video_verification: 25,
 } as const;
 
@@ -219,25 +248,10 @@ export function useDoorToDoorSession(userId?: string) {
   ): number => {
     let points = DOOR_POINTS.base_knock;
     
-    switch (disposition) {
-      case 'not_home':
-        points += DOOR_POINTS.not_home;
-        break;
-      case 'go_back':
-        points += DOOR_POINTS.go_back;
-        break;
-      case 'interested':
-        points += DOOR_POINTS.interested;
-        break;
-      case 'needs_inspection':
-        points += DOOR_POINTS.needs_inspection;
-        break;
-      case 'appointment_set':
-        points += DOOR_POINTS.appointment_set;
-        break;
-      case 'contract_signed':
-        points += DOOR_POINTS.contract_signed;
-        break;
+    // Get disposition points
+    const dispositionKey = disposition as keyof typeof DOOR_POINTS;
+    if (DOOR_POINTS[dispositionKey] !== undefined) {
+      points += DOOR_POINTS[dispositionKey];
     }
 
     if (hasCustomerInfo) {
@@ -276,7 +290,7 @@ export function useDoorToDoorSession(userId?: string) {
           lat,
           lng,
           address,
-          disposition,
+          disposition: disposition as any, // Cast for extended disposition types
           dwell_time_seconds: dwellTime,
           customer_name: customerInfo?.name || null,
           customer_phone: customerInfo?.phone || null,
@@ -284,7 +298,7 @@ export function useDoorToDoorSession(userId?: string) {
           appointment_date: customerInfo?.appointmentDate || null,
           points_awarded: pointsAwarded,
           notes: notes || null
-        })
+        } as any)
         .select()
         .single();
 
@@ -312,24 +326,34 @@ export function useDoorToDoorSession(userId?: string) {
       await awardPoints(
         pointsAwarded,
         'door_knock',
-        `Door knock: ${disposition.replace('_', ' ')}`
+        `Door knock: ${disposition.replace(/_/g, ' ')}`
       );
 
       // Show celebration for high-value dispositions
-      if (disposition === 'contract_signed') {
+      if (disposition === 'won' || disposition === 'contract_signed') {
         toast({
-          title: '🎉 CONTRACT SIGNED!',
+          title: '🎉 CONTRACT WON!',
           description: `Amazing! +${pointsAwarded} points!`
         });
-      } else if (disposition === 'appointment_set') {
+      } else if (disposition === 'inspected') {
         toast({
-          title: '📅 Appointment Set!',
+          title: '✅ Property Inspected!',
           description: `Great work! +${pointsAwarded} points!`
+        });
+      } else if (disposition === 'need_inspection' || disposition === 'needs_inspection') {
+        toast({
+          title: '🔍 Inspection Needed!',
+          description: `Promising lead! +${pointsAwarded} points!`
+        });
+      } else if (disposition === 'canvass_lead') {
+        toast({
+          title: '👥 Lead Captured!',
+          description: `Nice! +${pointsAwarded} points!`
         });
       } else {
         toast({
           title: `+${pointsAwarded} Points!`,
-          description: `Door recorded: ${disposition.replace('_', ' ')}`
+          description: `Door recorded: ${disposition.replace(/_/g, ' ')}`
         });
       }
 

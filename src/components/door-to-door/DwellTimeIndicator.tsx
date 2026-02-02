@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState, useRef } from "react";
 import { Clock } from "lucide-react";
 
 interface DwellTimeIndicatorProps {
@@ -13,31 +12,41 @@ export function DwellTimeIndicator({
   onComplete,
   onCancel
 }: DwellTimeIndicatorProps) {
-  const [elapsed, setElapsed] = useState(0);
-  const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
+  const [remaining, setRemaining] = useState(requiredSeconds);
+  const hasCompletedRef = useRef(false);
+  const progress = Math.min(((requiredSeconds - remaining) / requiredSeconds) * 100, 100);
 
   useEffect(() => {
+    // Reset completion flag when component mounts
+    hasCompletedRef.current = false;
+    setRemaining(requiredSeconds);
+
     const interval = setInterval(() => {
-      setElapsed(prev => {
-        const next = prev + 1;
-        if (next >= requiredSeconds) {
+      setRemaining(prev => {
+        const next = prev - 1;
+        if (next <= 0 && !hasCompletedRef.current) {
+          hasCompletedRef.current = true;
           clearInterval(interval);
-          onComplete();
+          // Use setTimeout to avoid state update during render
+          setTimeout(() => onComplete(), 0);
+          return 0;
         }
-        return next;
+        return Math.max(next, 0);
       });
     }, 1000);
 
     return () => clearInterval(interval);
   }, [requiredSeconds, onComplete]);
 
-  const remaining = Math.max(requiredSeconds - elapsed, 0);
+  const elapsed = requiredSeconds - remaining;
+  const circumference = 2 * Math.PI * 44; // r=44
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-background rounded-2xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl">
-        <div className="w-24 h-24 mx-auto rounded-full border-4 border-primary flex items-center justify-center relative">
-          <svg className="absolute inset-0 w-full h-full -rotate-90">
+        <div className="w-24 h-24 mx-auto relative">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+            {/* Background circle */}
             <circle
               cx="48"
               cy="48"
@@ -47,6 +56,7 @@ export function DwellTimeIndicator({
               strokeWidth="4"
               className="text-muted/20"
             />
+            {/* Progress circle - animates smoothly */}
             <circle
               cx="48"
               cy="48"
@@ -55,12 +65,17 @@ export function DwellTimeIndicator({
               stroke="currentColor"
               strokeWidth="4"
               strokeLinecap="round"
-              strokeDasharray={276.46}
-              strokeDashoffset={276.46 * (1 - progress / 100)}
-              className="text-primary transition-all duration-1000"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference * (1 - progress / 100)}
+              className="text-primary transition-all duration-1000 ease-linear"
             />
           </svg>
-          <span className="text-3xl font-bold text-primary">{remaining}</span>
+          {/* Countdown number in center */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-bold text-primary tabular-nums">
+              {remaining}
+            </span>
+          </div>
         </div>
         
         <div className="space-y-2">
