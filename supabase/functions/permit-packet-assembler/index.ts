@@ -399,6 +399,7 @@ serve(async (req) => {
     let learnedFastenerPatterns: any[] = [];
     let learnedJurisdictionRules: any[] = [];
     let learnedAIKnowledge: any[] = [];
+    let learnedRejectionPatterns: any[] = [];
     
     try {
       // Query fastener patterns for this jurisdiction
@@ -436,6 +437,36 @@ serve(async (req) => {
       if (aiKnowledgeData && aiKnowledgeData.length > 0) {
         learnedAIKnowledge = aiKnowledgeData;
         console.log(`Found ${aiKnowledgeData.length} AI knowledge items from training`);
+      }
+      
+      // PHASE 1: CLOSED LEARNING LOOP - Query rejection patterns for this jurisdiction/trade
+      const { data: rejectionData } = await supabase
+        .from('permit_rejections')
+        .select('rejection_reason, rejection_category, extracted_pattern')
+        .ilike('jurisdiction_county', `%${county}%`)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (rejectionData && rejectionData.length > 0) {
+        // Aggregate rejection patterns by frequency
+        const patternMap = new Map<string, { reason: string; category: string; count: number }>();
+        for (const rej of rejectionData) {
+          const key = rej.rejection_reason || rej.extracted_pattern || 'Unknown';
+          const existing = patternMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            patternMap.set(key, {
+              reason: key,
+              category: rej.rejection_category || 'general',
+              count: 1,
+            });
+          }
+        }
+        learnedRejectionPatterns = Array.from(patternMap.values())
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+        console.log(`Found ${learnedRejectionPatterns.length} rejection patterns for ${county}`);
       }
     } catch (e) {
       console.warn('Error fetching learned data:', e);
@@ -754,14 +785,20 @@ serve(async (req) => {
     let aiNotes = '';
     
     if (LOVABLE_API_KEY) {
+      // Format rejection avoidance context (PHASE 1: CLOSED LEARNING LOOP)
+      const rejectionAvoidanceContext = learnedRejectionPatterns.length > 0
+        ? `\n\nCRITICAL - AVOID THESE COMMON REJECTION REASONS (learned from ${county} building dept):\n${learnedRejectionPatterns.map(r => `- [${r.category}] ${r.reason} (${r.count} occurrences)`).join('\n')}\n\nIMPORTANT: Address each of these potential issues in the cover sheet and submission notes to prevent rejection.`
+        : '';
+      
       const systemPrompt = `You are an expert permit packet preparer for Florida building permits. Generate professional content for permit submissions.
 
 Given the permit details, generate:
 1. A professional HTML cover sheet with property info, owner info, contractor info, scope summary, and document checklist
-2. Submission notes for the permit expediter
+2. Submission notes for the permit expediter - CRITICAL: Include specific warnings based on learned rejection patterns
 3. Any warnings or issues detected
+4. A "Lessons Learned" section addressing common rejection reasons for this jurisdiction
 
-Use clean, professional formatting. Include all required information.`;
+Use clean, professional formatting. Include all required information.${rejectionAvoidanceContext}`;
 
       // Format AI knowledge for prompt
       const aiKnowledgeContext = learnedAIKnowledge.length > 0 
@@ -798,10 +835,18 @@ JURISDICTION-SPECIFIC RULES (learned gotchas):
 ${learnedJurisdictionRules.slice(0, 5).map(r => `- ${r.rule_type}: ${r.rule_description}`).join('\n')}
 ` : ''}
 
+${learnedRejectionPatterns.length > 0 ? `
+COMMON REJECTION REASONS TO AVOID (from ${county} permit history):
+${learnedRejectionPatterns.map(r => `- ${r.reason} (category: ${r.category}, frequency: ${r.count})`).join('\n')}
+
+IMPORTANT: Generate submission notes that specifically address how to avoid each of these rejection reasons.
+` : ''}
+
 Respond with JSON:
 {
   "coverSheetHtml": "<html cover sheet content>",
   "submissionNotes": ["note1", "note2"],
+  "rejectionAvoidance": ["specific tips to avoid rejection based on learned patterns"],
   "warnings": ["warning if any"],
   "summary": "Brief summary of packet"
 }`;
