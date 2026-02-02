@@ -93,17 +93,33 @@ export default function ExtractedProductsTab() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // First, get all training-extracted products
-      const { data: productsData, error: productsError } = await supabase
-        .from("product_approvals")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Paginate to fetch ALL products (Supabase default limit is 1000)
+      let allProducts: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (productsError) throw productsError;
+      while (hasMore) {
+        const { data, error: fetchError } = await supabase
+          .from("product_approvals")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (fetchError) throw fetchError;
+
+        if (data && data.length > 0) {
+          allProducts = [...allProducts, ...data];
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
 
       // Get training packet info for source context
-      const trainingIds = productsData
-        ?.map(p => (p.metadata as { source_training_id?: string })?.source_training_id)
+      const trainingIds = allProducts
+        .map(p => (p.metadata as { source_training_id?: string })?.source_training_id)
         .filter(Boolean) as string[];
 
       let trainingMap = new Map<string, { source_file_name: string; county: string; city: string }>();
@@ -126,7 +142,7 @@ export default function ExtractedProductsTab() {
       }
 
       // Merge data - cast to handle Json type
-      const enrichedProducts = (productsData || []).map(p => {
+      const enrichedProducts = allProducts.map(p => {
         const metadata = p.metadata as Record<string, unknown> | null;
         const trainingId = metadata?.source_training_id as string | undefined;
         const trainingInfo = trainingId ? trainingMap.get(trainingId) : undefined;

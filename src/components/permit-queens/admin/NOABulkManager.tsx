@@ -53,18 +53,19 @@ export function NOABulkManager() {
   const loadStats = async () => {
     setIsLoadingStats(true);
     try {
-      const { data: allProducts, error: allError } = await supabase
+      // Use count queries with head: true to get accurate counts (bypasses 1000 row limit)
+      const { count: totalCount, error: allError } = await supabase
         .from('product_approvals')
-        .select('id', { count: 'exact' });
+        .select('*', { count: 'exact', head: true });
       
-      const { data: withPdf, error: pdfError } = await supabase
+      const { count: withPdfCount, error: pdfError } = await supabase
         .from('product_approvals')
-        .select('id', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .not('file_url', 'is', null);
       
-      const { data: pending, error: pendingError } = await supabase
+      const { count: pendingCount, error: pendingError } = await supabase
         .from('product_approvals')
-        .select('id', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .eq('source_status', 'pending');
 
       // Products that have external Miami-Dade URLs (ready to download and cache)
@@ -73,16 +74,40 @@ export function NOABulkManager() {
         .select('*', { count: 'exact', head: true })
         .ilike('file_url', '%miamidade.gov%');
 
-      const { data: aiExtracted, error: aiError } = await supabase
+      const { count: aiExtractedCount, error: aiError } = await supabase
         .from('product_approvals')
-        .select('id, extraction_confidence', { count: 'exact' })
+        .select('*', { count: 'exact', head: true })
         .not('ai_extracted_at', 'is', null);
 
-      // Calculate average confidence
+      // For average confidence, we need to paginate to get all values
       let avgConfidence = 0;
-      if (aiExtracted && aiExtracted.length > 0) {
-        const totalConfidence = aiExtracted.reduce((sum, p) => sum + (p.extraction_confidence || 0), 0);
-        avgConfidence = totalConfidence / aiExtracted.length;
+      if (aiExtractedCount && aiExtractedCount > 0) {
+        let allConfidences: number[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: confidenceData } = await supabase
+            .from('product_approvals')
+            .select('extraction_confidence')
+            .not('ai_extracted_at', 'is', null)
+            .not('extraction_confidence', 'is', null)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+          if (confidenceData && confidenceData.length > 0) {
+            allConfidences = [...allConfidences, ...confidenceData.map(p => p.extraction_confidence || 0)];
+            hasMore = confidenceData.length === pageSize;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        if (allConfidences.length > 0) {
+          const totalConfidence = allConfidences.reduce((sum, c) => sum + c, 0);
+          avgConfidence = totalConfidence / allConfidences.length;
+        }
       }
 
       // Get AI knowledge item count
@@ -92,11 +117,11 @@ export function NOABulkManager() {
 
       if (!allError && !pdfError && !pendingError && !aiError && !pdfUrlError) {
         setStats({
-          total: allProducts?.length || 0,
-          withPdf: withPdf?.length || 0,
-          pending: pending?.length || 0,
+          total: totalCount || 0,
+          withPdf: withPdfCount || 0,
+          pending: pendingCount || 0,
           withPdfUrl: externalPdfCount || 0,
-          aiExtracted: aiExtracted?.length || 0,
+          aiExtracted: aiExtractedCount || 0,
           avgConfidence: avgConfidence,
           knowledgeItems: knowledgeCount || 0
         });
