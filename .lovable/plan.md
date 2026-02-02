@@ -1,183 +1,253 @@
 
-# Fix Door to Door World Feature - Critical Updates
+# Door to Door World Enhancement Plan
 
 ## Summary
 
-After analyzing the Door to Door World feature at `/door-to-door`, I've identified several issues that need to be fixed to ensure the feature works correctly. The primary issues are:
-
-1. **Missing Mapbox token fallback** - Map may fail to load if the environment variable isn't available
-2. **Property marker click events not properly captured** - Coordinates passed incorrectly in some cases  
-3. **Missing session ID reference** - Door knocks may not link properly to property dispositions
-4. **Stats display timer not updating** - Session duration doesn't update in real-time
-5. **Video storage bucket policies** - May prevent video uploads
+This plan implements major enhancements to transform the Door to Door feature into a comprehensive "Roofing Redline"-style canvassing system with improved countdown functionality, expanded disposition options, and a detailed property sidebar.
 
 ---
 
-## Fix 1: Add Mapbox Token Fallback
+## 1. Fix Countdown Timer (DwellTimeIndicator)
 
-**File**: `src/components/door-to-door/DoorToDoorMap.tsx`
+**File**: `src/components/door-to-door/DwellTimeIndicator.tsx`
 
-The current code has no fallback if `VITE_MAPBOX_TOKEN` isn't available. Other map components have fallbacks. I'll add one to ensure the map always loads.
+The current countdown actually counts UP (from 0 to 20), not DOWN. I'll fix it to:
+- Start at 20 and count down to 0
+- Update every second with smooth circular progress animation
+- Display the remaining time prominently in the center
 
 **Change**:
 ```typescript
-// Before
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+// Show countdown from requiredSeconds to 0
+const remaining = Math.max(requiredSeconds - elapsed, 0);
+// Progress fills as time passes (0% to 100%)
+const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
+```
 
-// After  
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 
-  'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHNxcXAyMGkwMmt3MmtwOHRtZzRtdTQ0In0.r5TIIyCB7DcObd5rs4BVIw';
+The visual shows `{remaining}` which is correct, but I'll improve the animation timing.
+
+---
+
+## 2. Expand Disposition Options
+
+**Files**: 
+- `src/hooks/usePropertyDispositions.ts` - Update PropertyDisposition type
+- `src/components/door-to-door/DispositionQuickBar.tsx` - Add new disposition options
+
+**New Dispositions** (matching Roofing Redline style):
+
+| Disposition | Color | Icon | Points |
+|-------------|-------|------|--------|
+| Not Contacted | Amber (outline) | Circle | 0 |
+| Not Home | Gray | Home | +2 |
+| Go Back | Amber | RotateCcw | +3 |
+| Not Interested | Red | X | 0 |
+| Need Inspection | Orange | Search | +75 |
+| Interested | Blue | ThumbsUp | +10 |
+| Storm Damage | Purple | CloudLightning | +15 |
+| Unqualified | Gray | Slash | 0 |
+| Canvass Lead | Teal | Users | +25 |
+| New Roof | Green | CheckCircle | +50 |
+| Follow Up | Yellow | Clock | +5 |
+| Waiting | Cyan | Hourglass | +5 |
+| Already Solar | Lime | Sun | 0 |
+| Opportunity | Indigo | Zap | +30 |
+| Commercial | Slate | Building2 | +10 |
+| Inspected | Emerald | ClipboardCheck | +100 |
+| Old Roof | Brown | Home | +10 |
+| Won | Gold | Trophy | +200 |
+
+---
+
+## 3. Enhanced Property Side Panel
+
+**File**: `src/components/door-to-door/PropertySidePanel.tsx`
+
+Add tabbed interface with sections:
+
+### Sidebar Structure
+
+```text
++----------------------------------+
+|  [Address]                    X  |
+|  [Disposition Status Badge]      |
++----------------------------------+
+|  [ Dispositions Tab ] [ Details ] |
+|                                   |
+|  Quick Disposition Grid (4x5)    |
+|  - All 18 disposition options    |
+|  - Color-coded buttons           |
+|                                   |
++----------------------------------+
+|  Customer Info                   |
+|  - Name, Phone, Email            |
+|  - Add multiple residents (+)    |
++----------------------------------+
+|  Project Section                 |
+|  - Roof type, condition          |
+|  - Insurance claim status        |
++----------------------------------+
+|  Proposals                       |
+|  - Link to create estimate       |
++----------------------------------+
+|  Files / Photos                  |
+|  - Upload damage photos          |
+|  - Before/after images           |
++----------------------------------+
+|  Tags                            |
+|  - Storm date, priority, etc.    |
++----------------------------------+
+|  Notes History                   |
+|  - Timestamped notes log         |
++----------------------------------+
+|        [ Save Changes ]          |
++----------------------------------+
 ```
 
 ---
 
-## Fix 2: Fix Session Stats Timer
-
-**File**: `src/components/door-to-door/SessionStats.tsx`
-
-The current implementation calculates duration once when rendered, but doesn't update in real-time. I'll add a `useEffect` with an interval to update every second.
-
-**Change**: Add state for live duration and interval to update it:
-```typescript
-const [liveDuration, setLiveDuration] = useState("00:00");
-
-useEffect(() => {
-  if (!sessionStartTime) return;
-  
-  const interval = setInterval(() => {
-    // Calculate and update duration
-  }, 1000);
-  
-  return () => clearInterval(interval);
-}, [sessionStartTime]);
-```
-
----
-
-## Fix 3: Improve Property Click Handling
+## 4. Property Markers on Map
 
 **File**: `src/components/door-to-door/DoorToDoorMap.tsx`
 
-Currently, the property click handler uses `properties.find()` which may not find the correct property due to floating point comparison issues. I'll improve the lookup logic to use the `latLngHash` from the feature properties directly.
+The map already has property markers! Current implementation:
+- Orange outline circles = Not Contacted
+- Filled circles with colors = Contacted properties
 
-**Change**: Update click handlers to pass complete property data:
-```typescript
-// Use latLngHash for lookup instead of coordinate matching
-const existingProperty = properties.find(p => p.latLngHash === props?.latLngHash);
-```
-
----
-
-## Fix 4: Add Missing Session ID to Property Updates
-
-**File**: `src/hooks/usePropertyDispositions.ts`
-
-When updating a property disposition during an active session, the session ID should be recorded for tracking purposes. I'll add an optional `sessionId` parameter.
-
-**Change**: Add session tracking to property disposition upserts:
-```typescript
-const setPropertyDisposition = useCallback(async (
-  lat: number,
-  lng: number,
-  disposition: PropertyDisposition,
-  customerInfo?: {...},
-  address?: string,
-  sessionId?: string  // New optional parameter
-) => {
-  // Include session_id in upsert if provided
-});
-```
+**Enhancements**:
+- Improve marker sizes at different zoom levels
+- Add subtle animations when disposition changes
+- Show address tooltip on hover
 
 ---
 
-## Fix 5: Add Video Storage Policy Check
+## 5. Database Schema Updates
 
-**Database Migration**
+**New table**: `property_residents` (for multiple residents per property)
 
-Ensure the `door-to-door-videos` bucket has proper RLS policies allowing authenticated users to upload their own verification videos.
-
-**SQL**:
 ```sql
--- Add storage policies for video uploads
-CREATE POLICY "Users can upload their own videos"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'door-to-door-videos' 
-  AND auth.uid()::text = (storage.foldername(name))[1]
+CREATE TABLE property_residents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id UUID REFERENCES property_dispositions(id) ON DELETE CASCADE,
+  name TEXT,
+  phone TEXT,
+  email TEXT,
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
+```
 
-CREATE POLICY "Users can view their own videos"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'door-to-door-videos' 
-  AND auth.uid()::text = (storage.foldername(name))[1]
+**New table**: `property_photos` (for damage photos)
+
+```sql
+CREATE TABLE property_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id UUID REFERENCES property_dispositions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
+  photo_url TEXT NOT NULL,
+  caption TEXT,
+  photo_type TEXT DEFAULT 'general', -- 'before', 'after', 'damage', 'general'
+  created_at TIMESTAMPTZ DEFAULT now()
 );
+```
+
+**Update**: `property_dispositions` table - add new columns
+
+```sql
+ALTER TABLE property_dispositions ADD COLUMN IF NOT EXISTS
+  roof_type TEXT,
+  roof_condition TEXT,
+  insurance_claim BOOLEAN DEFAULT false,
+  storm_date DATE,
+  priority TEXT DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
+  tags TEXT[];
 ```
 
 ---
 
-## Fix 6: Improve Error Handling
+## 6. Files to Create/Modify
 
-**File**: `src/pages/DoorToDoor.tsx`
-
-Add better error handling for the case when GPS permission is denied or session creation fails.
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/door-to-door/DoorToDoorMap.tsx` | Add Mapbox fallback token |
-| `src/components/door-to-door/SessionStats.tsx` | Add real-time duration timer |
-| `src/hooks/usePropertyDispositions.ts` | Add optional session ID tracking |
-| `src/pages/DoorToDoor.tsx` | Improve error handling |
-| Database migration | Add storage policies for video bucket |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/usePropertyDispositions.ts` | Modify | Expand PropertyDisposition type to 18 options |
+| `src/components/door-to-door/DispositionQuickBar.tsx` | Modify | Add all disposition options with icons/colors |
+| `src/components/door-to-door/DwellTimeIndicator.tsx` | Modify | Fix countdown animation timing |
+| `src/components/door-to-door/PropertySidePanel.tsx` | Major rewrite | Add tabs, multiple residents, photos, project info |
+| `src/components/door-to-door/PropertyPhotos.tsx` | Create | Photo upload/display component |
+| `src/components/door-to-door/PropertyResidents.tsx` | Create | Multiple residents manager |
+| `src/components/door-to-door/PropertyTags.tsx` | Create | Tag management component |
+| `src/components/door-to-door/NotesHistory.tsx` | Create | Timestamped notes log |
+| `src/hooks/useDoorToDoorSession.ts` | Modify | Update points for new dispositions |
+| Database migration | Create | Add new tables and columns |
 
 ---
 
-## Technical Details
+## 7. Technical Implementation Details
 
-### Current Data Flow
+### Disposition Color Mapping
 
-```text
-User opens /door-to-door
-    ↓
-Auth check → redirects to login if not authenticated
-    ↓
-Map initializes with user's GPS position
-    ↓
-On bounds change → fetch existing properties + generate grid
-    ↓
-User clicks property circle → side panel opens
-    ↓
-User selects disposition → saves to property_dispositions + door_knocks
-    ↓
-Points awarded via gamification hook
+```typescript
+export function getDispositionColor(disposition: PropertyDisposition): string {
+  const colors: Record<PropertyDisposition, string> = {
+    'not_contacted': '#f59e0b',
+    'not_home': '#64748b',
+    'go_back': '#d97706',
+    'not_interested': '#dc2626',
+    'need_inspection': '#ea580c',
+    'interested': '#2563eb',
+    'storm_damage': '#9333ea',
+    'unqualified': '#94a3b8',
+    'canvass_lead': '#14b8a6',
+    'new_roof': '#22c55e',
+    'follow_up': '#eab308',
+    'waiting': '#06b6d4',
+    'already_solar': '#84cc16',
+    'opportunity': '#6366f1',
+    'commercial': '#475569',
+    'inspected': '#10b981',
+    'old_roof': '#92400e',
+    'won': '#fbbf24',
+  };
+  return colors[disposition] || '#f59e0b';
+}
 ```
 
-### Points System (already correct)
+### Points System Update
 
-| Action | Points |
-|--------|--------|
-| Base knock | 5 |
-| Not home | +2 |
-| Go back | +3 |
-| Interested | +10 |
-| Customer info | +20 |
-| Appointment set | +50 |
-| Needs inspection | +75 |
-| Contract signed | +200 |
-| Video verification | +25 |
+```typescript
+export const DOOR_POINTS = {
+  base_knock: 5,
+  not_home: 2,
+  not_interested: 0,
+  go_back: 3,
+  interested: 10,
+  need_inspection: 75,
+  storm_damage: 15,
+  unqualified: 0,
+  canvass_lead: 25,
+  new_roof: 50,
+  follow_up: 5,
+  waiting: 5,
+  already_solar: 0,
+  opportunity: 30,
+  commercial: 10,
+  inspected: 100,
+  old_roof: 10,
+  won: 200,
+  customer_info: 20,
+  video_verification: 25,
+};
+```
 
 ---
 
 ## Expected Outcome
 
-After implementing these fixes:
-- Map will always load (with fallback token)
-- Session timer will update in real-time
-- Property markers will be clickable and save properly
-- Video uploads will work correctly
-- Better error messages for GPS/session issues
-
+After implementation:
+1. Countdown timer properly counts from 20 to 0 with smooth circular animation
+2. 18 disposition options matching industry-standard canvassing apps
+3. Full-featured sidebar with tabs for customer info, project details, photos, and notes
+4. Property markers update color immediately on disposition change
+5. Support for multiple residents per property
+6. Photo upload capability for damage documentation
+7. Tag system for filtering and prioritization
