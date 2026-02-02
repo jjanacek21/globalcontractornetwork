@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Home, FileText, Image, Tag, MessageSquare, ChevronRight, ExternalLink } from 'lucide-react';
+import { X, MapPin, Home, FileText, Image, Tag, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { PropertyResidents } from './PropertyResidents';
 import { PropertyPhotos } from './PropertyPhotos';
 import { PropertyTags } from './PropertyTags';
 import { NotesHistory } from './NotesHistory';
+import { InstantQuoteSection } from './InstantQuoteSection';
 import type { PropertyDisposition, PropertyData } from '@/hooks/usePropertyDispositions';
 import { cn } from '@/lib/utils';
 
@@ -334,15 +335,18 @@ export function PropertySidePanel({
                 </div>
               </div>
 
-              {/* Proposals link */}
+              {/* Instant Quote Section */}
               <div className="pt-4 border-t">
-                <Button variant="outline" className="w-full justify-between" disabled>
-                  <span className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Create Proposal
-                  </span>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                <InstantQuoteSection
+                  propertyId={property.id}
+                  lat={property.lat}
+                  lng={property.lng}
+                  address={property.address}
+                  onPackageSelect={(pkg, tier, measurement) => {
+                    console.log('Package selected:', tier, pkg, measurement);
+                    // Could save to property or navigate to proposal creation
+                  }}
+                />
               </div>
             </TabsContent>
 

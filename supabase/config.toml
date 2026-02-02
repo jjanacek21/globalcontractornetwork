@@ -167,3 +167,6 @@ verify_jwt = false
 
 [functions.pdf-proxy]
 verify_jwt = false
+
+[functions.instant-roof-estimate]
+verify_jwt = false
