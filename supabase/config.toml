@@ -164,3 +164,6 @@ verify_jwt = false
 
 [functions.search-and-store-documents]
 verify_jwt = false
+
+[functions.pdf-proxy]
+verify_jwt = false
