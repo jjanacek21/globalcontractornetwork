@@ -83,32 +83,49 @@ export function PDFViewerDialog({
     };
   }, [blobUrl]);
 
-  // Fetch PDF via proxy
+  // Fetch PDF via proxy using direct fetch for binary response
   const fetchViaProxy = useCallback(async (targetUrl: string): Promise<string> => {
     const domain = getDomainName(targetUrl);
     setFetchProgress(`Fetching from ${domain}...`);
     
-    const { data, error } = await supabase.functions.invoke('pdf-proxy', {
-      body: { url: targetUrl },
-    });
+    // Use direct fetch instead of supabase.functions.invoke for proper binary handling
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    const response = await fetch(
+      `https://ujalvgknnbsxqpujxvwk.supabase.co/functions/v1/pdf-proxy`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqYWx2Z2tubmJzeHFwdWp4dndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTMzMDcsImV4cCI6MjA3NTI2OTMwN30.sh41h6hP_JNkRifubmKsrmr0Pr4tbshfK-gnR_BLNLA'}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqYWx2Z2tubmJzeHFwdWp4dndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2OTMzMDcsImV4cCI6MjA3NTI2OTMwN30.sh41h6hP_JNkRifubmKsrmr0Pr4tbshfK-gnR_BLNLA',
+        },
+        body: JSON.stringify({ url: targetUrl }),
+      }
+    );
 
-    if (error) {
-      console.error('[PDFViewerDialog] Proxy error:', error);
-      throw new Error(error.message || 'Failed to fetch document');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[PDFViewerDialog] Proxy error:', errorText);
+      throw new Error(errorText || 'Failed to fetch document');
     }
 
-    // The response should be a blob/arrayBuffer
-    if (data instanceof ArrayBuffer || data instanceof Blob) {
-      const blob = data instanceof Blob ? data : new Blob([data], { type: 'application/pdf' });
-      return URL.createObjectURL(blob);
+    // Get the response as a blob directly
+    const pdfBlob = await response.blob();
+    
+    // Verify it's actually a PDF
+    if (pdfBlob.type !== 'application/pdf' && pdfBlob.size > 0) {
+      // Check if it's an error response
+      const text = await pdfBlob.text();
+      try {
+        const json = JSON.parse(text);
+        if (json.error) throw new Error(json.error);
+      } catch {
+        // Not JSON, might still be a valid PDF with wrong content-type
+      }
     }
 
-    // If we got JSON error response
-    if (typeof data === 'object' && data.error) {
-      throw new Error(data.error);
-    }
-
-    throw new Error('Unexpected response from proxy');
+    return URL.createObjectURL(pdfBlob);
   }, [getDomainName]);
 
   // Main load effect
@@ -369,15 +386,21 @@ export function PDFViewerDialog({
               </div>
             </div>
           ) : (
-            <iframe
-              src={displayUrl}
-              className="w-full h-full border-0"
-              onLoad={handleIframeLoad}
-              onError={handleIframeError}
-              title={title}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              allow="fullscreen"
-            />
+            /* Use object tag with iframe fallback - no sandbox to allow Chrome PDF plugin */
+            <object
+              data={`${displayUrl}#toolbar=1&view=FitH&navpanes=0`}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <iframe
+                src={displayUrl}
+                className="w-full h-full border-0"
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                title={title}
+                allow="fullscreen"
+              />
+            </object>
           )}
         </div>
 
