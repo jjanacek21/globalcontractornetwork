@@ -112,19 +112,10 @@ export function PacketDownloader({
       setStage('Generating downloadable packet...');
       setProgress(85);
 
-      if (packetData?.packetId) {
-        // Fetch the generated packet URL
-        const { data: packet } = await supabase
-          .from('permit_packets')
-          .select('*')
-          .eq('id', packetData.packetId)
-          .single();
-
-        const packetRecord = packet as { packet_pdf_url?: string } | null;
-        if (packetRecord?.packet_pdf_url) {
-          setPacketUrl(packetRecord.packet_pdf_url);
-          onPacketReady?.(packetRecord.packet_pdf_url);
-        }
+      // Use the packet URL directly from edge function response
+      if (packetData?.packetPdfUrl) {
+        setPacketUrl(packetData.packetPdfUrl);
+        onPacketReady?.(packetData.packetPdfUrl);
       }
 
       setProgress(100);
