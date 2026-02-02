@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DoorOpen, Trophy, Clock, Target } from "lucide-react";
@@ -10,20 +11,38 @@ interface SessionStatsProps {
 }
 
 export function SessionStats({ session, allTimeStats, sessionStartTime }: SessionStatsProps) {
-  // Calculate session duration
-  const getDuration = () => {
-    if (!sessionStartTime) return "00:00";
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
-    const hours = Math.floor(diff / 3600);
-    const minutes = Math.floor((diff % 3600) / 60);
-    const seconds = diff % 60;
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const [liveDuration, setLiveDuration] = useState("00:00");
+
+  // Real-time duration timer
+  useEffect(() => {
+    if (!sessionStartTime) {
+      setLiveDuration("00:00");
+      return;
     }
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+
+    const calculateDuration = () => {
+      const now = new Date();
+      const diff = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+      const hours = Math.floor(diff / 3600);
+      const minutes = Math.floor((diff % 3600) / 60);
+      const seconds = diff % 60;
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    // Update immediately
+    setLiveDuration(calculateDuration());
+
+    // Then update every second
+    const interval = setInterval(() => {
+      setLiveDuration(calculateDuration());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sessionStartTime]);
 
   return (
     <div className="fixed top-20 left-4 z-40 space-y-2">
@@ -62,7 +81,7 @@ export function SessionStats({ session, allTimeStats, sessionStartTime }: Sessio
             
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
-              <span>{getDuration()}</span>
+              <span>{liveDuration}</span>
             </div>
           </CardContent>
         </Card>
