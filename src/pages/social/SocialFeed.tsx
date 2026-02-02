@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 
 const TRADE_OPTIONS = [
   "all", "Roofing", "General Contractor", "HVAC", "Plumbing", "Electrical",
-  "Flooring", "Painting", "Landscaping", "Windows & Doors"
+  "Flooring", "Painting", "Landscaping", "Windows & Doors", "Engineering"
 ];
 
 const SocialFeed = () => {

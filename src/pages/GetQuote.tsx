@@ -11,13 +11,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Home, Shield, PanelTop, Trees, Droplets, ArrowRight, 
   ArrowLeft, Loader2, CheckCircle, MapPin, Sparkles,
-  Phone, Mail, User
+  Phone, Mail, User, Ruler
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { Link } from "react-router-dom";
 import { ReferralSourceSelect } from "@/components/forms/ReferralSourceSelect";
 
-type ServiceType = "roofing" | "windows" | "coatings" | "landscaping" | "emergency" | null;
+type ServiceType = "roofing" | "windows" | "coatings" | "landscaping" | "emergency" | "engineering" | null;
 
 interface ServiceOption {
   id: ServiceType;
@@ -33,6 +33,7 @@ const services: ServiceOption[] = [
   { id: "windows", icon: PanelTop, title: "Windows & Doors", description: "Impact-rated installations", color: "bg-green-500" },
   { id: "landscaping", icon: Trees, title: "Tree & Landscaping", description: "Removal, trimming & design", color: "bg-emerald-600" },
   { id: "emergency", icon: Droplets, title: "Emergency Services", description: "Water damage & mold remediation", color: "bg-red-500" },
+  { id: "engineering", icon: Ruler, title: "Engineering", description: "Structural & specialty engineering", color: "bg-violet-500" },
 ];
 
 const GetQuote = () => {
@@ -61,6 +62,7 @@ const GetQuote = () => {
         coatings: "coating-quote-ai",
         landscaping: "landscaping-estimate-ai",
         emergency: "emergency-triage-ai",
+        engineering: "property-estimator-ai",
       };
 
       const functionName = functionMap[selectedService];
@@ -292,6 +294,53 @@ const GetQuote = () => {
                     key={option}
                     variant={projectDetails.urgency === option ? "default" : "outline"}
                     onClick={() => setProjectDetails({ ...projectDetails, urgency: option })}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      case "engineering":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>What type of engineering service?</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {["Structural", "MEP (Mechanical/Electrical/Plumbing)", "Civil", "Environmental", "Specialty"].map((option) => (
+                  <Button
+                    key={option}
+                    variant={projectDetails.engineeringType === option ? "default" : "outline"}
+                    onClick={() => setProjectDetails({ ...projectDetails, engineeringType: option })}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Project scope</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {["New Construction", "Renovation", "Inspection/Review", "Sealed Plans Only"].map((option) => (
+                  <Button
+                    key={option}
+                    variant={projectDetails.projectScope === option ? "default" : "outline"}
+                    onClick={() => setProjectDetails({ ...projectDetails, projectScope: option })}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Property Type</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {["Residential", "Commercial"].map((option) => (
+                  <Button
+                    key={option}
+                    variant={projectDetails.propertyType === option.toLowerCase() ? "default" : "outline"}
+                    onClick={() => setProjectDetails({ ...projectDetails, propertyType: option.toLowerCase() })}
                   >
                     {option}
                   </Button>

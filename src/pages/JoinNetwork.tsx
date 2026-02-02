@@ -707,6 +707,7 @@ const JoinNetwork = () => {
                         <SelectItem value="Flooring">Flooring</SelectItem>
                         <SelectItem value="Kitchen & Bath">Kitchen & Bath</SelectItem>
                         <SelectItem value="Handyman">Handyman</SelectItem>
+                        <SelectItem value="Engineering">Engineering</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>

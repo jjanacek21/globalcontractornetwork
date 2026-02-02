@@ -52,6 +52,7 @@ const Index = () => {
     { icon: PanelTop, title: "Gutters", description: "Seamless gutters and guards", link: "/prep-property" },
     { icon: Wrench, title: "General Repairs", description: "Handyman and maintenance", link: "/prep-property" },
     { icon: Calendar, title: "Maintenance Plans", description: "Annual property protection", link: "/prep-property" },
+    { icon: Ruler, title: "Engineering", description: "Structural & specialty engineering", link: "/get-quote" },
   ];
 
   const contractorFeatures = [

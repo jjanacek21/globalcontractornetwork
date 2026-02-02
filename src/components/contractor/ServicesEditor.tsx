@@ -46,7 +46,8 @@ const TRADE_CATEGORIES = [
   'Fencing',
   'Solar',
   'Handyman',
-  'Emergency Services'
+  'Emergency Services',
+  'Engineering'
 ];
 
 export function ServicesEditor({

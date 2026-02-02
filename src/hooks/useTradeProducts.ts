@@ -20,7 +20,7 @@ export interface TradeProduct {
   premium_tier?: number;
 }
 
-export type TradeType = 'roofing' | 'hvac' | 'electrical' | 'plumbing' | 'windows_doors' | 'general_construction';
+export type TradeType = 'roofing' | 'hvac' | 'electrical' | 'plumbing' | 'windows_doors' | 'general_construction' | 'engineering';
 
 export interface ProductCategory {
   category: string;
@@ -52,6 +52,10 @@ const TRADE_CATEGORIES: Record<TradeType, { categories: string[]; required: stri
   },
   general_construction: {
     categories: [],
+    required: [],
+  },
+  engineering: {
+    categories: ['Structural Calcs', 'Sealed Plans', 'MEP Design'],
     required: [],
   },
 };

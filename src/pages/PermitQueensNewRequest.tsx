@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles, Clock, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, Loader2, Home, Zap, Droplets, Building2, Wrench, TreeDeciduous, Shield, AlertTriangle, CheckCircle2, Package, CreditCard, Sparkles, Clock, Plus, Ruler } from 'lucide-react';
 import { WizardProgress } from '@/components/permit-queens/WizardProgress';
 import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInput';
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
@@ -56,6 +56,7 @@ const PERMIT_TYPES = [
   { id: 'general_construction', label: 'General', icon: Wrench, description: 'Additions, renovations', priority: false },
   { id: 'tree_removal', label: 'Tree Removal', icon: TreeDeciduous, description: 'Tree permits', priority: false },
   { id: 'fence', label: 'Fence', icon: Shield, description: 'Fencing permits', priority: false },
+  { id: 'engineering', label: 'Engineering', icon: Ruler, description: 'Structural calcs, sealed plans', priority: false },
 ];
 
 interface FormData {
