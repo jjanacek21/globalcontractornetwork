@@ -20,6 +20,7 @@ import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentU
 import { MultiMaterialSelector, MultiSelectedProduct } from '@/components/permit-queens/MultiMaterialSelector';
 import { MobileMaterialSheet } from '@/components/permit-queens/MobileMaterialSheet';
 import { SignatureChecklist, generateSignatureRequirements, SignatureRequirement } from '@/components/permit-queens/SignatureChecklist';
+import { SignatureCollectionDialog } from '@/components/permit-queens/SignatureCollectionDialog';
 import { usePermitRequest, usePricingTiers, PricingTier } from '@/hooks/usePermitRequest';
 import { usePropertyLookup } from '@/hooks/usePropertyLookup';
 import { useContractorProfile, PriorPermitData } from '@/hooks/useContractorProfile';
@@ -123,6 +124,8 @@ export default function PermitQueensNewRequest() {
   
   // Signature requirements state
   const [signatureRequirements, setSignatureRequirements] = useState<SignatureRequirement[]>([]);
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [collectedSignatures, setCollectedSignatures] = useState<any[]>([]);
   
   // Payment agreement state
   const [paymentAgreed, setPaymentAgreed] = useState(false);
@@ -1092,36 +1095,46 @@ export default function PermitQueensNewRequest() {
               
               {/* Signature Requirements Checklist */}
               {computedSignatureRequirements.length > 0 && (
-                <SignatureChecklist
-                  requirements={computedSignatureRequirements}
-                  ownerName={formData.owner_name}
-                  estimatedValue={formData.valuation}
-                  county={formData.jurisdiction_county}
-                  onSignatureComplete={(id) => {
-                    toast.success('Signature recorded');
-                  }}
-                  onDownloadForSigning={async (req) => {
-                    if (req.documentUrl) {
-                      try {
-                        const response = await fetch(req.documentUrl);
-                        if (!response.ok) throw new Error('Download failed');
-                        const blob = await response.blob();
-                        const blobUrl = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = blobUrl;
-                        link.download = `${req.documentType || 'document'}.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(blobUrl);
-                      } catch (err) {
-                        toast.error('Failed to download document');
+                <>
+                  <SignatureChecklist
+                    requirements={computedSignatureRequirements}
+                    ownerName={formData.owner_name}
+                    estimatedValue={formData.valuation}
+                    county={formData.jurisdiction_county}
+                    onSignatureComplete={(id) => {
+                      toast.success('Signature recorded');
+                    }}
+                    onDownloadForSigning={async (req) => {
+                      if (req.documentUrl) {
+                        try {
+                          const response = await fetch(req.documentUrl);
+                          if (!response.ok) throw new Error('Download failed');
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `${req.documentType || 'document'}.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                        } catch (err) {
+                          toast.error('Failed to download document');
+                        }
+                      } else {
+                        toast.info('Document will be available after packet generation');
                       }
-                    } else {
-                      toast.info('Document will be available after packet generation');
-                    }
-                  }}
-                />
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setSignatureDialogOpen(true)}
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Collect All Signatures ({collectedSignatures.length}/{computedSignatureRequirements.filter(r => r.signerType === 'owner' || r.signerType === 'qualifier').length})
+                  </Button>
+                </>
               )}
 
               {/* Service Selection & Payment Agreement */}
@@ -1256,6 +1269,18 @@ export default function PermitQueensNewRequest() {
         roofType={roofType}
         selectedProducts={selectedMaterials}
         onProductsChange={setSelectedMaterials}
+      />
+
+      {/* Signature Collection Dialog */}
+      <SignatureCollectionDialog
+        open={signatureDialogOpen}
+        onOpenChange={setSignatureDialogOpen}
+        requirements={computedSignatureRequirements}
+        ownerName={formData.owner_name}
+        onComplete={(signatures) => {
+          setCollectedSignatures(signatures);
+          toast.success(`${signatures.length} signatures collected successfully`);
+        }}
       />
     </div>
   );
