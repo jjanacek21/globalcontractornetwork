@@ -1,166 +1,338 @@
 
-# Door to Door World Enhancement Plan
+# Instant Roof Measurement Edge Function for Door to Door
 
 ## Summary
 
-This plan implements major enhancements to transform the Door to Door feature into a comprehensive "Roofing Redline"-style canvassing system with improved countdown functionality, expanded disposition options, and a detailed property sidebar.
+Create a new edge function `instant-roof-estimate` that combines satellite roof measurement with Good/Better/Best pricing calculations. This function will be integrated into the Door to Door property side panel, allowing canvassers to instantly get measurements and price ranges for any property they visit. The user experience will be:
+
+1. Click property on map → Side panel opens
+2. Click "Get Instant Quote" → AI analyzes satellite image
+3. User selects roof pitch (from visual selector) and complexity (for waste calculation)
+4. System displays Good/Better/Best pricing options
 
 ---
 
-## 1. Fix Countdown Timer (DwellTimeIndicator)
+## Architecture Overview
 
-**File**: `src/components/door-to-door/DwellTimeIndicator.tsx`
-
-The current countdown actually counts UP (from 0 to 20), not DOWN. I'll fix it to:
-- Start at 20 and count down to 0
-- Update every second with smooth circular progress animation
-- Display the remaining time prominently in the center
-
-**Change**:
-```typescript
-// Show countdown from requiredSeconds to 0
-const remaining = Math.max(requiredSeconds - elapsed, 0);
-// Progress fills as time passes (0% to 100%)
-const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          Door to Door Map                                 │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │  Property Side Panel                                                 │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐│ │
+│  │  │  [Status] [Details] [Photos] [Notes] [Quote] ← NEW TAB         ││ │
+│  │  └─────────────────────────────────────────────────────────────────┘│ │
+│  │                                                                      │ │
+│  │  Quote Tab Contents:                                                 │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐│ │
+│  │  │  [ Get Instant Measurement ]  ← Calls Edge Function            ││ │
+│  │  │                                                                  ││ │
+│  │  │  Satellite Preview         Measurement Results                  ││ │
+│  │  │  ┌────────────────┐       Base: 2,400 sq ft                    ││ │
+│  │  │  │   🛰️ Image     │       With Pitch: 2,688 sq ft              ││ │
+│  │  │  │                │       With Waste: 2,957 sq ft               ││ │
+│  │  │  └────────────────┘       ≈ 29.6 Squares                       ││ │
+│  │  │                                                                  ││ │
+│  │  │  [ Pitch Selector ]  Flat | Low | Standard | Steep | Very Steep ││ │
+│  │  │                                                                  ││ │
+│  │  │  [ Complexity Selector ]  Gable | Hip | 10+ | 20+ Facets       ││ │
+│  │  │                                                                  ││ │
+│  │  │  ┌────────────────────────────────────────────────────────────┐││ │
+│  │  │  │               Good/Better/Best Cards                        │││ │
+│  │  │  │  ┌─────────┐  ┌─────────┐  ┌─────────┐                    │││ │
+│  │  │  │  │ BRONZE  │  │  GOLD   │  │PLATINUM │                    │││ │
+│  │  │  │  │ $17,000 │  │ $24,000 │  │ $35,000 │                    │││ │
+│  │  │  │  │ -18,900 │  │ -25,400 │  │ -38,500 │                    │││ │
+│  │  │  │  │         │  │⭐Popular│  │         │                    │││ │
+│  │  │  │  │[Select] │  │[Select] │  │[Select] │                    │││ │
+│  │  │  │  └─────────┘  └─────────┘  └─────────┘                    │││ │
+│  │  │  └────────────────────────────────────────────────────────────┘││ │
+│  │  │                                                                  ││ │
+│  │  │  [ Create Proposal PDF ]                                        ││ │
+│  │  └─────────────────────────────────────────────────────────────────┘│ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-The visual shows `{remaining}` which is correct, but I'll improve the animation timing.
+---
+
+## 1. New Edge Function: `instant-roof-estimate`
+
+**File**: `supabase/functions/instant-roof-estimate/index.ts`
+
+This edge function combines:
+- Satellite roof measurement from `roof-vision-ai`
+- Pitch/complexity-adjusted calculations from `roofMeasurements.ts`
+- Good/Better/Best pricing from `packagePricing.ts`
+
+### Request Format
+```typescript
+interface InstantEstimateRequest {
+  latitude: number;
+  longitude: number;
+  address: string;
+  pitchBucket?: 'flat' | 'low' | 'standard' | 'steep' | 'verysteep';
+  complexity?: 'gable' | 'hip' | 'complex' | 'verycomplex';
+  roofCategory?: 'shingle' | 'metal' | 'tile';
+  zoomLevel?: number;
+}
+```
+
+### Response Format
+```typescript
+interface InstantEstimateResponse {
+  success: boolean;
+  measurement: {
+    baseSqFt: number;           // Flat satellite footprint
+    pitchMultiplier: number;    // Based on pitch selection
+    trueSqft: number;           // baseSqFt × pitchMultiplier
+    wastePct: number;           // Based on complexity
+    totalWithWaste: number;     // trueSqft × (1 + wastePct)
+    squares: number;            // totalWithWaste / 100
+    confidence: 'high' | 'medium' | 'low';
+    roofShape: string;
+    roofColor?: string;
+    estimatedAgeYears?: number;
+    satelliteImageUrl: string;
+  };
+  pricing: {
+    good: {
+      packageId: string;
+      packageName: string;
+      pricePerSquare: { low: number; high: number };
+      totalLow: number;
+      totalHigh: number;
+      features: string[];
+      warranty: string;
+    };
+    better: { /* same structure */ };
+    best: { /* same structure */ };
+  };
+}
+```
+
+### Implementation Logic
+```typescript
+// 1. Call roof-vision-ai for base satellite measurement
+const visionData = await fetch(supabaseUrl + '/functions/v1/roof-vision-ai', {
+  body: JSON.stringify({ latitude, longitude, address, zoomLevel })
+});
+
+// 2. Apply pitch multiplier (from user selection or default 'standard')
+const pitchMultipliers = {
+  flat: 1.00, low: 1.05, standard: 1.12, steep: 1.20, verysteep: 1.30
+};
+
+// 3. Apply waste percentage based on complexity
+const wastePcts = { 
+  gable: 0.10, hip: 0.12, complex: 0.15, verycomplex: 0.17 
+};
+
+// 4. Calculate squares
+const trueSqft = baseSqFt * pitchMultiplier;
+const totalWithWaste = trueSqft * (1 + wastePct);
+const squares = totalWithWaste / 100;
+
+// 5. Get Good/Better/Best packages based on category
+const packages = getGoodBetterBest(roofCategory);
+
+// 6. Calculate pricing for each tier
+pricing.good = {
+  packageId: packages.good.id,
+  packageName: packages.good.name,
+  totalLow: packages.good.priceLow * squares,
+  totalHigh: packages.good.priceHigh * squares,
+  ...
+};
+```
 
 ---
 
-## 2. Expand Disposition Options
+## 2. New Component: `PropertyQuoteTab`
 
-**Files**: 
-- `src/hooks/usePropertyDispositions.ts` - Update PropertyDisposition type
-- `src/components/door-to-door/DispositionQuickBar.tsx` - Add new disposition options
+**File**: `src/components/door-to-door/PropertyQuoteTab.tsx`
 
-**New Dispositions** (matching Roofing Redline style):
+A new tab for the PropertySidePanel that provides instant quote functionality.
 
-| Disposition | Color | Icon | Points |
-|-------------|-------|------|--------|
-| Not Contacted | Amber (outline) | Circle | 0 |
-| Not Home | Gray | Home | +2 |
-| Go Back | Amber | RotateCcw | +3 |
-| Not Interested | Red | X | 0 |
-| Need Inspection | Orange | Search | +75 |
-| Interested | Blue | ThumbsUp | +10 |
-| Storm Damage | Purple | CloudLightning | +15 |
-| Unqualified | Gray | Slash | 0 |
-| Canvass Lead | Teal | Users | +25 |
-| New Roof | Green | CheckCircle | +50 |
-| Follow Up | Yellow | Clock | +5 |
-| Waiting | Cyan | Hourglass | +5 |
-| Already Solar | Lime | Sun | 0 |
-| Opportunity | Indigo | Zap | +30 |
-| Commercial | Slate | Building2 | +10 |
-| Inspected | Emerald | ClipboardCheck | +100 |
-| Old Roof | Brown | Home | +10 |
-| Won | Gold | Trophy | +200 |
+### Features
+- "Get Instant Measurement" button triggers edge function call
+- Satellite image preview from Mapbox
+- Pitch selector using existing `PitchSelector` component
+- Complexity selector using existing `ComplexitySelector` component
+- Real-time recalculation when pitch/complexity changes
+- Good/Better/Best pricing cards with select buttons
+- "Create Proposal" button for PDF generation
+
+### Component Structure
+```tsx
+export function PropertyQuoteTab({
+  propertyId,
+  lat,
+  lng,
+  address,
+  onPackageSelect,
+}: PropertyQuoteTabProps) {
+  const [measurement, setMeasurement] = useState(null);
+  const [pricing, setPricing] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pitch, setPitch] = useState('standard');
+  const [complexity, setComplexity] = useState('gable');
+  const [roofCategory, setRoofCategory] = useState('shingle');
+
+  const getInstantEstimate = async () => {
+    const { data } = await supabase.functions.invoke('instant-roof-estimate', {
+      body: { latitude: lat, longitude: lng, address, pitchBucket: pitch, complexity }
+    });
+    setMeasurement(data.measurement);
+    setPricing(data.pricing);
+  };
+
+  // When pitch/complexity changes, recalculate locally
+  useEffect(() => {
+    if (measurement) {
+      recalculatePricing(measurement.baseSqFt, pitch, complexity, roofCategory);
+    }
+  }, [pitch, complexity, roofCategory]);
+
+  return (
+    <div className="space-y-4">
+      {!measurement ? (
+        <Button onClick={getInstantEstimate} disabled={isLoading}>
+          {isLoading ? <Loader2 className="animate-spin" /> : <Zap />}
+          Get Instant Measurement
+        </Button>
+      ) : (
+        <>
+          <MeasurementSummary measurement={measurement} />
+          <PitchSelector value={pitch} onChange={setPitch} />
+          <ComplexitySelector value={complexity} onChange={setComplexity} />
+          <RoofCategoryTabs value={roofCategory} onChange={setRoofCategory} />
+          <GoodBetterBestCards pricing={pricing} onSelect={onPackageSelect} />
+        </>
+      )}
+    </div>
+  );
+}
+```
 
 ---
 
-## 3. Enhanced Property Side Panel
+## 3. Update PropertySidePanel
 
 **File**: `src/components/door-to-door/PropertySidePanel.tsx`
 
-Add tabbed interface with sections:
+Add a new "Quote" tab alongside existing tabs (Status, Details, Photos, Notes).
 
-### Sidebar Structure
+### Changes
+```typescript
+// Add new import
+import { PropertyQuoteTab } from './PropertyQuoteTab';
+import { FileText, DollarSign } from 'lucide-react';
 
-```text
-+----------------------------------+
-|  [Address]                    X  |
-|  [Disposition Status Badge]      |
-+----------------------------------+
-|  [ Dispositions Tab ] [ Details ] |
-|                                   |
-|  Quick Disposition Grid (4x5)    |
-|  - All 18 disposition options    |
-|  - Color-coded buttons           |
-|                                   |
-+----------------------------------+
-|  Customer Info                   |
-|  - Name, Phone, Email            |
-|  - Add multiple residents (+)    |
-+----------------------------------+
-|  Project Section                 |
-|  - Roof type, condition          |
-|  - Insurance claim status        |
-+----------------------------------+
-|  Proposals                       |
-|  - Link to create estimate       |
-+----------------------------------+
-|  Files / Photos                  |
-|  - Upload damage photos          |
-|  - Before/after images           |
-+----------------------------------+
-|  Tags                            |
-|  - Storm date, priority, etc.    |
-+----------------------------------+
-|  Notes History                   |
-|  - Timestamped notes log         |
-+----------------------------------+
-|        [ Save Changes ]          |
-+----------------------------------+
+// Add Quote tab to TabsList
+<TabsTrigger value="quote">
+  <DollarSign className="w-4 h-4 mr-1" />
+  Quote
+</TabsTrigger>
+
+// Add Quote tab content
+<TabsContent value="quote" className="m-0 p-4">
+  <PropertyQuoteTab
+    propertyId={property.id}
+    lat={property.lat}
+    lng={property.lng}
+    address={property.address}
+    onPackageSelect={(pkg) => {
+      // Save selected package to property disposition
+      // Navigate to proposal creation
+    }}
+  />
+</TabsContent>
 ```
 
 ---
 
-## 4. Property Markers on Map
+## 4. Good/Better/Best Pricing Cards Component
 
-**File**: `src/components/door-to-door/DoorToDoorMap.tsx`
+**File**: `src/components/door-to-door/GoodBetterBestCards.tsx`
 
-The map already has property markers! Current implementation:
-- Orange outline circles = Not Contacted
-- Filled circles with colors = Contacted properties
+Displays the three pricing tiers in a visually appealing card layout.
 
-**Enhancements**:
-- Improve marker sizes at different zoom levels
-- Add subtle animations when disposition changes
-- Show address tooltip on hover
+### Design
+- Three cards side by side (responsive: stack on mobile)
+- Each card shows: Package name, price range, key features, warranty
+- "Better" card highlighted with "Popular" badge
+- Select button on each card
+
+```tsx
+export function GoodBetterBestCards({
+  pricing,
+  squares,
+  onSelect
+}: GoodBetterBestCardsProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Good Card */}
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardHeader>
+          <Badge className="w-fit bg-amber-500">Good</Badge>
+          <CardTitle>{pricing.good.packageName}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            ${formatNumber(pricing.good.totalLow)} - ${formatNumber(pricing.good.totalHigh)}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            ${pricing.good.pricePerSquare.low}-${pricing.good.pricePerSquare.high}/sq
+          </p>
+          <ul className="mt-4 space-y-2">
+            {pricing.good.features.slice(0, 4).map((f, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm">
+                <Check className="h-4 w-4 text-green-600" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-muted-foreground mt-2">
+            {pricing.good.warranty}
+          </p>
+          <Button className="w-full mt-4" onClick={() => onSelect(pricing.good)}>
+            Select Bronze
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Better Card - Popular */}
+      <Card className="border-primary ring-2 ring-primary/20 bg-primary/5">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <Badge className="bg-primary">Most Popular</Badge>
+        </div>
+        {/* Similar structure */}
+      </Card>
+
+      {/* Best Card */}
+      <Card className="border-slate-300 bg-slate-50/50">
+        {/* Similar structure */}
+      </Card>
+    </div>
+  );
+}
+```
 
 ---
 
-## 5. Database Schema Updates
+## 5. Database Updates
 
-**New table**: `property_residents` (for multiple residents per property)
+Store quote data in `property_dispositions` table.
 
-```sql
-CREATE TABLE property_residents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id UUID REFERENCES property_dispositions(id) ON DELETE CASCADE,
-  name TEXT,
-  phone TEXT,
-  email TEXT,
-  is_primary BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**New table**: `property_photos` (for damage photos)
-
-```sql
-CREATE TABLE property_photos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id UUID REFERENCES property_dispositions(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL,
-  photo_url TEXT NOT NULL,
-  caption TEXT,
-  photo_type TEXT DEFAULT 'general', -- 'before', 'after', 'damage', 'general'
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**Update**: `property_dispositions` table - add new columns
-
+### Add columns (migration)
 ```sql
 ALTER TABLE property_dispositions ADD COLUMN IF NOT EXISTS
-  roof_type TEXT,
-  roof_condition TEXT,
-  insurance_claim BOOLEAN DEFAULT false,
-  storm_date DATE,
-  priority TEXT DEFAULT 'normal', -- 'low', 'normal', 'high', 'urgent'
-  tags TEXT[];
+  measurement_data JSONB,          -- Store full measurement result
+  selected_package_id TEXT,        -- bronze, silver, gold, etc.
+  estimate_low INTEGER,            -- Dollar amount low
+  estimate_high INTEGER,           -- Dollar amount high
+  quote_created_at TIMESTAMPTZ;    -- When quote was generated
 ```
 
 ---
@@ -169,74 +341,122 @@ ALTER TABLE property_dispositions ADD COLUMN IF NOT EXISTS
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/hooks/usePropertyDispositions.ts` | Modify | Expand PropertyDisposition type to 18 options |
-| `src/components/door-to-door/DispositionQuickBar.tsx` | Modify | Add all disposition options with icons/colors |
-| `src/components/door-to-door/DwellTimeIndicator.tsx` | Modify | Fix countdown animation timing |
-| `src/components/door-to-door/PropertySidePanel.tsx` | Major rewrite | Add tabs, multiple residents, photos, project info |
-| `src/components/door-to-door/PropertyPhotos.tsx` | Create | Photo upload/display component |
-| `src/components/door-to-door/PropertyResidents.tsx` | Create | Multiple residents manager |
-| `src/components/door-to-door/PropertyTags.tsx` | Create | Tag management component |
-| `src/components/door-to-door/NotesHistory.tsx` | Create | Timestamped notes log |
-| `src/hooks/useDoorToDoorSession.ts` | Modify | Update points for new dispositions |
-| Database migration | Create | Add new tables and columns |
+| `supabase/functions/instant-roof-estimate/index.ts` | **Create** | New edge function combining measurement + pricing |
+| `supabase/config.toml` | Modify | Add function config |
+| `src/components/door-to-door/PropertyQuoteTab.tsx` | **Create** | Quote tab component with measurement + pricing UI |
+| `src/components/door-to-door/GoodBetterBestCards.tsx` | **Create** | Pricing cards component |
+| `src/components/door-to-door/PropertySidePanel.tsx` | Modify | Add Quote tab |
+| Database migration | Create | Add quote-related columns |
 
 ---
 
-## 7. Technical Implementation Details
+## 7. Edge Function Implementation Details
 
-### Disposition Color Mapping
-
+### Complete Edge Function Code Pattern
 ```typescript
-export function getDispositionColor(disposition: PropertyDisposition): string {
-  const colors: Record<PropertyDisposition, string> = {
-    'not_contacted': '#f59e0b',
-    'not_home': '#64748b',
-    'go_back': '#d97706',
-    'not_interested': '#dc2626',
-    'need_inspection': '#ea580c',
-    'interested': '#2563eb',
-    'storm_damage': '#9333ea',
-    'unqualified': '#94a3b8',
-    'canvass_lead': '#14b8a6',
-    'new_roof': '#22c55e',
-    'follow_up': '#eab308',
-    'waiting': '#06b6d4',
-    'already_solar': '#84cc16',
-    'opportunity': '#6366f1',
-    'commercial': '#475569',
-    'inspected': '#10b981',
-    'old_roof': '#92400e',
-    'won': '#fbbf24',
-  };
-  return colors[disposition] || '#f59e0b';
-}
-```
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-### Points System Update
-
-```typescript
-export const DOOR_POINTS = {
-  base_knock: 5,
-  not_home: 2,
-  not_interested: 0,
-  go_back: 3,
-  interested: 10,
-  need_inspection: 75,
-  storm_damage: 15,
-  unqualified: 0,
-  canvass_lead: 25,
-  new_roof: 50,
-  follow_up: 5,
-  waiting: 5,
-  already_solar: 0,
-  opportunity: 30,
-  commercial: 10,
-  inspected: 100,
-  old_roof: 10,
-  won: 200,
-  customer_info: 20,
-  video_verification: 25,
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Pitch multipliers (same as roofMeasurements.ts)
+const PITCH_MULTIPLIERS = {
+  flat: 1.00, low: 1.05, standard: 1.12, steep: 1.20, verysteep: 1.30
+};
+
+// Waste percentages by complexity
+const WASTE_PCTS = {
+  gable: 0.10, hip: 0.12, complex: 0.15, verycomplex: 0.17
+};
+
+// Package pricing (from packagePricing.ts)
+const PACKAGES = {
+  shingle: {
+    good: { id: 'bronze', name: 'Bronze', priceLow: 575, priceHigh: 650, ... },
+    better: { id: 'gold', name: 'Gold', priceLow: 800, priceHigh: 850, ... },
+    best: { id: 'platinum', name: 'Platinum', priceLow: 1100, priceHigh: 1300, ... },
+  },
+  metal: { ... },
+  tile: { ... },
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { latitude, longitude, address, pitchBucket, complexity, roofCategory, zoomLevel } 
+      = await req.json();
+
+    // 1. Get satellite measurement
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const visionResponse = await fetch(`${supabaseUrl}/functions/v1/roof-vision-ai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude, longitude, address, zoomLevel: zoomLevel || 19 }),
+    });
+
+    const visionData = await visionResponse.json();
+    const baseSqFt = visionData.estimation?.estimatedSqft || 2500;
+
+    // 2. Apply pitch and waste calculations
+    const pitchMultiplier = PITCH_MULTIPLIERS[pitchBucket] || PITCH_MULTIPLIERS.standard;
+    const wastePct = WASTE_PCTS[complexity] || WASTE_PCTS.gable;
+    const trueSqft = Math.round(baseSqFt * pitchMultiplier);
+    const totalWithWaste = Math.round(trueSqft * (1 + wastePct));
+    const squares = totalWithWaste / 100;
+
+    // 3. Get packages and calculate pricing
+    const category = roofCategory || 'shingle';
+    const packages = PACKAGES[category];
+    
+    const calculateTierPricing = (pkg) => ({
+      packageId: pkg.id,
+      packageName: pkg.name,
+      pricePerSquare: { low: pkg.priceLow, high: pkg.priceHigh },
+      totalLow: Math.round(pkg.priceLow * squares),
+      totalHigh: Math.round(pkg.priceHigh * squares),
+      features: pkg.features || [],
+      warranty: pkg.warranty || '',
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      measurement: {
+        baseSqFt,
+        pitchMultiplier,
+        trueSqft,
+        wastePct,
+        totalWithWaste,
+        squares,
+        confidence: visionData.estimation?.confidence || 'medium',
+        roofShape: visionData.estimation?.roofShape,
+        roofColor: visionData.estimation?.primaryRoofColor,
+        satelliteImageUrl: visionData.estimation?.satelliteImageUrl,
+      },
+      pricing: {
+        good: calculateTierPricing(packages.good),
+        better: calculateTierPricing(packages.better),
+        best: calculateTierPricing(packages.best),
+      },
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in instant-roof-estimate:', error);
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
 ```
 
 ---
@@ -244,10 +464,10 @@ export const DOOR_POINTS = {
 ## Expected Outcome
 
 After implementation:
-1. Countdown timer properly counts from 20 to 0 with smooth circular animation
-2. 18 disposition options matching industry-standard canvassing apps
-3. Full-featured sidebar with tabs for customer info, project details, photos, and notes
-4. Property markers update color immediately on disposition change
-5. Support for multiple residents per property
-6. Photo upload capability for damage documentation
-7. Tag system for filtering and prioritization
+1. Door to Door canvassers can click any property and get an instant satellite-based measurement
+2. Users select pitch (visual picker) and complexity (waste calculation) 
+3. System displays Good/Better/Best pricing with calculated totals
+4. Canvassers can select a package and create a proposal PDF on the spot
+5. Quote data is saved to the property for follow-up
+
+This dramatically speeds up the canvassing workflow by providing instant, professional estimates without leaving the app.
