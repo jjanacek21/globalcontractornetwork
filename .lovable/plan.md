@@ -1,150 +1,111 @@
 
-# Fix PDF Preview Chrome Blocking Issues
+# Fix Permit Packet Download - Only Cover Sheet Downloading
 
-## Problem Analysis
+## Problem Summary
 
-The current `PDFViewerDialog` component faces Chrome blocking issues when viewing NOA documents from:
-- **Miami-Dade County** (`miamidade.gov`)  
-- **Florida Building Code** (`floridabuilding.org`)
-- **Other government sites** (`.gov/`)
+When downloading a permit packet, only the cover sheet is included because the frontend isn't correctly retrieving the merged PDF URL. The edge function successfully merges documents and uploads the packet, but the frontend can't access it.
 
-### Why Documents Are Blocked
+## Root Cause Analysis
 
-1. **CORS (Cross-Origin Resource Sharing)**: Government servers don't send `Access-Control-Allow-Origin` headers
-2. **X-Frame-Options**: Many government sites set `DENY` or `SAMEORIGIN` headers preventing iframe embedding
-3. **Content-Security-Policy**: Restricts embedding in foreign origins
-4. **Google Docs Viewer Limitations**: Only works for publicly accessible URLs without restrictions, often times out
+### Issue 1: Wrong Column Name in PacketDownloader
 
-### Current Fallback Chain (Often Fails)
+**File**: `src/components/permit-queens/PacketDownloader.tsx` (line 117-127)
 
-```text
-Direct iframe → Google Docs viewer → Plain URL → Error state
+```typescript
+// Current code - WRONG column name
+const { data: packet } = await supabase
+  .from('permit_packets')
+  .select('*')
+  .eq('id', packetData.packetId)
+  .single();
+
+const packetRecord = packet as { packet_pdf_url?: string } | null;
+if (packetRecord?.packet_pdf_url) {  // ❌ This column doesn't exist!
+  setPacketUrl(packetRecord.packet_pdf_url);
 ```
 
----
+**The database column is `file_path`, NOT `packet_pdf_url`**
 
-## Solution: Server-Side PDF Proxy Edge Function
+### Issue 2: Ignoring Edge Function Response
 
-Create a new edge function that proxies PDF requests through your server, bypassing browser restrictions entirely.
+The edge function already returns the packet URL in `packetData.packetPdfUrl` (line 1010 of edge function), but the frontend ignores it and queries the database instead.
 
-### How It Works
+### Database Evidence
 
-```text
-Frontend → Edge Function (pdf-proxy) → Government Server → Returns PDF bytes → Frontend displays
+The packet exists with the correct URL in `file_path`:
+- `file_path`: `https://ujalvgknnbsxqpujxvwk.supabase.co/storage/v1/object/sign/permit-documents/packets/...`
+- `document_count`: 6
+- `total_pages`: 9
+
+## Solution
+
+### Fix 1: Use Edge Function Response Directly (Preferred)
+
+Instead of querying the database, use the URL returned directly from the edge function:
+
+```typescript
+// Use the URL from edge function response
+if (packetData?.packetPdfUrl) {
+  setPacketUrl(packetData.packetPdfUrl);
+  onPacketReady?.(packetData.packetPdfUrl);
+}
 ```
 
-The edge function runs server-side where CORS doesn't apply, fetches the PDF, and streams it back with proper headers.
+### Fix 2: Correct the Column Name (Fallback)
 
----
+If database query is still needed, use the correct column:
+
+```typescript
+const packetRecord = packet as { file_path?: string } | null;
+if (packetRecord?.file_path) {
+  setPacketUrl(packetRecord.file_path);
+```
 
 ## Implementation Details
 
-### 1. New Edge Function: `pdf-proxy`
+### File to Modify
 
-**File**: `supabase/functions/pdf-proxy/index.ts`
+**`src/components/permit-queens/PacketDownloader.tsx`**
 
-| Feature | Description |
-|---------|-------------|
-| **Input** | PDF URL to proxy |
-| **Security** | Validate URL is from allowed domains only |
-| **Headers** | Uses appropriate `User-Agent` to avoid bot blocks |
-| **Output** | Returns PDF bytes with `application/pdf` content type |
-| **Caching** | Optional: Cache frequently accessed PDFs |
+| Line Range | Change |
+|------------|--------|
+| 115-128 | Replace database query with direct use of edge function response |
 
-**Allowed Domains (Whitelist)**:
-- `miamidade.gov`
-- `floridabuilding.org`  
-- `*.gov`
-- Supabase storage URLs
+### Updated Code Flow
 
-### 2. Updated `PDFViewerDialog` Component
-
-**Changes**:
-1. Detect external government URLs that need proxying
-2. Call the `pdf-proxy` edge function instead of direct loading
-3. Use the proxied URL in the iframe
-4. Maintain existing fallbacks (Google Viewer, Open in New Tab)
-
-**New Fallback Chain**:
 ```text
-Proxy via edge function → Google Docs viewer → Open in new tab
+1. Call permit-packet-assembler edge function
+2. Edge function merges PDFs and returns { packetPdfUrl: "signed-url" }
+3. Frontend uses packetPdfUrl directly (no DB query needed)
+4. User clicks Download → fetches from packetPdfUrl
 ```
 
-### 3. New Hook: `usePdfProxy`
+## Technical Details
 
-Small utility hook to:
-- Generate proxied URLs for external documents
-- Cache proxy results
-- Handle loading states
+### Edge Function Response Structure (already correct)
 
----
-
-## Technical Specification
-
-### Edge Function Implementation
-
+The edge function at lines 996-1011 returns:
 ```typescript
-// Pseudocode for pdf-proxy/index.ts
-
-1. Validate URL is from allowed domains
-2. Fetch PDF from source with custom User-Agent headers
-3. Validate response is actual PDF (check magic bytes)
-4. Return PDF bytes with CORS headers
-5. Handle errors gracefully
+{
+  success: true,
+  data: {
+    packetId: packet?.id,
+    documentIndex: [...],
+    packetPdfUrl: signedUrl, // ✅ Already includes the merged PDF URL
+    // ...
+  }
+}
 ```
 
-### Component Changes
+### Changes Required
 
-```typescript
-// PDFViewerDialog changes
-
-1. Add getProxiedUrl() function
-2. For external gov URLs: call pdf-proxy edge function
-3. Use Blob URL from response for iframe src
-4. Add progress indicator during proxy fetch
-5. Better error messages when proxy fails
-```
-
----
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/pdf-proxy/index.ts` | Edge function to proxy external PDFs |
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/ui/PDFViewerDialog.tsx` | Add proxy logic, better fallbacks, cleaner UX |
-
----
-
-## Security Considerations
-
-1. **URL Whitelist**: Only allow proxying from known government domains
-2. **Rate Limiting**: Prevent abuse of the proxy
-3. **Size Limits**: Cap maximum file size (e.g., 25MB)
-4. **No User Input in URLs**: Validate URLs server-side
-
----
-
-## User Experience Improvements
-
-| Issue | Solution |
-|-------|----------|
-| Loading takes too long | Add progress indicator with time estimate |
-| Can't tell if loading or stuck | Show "Fetching from [domain]..." message |
-| Google Viewer fails silently | Show clear error with "Open in New Tab" button |
-| Download doesn't work | Use proxy for downloads too |
-
----
+1. Remove the unnecessary database query (lines 117-121)
+2. Use `packetData.packetPdfUrl` directly from the edge function response
+3. Keep the `packetData.packetId` storage for reference if needed
 
 ## Expected Result
 
-After implementation:
-- NOA documents from Miami-Dade and Florida Building will load reliably in the viewer
-- No more Chrome blocking errors
-- Seamless inline viewing experience
-- Fallback to "Open in New Tab" always available
+After the fix:
+- Packet downloads will include ALL merged documents (cover sheet + uploaded PDFs + NOAs)
+- No additional database query needed
+- Faster packet retrieval (one less round trip)
