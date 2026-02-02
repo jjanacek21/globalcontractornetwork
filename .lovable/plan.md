@@ -1,285 +1,182 @@
 
+# Add Engineering as a Service Type - Implementation Plan
 
-# Comprehensive AI-Powered Permit Expediting System - Gap Analysis & Implementation Plan
+## Summary
 
-## Executive Summary
-
-After extensive analysis of the existing codebase, **most of the core permit expediting system is already built**. The system has a solid foundation with:
-
-- 30+ permit-related database tables
-- 20+ specialized edge functions
-- Property data auto-fill via county appraiser lookup
-- Smart document management and form filling
-- Multi-material selection from 2,489+ product approvals
-- AI-powered packet generation and assembly
-- Digital signature capture with PDF embedding
-- Rejection tracking with AI learning loop
-
-This plan identifies **gaps and enhancements** to make the workflow more robust and fully connected.
+This plan adds "Engineering" as a fully integrated service category across the entire platform, including contractor signup, company registration, directory listings, quote systems, permit workflows, social feeds, and referral systems.
 
 ---
 
-## Current State Analysis
+## Technical Overview
 
-### What's Already Implemented
+Engineering services will be added to **16 files** across the codebase, plus a database migration to add `engineering` to the `permit_type_enum` PostgreSQL enum.
 
-| Feature | Status | Location |
-|---------|--------|----------|
-| 3-Step Wizard (Property/Materials/Review) | Complete | `PermitQueensNewRequest.tsx` |
-| Property Appraiser Lookup (folio, year_built, owner) | Complete | `property-appraiser-lookup` edge function |
-| Multi-Material Selection from Products DB | Complete | `MultiMaterialSelector.tsx` |
-| Smart Document Manager (by jurisdiction) | Complete | `SmartDocumentManager.tsx` |
-| AI Form Filling (Section 1524, checkboxes) | Complete | `permit-smart-form-filler` edge function |
-| NOA/Product Approval Lookup | Complete | `product_approvals` table + batch sourcing |
-| Packet Assembly (cover sheet + merge PDFs) | Complete | `permit-packet-assembler` edge function |
-| Digital Signature Capture | Complete | `SignatureCapture.tsx` |
-| Rejection Tracker | Complete | `RejectionTracker.tsx` + `permit_rejections` table |
-| AI Knowledge Base | Complete | `permit_ai_knowledge` table + training pipeline |
-| Status Tracking Dashboard | Complete | `PermitQueensDashboard.tsx` |
+**Icon Choice**: The `Ruler` icon from lucide-react will represent Engineering services throughout the platform.
 
-### Identified Gaps
-
-| Gap | Priority | Description |
-|-----|----------|-------------|
-| Learning Loop Not Triggered | High | Rejections logged but not actively fed into packet generation prompts |
-| Signature Workflow Incomplete | High | Signature capture exists but not integrated into wizard review step |
-| Template Auto-Selection | Medium | Smart docs exist but wizard doesn't auto-select jurisdiction forms |
-| Inspection Scheduling UI | Medium | `permit_inspections` table exists but no scheduling interface |
-| Status Event Notifications | Medium | `permit_notifications` table exists but no push/email delivery |
-| Contractor Form Data Prefill | Low | `contractor_form_data` table exists but not populated on profile |
+**Color Scheme**: Engineering will use an indigo/violet color scheme (`bg-violet-500/10 text-violet-400 border-violet-500/30`) to differentiate it from other trades.
 
 ---
 
-## Implementation Plan
+## Changes Required
 
-### Phase 1: Close the Learning Loop (High Priority)
+### 1. Database Migration
 
-**Problem**: Rejections are logged but the AI generation prompts don't actively query this data.
+Add `engineering` to the existing `permit_type_enum`:
 
-**Solution**: Enhance `permit-packet-assembler` to explicitly include rejection patterns in the AI prompt.
-
-```text
-permit-packet-assembler/index.ts modifications:
-1. Query permit_rejections for matching jurisdiction + trade
-2. Extract common patterns (missing_document, code_violation, etc.)
-3. Include rejection avoidance instructions in the cover sheet generation
-4. Add "Lessons Learned" section showing what issues to avoid
-```
-
-**Database Query Addition**:
 ```sql
--- Add to packet assembler
-SELECT rejection_reason, rejection_category, COUNT(*) as frequency
-FROM permit_rejections
-WHERE jurisdiction_county = $county
-  AND trade = $trade
-GROUP BY rejection_reason, rejection_category
-ORDER BY frequency DESC
-LIMIT 10;
+ALTER TYPE permit_type_enum ADD VALUE 'engineering';
 ```
+
+### 2. Contractor Directory (`src/pages/ContractorDirectory.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 8 | Add `Ruler` to imports |
+| 27-40 | Add `engineering: Ruler` to `categoryIcons` |
+| 42-55 | Add engineering color to `categoryColors` |
+| 91-105 | Add `{ id: "engineering", name: "Engineering", icon: Ruler }` to `categories` |
+
+### 3. Contractor Signup (`src/pages/JoinNetwork.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 698-711 | Add `<SelectItem value="Engineering">Engineering</SelectItem>` to Primary Service Category select |
+
+### 4. Company Registration (`src/pages/CompanyRegistration.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 24-45 | Add `"Engineering"` to `SERVICE_CATEGORIES` array |
+
+### 5. Get Quote Page (`src/pages/GetQuote.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 12-15 | Add `Ruler` to imports |
+| 20 | Add `"engineering"` to `ServiceType` union |
+| 30-36 | Add engineering service option to `services` array |
+| 58-64 | Add `engineering: "property-estimator-ai"` to `functionMap` |
+| 167-323 | Add `case "engineering":` with relevant questions |
+
+### 6. Homepage Services (`src/pages/Index.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 45-55 | Add `{ icon: Ruler, title: "Engineering", description: "Structural & specialty engineering", link: "/get-quote" }` to `homeownerServices` |
+
+### 7. Instant Quote Section (`src/components/marketing/InstantQuoteSection.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 39-46 | Add `{ icon: Ruler, label: "Engineering" }` to `quoteTypes` |
+
+### 8. Social Feed (`src/pages/social/SocialFeed.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 11-14 | Add `"Engineering"` to `TRADE_OPTIONS` array |
+
+### 9. Create Post Form (`src/components/social/CreatePostForm.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 10-14 | Add `"Engineering"` to `TRADE_OPTIONS` array |
+
+### 10. Submit Referral Dialog (`src/components/referrals/SubmitReferralDialog.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 11-33 | Add `"Engineering"` to `SERVICE_TYPES` array |
+
+### 11. Add Job Dialog (`src/components/contractor-dashboard/AddJobDialog.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 41-51 | Add `"Engineering"` to `serviceTypes` array |
+
+### 12. Permit Queens Landing (`src/pages/PermitQueens.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 11 | Add `Ruler` to imports |
+| 85-92 | Add `{ icon: Ruler, name: "Engineering", description: "Structural, MEP, specialty" }` to `industries` |
+
+### 13. Permit Pros Landing (`src/pages/PermitPros.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 11 | Add `Ruler` to imports |
+| 84-91 | Add `{ icon: Ruler, name: "Engineering", description: "Structural, MEP, specialty" }` to `industries` |
+
+### 14. Building Dept Lookup (`src/components/permit-pros/BuildingDeptLookup.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 75-82 | Add `{ value: "engineering", label: "Engineering" }` to `trades` array |
+
+### 15. Permit Request Wizard (`src/pages/PermitQueensNewRequest.tsx`)
+
+| Line Range | Change |
+|------------|--------|
+| 11 | Add `Ruler` to imports |
+| 50-59 | Add `{ id: 'engineering', label: 'Engineering', icon: Ruler, description: 'Structural calcs, sealed plans', priority: false }` to `PERMIT_TYPES` |
+
+### 16. Trade Products Hook (`src/hooks/useTradeProducts.ts`)
+
+| Line Range | Change |
+|------------|--------|
+| 23 | Add `'engineering'` to `TradeType` union |
+| 32-57 | Add `engineering` entry to `TRADE_CATEGORIES` config |
 
 ---
 
-### Phase 2: Integrate Digital Signatures into Wizard (High Priority)
+## File Summary
 
-**Problem**: `SignatureCapture.tsx` exists but isn't connected to the Review step.
-
-**Solution**: Add signature collection to Step 3 before final submission.
-
-**UI Flow**:
-```
-Step 3: Review & Submit
-├── Packet Preview (existing)
-├── Signature Requirements Checklist (existing - SignatureChecklist.tsx)
-├── [NEW] "Collect Signatures" Button
-│   ├── Opens SignatureCapture dialog
-│   ├── Iterates through required signers (owner, contractor)
-│   ├── Embeds signatures into generated PDF
-│   └── Updates document status to "signed"
-└── Submit (enabled after signatures collected)
-```
-
-**Files to Modify**:
-- `PermitQueensNewRequest.tsx` (lines 600-900) - Add signature collection step
-- Create `SignatureCollectionDialog.tsx` - Multi-signer workflow
+| File | Action |
+|------|--------|
+| Database | Migration to add `engineering` to `permit_type_enum` |
+| `src/pages/ContractorDirectory.tsx` | Add icon, color, and category |
+| `src/pages/JoinNetwork.tsx` | Add service select option |
+| `src/pages/CompanyRegistration.tsx` | Add to SERVICE_CATEGORIES |
+| `src/pages/GetQuote.tsx` | Add service type with questions |
+| `src/pages/Index.tsx` | Add to homeownerServices |
+| `src/components/marketing/InstantQuoteSection.tsx` | Add to quoteTypes |
+| `src/pages/social/SocialFeed.tsx` | Add to TRADE_OPTIONS |
+| `src/components/social/CreatePostForm.tsx` | Add to TRADE_OPTIONS |
+| `src/components/referrals/SubmitReferralDialog.tsx` | Add to SERVICE_TYPES |
+| `src/components/contractor-dashboard/AddJobDialog.tsx` | Add to serviceTypes |
+| `src/pages/PermitQueens.tsx` | Add to industries |
+| `src/pages/PermitPros.tsx` | Add to industries |
+| `src/components/permit-pros/BuildingDeptLookup.tsx` | Add to trades |
+| `src/pages/PermitQueensNewRequest.tsx` | Add to PERMIT_TYPES |
+| `src/hooks/useTradeProducts.ts` | Add to TradeType and TRADE_CATEGORIES |
 
 ---
 
-### Phase 3: Auto-Select Jurisdiction Templates (Medium Priority)
+## Engineering Service Configuration
 
-**Problem**: Smart documents are organized by building department, but the wizard doesn't automatically pull the correct forms.
+**Display Name**: Engineering
+**Icon**: Ruler (from lucide-react)
+**Color Theme**: Violet (`bg-violet-500/10 text-violet-400 border-violet-500/30 hover:bg-violet-500/20`)
+**Description Options**:
+- "Structural & specialty engineering" (homepage)
+- "Structural calcs, sealed plans" (permits)
+- "Structural, MEP, specialty" (landing pages)
 
-**Solution**: When jurisdiction is detected, query `permit_form_templates` and pre-populate required document types.
-
-**Flow**:
-```
-1. User enters address → jurisdiction detected (county + city)
-2. System queries permit_form_templates WHERE building_dept matches
-3. Required templates displayed in Materials step
-4. AI auto-fills templates during packet generation
-```
-
-**Edge Function Enhancement**:
-```typescript
-// permit-packet-assembler addition
-const { data: templates } = await supabase
-  .from('permit_form_templates')
-  .select('*')
-  .eq('building_dept_id', detectedDeptId)
-  .in('form_type', requiredTypes)
-  .eq('is_fillable', true);
-
-// For each template, call permit-smart-form-filler
-for (const template of templates) {
-  const filledPdf = await fillTemplate(template.id, projectData);
-  // Include in packet merge
-}
-```
+**Quote Questions** (for GetQuote.tsx):
+- Engineering type: Structural, MEP (Mechanical/Electrical/Plumbing), Civil, Environmental, Specialty
+- Project scope: New Construction, Renovation, Inspection/Review, Sealed Plans Only
+- Property type: Residential, Commercial
 
 ---
 
-### Phase 4: Status Timeline & Notifications (Medium Priority)
-
-**Problem**: `permit_status_events` table tracks changes but no UI shows the timeline or sends notifications.
-
-**Solution**: Add status timeline component and email notification trigger.
-
-**Components to Create**:
-1. `StatusTimelineView.tsx` - Visual timeline of permit events
-2. Enhance `permit_status_events` trigger to call notification edge function
-
-**Notification Flow**:
-```
-permit_status_events INSERT trigger
-    ↓
-permit-notification-sender edge function
-    ↓
-Resend API (email) + homeowner_notifications table (in-app)
-```
-
----
-
-### Phase 5: Inspection Scheduling Interface (Medium Priority)
-
-**Problem**: `permit_inspections` table exists but no UI to request/track inspections.
-
-**Solution**: Add inspection tab to project details.
-
-**UI Components**:
-```
-Project Details
-├── Documents Tab
-├── Status Tab
-└── [NEW] Inspections Tab
-    ├── Request Inspection button
-    ├── Inspection types (foundation, framing, final, etc.)
-    ├── Scheduled inspections list
-    └── Inspection results/notes
-```
-
----
-
-## Technical Architecture
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        PERMIT EXPEDITING SYSTEM                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐              │
-│  │   WIZARD     │    │   PACKET     │    │   LEARNING   │              │
-│  │   WORKFLOW   │    │   ENGINE     │    │    LOOP      │              │
-│  ├──────────────┤    ├──────────────┤    ├──────────────┤              │
-│  │ Step 1:      │    │ Cover Sheet  │    │ Rejections   │              │
-│  │ Property     │───►│ Generator    │◄───│ Tracker      │              │
-│  │ + Scope      │    │              │    │              │              │
-│  ├──────────────┤    │ Smart Form   │    │ AI Knowledge │              │
-│  │ Step 2:      │    │ Filler       │    │ Extraction   │              │
-│  │ Materials    │    │              │    │              │              │
-│  │ + Docs       │    │ NOA Auto-    │    │ Training     │              │
-│  ├──────────────┤    │ Sourcing     │    │ Books        │              │
-│  │ Step 3:      │    │              │    │              │              │
-│  │ Review       │    │ PDF Merger   │    │              │              │
-│  │ + Sign       │    │              │    │              │              │
-│  └──────────────┘    └──────────────┘    └──────────────┘              │
-│         │                   │                   │                       │
-│         └───────────────────┼───────────────────┘                       │
-│                             ▼                                           │
-│                    ┌──────────────┐                                     │
-│                    │   DATABASE   │                                     │
-│                    │              │                                     │
-│                    │ permit_      │                                     │
-│                    │ projects     │                                     │
-│                    │              │                                     │
-│                    │ product_     │                                     │
-│                    │ approvals    │                                     │
-│                    │              │                                     │
-│                    │ permit_ai_   │                                     │
-│                    │ knowledge    │                                     │
-│                    └──────────────┘                                     │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `supabase/functions/permit-packet-assembler/index.ts` | Modify | Add rejection pattern query and AI prompt enhancement |
-| `src/components/permit-queens/SignatureCollectionDialog.tsx` | Create | Multi-signer workflow for Step 3 |
-| `src/pages/PermitQueensNewRequest.tsx` | Modify | Integrate signature collection before submit |
-| `src/components/permit-queens/StatusTimelineView.tsx` | Create | Visual timeline of permit events |
-| `src/components/permit-queens/InspectionScheduler.tsx` | Create | Request and track inspections |
-| `supabase/functions/permit-notification-sender/index.ts` | Modify | Add email delivery via Resend |
-
----
-
-## Database Enhancements
-
-No new tables required - all necessary tables exist:
-- `permit_projects` - Main project data
-- `permit_rejections` - Rejection patterns for learning
-- `permit_ai_knowledge` - Extracted rules from training
-- `permit_inspections` - Inspection tracking
-- `permit_status_events` - Status change history
-- `permit_notifications` - In-app notifications
-
----
-
-## Implementation Priority
-
-1. **Close Learning Loop** (2-3 hours)
-   - Modify packet assembler to query rejections
-   - Add avoidance instructions to prompts
-
-2. **Signature Integration** (3-4 hours)
-   - Create SignatureCollectionDialog
-   - Integrate into wizard Step 3
-   - Embed signatures into generated PDFs
-
-3. **Template Auto-Selection** (2-3 hours)
-   - Query matching templates by jurisdiction
-   - Auto-fill and include in packet
-
-4. **Status Notifications** (2-3 hours)
-   - Enhance notification sender
-   - Add email delivery
-
-5. **Inspection UI** (2-3 hours)
-   - Create scheduling interface
-   - Connect to existing table
-
----
-
-## Expected Outcomes
+## Verification Points
 
 After implementation:
-- Permit packets automatically improve based on past rejections
-- Complete digital signature workflow before submission
-- Jurisdiction-specific forms auto-populated
-- Real-time status updates via email and in-app
-- Full inspection lifecycle management
-
-The system will function as a true "AI Permit Expediter Brain" that learns and improves with each submission.
-
+1. Engineering appears in Contractor Directory filters
+2. Contractors can select Engineering during signup/registration
+3. Engineering shows on homepage service grid
+4. Users can request Engineering quotes
+5. Engineering posts can be tagged in social feed
+6. Engineering appears in permit type selection
+7. Referrals can be submitted for Engineering services
