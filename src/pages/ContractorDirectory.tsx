@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3 } from "lucide-react";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3, Ruler } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { ReviewSubmissionDialog } from "@/components/contractor-directory/ReviewSubmissionDialog";
 
@@ -36,7 +36,8 @@ const categoryIcons: Record<string, any> = {
   solar: Sun,
   painting: Paintbrush,
   fencing: Fence,
-  flooring: Grid3X3
+  flooring: Grid3X3,
+  engineering: Ruler
 };
 
 const categoryColors: Record<string, string> = {
@@ -51,7 +52,8 @@ const categoryColors: Record<string, string> = {
   solar: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
   painting: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
   fencing: "bg-stone-500/10 text-stone-400 border-stone-500/30 hover:bg-stone-500/20",
-  flooring: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20"
+  flooring: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20",
+  engineering: "bg-violet-500/10 text-violet-400 border-violet-500/30 hover:bg-violet-500/20"
 };
 
 export default function ContractorDirectory() {
@@ -101,7 +103,8 @@ export default function ContractorDirectory() {
     { id: "solar", name: "Solar", icon: Sun },
     { id: "painting", name: "Painting", icon: Paintbrush },
     { id: "fencing", name: "Fencing", icon: Fence },
-    { id: "flooring", name: "Flooring", icon: Grid3X3 }
+    { id: "flooring", name: "Flooring", icon: Grid3X3 },
+    { id: "engineering", name: "Engineering", icon: Ruler }
   ];
 
   useEffect(() => {

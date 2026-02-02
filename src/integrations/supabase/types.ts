@@ -9402,6 +9402,7 @@ export type Database = {
         | "demolition"
         | "addition"
         | "other"
+        | "engineering"
       pipeline_stage:
         | "lead"
         | "inspection"
@@ -9662,6 +9663,7 @@ export const Constants = {
         "demolition",
         "addition",
         "other",
+        "engineering",
       ],
       pipeline_stage: [
         "lead",

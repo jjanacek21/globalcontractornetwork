@@ -47,6 +47,7 @@ const serviceTypes = [
   "Mold Remediation",
   "Water Damage",
   "General Repairs",
+  "Engineering",
   "Other",
 ];
 

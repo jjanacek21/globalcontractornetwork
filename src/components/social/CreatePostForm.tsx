@@ -10,7 +10,7 @@ import { useSocialProfile } from "@/hooks/useSocialProfile";
 const TRADE_OPTIONS = [
   "Roofing", "General Contractor", "HVAC", "Plumbing", "Electrical",
   "Flooring", "Painting", "Landscaping", "Windows & Doors", "Concrete",
-  "Drywall", "Mold Remediation", "Water Damage", "Fire Damage"
+  "Drywall", "Mold Remediation", "Water Damage", "Fire Damage", "Engineering"
 ];
 
 interface CreatePostFormProps {

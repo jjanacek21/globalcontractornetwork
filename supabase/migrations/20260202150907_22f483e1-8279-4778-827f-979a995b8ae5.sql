@@ -1,0 +1,1 @@
+ALTER TYPE permit_type_enum ADD VALUE 'engineering';

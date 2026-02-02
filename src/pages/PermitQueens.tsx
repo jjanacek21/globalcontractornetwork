@@ -19,7 +19,8 @@ import {
   Wrench,
   Sun,
   Home,
-  Crown
+  Crown,
+  Ruler
 } from "lucide-react";
 import { PermitQueensHeader } from "@/components/permit-queens/PermitQueensHeader";
 import { PermitQueensFooter } from "@/components/permit-queens/PermitQueensFooter";
@@ -88,7 +89,8 @@ const PermitQueens = () => {
     { icon: Droplets, name: "Plumbing", description: "Repiping, water heaters, fixtures" },
     { icon: Wrench, name: "HVAC", description: "AC replacement, ductwork, ventilation" },
     { icon: Sun, name: "Solar", description: "PV systems, battery storage" },
-    { icon: Hammer, name: "General Contracting", description: "Renovations, additions, build-outs" }
+    { icon: Hammer, name: "General Contracting", description: "Renovations, additions, build-outs" },
+    { icon: Ruler, name: "Engineering", description: "Structural, MEP, specialty" }
   ];
 
   const counties = [

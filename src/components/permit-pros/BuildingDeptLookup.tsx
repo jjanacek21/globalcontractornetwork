@@ -79,6 +79,7 @@ export function BuildingDeptLookup() {
     { value: "plumbing", label: "Plumbing" },
     { value: "general", label: "General" },
     { value: "solar", label: "Solar" },
+    { value: "engineering", label: "Engineering" },
   ];
 
   // Florida Building Code requirements (statewide)

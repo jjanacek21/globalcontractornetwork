@@ -11,7 +11,8 @@ import {
   DoorOpen,
   Trees,
   AlertTriangle,
-  FileText
+  FileText,
+  Ruler
 } from "lucide-react";
 
 const InstantQuoteSection = () => {
@@ -43,6 +44,7 @@ const InstantQuoteSection = () => {
     { icon: Trees, label: "Landscaping" },
     { icon: AlertTriangle, label: "Mitigation" },
     { icon: FileText, label: "Insurance" },
+    { icon: Ruler, label: "Engineering" },
   ];
 
   return (

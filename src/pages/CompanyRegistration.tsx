@@ -42,6 +42,7 @@ const SERVICE_CATEGORIES = [
   "Pool",
   "Fencing",
   "Concrete",
+  "Engineering",
 ];
 
 const REVENUE_RANGES = [

@@ -29,6 +29,7 @@ const SERVICE_TYPES = [
   "Concrete",
   "Pool Service",
   "Pest Control",
+  "Engineering",
   "Other",
 ];
 
