@@ -2394,6 +2394,47 @@ export type Database = {
           },
         ]
       }
+      door_session_goals: {
+        Row: {
+          created_at: string
+          goals_doors: number
+          goals_leads: number
+          id: string
+          session_id: string
+          user_id: string
+          video_duration_seconds: number
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          goals_doors?: number
+          goals_leads?: number
+          id?: string
+          session_id: string
+          user_id: string
+          video_duration_seconds?: number
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          goals_doors?: number
+          goals_leads?: number
+          id?: string
+          session_id?: string
+          user_id?: string
+          video_duration_seconds?: number
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_session_goals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       door_to_door_stats: {
         Row: {
           current_streak_days: number
@@ -7721,6 +7762,147 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_feed_posts: {
+        Row: {
+          content: string | null
+          created_at: string
+          doors_knocked: number
+          goals_doors: number | null
+          goals_leads: number | null
+          id: string
+          leads_gotten: number
+          points_earned: number
+          session_id: string
+          user_id: string
+          video_type: string
+          video_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          doors_knocked?: number
+          goals_doors?: number | null
+          goals_leads?: number | null
+          id?: string
+          leads_gotten?: number
+          points_earned?: number
+          session_id: string
+          user_id: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          doors_knocked?: number
+          goals_doors?: number | null
+          goals_leads?: number | null
+          id?: string
+          leads_gotten?: number
+          points_earned?: number
+          session_id?: string
+          user_id?: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feed_posts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_feed_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          reaction_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feed_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "session_feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_progress_videos: {
+        Row: {
+          challenges_mentioned: string | null
+          created_at: string
+          id: string
+          points_awarded: number
+          points_multiplier: number
+          session_id: string
+          update_number: number
+          updated_goals_doors: number | null
+          updated_goals_leads: number | null
+          user_id: string
+          video_duration_seconds: number
+          video_type: string
+          video_url: string
+        }
+        Insert: {
+          challenges_mentioned?: string | null
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          points_multiplier?: number
+          session_id: string
+          update_number?: number
+          updated_goals_doors?: number | null
+          updated_goals_leads?: number | null
+          user_id: string
+          video_duration_seconds?: number
+          video_type?: string
+          video_url: string
+        }
+        Update: {
+          challenges_mentioned?: string | null
+          created_at?: string
+          id?: string
+          points_awarded?: number
+          points_multiplier?: number
+          session_id?: string
+          update_number?: number
+          updated_goals_doors?: number | null
+          updated_goals_leads?: number | null
+          user_id?: string
+          video_duration_seconds?: number
+          video_type?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_progress_videos_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "field_sessions"
             referencedColumns: ["id"]
           },
         ]

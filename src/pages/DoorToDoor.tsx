@@ -2,18 +2,23 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin, TrendingUp } from "lucide-react";
 import { DoorToDoorMap } from "@/components/door-to-door/DoorToDoorMap";
 import { SessionControls } from "@/components/door-to-door/SessionControls";
 import { SessionStats } from "@/components/door-to-door/SessionStats";
 import { PropertySidePanel } from "@/components/door-to-door/PropertySidePanel";
 import { VideoVerificationModal } from "@/components/door-to-door/VideoVerificationModal";
+import { PreSessionGoalVideo } from "@/components/door-to-door/PreSessionGoalVideo";
+import { ProgressVideoModal } from "@/components/door-to-door/ProgressVideoModal";
+import { SessionFeed } from "@/components/door-to-door/SessionFeed";
 import { useDoorToDoorSession, type DoorDisposition } from "@/hooks/useDoorToDoorSession";
 import { usePropertyDispositions, generateLatLngHash, type PropertyDisposition } from "@/hooks/usePropertyDispositions";
 import { useGPSTracking } from "@/hooks/useGPSTracking";
+import { useSessionGoals } from "@/hooks/useSessionGoals";
 import { useToast } from "@/hooks/use-toast";
 
 const VIDEO_CHECK_INTERVAL = 30 * 60 * 1000; // 30 minutes
+const PROGRESS_VIDEO_INTERVAL = 60 * 60 * 1000; // 1 hour
 
 interface SelectedProperty {
   lat: number;
@@ -38,9 +43,13 @@ export default function DoorToDoor() {
   const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   
-  // Video modal state
+  // Video modal states
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showGoalVideo, setShowGoalVideo] = useState(false);
+  const [showProgressVideo, setShowProgressVideo] = useState(false);
+  const [showFeed, setShowFeed] = useState(false);
   const [lastVideoCheck, setLastVideoCheck] = useState<number>(Date.now());
+  const [pendingSessionStart, setPendingSessionStart] = useState(false);
 
   // Session hook
   const {
@@ -64,6 +73,17 @@ export default function DoorToDoor() {
     setPropertyDisposition,
     generatePropertyGrid,
   } = usePropertyDispositions(userId || undefined);
+
+  // Session goals hook
+  const {
+    goals: sessionGoals,
+    progressVideos,
+    hasSetGoals,
+    currentGoals,
+    nextUpdateNumber,
+    isProgressVideoDue,
+    recordProgressVideo
+  } = useSessionGoals(userId || undefined, activeSession?.id);
 
   // GPS tracking hook
   const {
@@ -103,7 +123,7 @@ export default function DoorToDoor() {
     }
   }, [route, activeSession]);
 
-  // Video check timer
+  // Video check timer (30-minute verification)
   useEffect(() => {
     if (!activeSession) return;
 
@@ -116,6 +136,19 @@ export default function DoorToDoor() {
 
     return () => clearInterval(interval);
   }, [activeSession, lastVideoCheck]);
+
+  // Hourly progress video check
+  useEffect(() => {
+    if (!activeSession || !sessionStartTime || !hasSetGoals) return;
+
+    const interval = setInterval(() => {
+      if (isProgressVideoDue(sessionStartTime)) {
+        setShowProgressVideo(true);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [activeSession, sessionStartTime, hasSetGoals, isProgressVideoDue]);
 
   // Handle bounds change - fetch properties and generate grid
   const handleBoundsChange = useCallback(async (bounds: { north: number; south: number; east: number; west: number }) => {
@@ -141,7 +174,7 @@ export default function DoorToDoor() {
     }
   }, [userId, fetchPropertiesInBounds, generatePropertyGrid, setPropertyDisposition]);
 
-  // Handle start session
+  // Handle start session - start first, then show goal video
   const handleStartSession = async () => {
     try {
       const session = await startSession();
@@ -149,10 +182,9 @@ export default function DoorToDoor() {
         startTracking();
         setSessionStartTime(new Date());
         setLastVideoCheck(Date.now());
-        toast({
-          title: "Session Started",
-          description: "GPS tracking active. Good luck canvassing!",
-        });
+        // Show goal video after session is created
+        setPendingSessionStart(true);
+        setShowGoalVideo(true);
       } else {
         toast({
           title: "Session Error",
@@ -170,12 +202,38 @@ export default function DoorToDoor() {
     }
   };
 
+  // Called after goal video is completed
+  const handleGoalVideoComplete = async (goals: { doors: number; leads: number }, videoUrl: string) => {
+    setShowGoalVideo(false);
+    setPendingSessionStart(false);
+    toast({
+      title: "🎯 Goals Set!",
+      description: `Let's hit ${goals.doors} doors and ${goals.leads} leads!`,
+    });
+  };
+
+  // Handle goal video cancel - session continues without goals
+  const handleGoalVideoCancel = () => {
+    setShowGoalVideo(false);
+    setPendingSessionStart(false);
+    toast({
+      title: "Session Started",
+      description: "You can still record a goal video anytime!",
+    });
+  };
+
   // Handle end session
   const handleEndSession = async () => {
     await endSession();
     stopTracking();
     clearRoute();
     setSessionStartTime(null);
+  };
+
+  // Handle progress video upload
+  const handleProgressVideoUpload = async (videoUrl: string, points: number): Promise<boolean> => {
+    const success = await recordProgressVideo(videoUrl, 0, 'progress', points);
+    return success;
   };
 
   // Handle property click from map
@@ -298,6 +356,11 @@ export default function DoorToDoor() {
     );
   }
 
+  // Count leads from doorKnocks
+  const leadsCount = doorKnocks.filter(k => 
+    ['interested', 'need_inspection', 'canvass_lead', 'new_roof', 'opportunity', 'inspected', 'won'].includes(k.disposition)
+  ).length;
+
   return (
     <div className="h-screen w-full relative overflow-hidden">
       {/* Back Button */}
@@ -312,12 +375,50 @@ export default function DoorToDoor() {
         </Button>
       </div>
 
+      {/* Feed Button */}
+      <div className="fixed top-4 right-4 z-50">
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setShowFeed(true)}
+          className="rounded-full shadow-lg"
+        >
+          <TrendingUp className="w-5 h-5" />
+        </Button>
+      </div>
+
       {/* Session Stats */}
       <SessionStats
         session={activeSession}
         allTimeStats={stats}
         sessionStartTime={sessionStartTime || undefined}
       />
+
+      {/* Goals Progress Bar (during active session) */}
+      {activeSession && hasSetGoals && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Doors</span>
+            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-amber-500 transition-all" 
+                style={{ width: `${Math.min((doorKnocks.length / currentGoals.doors) * 100, 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold">{doorKnocks.length}/{currentGoals.doors}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Leads</span>
+            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 transition-all" 
+                style={{ width: `${Math.min((leadsCount / currentGoals.leads) * 100, 100)}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold">{leadsCount}/{currentGoals.leads}</span>
+          </div>
+        </div>
+      )}
 
       {/* GPS Error Banner */}
       {gpsError && (
@@ -371,7 +472,34 @@ export default function DoorToDoor() {
         userId={userId || undefined}
       />
 
-      {/* Video Verification Modal */}
+      {/* Pre-Session Goal Video Modal */}
+      {userId && activeSession && pendingSessionStart && (
+        <PreSessionGoalVideo
+          isOpen={showGoalVideo}
+          onComplete={handleGoalVideoComplete}
+          onCancel={handleGoalVideoCancel}
+          userId={userId}
+          sessionId={activeSession.id}
+        />
+      )}
+
+      {/* Hourly Progress Video Modal */}
+      {activeSession && userId && hasSetGoals && (
+        <ProgressVideoModal
+          isOpen={showProgressVideo}
+          onClose={() => setShowProgressVideo(false)}
+          onUpload={handleProgressVideoUpload}
+          userId={userId}
+          sessionId={activeSession.id}
+          updateNumber={nextUpdateNumber}
+          currentDoors={doorKnocks.length}
+          currentLeads={leadsCount}
+          goalsDoors={currentGoals.doors}
+          goalsLeads={currentGoals.leads}
+        />
+      )}
+
+      {/* Video Verification Modal (30-min check-in) */}
       {activeSession && userId && (
         <VideoVerificationModal
           isOpen={showVideoModal}
@@ -381,6 +509,13 @@ export default function DoorToDoor() {
           userId={userId}
         />
       )}
+
+      {/* Global Session Feed */}
+      <SessionFeed
+        userId={userId || undefined}
+        isOpen={showFeed}
+        onClose={() => setShowFeed(false)}
+      />
     </div>
   );
 }
