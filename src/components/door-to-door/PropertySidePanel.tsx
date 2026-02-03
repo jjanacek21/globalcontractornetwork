@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { DispositionQuickBar, getDispositionColor, getDispositionConfig } from './DispositionQuickBar';
+import { DispositionVideoModal, isHighValueDisposition } from './DispositionVideoModal';
 import { PropertyResidents } from './PropertyResidents';
 import { PropertyPhotos } from './PropertyPhotos';
 import { PropertyTags } from './PropertyTags';
@@ -54,6 +55,7 @@ interface PropertySidePanelProps {
   ) => void;
   loading?: boolean;
   userId?: string;
+  sessionId?: string;
 }
 
 export function PropertySidePanel({
@@ -62,7 +64,8 @@ export function PropertySidePanel({
   property,
   onSave,
   loading,
-  userId
+  userId,
+  sessionId
 }: PropertySidePanelProps) {
   const [disposition, setDisposition] = useState<PropertyDisposition>('not_contacted');
   const [customerName, setCustomerName] = useState('');
@@ -76,6 +79,10 @@ export function PropertySidePanel({
   const [priority, setPriority] = useState('normal');
   const [tags, setTags] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('disposition');
+  
+  // Video verification state
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [pendingDisposition, setPendingDisposition] = useState<PropertyDisposition | null>(null);
 
   // Update form when property changes
   useEffect(() => {
@@ -96,8 +103,18 @@ export function PropertySidePanel({
   }, [property]);
 
   const handleDispositionSelect = (newDisposition: PropertyDisposition) => {
+    const config = getDispositionConfig(newDisposition);
+    const basePoints = config?.points || 0;
+    
+    // Check if this is a high-value disposition that needs video verification
+    if (isHighValueDisposition(newDisposition) && userId) {
+      setPendingDisposition(newDisposition);
+      setShowVideoModal(true);
+      return;
+    }
+    
+    // Regular disposition - save immediately
     setDisposition(newDisposition);
-    // Auto-save on disposition change
     onSave(newDisposition, {
       name: customerName || undefined,
       phone: customerPhone || undefined,
@@ -111,6 +128,49 @@ export function PropertySidePanel({
       priority,
       tags,
     });
+  };
+
+  const handleVideoComplete = (pointsAwarded: number, videoUrl?: string) => {
+    if (pendingDisposition) {
+      setDisposition(pendingDisposition);
+      onSave(pendingDisposition, {
+        name: customerName || undefined,
+        phone: customerPhone || undefined,
+        email: customerEmail || undefined,
+        notes: notes || undefined,
+      }, {
+        roofType: roofType || undefined,
+        roofCondition: roofCondition || undefined,
+        insuranceClaim,
+        stormDate: stormDate || undefined,
+        priority,
+        tags,
+      });
+    }
+    setShowVideoModal(false);
+    setPendingDisposition(null);
+  };
+
+  const handleVideoSkip = () => {
+    // User skipped video - save with base points (1x)
+    if (pendingDisposition) {
+      setDisposition(pendingDisposition);
+      onSave(pendingDisposition, {
+        name: customerName || undefined,
+        phone: customerPhone || undefined,
+        email: customerEmail || undefined,
+        notes: notes || undefined,
+      }, {
+        roofType: roofType || undefined,
+        roofCondition: roofCondition || undefined,
+        insuranceClaim,
+        stormDate: stormDate || undefined,
+        priority,
+        tags,
+      });
+    }
+    setShowVideoModal(false);
+    setPendingDisposition(null);
   };
 
   const handleSaveDetails = () => {
@@ -381,6 +441,24 @@ export function PropertySidePanel({
           </Button>
         </div>
       </div>
+
+      {/* Video Verification Modal */}
+      {pendingDisposition && userId && (
+        <DispositionVideoModal
+          isOpen={showVideoModal}
+          onClose={() => {
+            setShowVideoModal(false);
+            setPendingDisposition(null);
+          }}
+          disposition={pendingDisposition}
+          basePoints={getDispositionConfig(pendingDisposition)?.points || 0}
+          userId={userId}
+          sessionId={sessionId}
+          propertyAddress={property?.address}
+          onComplete={handleVideoComplete}
+          onSkip={handleVideoSkip}
+        />
+      )}
     </>
   );
 }
