@@ -1,172 +1,276 @@
 
-# Fix Chrome PDF Preview Blocking - Implementation Plan
+# Enhanced Live Feed Sidebar for Door to Door World
 
-## Problem Analysis
-
-Chrome is blocking PDF previews for two reasons:
-
-### Issue 1: Sandboxed Iframe Restrictions
-The `PDFViewerDialog` component uses an iframe with a `sandbox` attribute:
-```tsx
-sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-```
-
-**Why this breaks PDFs**: Chrome's built-in PDF viewer (PDFium) is a browser plugin that requires elevated permissions. Even with `allow-scripts` and `allow-same-origin`, sandboxed iframes block plugins by default. This causes PDFs to show as blocked/grey screens.
-
-### Issue 2: Supabase Response Parsing
-The `pdf-proxy` edge function returns binary PDF data, but the Supabase client's `invoke` function doesn't automatically handle binary responses. The current check:
-```tsx
-if (data instanceof ArrayBuffer || data instanceof Blob)
-```
-fails because Supabase returns a parsed JSON-like object wrapper, not raw binary data.
+## Overview
+Upgrade the existing FeedSidebar component with improved UI/UX, better toggle mechanics (chat icon), enhanced real-time notifications, a "My Team" tab, and an optimized post display showing user profiles, goal panels, progress bars, point multipliers, and emoji reactions from ALL users.
 
 ---
 
-## Solution
+## Current State Analysis
 
-### Fix 1: Remove Sandbox Attribute from PDF Iframe
-Remove the `sandbox` attribute entirely when displaying PDFs. The security is already handled by:
-- Server-side URL validation in the proxy
-- Blob URLs for external documents (which are same-origin)
-- Content-Type validation (magic bytes check for PDFs)
+The `FeedSidebar.tsx` component already has:
+- Real-time Supabase subscriptions for new posts and reactions
+- Following/Trending tabs
+- Basic post cards with avatar fallbacks, video playback, and reactions
+- New posts notification banner
+- Slide-out animation with framer-motion
 
-### Fix 2: Use responseType Option for Binary Data
-The Supabase `functions.invoke` method supports a `responseType` option. Setting it to `'arraybuffer'` ensures binary data is returned correctly.
+**Missing/Needs Improvement:**
+1. Toggle button uses generic arrows instead of a chat icon
+2. No "My Team" tab to filter by team/company members
+3. Profile photos not displayed (profiles table lacks `avatar_url` column)
+4. Emoji reactions only show 4 of 6 available types
+5. No pulsing/attention animation for new content
+6. Progress bars could be more prominent
+7. No live status indicators for active sessions
 
-### Fix 3: Add `<object>` Fallback with PDF Viewer Parameters
-As an additional fallback, use `<object>` tag with PDF viewer parameters that work better in Chrome:
-```tsx
-<object data={`${displayUrl}#toolbar=1&view=FitH`} type="application/pdf">
-  <iframe src={displayUrl} ... />
-</object>
+---
+
+## Implementation Plan
+
+### Phase 1: Database Enhancement
+
+**Add avatar_url column to profiles table:**
+
+```sql
+ALTER TABLE public.profiles 
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ```
 
-### Fix 4: Also Fix FormPreviewDialog
-The `FormPreviewDialog` component has a similar iframe without any PDF-specific handling.
+This allows users to have profile photos displayed in the feed.
+
+---
+
+### Phase 2: UI/UX Improvements
+
+**File: `src/components/door-to-door/FeedSidebar.tsx`**
+
+#### 2.1 Toggle Button Enhancement
+- Replace arrow icons with `MessageSquare` (chat icon) from Lucide
+- Add pulse animation when new posts arrive
+- Show notification badge count
+
+```tsx
+// Before
+<TrendingUp className="w-5 h-5 text-primary" />
+<ChevronLeft className="w-4 h-4" />
+
+// After
+<MessageSquare className="w-5 h-5 text-primary" />
+{newPostsCount > 0 && (
+  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center animate-pulse">
+    {newPostsCount}
+  </span>
+)}
+```
+
+#### 2.2 Add "My Team" Tab
+- Extend `FeedTab` type: `'following' | 'trending' | 'team'`
+- Filter posts by team members (users from same company)
+- Query company_members table to get team user IDs
+
+```tsx
+// Three-column tab layout
+<TabsList className="grid w-full grid-cols-3 h-8">
+  <TabsTrigger value="following">
+    <Bell className="w-3 h-3 mr-1" /> All
+  </TabsTrigger>
+  <TabsTrigger value="team">
+    <Users className="w-3 h-3 mr-1" /> My Team
+  </TabsTrigger>
+  <TabsTrigger value="trending">
+    <TrendingUp className="w-3 h-3 mr-1" /> Hot
+  </TabsTrigger>
+</TabsList>
+```
+
+#### 2.3 Enhanced Profile Display
+- Fetch `avatar_url` from profiles table
+- Use `AvatarImage` component for profile photos
+- Add online/active session indicator ring
+
+```tsx
+<Avatar className="w-10 h-10">
+  <AvatarImage src={post.profile?.avatar_url || undefined} />
+  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+    {post.profile?.first_name?.[0] || 'U'}
+    {post.profile?.last_name?.[0] || ''}
+  </AvatarFallback>
+</Avatar>
+```
+
+#### 2.4 Show All 6 Emoji Reactions
+- Display all reaction types: fire, muscle, clap, target, star, rocket
+- Better layout with flex-wrap for reactions
+
+```tsx
+const REACTION_TYPES = ['🔥', '💪', '👏', '🎯', '⭐', '🚀'] as const;
+
+// Show all reactions instead of slice(0, 4)
+{REACTION_TYPES.map((emoji) => { ... })}
+```
+
+#### 2.5 Enhanced Goal Panel
+- More prominent progress bars with labels
+- Show doors knocked vs goal, leads vs goal
+- Color-coded progress (amber for doors, green for leads)
+- Add percentage completion text
+
+```tsx
+<div className="bg-gradient-to-r from-muted/60 to-muted/40 rounded-lg p-3 space-y-2.5">
+  <div className="flex items-center justify-between">
+    <span className="text-xs font-medium flex items-center gap-1.5">
+      <Target className="w-3.5 h-3.5 text-primary" />
+      Goals Progress
+    </span>
+    <span className="text-xs text-muted-foreground">
+      {Math.round((post.doors_knocked / post.goals_doors) * 100)}% complete
+    </span>
+  </div>
+  {/* Progress bars */}
+</div>
+```
+
+#### 2.6 Point Multiplier Badges
+- More visible multiplier badges for 2x (Roof) and 3x (Homeowner)
+- Gradient background for bonus indicators
+
+```tsx
+{showMultiplier && (
+  <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-1.5 py-0.5 border-0">
+    {config.multiplier} BONUS
+  </Badge>
+)}
+```
+
+#### 2.7 Real-time Animations
+- Pulse animation on toggle button when new posts arrive
+- Smooth entry animations for new posts
+- "New" indicator on recently posted items
+
+```tsx
+// Add to toggle button when new posts exist
+className={cn(
+  "fixed z-50 bg-card border shadow-lg rounded-l-xl p-2",
+  newPostsCount > 0 && "animate-pulse ring-2 ring-primary"
+)}
+```
+
+---
+
+### Phase 3: Data Fetching Improvements
+
+#### 3.1 Optimized Profile Fetching
+Update the profiles query to include `avatar_url`:
+
+```tsx
+const { data: profilesData } = await supabase
+  .from('profiles')
+  .select('id, first_name, last_name, avatar_url')
+  .in('id', userIds);
+```
+
+#### 3.2 Team Filtering Logic
+For "My Team" tab, fetch team members first:
+
+```tsx
+// Fetch current user's company
+const { data: membership } = await supabase
+  .from('company_members')
+  .select('company_id')
+  .eq('user_id', userId)
+  .single();
+
+if (membership?.company_id) {
+  // Fetch team member IDs
+  const { data: teamMembers } = await supabase
+    .from('company_members')
+    .select('user_id')
+    .eq('company_id', membership.company_id);
+  
+  // Filter posts by team members
+  query = query.in('user_id', teamMembers.map(m => m.user_id));
+}
+```
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/ui/PDFViewerDialog.tsx` | Remove sandbox, fix response parsing, add object fallback |
-| `src/components/permit-queens/FormPreviewDialog.tsx` | Remove sandbox from iframe |
+| File | Changes |
+|------|---------|
+| `src/components/door-to-door/FeedSidebar.tsx` | Major UI overhaul, add My Team tab, enhance reactions/profiles |
+| Database migration | Add `avatar_url` column to profiles table |
 
 ---
 
-## Technical Implementation
+## Technical Details
 
-### PDFViewerDialog.tsx Changes
-
-**Line 91-93**: Fix Supabase invoke to request binary response
+### Updated FeedPost Interface
 ```tsx
-const { data, error } = await supabase.functions.invoke('pdf-proxy', {
-  body: { url: targetUrl },
-  // Tell Supabase to return raw binary data
-});
-
-// Handle the response properly
-const response = await fetch(`${SUPABASE_URL}/functions/v1/pdf-proxy`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session?.access_token}`,
-  },
-  body: JSON.stringify({ url: targetUrl }),
-});
-const pdfBlob = await response.blob();
-return URL.createObjectURL(pdfBlob);
+interface FeedPost {
+  id: string;
+  session_id: string;
+  user_id: string;
+  video_url: string | null;
+  video_type: 'goal' | 'progress' | 'roof' | 'homeowner';
+  content: string | null;
+  points_earned: number;
+  doors_knocked: number;
+  leads_gotten: number;
+  goals_doors: number | null;
+  goals_leads: number | null;
+  created_at: string;
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null; // NEW
+  };
+  reactions: { reaction_type: string; count: number }[];
+  userReaction?: string;
+  totalReactions: number;
+}
 ```
 
-**Line 372-380**: Replace sandboxed iframe with object/embed fallback chain
+### Component Props (unchanged)
 ```tsx
-{!error && (
-  <object
-    data={`${displayUrl}#toolbar=1&view=FitH&navpanes=0`}
-    type="application/pdf"
-    className="w-full h-full"
-    onLoad={handleIframeLoad}
-  >
-    {/* Fallback to iframe without sandbox */}
-    <iframe
-      src={displayUrl}
-      className="w-full h-full border-0"
-      onLoad={handleIframeLoad}
-      onError={handleIframeError}
-      title={title}
-      allow="fullscreen"
-    />
-  </object>
-)}
-```
-
-### FormPreviewDialog.tsx Changes
-
-**Line 128-132**: Remove sandbox restriction
-```tsx
-<iframe 
-  src={previewUrl} 
-  className="w-full h-full min-h-[500px]" 
-  title={`Preview: ${documentName}`}
-  allow="fullscreen"
-/>
+interface FeedSidebarProps {
+  userId?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}
 ```
 
 ---
 
-## Architecture Diagram
+## Visual Changes Summary
 
 ```text
-Before (Blocked):
-┌──────────────────────────────────────────────────────┐
-│  Browser (Chrome)                                     │
-├──────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────┐  │
-│  │  Sandboxed Iframe                              │  │
-│  │  sandbox="allow-scripts allow-same-origin"     │  │
-│  │                                                │  │
-│  │  ┌──────────────────────────────────────────┐  │  │
-│  │  │  PDFium Plugin                           │  │  │
-│  │  │  ❌ BLOCKED - plugins disabled in sandbox│  │  │
-│  │  └──────────────────────────────────────────┘  │  │
-│  └────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────┘
+Current Toggle:                    Enhanced Toggle:
+┌─────────┐                       ┌─────────┐
+│  📈 ◀  │                       │  💬 ●3 │  (chat icon + badge)
+└─────────┘                       └─────────┘
+                                   ↑ pulses when new posts
 
-After (Working):
-┌──────────────────────────────────────────────────────┐
-│  Browser (Chrome)                                     │
-├──────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────┐  │
-│  │  Object Tag (no sandbox)                       │  │
-│  │  data="blob:...#toolbar=1&view=FitH"           │  │
-│  │                                                │  │
-│  │  ┌──────────────────────────────────────────┐  │  │
-│  │  │  PDFium Plugin                           │  │  │
-│  │  │  ✅ Works - plugins enabled               │  │  │
-│  │  │  ✅ Blob URL = same-origin = secure       │  │  │
-│  │  └──────────────────────────────────────────┘  │  │
-│  └────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────┘
+Current Tabs:                      Enhanced Tabs:
+┌──────────────────┐              ┌──────────────────────────┐
+│ Following │ Trending │          │  All │ My Team │  Hot   │
+└──────────────────┘              └──────────────────────────┘
+
+Current Reactions (4):             Enhanced Reactions (6):
+🔥 💪 👏 🎯                        🔥 💪 👏 🎯 ⭐ 🚀
 ```
-
----
-
-## Security Considerations
-
-Removing the sandbox is safe because:
-
-1. **Proxy validates URLs**: The `pdf-proxy` edge function only allows whitelisted domains (government sites)
-2. **Binary validation**: Proxy checks PDF magic bytes (`%PDF-`) before returning content
-3. **Blob URLs are same-origin**: When using the proxy, PDFs are converted to blob URLs which are inherently same-origin and can't escape the page context
-4. **Direct URLs are Supabase storage**: Non-proxied URLs are from Supabase storage (signed URLs) which are trusted
 
 ---
 
 ## Expected Outcome
 
 After implementation:
-- PDFs from Supabase storage will display immediately without blocking
-- PDFs from government sites (Miami-Dade, Florida Building) will load via proxy and display
-- Chrome's built-in PDF viewer will work with full toolbar (zoom, download, print)
-- Fallback chain ensures maximum compatibility across browsers
+- Chat icon toggle button with pulsing notification badge
+- Three tabs: All (Following), My Team, Hot (Trending)
+- Profile photos displayed when available
+- All 6 emoji reactions visible and interactive
+- Enhanced goal panels with clear progress visualization
+- Point multiplier badges prominently displayed
+- Smooth real-time animations for new content
+- Team-based filtering for company members
