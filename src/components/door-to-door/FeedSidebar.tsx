@@ -9,16 +9,19 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { 
   Video, Target, Clock, Home, Users, Zap, TrendingUp, 
-  Bell, ChevronUp, X, Sparkles, MessageSquare
+  Bell, ChevronUp, X, Sparkles, MessageSquare, Image as ImageIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
+import { FeedPostComposer } from "./FeedPostComposer";
+import { FeedComments } from "./FeedComments";
 interface FeedPost {
   id: string;
   session_id: string;
   user_id: string;
   video_url: string | null;
+  image_url: string | null;
+  post_type: 'text' | 'photo' | 'video';
   video_type: 'goal' | 'progress' | 'roof' | 'homeowner';
   content: string | null;
   points_earned: number;
@@ -35,6 +38,7 @@ interface FeedPost {
   reactions: { reaction_type: string; count: number }[];
   userReaction?: string;
   totalReactions: number;
+  commentCount: number;
 }
 
 interface FeedSidebarProps {
@@ -61,7 +65,22 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
   const [activeTab, setActiveTab] = useState<FeedTab>('following');
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [teamMemberIds, setTeamMemberIds] = useState<string[]>([]);
+  const [userProfile, setUserProfile] = useState<{first_name: string | null; last_name: string | null; avatar_url: string | null} | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!userId) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+      setUserProfile(data);
+    };
+    fetchProfile();
+  }, [userId]);
 
   // Fetch team members for "My Team" tab
   useEffect(() => {
@@ -128,9 +147,16 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
 
       const postsWithReactions = await Promise.all(
         (postsData || []).map(async (post) => {
+          // Fetch reactions
           const { data: reactions } = await supabase
             .from('session_feed_reactions')
             .select('reaction_type, user_id')
+            .eq('post_id', post.id);
+
+          // Fetch comment count
+          const { count: commentCount } = await supabase
+            .from('session_feed_comments')
+            .select('id', { count: 'exact', head: true })
             .eq('post_id', post.id);
 
           const reactionCounts = REACTION_TYPES.map(type => ({
@@ -150,7 +176,8 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
 
           return {
             ...post,
-            video_type: post.video_type as 'goal' | 'progress' | 'roof' | 'homeowner',
+            post_type: (post.post_type || 'video') as 'text' | 'photo' | 'video',
+            video_type: (post.video_type || 'progress') as 'goal' | 'progress' | 'roof' | 'homeowner',
             profile: profile ? {
               first_name: profile.first_name,
               last_name: profile.last_name,
@@ -158,7 +185,8 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
             } : undefined,
             reactions: reactionCounts,
             userReaction,
-            totalReactions
+            totalReactions,
+            commentCount: commentCount || 0
           } as FeedPost;
         })
       );
@@ -318,6 +346,17 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
               )}
             </AnimatePresence>
 
+            {/* Post Composer */}
+            {userId && (
+              <div className="px-3 py-2 border-b">
+                <FeedPostComposer 
+                  userId={userId}
+                  userProfile={userProfile || undefined}
+                  onPostCreated={() => fetchPosts(true)}
+                />
+              </div>
+            )}
+
             {/* Feed Content */}
             <ScrollArea className="flex-1" ref={scrollRef}>
               <div className="p-3 space-y-3">
@@ -432,6 +471,17 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                           </div>
                         )}
 
+                        {/* Image Display */}
+                        {post.image_url && (
+                          <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+                            <img
+                              src={post.image_url}
+                              alt="Post image"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+
                         {/* Video Thumbnail */}
                         {post.video_url && (
                           <div 
@@ -453,6 +503,11 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                               </div>
                             )}
                           </div>
+                        )}
+
+                        {/* Text content */}
+                        {post.content && (
+                          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
                         )}
 
                         {/* All 6 Emoji Reactions */}
@@ -488,6 +543,13 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                             </span>
                           )}
                         </div>
+
+                        {/* Comments Section */}
+                        <FeedComments
+                          postId={post.id}
+                          userId={userId}
+                          initialCount={post.commentCount}
+                        />
                       </motion.div>
                     );
                   })
