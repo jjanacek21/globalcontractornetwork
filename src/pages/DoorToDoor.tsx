@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin, TrendingUp } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { DoorToDoorMap } from "@/components/door-to-door/DoorToDoorMap";
 import { SessionControls } from "@/components/door-to-door/SessionControls";
 import { SessionStats } from "@/components/door-to-door/SessionStats";
@@ -10,7 +10,7 @@ import { PropertySidePanel } from "@/components/door-to-door/PropertySidePanel";
 import { VideoVerificationModal } from "@/components/door-to-door/VideoVerificationModal";
 import { PreSessionGoalVideo } from "@/components/door-to-door/PreSessionGoalVideo";
 import { ProgressVideoModal } from "@/components/door-to-door/ProgressVideoModal";
-import { SessionFeed } from "@/components/door-to-door/SessionFeed";
+import { FeedSidebar } from "@/components/door-to-door/FeedSidebar";
 import { useDoorToDoorSession, type DoorDisposition } from "@/hooks/useDoorToDoorSession";
 import { usePropertyDispositions, generateLatLngHash, type PropertyDisposition } from "@/hooks/usePropertyDispositions";
 import { useGPSTracking } from "@/hooks/useGPSTracking";
@@ -375,17 +375,12 @@ export default function DoorToDoor() {
         </Button>
       </div>
 
-      {/* Feed Button */}
-      <div className="fixed top-4 right-4 z-50">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => setShowFeed(true)}
-          className="rounded-full shadow-lg"
-        >
-          <TrendingUp className="w-5 h-5" />
-        </Button>
-      </div>
+      {/* Feed Sidebar - integrated on map */}
+      <FeedSidebar
+        userId={userId || undefined}
+        isOpen={showFeed}
+        onToggle={() => setShowFeed(!showFeed)}
+      />
 
       {/* Session Stats */}
       <SessionStats
@@ -509,13 +504,6 @@ export default function DoorToDoor() {
           userId={userId}
         />
       )}
-
-      {/* Global Session Feed */}
-      <SessionFeed
-        userId={userId || undefined}
-        isOpen={showFeed}
-        onClose={() => setShowFeed(false)}
-      />
     </div>
   );
 }
