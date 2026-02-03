@@ -7769,6 +7769,51 @@ export type Database = {
           },
         ]
       }
+      session_feed_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feed_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "session_feed_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feed_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "session_feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_feed_posts: {
         Row: {
           content: string | null
@@ -7777,8 +7822,10 @@ export type Database = {
           goals_doors: number | null
           goals_leads: number | null
           id: string
+          image_url: string | null
           leads_gotten: number
           points_earned: number
+          post_type: string | null
           session_id: string
           user_id: string
           video_type: string
@@ -7791,8 +7838,10 @@ export type Database = {
           goals_doors?: number | null
           goals_leads?: number | null
           id?: string
+          image_url?: string | null
           leads_gotten?: number
           points_earned?: number
+          post_type?: string | null
           session_id: string
           user_id: string
           video_type?: string
@@ -7805,8 +7854,10 @@ export type Database = {
           goals_doors?: number | null
           goals_leads?: number | null
           id?: string
+          image_url?: string | null
           leads_gotten?: number
           points_earned?: number
+          post_type?: string | null
           session_id?: string
           user_id?: string
           video_type?: string
