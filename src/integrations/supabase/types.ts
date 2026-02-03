@@ -2834,10 +2834,13 @@ export type Database = {
         Row: {
           created_at: string
           ended_at: string | null
+          goals_doors: number | null
+          goals_leads: number | null
           id: string
           is_active: boolean
           route_geojson: Json | null
           started_at: string
+          status: string | null
           total_doors: number
           total_points: number
           user_id: string
@@ -2845,10 +2848,13 @@ export type Database = {
         Insert: {
           created_at?: string
           ended_at?: string | null
+          goals_doors?: number | null
+          goals_leads?: number | null
           id?: string
           is_active?: boolean
           route_geojson?: Json | null
           started_at?: string
+          status?: string | null
           total_doors?: number
           total_points?: number
           user_id: string
@@ -2856,10 +2862,13 @@ export type Database = {
         Update: {
           created_at?: string
           ended_at?: string | null
+          goals_doors?: number | null
+          goals_leads?: number | null
           id?: string
           is_active?: boolean
           route_geojson?: Json | null
           started_at?: string
+          status?: string | null
           total_doors?: number
           total_points?: number
           user_id?: string
