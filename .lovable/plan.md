@@ -1,93 +1,108 @@
 
-# Fix Door to Door World Live Feed Post Creation
+# Add Video Verification for High-Value Dispositions
 
-## Problem Summary
+## Problem
 
-The "Failed to create post" error occurs because the code attempts to create a fallback `field_sessions` record with columns that don't exist in the database. This happens when a user tries to post from the Live Feed without an active field session.
+When users tap **Inspect**, **Lead**, or **Won** buttons in Door to Door World, the disposition saves immediately without prompting for a video verification. The user expects to be asked to record a video showing their location (ground level, on the roof, or with the homeowner) to earn point multipliers (1x, 2x, or 3x).
 
-## Root Cause
+## Solution Overview
 
-**Database/Code Mismatch:**
-The `FeedPostComposer.tsx` inserts into `field_sessions` using:
-- `status` - Column does not exist
-- `goals_doors` - Column does not exist  
-- `goals_leads` - Column does not exist
+Create a new **Disposition Video Verification Modal** that:
+1. Opens when users select high-value dispositions (`inspected`, `canvass_lead`, `won`)
+2. Lets users choose their video type: Standard (1x), Roof (2x), or Homeowner (3x)
+3. Records and uploads the video
+4. Awards multiplied points based on video location
+5. Then saves the disposition
 
-Actual `field_sessions` columns: `id`, `user_id`, `started_at`, `ended_at`, `total_doors`, `total_points`, `route_geojson`, `is_active`, `created_at`
+## Implementation Details
 
-## Solution
+### Step 1: Create DispositionVideoModal Component
 
-### Step 1: Add Missing Columns to field_sessions Table
+Create a new component `src/components/door-to-door/DispositionVideoModal.tsx` that:
+- Accepts disposition type, base points, and callback props
+- Shows location selection (Standard/Roof/Homeowner) with point multipliers
+- Handles video recording with camera access
+- Uploads to Supabase storage `door-to-door-videos` bucket
+- Saves record to `session_progress_videos` table with video type
+- Returns the final points earned
 
-Add the missing columns that the application expects:
+**Key Features:**
+- 5-second minimum video duration
+- Back camera preferred for proof-of-location
+- Point multipliers: Standard (1x), Roof (2x), Homeowner (3x)
+- Auto-post to session feed for visibility
 
-```sql
-ALTER TABLE public.field_sessions 
-ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active',
-ADD COLUMN IF NOT EXISTS goals_doors INTEGER DEFAULT 0,
-ADD COLUMN IF NOT EXISTS goals_leads INTEGER DEFAULT 0;
+### Step 2: Define High-Value Dispositions
+
+```text
+HIGH_VALUE_DISPOSITIONS = ['inspected', 'canvass_lead', 'won']
 ```
 
-### Step 2: Fix FeedPostComposer.tsx Fallback Session Logic
+Base points from `DispositionQuickBar.tsx`:
+- `inspected`: 100 pts (can earn up to 300 pts with 3x)
+- `canvass_lead`: 25 pts (can earn up to 75 pts with 3x)  
+- `won`: 200 pts (can earn up to 600 pts with 3x)
 
-Update the fallback session creation to use correct column names:
+### Step 3: Update PropertySidePanel
 
-**Current problematic code (lines 263-277):**
-```tsx
-const { data: newSession, error: sessionError } = await supabase
-  .from('field_sessions')
-  .insert({
-    user_id: userId,
-    status: 'completed',        // ❌ Column doesn't exist
-    started_at: new Date().toISOString(),
-    ended_at: new Date().toISOString(),
-    goals_doors: 0,             // ❌ Column doesn't exist
-    goals_leads: 0              // ❌ Column doesn't exist
-  })
+Modify `handleDispositionSelect` in `PropertySidePanel.tsx`:
+
+```text
+Current Flow:
+  User taps disposition → Save immediately
+
+New Flow:
+  User taps disposition
+    → If high-value disposition:
+        → Open DispositionVideoModal
+        → User records video with location type
+        → Award multiplied points
+        → Save disposition
+    → Else:
+        → Save immediately (unchanged)
 ```
 
-**Fixed code after migration:**
-```tsx
-const { data: newSession, error: sessionError } = await supabase
-  .from('field_sessions')
-  .insert({
-    user_id: userId,
-    started_at: new Date().toISOString(),
-    ended_at: new Date().toISOString(),
-    is_active: false,
-    total_doors: 0,
-    total_points: 0,
-    status: 'completed',
-    goals_doors: 0,
-    goals_leads: 0
-  })
+### Step 4: State Management
+
+Add to `PropertySidePanel.tsx`:
+- `showDispositionVideo: boolean` - controls modal visibility
+- `pendingDisposition: PropertyDisposition | null` - stores disposition awaiting video
+- `onVideoComplete` callback - saves disposition after successful video
+
+### Step 5: Database Integration
+
+The video will be saved to:
+- **Storage**: `door-to-door-videos` bucket (already exists)
+- **Table**: `session_progress_videos` with fields:
+  - `video_type`: 'standard' | 'roof' | 'homeowner'
+  - `points_multiplier`: 1.0 | 2.0 | 3.0
+  - `points_awarded`: calculated points
+
+## Component Structure
+
+```text
+PropertySidePanel
+  └── DispositionQuickBar (existing)
+  └── DispositionVideoModal (new)
+        ├── Location Selection (Standard/Roof/Homeowner radio)
+        ├── Video Recording Interface
+        ├── Preview & Upload Controls
+        └── Points Display with Multiplier
 ```
 
-## Verification Checklist
+## User Experience
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| session_feed_posts table | ✅ Ready | Has all required columns |
-| session_feed_comments table | ✅ Ready | Supports threaded replies |
-| session_feed_reactions table | ✅ Ready | Working with 6 emoji types |
-| feed-media storage bucket | ✅ Ready | Public bucket with upload policies |
-| field_sessions table | ❌ Fix Required | Missing status, goals_doors, goals_leads |
+1. User taps **Inspect** on a property
+2. Modal opens: "Verify Your Location for Bonus Points!"
+3. User selects: "On the Roof" (2x multiplier)
+4. User records 5+ second video showing roof
+5. Video uploads, user sees "+200 Points!" (100 base × 2x)
+6. Property saves as `inspected` with video verification
 
-## Technical Details
+## Technical Notes
 
-### Database Migration
-- Adds 3 columns with safe defaults
-- Non-breaking change (existing data preserved)
-- All new columns have DEFAULT values
-
-### Code Changes
-- Update fallback session insert to include `is_active` and `total_*` columns
-- Ensures RLS policies work correctly (field_sessions requires `user_id = auth.uid()`)
-
-## Expected Outcome
-
-After this fix:
-1. Users can post text/photo/video from Live Feed without an active session
-2. The system creates a valid fallback session record
-3. Posts display correctly in the feed with real-time updates
-4. Comments and reactions work as expected
+- Video recording uses `getUserMedia` directly in click handler (Safari compatibility)
+- Back camera (`facingMode: 'environment'`) for proof videos
+- 5-second minimum enforced before stop button is enabled
+- Graceful fallback if user skips video (saves with 1x points, no video)
+- Works with or without active field session
