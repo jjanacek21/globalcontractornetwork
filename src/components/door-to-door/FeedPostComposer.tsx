@@ -255,12 +255,33 @@ export function FeedPostComposer({
         mediaUrl = publicUrl;
       }
 
-      // Create post
+      // Create post - if no sessionId, create a standalone post with a new field_session first
+      let effectiveSessionId = sessionId;
+      
+      if (!effectiveSessionId) {
+        // Create a temporary session for standalone posts
+        const { data: newSession, error: sessionError } = await supabase
+          .from('field_sessions')
+          .insert({
+            user_id: userId,
+            status: 'completed',
+            started_at: new Date().toISOString(),
+            ended_at: new Date().toISOString(),
+            goals_doors: 0,
+            goals_leads: 0
+          })
+          .select('id')
+          .single();
+        
+        if (sessionError) throw sessionError;
+        effectiveSessionId = newSession.id;
+      }
+
       const { error: insertError } = await supabase
         .from('session_feed_posts')
         .insert({
           user_id: userId,
-          session_id: sessionId || crypto.randomUUID(),
+          session_id: effectiveSessionId,
           content: content.trim() || null,
           post_type: mediaType === 'none' ? 'text' : mediaType,
           video_type: 'progress',
