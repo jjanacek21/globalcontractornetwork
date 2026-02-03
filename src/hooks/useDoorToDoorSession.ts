@@ -322,6 +322,15 @@ export function useDoorToDoorSession(userId?: string) {
         total_points: prev.total_points + pointsAwarded
       } : null);
 
+      // Also update the database session record (triggers should handle this, but ensure it's persisted)
+      await supabase
+        .from('field_sessions')
+        .update({
+          total_doors: (activeSession?.total_doors || 0) + 1,
+          total_points: (activeSession?.total_points || 0) + pointsAwarded
+        })
+        .eq('id', activeSession.id);
+
       // Award points to gamification system
       await awardPoints(
         pointsAwarded,

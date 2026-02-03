@@ -465,6 +465,7 @@ export default function DoorToDoor() {
         onSave={handleSaveDisposition}
         loading={propertiesLoading}
         userId={userId || undefined}
+        sessionId={activeSession?.id}
       />
 
       {/* Pre-Session Goal Video Modal */}
