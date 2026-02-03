@@ -494,6 +494,12 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                                 className="w-full h-full object-cover"
                                 controls
                                 autoPlay
+                                playsInline
+                                muted
+                                preload="auto"
+                                onPlay={(e) => {
+                                  e.currentTarget.muted = false;
+                                }}
                               />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">

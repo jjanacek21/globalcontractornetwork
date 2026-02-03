@@ -380,6 +380,12 @@ export function SessionFeed({ userId, isOpen, onClose }: SessionFeedProps) {
                               className="w-full h-full object-cover"
                               controls
                               autoPlay
+                              playsInline
+                              muted
+                              preload="auto"
+                              onPlay={(e) => {
+                                e.currentTarget.muted = false;
+                              }}
                             />
                           ) : (
                             <>
