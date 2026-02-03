@@ -264,9 +264,12 @@ export function FeedPostComposer({
           .from('field_sessions')
           .insert({
             user_id: userId,
-            status: 'completed',
             started_at: new Date().toISOString(),
             ended_at: new Date().toISOString(),
+            is_active: false,
+            total_doors: 0,
+            total_points: 0,
+            status: 'completed',
             goals_doors: 0,
             goals_leads: 0
           })
