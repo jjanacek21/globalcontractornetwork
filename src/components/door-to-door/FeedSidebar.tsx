@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { 
   Video, Target, Clock, Home, Users, Zap, TrendingUp, 
-  Bell, ChevronUp, X, Sparkles, ChevronLeft, ChevronRight 
+  Bell, ChevronUp, X, Sparkles, MessageSquare
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ interface FeedPost {
   profile?: {
     first_name: string | null;
     last_name: string | null;
+    avatar_url: string | null;
   };
   reactions: { reaction_type: string; count: number }[];
   userReaction?: string;
@@ -51,7 +52,7 @@ const VIDEO_TYPE_CONFIG = {
   homeowner: { icon: Users, label: 'HO', color: 'bg-green-500', multiplier: '3x' }
 };
 
-type FeedTab = 'following' | 'trending';
+type FeedTab = 'following' | 'team' | 'trending';
 
 export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -59,7 +60,38 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FeedTab>('following');
   const [newPostsCount, setNewPostsCount] = useState(0);
+  const [teamMemberIds, setTeamMemberIds] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch team members for "My Team" tab
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (!userId) return;
+      
+      try {
+        // Get user's company
+        const { data: membership } = await supabase
+          .from('company_members')
+          .select('company_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (membership?.company_id) {
+          // Get all team member IDs
+          const { data: teamMembers } = await supabase
+            .from('company_members')
+            .select('user_id')
+            .eq('company_id', membership.company_id);
+
+          setTeamMemberIds((teamMembers || []).map(m => m.user_id));
+        }
+      } catch (err) {
+        console.error('Error fetching team members:', err);
+      }
+    };
+
+    fetchTeamMembers();
+  }, [userId]);
 
   const fetchPosts = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
@@ -68,6 +100,11 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
         .from('session_feed_posts')
         .select('*')
         .limit(30);
+      
+      // Apply tab-specific filtering
+      if (activeTab === 'team' && teamMemberIds.length > 0) {
+        query = query.in('user_id', teamMemberIds);
+      }
       
       if (activeTab === 'trending') {
         query = query.order('points_earned', { ascending: false });
@@ -82,10 +119,10 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
       const userIds = [...new Set((postsData || []).map(p => p.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, avatar_url')
         .in('id', userIds);
 
-      const profilesMap = new Map<string, { id: string; first_name: string | null; last_name: string | null }>(
+      const profilesMap = new Map<string, { id: string; first_name: string | null; last_name: string | null; avatar_url: string | null }>(
         (profilesData || []).map(p => [p.id, p])
       );
 
@@ -116,7 +153,8 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
             video_type: post.video_type as 'goal' | 'progress' | 'roof' | 'homeowner',
             profile: profile ? {
               first_name: profile.first_name,
-              last_name: profile.last_name
+              last_name: profile.last_name,
+              avatar_url: profile.avatar_url
             } : undefined,
             reactions: reactionCounts,
             userReaction,
@@ -158,7 +196,7 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
         supabase.removeChannel(channel);
       };
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeTab, teamMemberIds]);
 
   const handleReaction = async (postId: string, reactionType: string) => {
     if (!userId) return;
@@ -195,30 +233,27 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
 
   return (
     <>
-      {/* Toggle Button - Always visible */}
+      {/* Toggle Button - Chat icon with notification badge */}
       <motion.button
         onClick={onToggle}
         className={cn(
-          "fixed z-50 bg-card border shadow-lg rounded-l-xl p-2 transition-all hover:bg-accent",
-          isOpen ? "right-80 md:right-96" : "right-0"
+          "fixed z-50 bg-card border shadow-lg rounded-l-xl p-2.5 transition-all hover:bg-accent",
+          isOpen ? "right-80 md:right-96" : "right-0",
+          !isOpen && newPostsCount > 0 && "animate-pulse ring-2 ring-primary shadow-primary/30"
         )}
         style={{ top: '50%', transform: 'translateY(-50%)' }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        <div className="flex flex-col items-center gap-1">
-          {isOpen ? (
-            <ChevronRight className="w-5 h-5" />
-          ) : (
-            <>
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <ChevronLeft className="w-4 h-4" />
-            </>
-          )}
+        <div className="relative">
+          <MessageSquare className={cn(
+            "w-5 h-5",
+            newPostsCount > 0 ? "text-primary" : "text-muted-foreground"
+          )} />
           {!isOpen && newPostsCount > 0 && (
-            <Badge variant="destructive" className="text-xs px-1.5 py-0">
-              {newPostsCount}
-            </Badge>
+            <span className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center animate-bounce font-bold">
+              {newPostsCount > 9 ? '9+' : newPostsCount}
+            </span>
           )}
         </div>
       </motion.button>
@@ -237,7 +272,7 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
             <div className="flex items-center justify-between p-3 border-b bg-background/80">
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <MessageSquare className="w-5 h-5 text-primary" />
                   <Sparkles className="w-3 h-3 text-amber-500 absolute -top-1 -right-1" />
                 </div>
                 <h2 className="font-bold">Live Feed</h2>
@@ -247,17 +282,21 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
               </Button>
             </div>
 
-            {/* Tabs */}
+            {/* Tabs - 3 columns: All, My Team, Hot */}
             <div className="px-3 pt-2 pb-1 bg-background/60">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FeedTab)}>
-                <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsList className="grid w-full grid-cols-3 h-8">
                   <TabsTrigger value="following" className="text-xs">
                     <Bell className="w-3 h-3 mr-1" />
-                    Following
+                    All
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="text-xs">
+                    <Users className="w-3 h-3 mr-1" />
+                    My Team
                   </TabsTrigger>
                   <TabsTrigger value="trending" className="text-xs">
                     <TrendingUp className="w-3 h-3 mr-1" />
-                    Trending
+                    Hot
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -274,7 +313,7 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                   className="mx-3 mt-2 bg-primary text-primary-foreground px-3 py-1.5 rounded-full shadow flex items-center justify-center gap-1.5 text-sm hover:bg-primary/90"
                 >
                   <ChevronUp className="w-3 h-3" />
-                  {newPostsCount} new
+                  {newPostsCount} new {newPostsCount === 1 ? 'post' : 'posts'}
                 </motion.button>
               )}
             </AnimatePresence>
@@ -289,15 +328,19 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                 ) : posts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Video className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No updates yet</p>
+                    <p className="text-sm">
+                      {activeTab === 'team' ? 'No team updates yet' : 'No updates yet'}
+                    </p>
                   </div>
                 ) : (
                   posts.map((post, index) => {
                     const config = VIDEO_TYPE_CONFIG[post.video_type] || VIDEO_TYPE_CONFIG.progress;
-                    const Icon = config.icon;
                     const doorsProgress = post.goals_doors ? (post.doors_knocked / post.goals_doors) * 100 : 0;
                     const leadsProgress = post.goals_leads ? (post.leads_gotten / post.goals_leads) * 100 : 0;
                     const showMultiplier = post.video_type === 'roof' || post.video_type === 'homeowner';
+                    const overallProgress = post.goals_doors 
+                      ? Math.round((doorsProgress + leadsProgress) / 2) 
+                      : 0;
 
                     return (
                       <motion.div 
@@ -305,12 +348,13 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className="bg-card rounded-lg border shadow-sm p-3 space-y-2"
+                        className="bg-card rounded-lg border shadow-sm p-3 space-y-2.5"
                       >
-                        {/* Header - Compact */}
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                        {/* Header with Avatar */}
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="w-10 h-10 ring-2 ring-background">
+                            <AvatarImage src={post.profile?.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                               {post.profile?.first_name?.[0] || 'U'}
                               {post.profile?.last_name?.[0] || ''}
                             </AvatarFallback>
@@ -318,14 +362,14 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-medium text-sm truncate">
-                                {post.profile?.first_name || 'User'}
+                                {post.profile?.first_name || 'User'} {post.profile?.last_name?.[0] ? `${post.profile.last_name[0]}.` : ''}
                               </p>
                               <Badge variant="secondary" className={`${config.color} text-white text-[10px] px-1.5 py-0`}>
                                 {config.label}
                               </Badge>
                               {showMultiplier && (
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500 text-amber-600">
-                                  {config.multiplier}
+                                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] px-1.5 py-0 border-0">
+                                  {config.multiplier} BONUS
                                 </Badge>
                               )}
                             </div>
@@ -333,25 +377,56 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                               {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 rounded-full">
-                            <Zap className="w-3 h-3 text-amber-500" />
-                            <span className="font-bold text-xs text-amber-600">+{post.points_earned}</span>
+                          <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full">
+                            <Zap className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="font-bold text-sm text-amber-600">+{post.points_earned}</span>
                           </div>
                         </div>
 
-                        {/* Progress Bars - Compact */}
+                        {/* Enhanced Goal Panel */}
                         {post.goals_doors && (
-                          <div className="bg-muted/40 rounded p-2 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <Home className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <Progress value={Math.min(doorsProgress, 100)} className="h-1.5 flex-1" />
-                              <span className="text-[10px] font-medium w-10 text-right">{post.doors_knocked}/{post.goals_doors}</span>
+                          <div className="bg-gradient-to-r from-muted/60 to-muted/40 rounded-lg p-3 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium flex items-center gap-1.5">
+                                <Target className="w-3.5 h-3.5 text-primary" />
+                                Goals Progress
+                              </span>
+                              <span className="text-xs text-muted-foreground font-medium">
+                                {overallProgress}% complete
+                              </span>
                             </div>
+                            
+                            {/* Doors Progress */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-muted-foreground flex items-center gap-1">
+                                  <Home className="w-3 h-3" /> Doors
+                                </span>
+                                <span className="font-semibold text-amber-600">
+                                  {post.doors_knocked}/{post.goals_doors}
+                                </span>
+                              </div>
+                              <Progress 
+                                value={Math.min(doorsProgress, 100)} 
+                                className="h-2 [&>div]:bg-gradient-to-r [&>div]:from-amber-400 [&>div]:to-amber-600" 
+                              />
+                            </div>
+                            
+                            {/* Leads Progress */}
                             {post.goals_leads && (
-                              <div className="flex items-center gap-2">
-                                <Users className="w-3 h-3 text-muted-foreground shrink-0" />
-                                <Progress value={Math.min(leadsProgress, 100)} className="h-1.5 flex-1 [&>div]:bg-green-500" />
-                                <span className="text-[10px] font-medium text-green-600 w-10 text-right">{post.leads_gotten}/{post.goals_leads}</span>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Users className="w-3 h-3" /> Leads
+                                  </span>
+                                  <span className="font-semibold text-green-600">
+                                    {post.leads_gotten}/{post.goals_leads}
+                                  </span>
+                                </div>
+                                <Progress 
+                                  value={Math.min(leadsProgress, 100)} 
+                                  className="h-2 [&>div]:bg-gradient-to-r [&>div]:from-green-400 [&>div]:to-green-600" 
+                                />
                               </div>
                             )}
                           </div>
@@ -360,7 +435,7 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                         {/* Video Thumbnail */}
                         {post.video_url && (
                           <div 
-                            className="relative aspect-video bg-muted rounded overflow-hidden cursor-pointer group"
+                            className="relative aspect-video bg-muted rounded-lg overflow-hidden cursor-pointer group"
                             onClick={() => setActiveVideoId(activeVideoId === post.id ? null : post.id)}
                           >
                             {activeVideoId === post.id ? (
@@ -371,37 +446,45 @@ export function FeedSidebar({ userId, isOpen, onToggle }: FeedSidebarProps) {
                                 autoPlay
                               />
                             ) : (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40">
-                                <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                  <Video className="w-4 h-4 text-primary" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                  <Video className="w-5 h-5 text-primary ml-0.5" />
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* Reactions - Compact */}
-                        <div className="flex items-center gap-1 pt-1">
-                          {REACTION_TYPES.slice(0, 4).map((emoji) => {
+                        {/* All 6 Emoji Reactions */}
+                        <div className="flex items-center gap-1 pt-1 flex-wrap">
+                          {REACTION_TYPES.map((emoji) => {
                             const reaction = post.reactions.find(r => r.reaction_type === emoji);
                             const isSelected = post.userReaction === emoji;
                             return (
-                              <button
+                              <motion.button
                                 key={emoji}
                                 onClick={() => handleReaction(post.id, emoji)}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 className={cn(
-                                  "px-1.5 py-0.5 rounded text-sm transition-all hover:scale-105",
-                                  isSelected ? 'bg-primary/20 ring-1 ring-primary' : reaction?.count ? 'bg-muted' : 'hover:bg-muted'
+                                  "px-2 py-1 rounded-lg text-sm transition-all",
+                                  isSelected 
+                                    ? 'bg-primary/20 ring-1 ring-primary shadow-sm' 
+                                    : reaction?.count 
+                                      ? 'bg-muted hover:bg-muted/80' 
+                                      : 'hover:bg-muted/60'
                                 )}
                               >
                                 {emoji}
-                                {reaction?.count ? <span className="ml-0.5 text-[10px]">{reaction.count}</span> : null}
-                              </button>
+                                {reaction?.count ? (
+                                  <span className="ml-0.5 text-[10px] font-medium">{reaction.count}</span>
+                                ) : null}
+                              </motion.button>
                             );
                           })}
                           {post.totalReactions > 0 && (
-                            <span className="text-[10px] text-muted-foreground ml-auto">
-                              {post.totalReactions}
+                            <span className="text-[10px] text-muted-foreground ml-auto font-medium">
+                              {post.totalReactions} reactions
                             </span>
                           )}
                         </div>
