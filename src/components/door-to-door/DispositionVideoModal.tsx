@@ -245,6 +245,27 @@ export function DispositionVideoModal({
 
       if (dbError) throw dbError;
 
+      // Also post to global feed for high-value dispositions
+      const locationEmoji = locationType === 'roof' ? '🏠' : locationType === 'homeowner' ? '🤝' : '📍';
+      const { error: feedError } = await supabase
+        .from('session_feed_posts')
+        .insert({
+          session_id: effectiveSessionId,
+          user_id: userId,
+          video_url: urlData.publicUrl,
+          video_type: locationType,
+          post_type: 'video',
+          content: `${dispositionConfig?.label || disposition} at ${propertyAddress || 'a property'}! ${locationEmoji}`,
+          points_earned: calculatedPoints,
+          doors_knocked: 1,
+          leads_gotten: 1,
+        });
+
+      if (feedError) {
+        console.error('Feed post error:', feedError);
+        // Don't throw - the main save succeeded
+      }
+
       toast({
         title: `+${calculatedPoints} Points!`,
         description: `${selectedLocation.label} verification recorded successfully.`,
