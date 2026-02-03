@@ -1,108 +1,96 @@
 
-# Add Video Verification for High-Value Dispositions
+# Fix Video Playback in Global Chat Feed
 
 ## Problem
 
-When users tap **Inspect**, **Lead**, or **Won** buttons in Door to Door World, the disposition saves immediately without prompting for a video verification. The user expects to be asked to record a video showing their location (ground level, on the roof, or with the homeowner) to earn point multipliers (1x, 2x, or 3x).
+Videos in the Door to Door World Live Feed are not playing. This is caused by missing browser-compatibility attributes on the `<video>` elements, particularly affecting iOS Safari and mobile browsers which have stricter autoplay policies.
 
-## Solution Overview
+## Root Cause
 
-Create a new **Disposition Video Verification Modal** that:
-1. Opens when users select high-value dispositions (`inspected`, `canvass_lead`, `won`)
-2. Lets users choose their video type: Standard (1x), Roof (2x), or Homeowner (3x)
-3. Records and uploads the video
-4. Awards multiplied points based on video location
-5. Then saves the disposition
-
-## Implementation Details
-
-### Step 1: Create DispositionVideoModal Component
-
-Create a new component `src/components/door-to-door/DispositionVideoModal.tsx` that:
-- Accepts disposition type, base points, and callback props
-- Shows location selection (Standard/Roof/Homeowner) with point multipliers
-- Handles video recording with camera access
-- Uploads to Supabase storage `door-to-door-videos` bucket
-- Saves record to `session_progress_videos` table with video type
-- Returns the final points earned
-
-**Key Features:**
-- 5-second minimum video duration
-- Back camera preferred for proof-of-location
-- Point multipliers: Standard (1x), Roof (2x), Homeowner (3x)
-- Auto-post to session feed for visibility
-
-### Step 2: Define High-Value Dispositions
-
-```text
-HIGH_VALUE_DISPOSITIONS = ['inspected', 'canvass_lead', 'won']
+Both `SessionFeed.tsx` and `FeedSidebar.tsx` render videos with:
+```tsx
+<video
+  src={post.video_url}
+  controls
+  autoPlay  // ❌ Blocked by browsers without muted
+/>
 ```
 
-Base points from `DispositionQuickBar.tsx`:
-- `inspected`: 100 pts (can earn up to 300 pts with 3x)
-- `canvass_lead`: 25 pts (can earn up to 75 pts with 3x)  
-- `won`: 200 pts (can earn up to 600 pts with 3x)
+**Missing critical attributes:**
+- `playsInline` - Required for iOS Safari inline playback (without this, iOS tries to fullscreen)
+- `muted` - Required for autoplay to work on most browsers
+- `preload="auto"` - Helps with faster video start
 
-### Step 3: Update PropertySidePanel
+## Solution
 
-Modify `handleDispositionSelect` in `PropertySidePanel.tsx`:
+Update video elements in both components with proper attributes and add a muted autoplay fallback pattern.
 
-```text
-Current Flow:
-  User taps disposition → Save immediately
+### Files to Update
 
-New Flow:
-  User taps disposition
-    → If high-value disposition:
-        → Open DispositionVideoModal
-        → User records video with location type
-        → Award multiplied points
-        → Save disposition
-    → Else:
-        → Save immediately (unchanged)
+**1. `src/components/door-to-door/FeedSidebar.tsx`** (lines 486-506)
+
+Update the video element:
+```tsx
+{activeVideoId === post.id ? (
+  <video
+    src={post.video_url}
+    className="w-full h-full object-cover"
+    controls
+    autoPlay
+    playsInline      // ✅ Required for iOS inline playback
+    muted            // ✅ Required for autoplay
+    preload="auto"   // ✅ Faster load
+    onPlay={(e) => {
+      // Attempt to unmute after play starts
+      const video = e.currentTarget;
+      video.muted = false;
+    }}
+  />
+) : (
+  // ... thumbnail remains the same
+)}
 ```
 
-### Step 4: State Management
+**2. `src/components/door-to-door/SessionFeed.tsx`** (lines 377-383)
 
-Add to `PropertySidePanel.tsx`:
-- `showDispositionVideo: boolean` - controls modal visibility
-- `pendingDisposition: PropertyDisposition | null` - stores disposition awaiting video
-- `onVideoComplete` callback - saves disposition after successful video
-
-### Step 5: Database Integration
-
-The video will be saved to:
-- **Storage**: `door-to-door-videos` bucket (already exists)
-- **Table**: `session_progress_videos` with fields:
-  - `video_type`: 'standard' | 'roof' | 'homeowner'
-  - `points_multiplier`: 1.0 | 2.0 | 3.0
-  - `points_awarded`: calculated points
-
-## Component Structure
-
-```text
-PropertySidePanel
-  └── DispositionQuickBar (existing)
-  └── DispositionVideoModal (new)
-        ├── Location Selection (Standard/Roof/Homeowner radio)
-        ├── Video Recording Interface
-        ├── Preview & Upload Controls
-        └── Points Display with Multiplier
+Apply the same fix:
+```tsx
+<video
+  src={post.video_url}
+  className="w-full h-full object-cover"
+  controls
+  autoPlay
+  playsInline
+  muted
+  preload="auto"
+  onPlay={(e) => {
+    const video = e.currentTarget;
+    video.muted = false;
+  }}
+/>
 ```
 
-## User Experience
+## Technical Details
 
-1. User taps **Inspect** on a property
-2. Modal opens: "Verify Your Location for Bonus Points!"
-3. User selects: "On the Roof" (2x multiplier)
-4. User records 5+ second video showing roof
-5. Video uploads, user sees "+200 Points!" (100 base × 2x)
-6. Property saves as `inspected` with video verification
+| Attribute | Purpose | Browser Impact |
+|-----------|---------|----------------|
+| `playsInline` | Prevents iOS from forcing fullscreen | iOS Safari |
+| `muted` | Allows autoplay without user gesture | All browsers |
+| `preload="auto"` | Buffers video for faster playback | All browsers |
+| `onPlay` unmute | Attempts to unmute after autoplay starts | User experience |
 
-## Technical Notes
+### Autoplay Policy Workaround
 
-- Video recording uses `getUserMedia` directly in click handler (Safari compatibility)
-- Back camera (`facingMode: 'environment'`) for proof videos
-- 5-second minimum enforced before stop button is enabled
-- Graceful fallback if user skips video (saves with 1x points, no video)
-- Works with or without active field session
+The fix uses the pattern recommended in the stack overflow solution:
+1. Video starts muted (allowed by all browsers)
+2. On successful play, attempt to unmute
+3. Controls are visible so user can unmute if needed
+
+## Expected Outcome
+
+After this fix:
+1. Videos will play inline on iOS Safari (no fullscreen takeover)
+2. Videos will autoplay when clicked (muted initially)
+3. Sound will attempt to enable automatically after playback starts
+4. User can always unmute via video controls if needed
+5. Works on desktop and mobile browsers
