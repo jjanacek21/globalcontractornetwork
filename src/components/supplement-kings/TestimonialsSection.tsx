@@ -63,13 +63,13 @@ export function TestimonialsSection() {
   };
 
   return (
-    <section id="testimonials" className="py-20 bg-slate-900/50">
+    <section id="testimonials" className="py-20 bg-gray-50">
       <div className="container">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             Contractor Success Stories
           </h2>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             See how we've helped contractors across Florida maximize their insurance claim settlements
           </p>
         </div>
@@ -77,23 +77,23 @@ export function TestimonialsSection() {
         {/* Video Testimonials */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {videoTestimonials.map((testimonial) => (
-            <Card key={testimonial.id} className="bg-slate-800/50 border-slate-700 hover:border-blue-500/50 transition-colors overflow-hidden">
-              <div className="aspect-video bg-slate-700 relative flex items-center justify-center">
+            <Card key={testimonial.id} className="bg-white border-gray-200 hover:border-emerald-500/50 shadow-sm hover:shadow-md transition-all overflow-hidden">
+              <div className="aspect-video bg-gray-100 relative flex items-center justify-center">
                 <Button 
                   size="icon" 
-                  className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700"
+                  className="h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-700"
                 >
                   <Play className="h-6 w-6 text-white ml-1" />
                 </Button>
-                <div className="absolute bottom-2 right-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                <div className="absolute bottom-2 right-2 bg-emerald-600 text-white text-xs font-semibold px-2 py-1 rounded">
                   {testimonial.growth}
                 </div>
               </div>
               <CardContent className="p-4">
-                <p className="text-sm text-slate-300 mb-3 line-clamp-2">"{testimonial.quote}"</p>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">"{testimonial.quote}"</p>
                 <div>
-                  <p className="font-semibold text-white">{testimonial.name}</p>
-                  <p className="text-xs text-slate-400">{testimonial.role}, {testimonial.company}</p>
+                  <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                  <p className="text-xs text-gray-500">{testimonial.role}, {testimonial.company}</p>
                 </div>
               </CardContent>
             </Card>
@@ -103,19 +103,19 @@ export function TestimonialsSection() {
         {/* Google/Facebook Reviews Carousel */}
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
-            <h3 className="text-xl font-semibold text-white mb-2">What Our Clients Say</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">What Our Clients Say</h3>
             <div className="flex items-center justify-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="h-5 w-5 fill-yellow-500 text-yellow-500" />
               ))}
-              <span className="text-slate-400 ml-2">4.9/5 from 200+ reviews</span>
+              <span className="text-gray-500 ml-2">4.9/5 from 200+ reviews</span>
             </div>
           </div>
 
-          <Card className="bg-slate-800/50 border-slate-700 relative">
+          <Card className="bg-white border-gray-200 shadow-sm relative">
             <CardContent className="p-8 text-center">
-              <Quote className="h-8 w-8 text-blue-500/30 mx-auto mb-4" />
-              <p className="text-lg text-slate-200 mb-6">
+              <Quote className="h-8 w-8 text-emerald-500/30 mx-auto mb-4" />
+              <p className="text-lg text-gray-700 mb-6">
                 "{googleReviews[currentReview].text}"
               </p>
               <div className="flex items-center justify-center gap-1 mb-2">
@@ -123,14 +123,14 @@ export function TestimonialsSection() {
                   <Star key={i} className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                 ))}
               </div>
-              <p className="font-semibold text-white">{googleReviews[currentReview].name}</p>
-              <p className="text-sm text-slate-400">via {googleReviews[currentReview].source}</p>
+              <p className="font-semibold text-gray-900">{googleReviews[currentReview].name}</p>
+              <p className="text-sm text-gray-500">via {googleReviews[currentReview].source}</p>
             </CardContent>
 
             <Button 
               variant="ghost" 
               size="icon" 
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
               onClick={prevReview}
             >
               <ChevronLeft className="h-6 w-6" />
@@ -138,7 +138,7 @@ export function TestimonialsSection() {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
               onClick={nextReview}
             >
               <ChevronRight className="h-6 w-6" />
@@ -152,7 +152,7 @@ export function TestimonialsSection() {
                 key={index}
                 onClick={() => setCurrentReview(index)}
                 className={`h-2 w-2 rounded-full transition-colors ${
-                  index === currentReview ? "bg-blue-500" : "bg-slate-600"
+                  index === currentReview ? "bg-emerald-500" : "bg-gray-300"
                 }`}
               />
             ))}
