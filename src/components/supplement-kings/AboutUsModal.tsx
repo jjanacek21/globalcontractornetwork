@@ -9,43 +9,43 @@ interface AboutUsModalProps {
 export function AboutUsModal({ open, onOpenChange }: AboutUsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-slate-900 border-slate-700">
+      <DialogContent className="max-w-3xl bg-white border-gray-200">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-yellow-500 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
               <Crown className="h-6 w-6 text-white" />
             </div>
-            <DialogTitle className="text-2xl text-white">About Supplement Kings</DialogTitle>
+            <DialogTitle className="text-2xl text-gray-900">About Supplement Kings</DialogTitle>
           </div>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-500">
             Learn about who we are and what we do
           </DialogDescription>
         </DialogHeader>
 
         {/* Video Placeholder */}
-        <div className="aspect-video bg-slate-800 rounded-lg flex items-center justify-center mb-6">
+        <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-6">
           <div className="text-center">
-            <Crown className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-            <p className="text-slate-400">Company Introduction Video</p>
-            <p className="text-sm text-slate-500">Coming Soon</p>
+            <Crown className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
+            <p className="text-gray-500">Company Introduction Video</p>
+            <p className="text-sm text-gray-400">Coming Soon</p>
           </div>
         </div>
 
         {/* Company Story */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-white">Our Story</h3>
-          <p className="text-slate-300">
+          <h3 className="text-xl font-semibold text-gray-900">Our Story</h3>
+          <p className="text-gray-600">
             Supplement Kings was founded by industry veterans who saw contractors consistently leaving money on the table 
             when dealing with insurance claims. With decades of combined experience in the roofing, restoration, and 
             insurance industries, we built a company dedicated to helping contractors maximize their claim settlements.
           </p>
-          <p className="text-slate-300">
+          <p className="text-gray-600">
             Today, we've helped hundreds of contractors across Florida recover millions in underpaid claims. Our team 
             of certified Xactimate estimators, field inspectors, and negotiation specialists work together to ensure 
             you get every dollar you deserve.
           </p>
 
-          <h3 className="text-xl font-semibold text-white mt-6">What Sets Us Apart</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mt-6">What Sets Us Apart</h3>
           <ul className="space-y-3">
             {[
               "24-48 hour turnaround on all estimates",
@@ -56,8 +56,8 @@ export function AboutUsModal({ open, onOpenChange }: AboutUsModalProps) {
               "Serving all 67 Florida counties"
             ].map((item, index) => (
               <li key={index} className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <span className="text-slate-300">{item}</span>
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                <span className="text-gray-600">{item}</span>
               </li>
             ))}
           </ul>

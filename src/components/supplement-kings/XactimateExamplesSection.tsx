@@ -64,80 +64,80 @@ const examples = [
 
 export function XactimateExamplesSection() {
   return (
-    <section id="examples" className="py-20">
+    <section id="examples" className="py-20 bg-white">
       <div className="container">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             Real Results: Xactimate Comparison
           </h2>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             See the difference between insurance company estimates and our comprehensive supplements
           </p>
         </div>
 
         <div className="space-y-8">
           {examples.map((example, index) => (
-            <Card key={index} className="bg-slate-800/50 border-slate-700 overflow-hidden">
-              <CardHeader className="bg-slate-800 border-b border-slate-700">
+            <Card key={index} className="bg-white border-gray-200 shadow-sm overflow-hidden">
+              <CardHeader className="bg-gray-50 border-b border-gray-200">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                  <CardTitle className="text-white">{example.property}</CardTitle>
-                  <Badge className="bg-blue-600 text-white w-fit">{example.claimType}</Badge>
+                  <CardTitle className="text-gray-900">{example.property}</CardTitle>
+                  <Badge className="bg-emerald-600 text-white w-fit">{example.claimType}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700">
+                <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200">
                   {/* State Farm */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="h-8 w-8 rounded bg-red-500/20 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-red-400" />
+                      <div className="h-8 w-8 rounded bg-red-50 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-red-500" />
                       </div>
-                      <span className="font-semibold text-slate-300">State Farm</span>
+                      <span className="font-semibold text-gray-700">State Farm</span>
                     </div>
-                    <p className="text-3xl font-bold text-red-400 mb-2">
+                    <p className="text-3xl font-bold text-red-500 mb-2">
                       ${example.statefarm.amount.toLocaleString()}
                     </p>
-                    <p className="text-sm text-slate-500 mb-3">{example.statefarm.items} line items</p>
-                    <p className="text-xs text-slate-400">{example.statefarm.notes}</p>
+                    <p className="text-sm text-gray-400 mb-3">{example.statefarm.items} line items</p>
+                    <p className="text-xs text-gray-500">{example.statefarm.notes}</p>
                   </div>
 
                   {/* Citizens */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="h-8 w-8 rounded bg-yellow-500/20 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-yellow-400" />
+                      <div className="h-8 w-8 rounded bg-yellow-50 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-yellow-500" />
                       </div>
-                      <span className="font-semibold text-slate-300">Citizens</span>
+                      <span className="font-semibold text-gray-700">Citizens</span>
                     </div>
-                    <p className="text-3xl font-bold text-yellow-400 mb-2">
+                    <p className="text-3xl font-bold text-yellow-500 mb-2">
                       ${example.citizens.amount.toLocaleString()}
                     </p>
-                    <p className="text-sm text-slate-500 mb-3">{example.citizens.items} line items</p>
-                    <p className="text-xs text-slate-400">{example.citizens.notes}</p>
+                    <p className="text-sm text-gray-400 mb-3">{example.citizens.items} line items</p>
+                    <p className="text-xs text-gray-500">{example.citizens.notes}</p>
                   </div>
 
                   {/* Supplement Kings */}
-                  <div className="p-6 bg-blue-950/30">
+                  <div className="p-6 bg-emerald-50/50">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="h-8 w-8 rounded bg-blue-500/20 flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-blue-400" />
+                      <div className="h-8 w-8 rounded bg-emerald-100 flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4 text-emerald-600" />
                       </div>
-                      <span className="font-semibold text-white">Supplement Kings</span>
+                      <span className="font-semibold text-gray-900">Supplement Kings</span>
                     </div>
-                    <p className="text-3xl font-bold text-blue-400 mb-2">
+                    <p className="text-3xl font-bold text-emerald-600 mb-2">
                       ${example.supplementKings.amount.toLocaleString()}
                     </p>
-                    <p className="text-sm text-slate-500 mb-3">{example.supplementKings.items} line items</p>
-                    <p className="text-xs text-slate-300">{example.supplementKings.notes}</p>
+                    <p className="text-sm text-gray-400 mb-3">{example.supplementKings.items} line items</p>
+                    <p className="text-xs text-gray-700">{example.supplementKings.notes}</p>
                     
-                    <div className="mt-4 pt-4 border-t border-slate-700">
-                      <div className="flex items-center gap-2 text-green-400">
+                    <div className="mt-4 pt-4 border-t border-emerald-200">
+                      <div className="flex items-center gap-2 text-emerald-600">
                         <ArrowRight className="h-4 w-4" />
                         <span className="font-semibold">
                           +${(example.supplementKings.amount - example.statefarm.amount).toLocaleString()} recovered
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         {Math.round(((example.supplementKings.amount - example.statefarm.amount) / example.statefarm.amount) * 100)}% increase from original estimate
                       </p>
                     </div>
