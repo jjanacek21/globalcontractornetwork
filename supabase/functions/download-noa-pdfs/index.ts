@@ -154,7 +154,8 @@ serve(async (req) => {
           .update({
             file_url: fileUrl,
             noa_pdf_url: fileUrl,
-            source_status: 'found',
+            source_status: 'verified',
+            is_active: true,
             updated_at: new Date().toISOString()
           })
           .eq('id', product.id);

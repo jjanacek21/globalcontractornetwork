@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   Search, RefreshCw, CheckCircle2, Edit2, Trash2, 
-  Package, ShieldCheck, Clock, FileText, Save, X
+  Package, ShieldCheck, Clock, FileText, Save, X,
+  Upload, AlertTriangle
 } from "lucide-react";
 
 interface ExtractedProduct {
@@ -64,8 +65,12 @@ const CATEGORIES = [
 
 const STATUS_FILTERS = [
   { value: "all", label: "All Status" },
-  { value: "training_extracted", label: "Pending Review" },
   { value: "verified", label: "Verified" },
+  { value: "found", label: "PDF Found" },
+  { value: "imported", label: "Imported" },
+  { value: "training_extracted", label: "Extracted" },
+  { value: "needs_manual_upload", label: "Needs Upload" },
+  { value: "pending", label: "Pending" },
 ];
 
 export default function ExtractedProductsTab() {
@@ -196,7 +201,8 @@ export default function ExtractedProductsTab() {
   const stats = {
     total: products.length,
     verified: products.filter(p => p.source_status === "verified").length,
-    pendingReview: products.filter(p => p.source_status === "training_extracted").length,
+    pendingReview: products.filter(p => !["verified", "found"].includes(p.source_status || "")).length,
+    withPdfs: products.filter(p => p.source_status === "found" || (p.source_status !== "verified" && (p as any).file_url)).length,
     hvhzApproved: products.filter(p => p.hvhz_approved).length,
   };
 
@@ -223,6 +229,34 @@ export default function ExtractedProductsTab() {
     } catch (error) {
       console.error("Error verifying product:", error);
       toast.error("Failed to verify product");
+    }
+  };
+
+  const handleBulkVerify = async () => {
+    const unverifiedWithPdfs = products.filter(
+      p => p.source_status !== "verified" && (p.source_status === "found" || p.source_status === "imported")
+    );
+    if (unverifiedWithPdfs.length === 0) {
+      toast.info("No unverified products with PDFs to verify");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("product_approvals")
+        .update({ source_status: "verified", is_active: true })
+        .in("id", unverifiedWithPdfs.map(p => p.id));
+      if (error) throw error;
+      setProducts(prev =>
+        prev.map(p =>
+          unverifiedWithPdfs.some(u => u.id === p.id)
+            ? { ...p, source_status: "verified", is_active: true }
+            : p
+        )
+      );
+      toast.success(`Verified ${unverifiedWithPdfs.length} products`);
+    } catch (error) {
+      console.error("Error bulk verifying:", error);
+      toast.error("Failed to bulk verify products");
     }
   };
 
@@ -330,10 +364,16 @@ export default function ExtractedProductsTab() {
             NOAs, FL approvals, and UL listings extracted from training packets
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchProducts}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleBulkVerify}>
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Verify All with PDFs
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchProducts}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -514,6 +554,26 @@ export default function ExtractedProductsTab() {
                           <Badge className="bg-green-100 text-green-700">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Verified
+                          </Badge>
+                        ) : product.source_status === "found" ? (
+                          <Badge className="bg-blue-100 text-blue-700">
+                            <FileText className="h-3 w-3 mr-1" />
+                            PDF Found
+                          </Badge>
+                        ) : product.source_status === "imported" ? (
+                          <Badge variant="secondary">
+                            <Upload className="h-3 w-3 mr-1" />
+                            Imported
+                          </Badge>
+                        ) : product.source_status === "training_extracted" ? (
+                          <Badge className="bg-purple-100 text-purple-700">
+                            <Package className="h-3 w-3 mr-1" />
+                            Extracted
+                          </Badge>
+                        ) : product.source_status === "needs_manual_upload" ? (
+                          <Badge className="bg-red-100 text-red-700">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Needs Upload
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-amber-600 border-amber-300">
