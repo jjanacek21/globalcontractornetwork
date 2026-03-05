@@ -5747,6 +5747,7 @@ export type Database = {
           architectural_approval: boolean | null
           architectural_approval_required: boolean | null
           assigned_expediter_id: string | null
+          bond_amount: string | null
           building_dept_id: string | null
           building_type: string | null
           city: string | null
@@ -5761,25 +5762,50 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           deck_attachment_confirmed: boolean | null
+          deck_type: string | null
+          door_count: number | null
+          door_noa: string | null
+          door_product: string | null
+          energy_code_compliant: boolean | null
+          engineer_required: boolean | null
+          existing_roof_material: string | null
           expedited: boolean | null
+          fastener_noa: string | null
           fastener_pattern_confirmed: boolean | null
+          fastener_product: string | null
           fee_actual: number | null
           fee_estimate: number | null
+          flood_zone: string | null
+          folio_number: string | null
+          frame_material: string | null
           generated_forms: Json | null
           has_exposed_ceilings: boolean | null
           has_hurricane_straps: boolean | null
           has_ponding_water: boolean | null
           hoa_approval: boolean | null
+          hvhz_protocol: string | null
           id: string
+          improvement_description: string | null
           inspection_requested: string | null
           inspection_requested_at: string | null
+          is_hvhz: boolean | null
           jurisdiction_county: string | null
+          legal_description: string | null
+          lender_address: string | null
+          lender_name: string | null
           license_numbers_json: Json | null
           missing_items_json: Json | null
+          new_roof_material: string | null
           notes: string | null
+          obstacles: string | null
+          owner_address: string | null
+          owner_city: string | null
           owner_email: string | null
+          owner_fax: string | null
           owner_name: string | null
           owner_phone: string | null
+          owner_state: string | null
+          owner_zip: string | null
           packet_status: string | null
           packet_url: string | null
           parcel_id: string | null
@@ -5794,19 +5820,36 @@ export type Database = {
           revision_requested: boolean | null
           roof_accessories: string | null
           roof_color: string | null
+          roof_covering_noa: string | null
+          roof_covering_product: string | null
+          roof_pitch: string | null
+          roof_size_sqft: number | null
+          roof_stories: number | null
           roof_type: string | null
+          roof_work_type: string | null
           scope_description: string | null
           selected_products: Json | null
           service_type: string
+          shgc: string | null
+          sliding_door_count: number | null
+          square_footage: number | null
           state: string | null
           status: string
           stripe_session_id: string | null
           structured_scope_json: Json | null
+          surety_name: string | null
           trade_data: Json | null
+          u_factor: string | null
+          underlayment_noa: string | null
+          underlayment_product: string | null
           underlayment_type: string | null
           updated_at: string
           user_id: string
           valuation: number | null
+          wind_speed_zone: string | null
+          window_count: number | null
+          window_noa: string | null
+          window_product: string | null
           year_built: number | null
           zip_code: string | null
         }
@@ -5820,6 +5863,7 @@ export type Database = {
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
+          bond_amount?: string | null
           building_dept_id?: string | null
           building_type?: string | null
           city?: string | null
@@ -5834,25 +5878,50 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           deck_attachment_confirmed?: boolean | null
+          deck_type?: string | null
+          door_count?: number | null
+          door_noa?: string | null
+          door_product?: string | null
+          energy_code_compliant?: boolean | null
+          engineer_required?: boolean | null
+          existing_roof_material?: string | null
           expedited?: boolean | null
+          fastener_noa?: string | null
           fastener_pattern_confirmed?: boolean | null
+          fastener_product?: string | null
           fee_actual?: number | null
           fee_estimate?: number | null
+          flood_zone?: string | null
+          folio_number?: string | null
+          frame_material?: string | null
           generated_forms?: Json | null
           has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
           has_ponding_water?: boolean | null
           hoa_approval?: boolean | null
+          hvhz_protocol?: string | null
           id?: string
+          improvement_description?: string | null
           inspection_requested?: string | null
           inspection_requested_at?: string | null
+          is_hvhz?: boolean | null
           jurisdiction_county?: string | null
+          legal_description?: string | null
+          lender_address?: string | null
+          lender_name?: string | null
           license_numbers_json?: Json | null
           missing_items_json?: Json | null
+          new_roof_material?: string | null
           notes?: string | null
+          obstacles?: string | null
+          owner_address?: string | null
+          owner_city?: string | null
           owner_email?: string | null
+          owner_fax?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          owner_state?: string | null
+          owner_zip?: string | null
           packet_status?: string | null
           packet_url?: string | null
           parcel_id?: string | null
@@ -5867,19 +5936,36 @@ export type Database = {
           revision_requested?: boolean | null
           roof_accessories?: string | null
           roof_color?: string | null
+          roof_covering_noa?: string | null
+          roof_covering_product?: string | null
+          roof_pitch?: string | null
+          roof_size_sqft?: number | null
+          roof_stories?: number | null
           roof_type?: string | null
+          roof_work_type?: string | null
           scope_description?: string | null
           selected_products?: Json | null
           service_type: string
+          shgc?: string | null
+          sliding_door_count?: number | null
+          square_footage?: number | null
           state?: string | null
           status?: string
           stripe_session_id?: string | null
           structured_scope_json?: Json | null
+          surety_name?: string | null
           trade_data?: Json | null
+          u_factor?: string | null
+          underlayment_noa?: string | null
+          underlayment_product?: string | null
           underlayment_type?: string | null
           updated_at?: string
           user_id: string
           valuation?: number | null
+          wind_speed_zone?: string | null
+          window_count?: number | null
+          window_noa?: string | null
+          window_product?: string | null
           year_built?: number | null
           zip_code?: string | null
         }
@@ -5893,6 +5979,7 @@ export type Database = {
           architectural_approval?: boolean | null
           architectural_approval_required?: boolean | null
           assigned_expediter_id?: string | null
+          bond_amount?: string | null
           building_dept_id?: string | null
           building_type?: string | null
           city?: string | null
@@ -5907,25 +5994,50 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           deck_attachment_confirmed?: boolean | null
+          deck_type?: string | null
+          door_count?: number | null
+          door_noa?: string | null
+          door_product?: string | null
+          energy_code_compliant?: boolean | null
+          engineer_required?: boolean | null
+          existing_roof_material?: string | null
           expedited?: boolean | null
+          fastener_noa?: string | null
           fastener_pattern_confirmed?: boolean | null
+          fastener_product?: string | null
           fee_actual?: number | null
           fee_estimate?: number | null
+          flood_zone?: string | null
+          folio_number?: string | null
+          frame_material?: string | null
           generated_forms?: Json | null
           has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
           has_ponding_water?: boolean | null
           hoa_approval?: boolean | null
+          hvhz_protocol?: string | null
           id?: string
+          improvement_description?: string | null
           inspection_requested?: string | null
           inspection_requested_at?: string | null
+          is_hvhz?: boolean | null
           jurisdiction_county?: string | null
+          legal_description?: string | null
+          lender_address?: string | null
+          lender_name?: string | null
           license_numbers_json?: Json | null
           missing_items_json?: Json | null
+          new_roof_material?: string | null
           notes?: string | null
+          obstacles?: string | null
+          owner_address?: string | null
+          owner_city?: string | null
           owner_email?: string | null
+          owner_fax?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          owner_state?: string | null
+          owner_zip?: string | null
           packet_status?: string | null
           packet_url?: string | null
           parcel_id?: string | null
@@ -5940,19 +6052,36 @@ export type Database = {
           revision_requested?: boolean | null
           roof_accessories?: string | null
           roof_color?: string | null
+          roof_covering_noa?: string | null
+          roof_covering_product?: string | null
+          roof_pitch?: string | null
+          roof_size_sqft?: number | null
+          roof_stories?: number | null
           roof_type?: string | null
+          roof_work_type?: string | null
           scope_description?: string | null
           selected_products?: Json | null
           service_type?: string
+          shgc?: string | null
+          sliding_door_count?: number | null
+          square_footage?: number | null
           state?: string | null
           status?: string
           stripe_session_id?: string | null
           structured_scope_json?: Json | null
+          surety_name?: string | null
           trade_data?: Json | null
+          u_factor?: string | null
+          underlayment_noa?: string | null
+          underlayment_product?: string | null
           underlayment_type?: string | null
           updated_at?: string
           user_id?: string
           valuation?: number | null
+          wind_speed_zone?: string | null
+          window_count?: number | null
+          window_noa?: string | null
+          window_product?: string | null
           year_built?: number | null
           zip_code?: string | null
         }
