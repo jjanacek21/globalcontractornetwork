@@ -72,6 +72,59 @@ interface FormData {
   isHVHZ: boolean;
 }
 
+/**
+ * Extract trade-specific data into flat DB columns for permit_projects.
+ * Maps RoofingFormData / WindowDoorFormData fields → dedicated columns.
+ */
+function extractTradeColumns(tradeData: TradeQuestionsData, formData: FormData): Record<string, any> {
+  const cols: Record<string, any> = {};
+  
+  // Roofing fields
+  const r = tradeData.roofing;
+  if (r) {
+    cols.roof_work_type = r.workType || null;
+    cols.roof_size_sqft = r.roofSizeUnit === 'squares' ? (r.roofSize || 0) * 100 : r.roofSize || null;
+    cols.roof_pitch = r.pitch || null;
+    cols.roof_stories = r.stories ? parseInt(r.stories) : null;
+    cols.existing_roof_material = r.existingMaterial || null;
+    cols.new_roof_material = r.newMaterial || null;
+    cols.underlayment_product = r.selectedUnderlayment?.product_name || null;
+    cols.underlayment_noa = r.selectedUnderlayment?.noa_number || null;
+    cols.roof_covering_product = r.selectedCovering?.product_name || null;
+    cols.roof_covering_noa = r.selectedCovering?.noa_number || null;
+    cols.fastener_product = r.selectedFasteners?.product_name || null;
+    cols.fastener_noa = r.selectedFasteners?.noa_number || null;
+    cols.deck_attachment_confirmed = r.deckAttachmentConfirmed || false;
+    cols.year_built = r.yearBuilt || null;
+    cols.building_type = r.buildingType || null;
+    cols.has_exposed_ceilings = r.hasExposedCeilings || false;
+    cols.has_ponding_water = r.hasPondingWater || false;
+    cols.requires_overflow_scuppers = r.requiresOverflowScuppers || false;
+    cols.obstacles = r.obstacles?.length ? r.obstacles.join(', ') : null;
+  }
+  
+  // Windows & Doors fields
+  const w = tradeData.windows_doors;
+  if (w) {
+    cols.window_count = w.windowCount || null;
+    cols.door_count = w.doorCount || null;
+    cols.sliding_door_count = w.slidingDoorCount || null;
+    cols.frame_material = w.frameMaterial || null;
+    cols.u_factor = w.uFactor ? String(w.uFactor) : null;
+    cols.shgc = w.shgc ? String(w.shgc) : null;
+    cols.window_product = w.selectedWindowProduct?.product_name || null;
+    cols.window_noa = w.selectedWindowProduct?.noa_number || null;
+    cols.door_product = w.selectedDoorProduct?.product_name || null;
+    cols.door_noa = w.selectedDoorProduct?.noa_number || null;
+    cols.engineer_required = w.requiresEngineering || false;
+  }
+  
+  // Compliance
+  cols.is_hvhz = formData.isHVHZ || false;
+  
+  return cols;
+}
+
 export default function PermitQueensNewRequest() {
   const navigate = useNavigate();
   const { createPermit, saving } = usePermitRequest();
@@ -200,6 +253,9 @@ export default function PermitQueensNewRequest() {
               pipeline_status: 'draft',
               status: 'draft',
               user_id: user.id,
+              scope_description: JSON.stringify(tradeData),
+              valuation: formData.valuation || null,
+              ...extractTradeColumns(tradeData, formData),
               selected_products: selectedMaterials.map(m => ({
                 id: m.product.id,
                 manufacturer: m.product.manufacturer,
@@ -208,7 +264,7 @@ export default function PermitQueensNewRequest() {
                 file_url: m.product.file_url,
                 category: m.category,
               })),
-            })
+            } as any)
             .select()
             .single();
           
@@ -484,6 +540,7 @@ export default function PermitQueensNewRequest() {
             pipeline_status: 'intake',
             status: 'pending',
             user_id: user.id,
+            ...extractTradeColumns(tradeData, formData),
             selected_products: selectedMaterials.map(m => ({
               id: m.product.id,
               manufacturer: m.product.manufacturer,
@@ -492,7 +549,7 @@ export default function PermitQueensNewRequest() {
               file_url: m.product.file_url,
               category: m.category,
             })),
-          })
+          } as any)
           .select()
           .single();
         
@@ -567,6 +624,9 @@ export default function PermitQueensNewRequest() {
           .update({
             complexity_tier: formData.complexity_tier,
             pipeline_status: 'intake',
+            scope_description: JSON.stringify(tradeData),
+            valuation: formData.valuation || null,
+            ...extractTradeColumns(tradeData, formData),
             selected_products: selectedMaterials.map(m => ({
               id: m.product.id,
               manufacturer: m.product.manufacturer,
@@ -575,7 +635,7 @@ export default function PermitQueensNewRequest() {
               file_url: m.product.file_url,
               category: m.category,
             })),
-          })
+          } as any)
           .eq('id', tempPermitId);
         
         if (updateError) throw updateError;
