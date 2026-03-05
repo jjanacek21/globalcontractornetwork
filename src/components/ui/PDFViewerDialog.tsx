@@ -49,6 +49,12 @@ export function PDFViewerDialog({
     return PROXY_REQUIRED_DOMAINS.some(domain => lowerUrl.includes(domain));
   }, []);
 
+  // Check if URL is a Supabase storage URL
+  const isSupabaseStorageUrl = useCallback((targetUrl: string) => {
+    if (!targetUrl) return false;
+    return targetUrl.includes('supabase.co/storage');
+  }, []);
+
   // Get domain name for display
   const getDomainName = useCallback((targetUrl: string): string => {
     try {
@@ -162,15 +168,31 @@ export function PDFViewerDialog({
             setLoading(false);
           }
         }
+      } else if (isSupabaseStorageUrl(url)) {
+        // Fetch Supabase storage signed URLs as blob to avoid sandbox/iframe issues
+        try {
+          setFetchProgress('Loading document...');
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+          const blob = await response.blob();
+          if (!cancelled) {
+            setBlobUrl(URL.createObjectURL(blob));
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error('[PDFViewerDialog] Supabase storage fetch failed:', err);
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : 'Failed to load document');
+            setLoading(false);
+          }
+        }
       } else {
-        // For non-proxy URLs, just set loading false and let iframe handle it
-        // Set a timeout to auto-complete loading
+        // For other URLs, let iframe handle it
         const timeout = setTimeout(() => {
           if (!cancelled) {
             setLoading(false);
           }
         }, 5000);
-        
         return () => clearTimeout(timeout);
       }
     };
