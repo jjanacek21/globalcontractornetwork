@@ -74,7 +74,7 @@ serve(async (req) => {
       .limit(limit);
 
     if (skipExisting) {
-      query = query.or('file_url.is.null,source_status.eq.pending');
+      query = query.or('file_url.is.null,source_status.in.(pending,imported,training_extracted,needs_manual_upload)');
     }
 
     if (noaNumbers?.length > 0) {
@@ -172,7 +172,8 @@ serve(async (req) => {
             .update({
               file_url: fileUrl,
               noa_pdf_url: fileUrl,
-              source_status: 'found',
+              source_status: 'verified',
+              is_active: true,
               updated_at: new Date().toISOString()
             })
             .eq('id', product.id);
