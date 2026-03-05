@@ -14,6 +14,7 @@ import { PermitAddressInput } from '@/components/permit-queens/PermitAddressInpu
 import { TradeQuestions, TradeQuestionsData, TradeType, getDefaultTradeData } from '@/components/permit-queens/TradeQuestions';
 import { PacketPreview } from '@/components/permit-queens/PacketPreview';
 import { PacketViewer, PacketData } from '@/components/permit-queens/PacketViewer';
+import { PacketContentsPreview } from '@/components/permit-queens/PacketContentsPreview';
 import { MissingItemsPanel } from '@/components/permit-queens/MissingItemsPanel';
 import { JurisdictionRulesPanel } from '@/components/permit-queens/JurisdictionRulesPanel';
 import { SmartDocumentUploader } from '@/components/permit-queens/SmartDocumentUploader';
@@ -1105,6 +1106,17 @@ export default function PermitQueensNewRequest() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Packet Contents Preview - Shows what will be in the packet */}
+              <PacketContentsPreview
+                jurisdictionCounty={formData.jurisdiction_county}
+                permitType={formData.permit_type || 'roofing'}
+                isHVHZ={formData.isHVHZ}
+                uploadedDocumentCount={uploadedDocuments.length}
+                selectedMaterialCount={selectedMaterials.length}
+                hasOwnerInfo={!!formData.owner_name && !!formData.owner_email}
+                hasContractorInfo={true}
+              />
 
               {/* Auto-Generated Packet Viewer */}
               {generatingPacket ? (
