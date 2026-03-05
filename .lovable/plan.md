@@ -1,48 +1,30 @@
 
 
-# Make Roof Color Preview More Realistic and 3D
+# Expand OUR_FIELDS with Roofing-Specific Fields
 
-## Overview
-Replace the flat 2D SVG house illustration with a perspective 3D-style SVG that has depth, shadows, gradients, and material-specific textures. Each house style will have a distinct 3D shape.
+## Problem
+The `OUR_FIELDS` constant in `PermitQueensAdminTemplates.tsx` only has 17 generic fields. When admins map PDF form fields to data fields, they can't map roofing-specific fields like roof size, pitch, materials, deck attachment, NOA numbers, etc. This blocks permit packet generation for roofing permits.
 
-## Approach
-Keep it as SVG (no Three.js overhead) but use 3D isometric perspective with:
-- **Depth/perspective**: Walls shown at an angle to give 3D appearance
-- **Shadows**: Drop shadows beneath the house and roof overhangs
-- **Gradients**: Roof surfaces with light/dark sides to simulate sun direction
-- **Material textures**: Shingle rows with staggered pattern, metal standing seam ridges
-- **Ambient details**: Bushes, walkway, garage, more realistic windows with shutters
+## Solution
+Expand `OUR_FIELDS` from 17 to ~65+ fields, grouped by category, covering all data the system collects. Fields are sourced from `PermitFormData` (permitFormFiller.ts), `RoofingFormData` (RoofingQuestions.tsx), `WindowDoorFormData`, and NOC-specific fields.
 
-## File to Change
-`src/components/roofing/RoofColorVisualizer.tsx` — replace the SVG block (lines 139-193) with a new 3D-perspective SVG per house style.
+## New Field Categories
 
-## SVG Design Per Style
+| Category | Fields |
+|----------|--------|
+| **Property** (existing + new) | property_address, property_unit, property_city, property_state, property_zip, folio_number, legal_description, flood_zone, wind_speed_zone |
+| **Owner** (existing + new) | owner_name, owner_address, owner_city, owner_state, owner_zip, owner_phone, owner_fax, owner_email, tenant_name |
+| **Contractor** (existing + new) | contractor_name, contractor_company, contractor_license, contractor_address, contractor_suite, contractor_city, contractor_state, contractor_zip, contractor_phone, contractor_fax, contractor_email, contractor_qualifier |
+| **Project** (existing + new) | permit_type, scope_description, work_type, valuation, square_footage, commencement_date, expiration_date |
+| **Roofing** (NEW) | roof_work_type, roof_size_sqft, roof_pitch, roof_stories, existing_roof_material, new_roof_material, underlayment_product, underlayment_noa, roof_covering_product, roof_covering_noa, fastener_product, fastener_noa, deck_type, deck_attachment_confirmed, year_built, building_type, has_exposed_ceilings, has_ponding_water, requires_overflow_scuppers, obstacles |
+| **Windows & Doors** (NEW) | window_count, door_count, sliding_door_count, frame_material, u_factor, shgc, window_product, window_noa, door_product, door_noa |
+| **NOC** (NEW) | improvement_description, lender_name, lender_address, bond_amount, surety_name |
+| **Compliance** (NEW) | is_hvhz, hvhz_protocol, energy_code_compliant, engineer_required |
+| **Auto** (existing + new) | date_today, application_number |
 
-### Ranch (default)
-- Low-profile single-story, wide house from 3/4 angle
-- Two visible wall faces (front lighter, side darker)
-- Low-pitched gable roof with overhang, two color faces (sun side / shade side)
-- Garage door on side, front door with porch
+## Rendering Enhancement
+Update the `<SelectContent>` in the mapping dialog to render fields grouped by category with `<SelectGroup>` + `<SelectLabel>` for easy scanning instead of a flat list.
 
-### Colonial
-- Two-story from 3/4 angle, taller proportions
-- Steep gable roof, dormers, symmetrical windows
-
-### Mediterranean
-- Stucco walls (warm tone), barrel tile texture on roof
-- Arched windows, terracotta accents
-
-### Modern
-- Flat/low-slope roof, large glass windows
-- Clean geometric lines, minimal overhangs
-
-## Rendering Technique
-- Use `selectedColor.hex` as the base roof fill
-- Compute a darker shade (multiply RGB by 0.75) for the shadow side of the roof
-- Add a subtle highlight gradient on the sun-facing side
-- Use `<filter>` for drop shadow beneath house
-- Shingle texture: staggered horizontal lines with slight opacity variation
-- Metal texture: vertical standing seam lines with white highlight
-
-## No functional changes — purely visual enhancement to the SVG illustration.
+## File Changed
+`src/pages/PermitQueensAdminTemplates.tsx` — expand OUR_FIELDS constant and add grouped rendering in the Select dropdown.
 
