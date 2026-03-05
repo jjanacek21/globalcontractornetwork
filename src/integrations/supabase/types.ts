@@ -5778,6 +5778,7 @@ export type Database = {
           flood_zone: string | null
           folio_number: string | null
           frame_material: string | null
+          generated_document_paths: string[] | null
           generated_forms: Json | null
           has_exposed_ceilings: boolean | null
           has_hurricane_straps: boolean | null
@@ -5894,6 +5895,7 @@ export type Database = {
           flood_zone?: string | null
           folio_number?: string | null
           frame_material?: string | null
+          generated_document_paths?: string[] | null
           generated_forms?: Json | null
           has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
@@ -6010,6 +6012,7 @@ export type Database = {
           flood_zone?: string | null
           folio_number?: string | null
           frame_material?: string | null
+          generated_document_paths?: string[] | null
           generated_forms?: Json | null
           has_exposed_ceilings?: boolean | null
           has_hurricane_straps?: boolean | null
