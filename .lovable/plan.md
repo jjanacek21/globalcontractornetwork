@@ -1,75 +1,71 @@
 
 
-# Retheme Supplement Kings to White & Green
+# Fix NOA/Product Approval Sourcing in Permit Expediting Admin
 
-## Overview
-Convert the Supplement Kings page and all its sub-components from the current dark blue/slate theme to the white background + emerald green accent theme used across other service pages (like Green Home Solutions).
+## Problem
 
-## Color Mapping
+Products imported into the `product_approvals` table (via CSV import or training packet extraction) are not being picked up by the bulk download tools because of status filter mismatches. The bulk downloader only processes products with `source_status = 'pending'` or `file_url IS NULL`, but imported products have `source_status = 'imported'` or `'training_extracted'`.
 
-| Current (Dark Blue/Slate) | New (White/Green) |
-|---|---|
-| `bg-slate-950`, `bg-slate-900` | `bg-white`, `bg-gray-50` |
-| `bg-slate-800/50` | `bg-white border-gray-200` |
-| `border-slate-700` | `border-gray-200` |
-| `text-white` | `text-gray-900` |
-| `text-slate-300`, `text-slate-400` | `text-gray-600`, `text-gray-500` |
-| `text-blue-400`, `bg-blue-600` | `text-emerald-600`, `bg-emerald-600` |
-| `from-blue-600 to-yellow-500` | `from-emerald-500 to-emerald-600` |
-| `bg-blue-500/10` | `bg-emerald-50` or `bg-emerald-500/10` |
-| `hover:border-blue-500` | `hover:border-emerald-500` |
+Additionally, successfully downloaded PDFs are marked as `source_status: 'found'` but the admin UI only shows "Verified" for `source_status = 'verified'` — everything else appears as "Pending", making it unclear which products have PDFs.
 
-## Files to Update (6 files)
+## Root Causes
 
-### 1. `src/pages/SupplementKings.tsx`
-- Root: `bg-slate-950` → `bg-white`
-- Hero gradient: emerald-based instead of blue/slate
-- All section backgrounds: white/gray-50 alternating
-- Text colors: dark text on light backgrounds
-- Buttons: emerald gradients replacing blue
-- Stats: emerald-600 instead of blue-400
-- Cards: white bg with gray borders
-- CTA section: emerald gradient border/bg
+1. **`noa-bulk-downloader` filter mismatch**: Line 77 uses `query.or('file_url.is.null,source_status.eq.pending')` which skips products with `source_status = 'imported'` or `'training_extracted'`
+2. **`download-noa-pdfs` only processes Miami-Dade external URLs**: Products without `miamidade.gov` in `file_url` are ignored
+3. **No auto-verification**: Successfully downloaded PDFs keep `source_status: 'found'` instead of being auto-verified
+4. **Admin UI status display**: Only shows binary "Verified" vs "Pending" — no distinction for "found" or "imported"
 
-### 2. `src/components/supplement-kings/SupplementKingsHeader.tsx`
-- Header bg: `bg-white border-b shadow-sm` (matching GreenHomeHeader)
-- Logo icon bg: emerald gradient
-- Nav text: `text-gray-700 hover:text-emerald-600`
-- Buttons: emerald colors
-- Mobile menu: white bg
+## Solution
 
-### 3. `src/components/supplement-kings/SupplementKingsFooter.tsx`
-- Footer bg: `bg-gray-900` (standard dark footer)
-- Accent colors: emerald replacing blue
-- Link hovers: emerald-400
+### 1. Fix `noa-bulk-downloader` filter (edge function)
 
-### 4. `src/components/supplement-kings/TestimonialsSection.tsx`
-- Section bg: `bg-gray-50`
-- Cards: white bg, gray borders
-- Text: dark on light
-- Play button: emerald
-- Stars: keep yellow
-- Review card: white bg
+Update the `skipExisting` filter to include all non-sourced statuses:
 
-### 5. `src/components/supplement-kings/XactimateExamplesSection.tsx`
-- Section bg: white
-- Cards: white bg, gray borders
-- Header text: dark
-- Supplement Kings column: emerald tint bg
-- Badge: emerald
+```sql
+-- Current (misses 'imported', 'training_extracted', 'needs_manual_upload')
+file_url.is.null,source_status.eq.pending
 
-### 6. `src/components/supplement-kings/AboutUsModal.tsx`
-- Dialog bg: white
-- Text: dark colors
-- Icon accents: emerald
-- Video placeholder: gray-100 bg
+-- Fixed (catches all un-sourced products)
+file_url.is.null,source_status.in.(pending,imported,training_extracted,needs_manual_upload)
+```
 
-## Hero Section Design
-The hero will use an emerald gradient background (matching GreenHomeHero pattern):
-- `bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900`
-- White text on dark green hero
-- Yellow accent for highlights (matching existing pattern)
-- Crown icon retained with emerald/yellow gradient
+### 2. Auto-verify on successful PDF download
 
-## No functional changes -- purely visual/CSS class swaps.
+In both `noa-bulk-downloader` and `download-noa-pdfs`, when a PDF is successfully downloaded and stored, set `source_status: 'verified'` instead of `'found'`:
+
+```typescript
+// Both edge functions: update after successful download
+.update({
+  file_url: fileUrl,
+  noa_pdf_url: fileUrl,
+  source_status: 'verified',  // was 'found'
+  is_active: true,
+  updated_at: new Date().toISOString()
+})
+```
+
+### 3. Improve admin status display in `ExtractedProductsTab`
+
+Show distinct badges for different statuses instead of binary Verified/Pending:
+
+| Status | Badge |
+|--------|-------|
+| `verified` | Green "Verified" |
+| `found` | Blue "PDF Found" |
+| `imported` | Gray "Imported" |
+| `training_extracted` | Purple "Extracted" |
+| `needs_manual_upload` | Red "Needs Upload" |
+| Other/null | Amber "Pending" |
+
+### 4. Add bulk verify action
+
+Add a "Verify All with PDFs" button to the `ExtractedProductsTab` that sets `source_status = 'verified'` for all products that have a `file_url` but aren't yet verified.
+
+## Files to Change
+
+| File | Change |
+|------|--------|
+| `supabase/functions/noa-bulk-downloader/index.ts` | Fix `skipExisting` filter to include `imported`, `training_extracted` statuses; set `source_status: 'verified'` on success |
+| `supabase/functions/download-noa-pdfs/index.ts` | Set `source_status: 'verified'` on successful download |
+| `src/components/admin/ExtractedProductsTab.tsx` | Multi-status badge display; add "Verify All with PDFs" bulk action |
 
