@@ -42,17 +42,23 @@ export function PacketContentsPreview({
       }
 
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('permit_form_templates')
           .select('id, form_name, form_type, category, trade_types, hvhz_only, requires_signature, requires_notary')
-          .or(`jurisdiction_name.ilike.%${jurisdictionCounty}%,jurisdiction_name.eq.Statewide`)
+          .or(`county.eq.${jurisdictionCounty},county.is.null`)
           .order('category');
+
+        // If not in HVHZ, exclude hvhz_only templates at DB level
+        if (!isHVHZ) {
+          query = query.eq('hvhz_only', false);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
         // Filter by trade type
         const filtered = (data || []).filter(t => {
-          if (t.hvhz_only && !isHVHZ) return false;
           if (t.trade_types && !t.trade_types.includes('*') && !t.trade_types.includes(permitType)) return false;
           return true;
         });
