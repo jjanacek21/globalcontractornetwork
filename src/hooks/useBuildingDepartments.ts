@@ -12,6 +12,7 @@ export interface BuildingDepartment {
   portal_url: string | null;
   hours: string | null;
   jurisdiction_type: string | null;
+  is_hvhz: boolean | null;
   created_at?: string;
   updated_at?: string;
   // Alias for backwards compatibility

@@ -9,22 +9,6 @@ export interface JurisdictionInfo {
   requiresHVHZProducts: boolean;
 }
 
-// HVHZ zones in Florida (coastal areas of Broward and Miami-Dade)
-const HVHZ_CITIES = [
-  'miami', 'miami beach', 'miami gardens', 'miami shores', 'miami springs',
-  'north miami', 'north miami beach', 'hialeah', 'hialeah gardens',
-  'fort lauderdale', 'hollywood', 'pembroke pines', 'miramar', 'coral springs',
-  'pompano beach', 'lauderhill', 'davie', 'plantation', 'sunrise', 'tamarac',
-  'coconut creek', 'margate', 'deerfield beach', 'lauderdale lakes',
-  'north lauderdale', 'parkland', 'weston', 'southwest ranches', 'cooper city',
-  'dania beach', 'hallandale beach', 'aventura', 'sunny isles beach', 'bal harbour',
-  'surfside', 'key biscayne', 'coral gables', 'south miami', 'pinecrest',
-  'cutler bay', 'homestead', 'florida city', 'doral', 'sweetwater', 'medley',
-  'opa-locka', 'westchester', 'kendall', 'palmetto bay', 'sunny isles',
-];
-
-const HVHZ_COUNTIES = ['broward', 'miami-dade'];
-
 export function useJurisdictionDetector() {
   const { departments, loading, getByCity, getByCounty } = useBuildingDepartments();
 
@@ -36,7 +20,7 @@ export function useJurisdictionDetector() {
     let isHVHZ = false;
     let buildingDepartment: BuildingDepartment | null = null;
 
-    // Check for city matches
+    // Check for city matches first
     for (const dept of departments) {
       if (dept.city) {
         const cityLower = dept.city.toLowerCase();
@@ -44,6 +28,7 @@ export function useJurisdictionDetector() {
           detectedCity = dept.city;
           detectedCounty = dept.county;
           buildingDepartment = dept;
+          isHVHZ = dept.is_hvhz === true;
           break;
         }
       }
@@ -55,19 +40,17 @@ export function useJurisdictionDetector() {
         const countyLower = dept.county.toLowerCase();
         if (normalizedAddress.includes(countyLower)) {
           detectedCounty = dept.county;
-          const depts = getByCounty(dept.county);
-          if (depts.length > 0) {
-            buildingDepartment = depts[0];
-            detectedCity = depts[0].city || '';
-          }
+          // Prefer the unincorporated (city=null) row for county-level match
+          const countyDept = departments.find(
+            d => d.county === dept.county && !d.city
+          ) || dept;
+          buildingDepartment = countyDept;
+          detectedCity = countyDept.city || '';
+          isHVHZ = countyDept.is_hvhz === true;
           break;
         }
       }
     }
-
-    // Check if in HVHZ
-    isHVHZ = HVHZ_CITIES.some(city => normalizedAddress.includes(city)) ||
-             HVHZ_COUNTIES.some(county => normalizedAddress.includes(county));
 
     return {
       county: detectedCounty,
@@ -91,11 +74,13 @@ export function useJurisdictionDetector() {
   };
 
   const getHVHZStatus = (county: string, city?: string): boolean => {
-    const countyLower = county.toLowerCase();
-    const cityLower = city?.toLowerCase() || '';
-    
-    return HVHZ_COUNTIES.some(c => countyLower.includes(c)) ||
-           HVHZ_CITIES.some(c => cityLower.includes(c));
+    // Look up from DB data instead of hardcoded lists
+    if (city) {
+      const dept = getByCity(city);
+      if (dept) return dept.is_hvhz === true;
+    }
+    const countyDepts = getByCounty(county);
+    return countyDepts.some(d => d.is_hvhz === true);
   };
 
   return {
