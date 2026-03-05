@@ -1,33 +1,48 @@
 
 
-# Fix Document Loading and Bulk Verify Failures
+# Make Roof Color Preview More Realistic and 3D
 
-## Two Issues Identified
+## Overview
+Replace the flat 2D SVG house illustration with a perspective 3D-style SVG that has depth, shadows, gradients, and material-specific textures. Each house style will have a distinct 3D shape.
 
-### Issue 1: PDF Viewer Fails for Supabase Signed URLs
-The screenshot shows "BCD Owner-Builder" displaying blank with a broken document icon. The `<object>` tag silently fails for Supabase storage signed URLs. The current code only uses blob-based fetching for external `.gov` domains (proxy path), but for signed URLs it relies on the `<object>` tag to render directly -- which fails silently in the sandboxed preview iframe.
+## Approach
+Keep it as SVG (no Three.js overhead) but use 3D isometric perspective with:
+- **Depth/perspective**: Walls shown at an angle to give 3D appearance
+- **Shadows**: Drop shadows beneath the house and roof overhangs
+- **Gradients**: Roof surfaces with light/dark sides to simulate sun direction
+- **Material textures**: Shingle rows with staggered pattern, metal standing seam ridges
+- **Ambient details**: Bushes, walkway, garage, more realistic windows with shutters
 
-**Fix**: For Supabase storage signed URLs, fetch the PDF as a blob and use `URL.createObjectURL()` (same approach as the proxy path) to guarantee rendering.
+## File to Change
+`src/components/roofing/RoofColorVisualizer.tsx` — replace the SVG block (lines 139-193) with a new 3D-perspective SVG per house style.
 
-**File**: `src/components/ui/PDFViewerDialog.tsx`
-- Add a check: if the URL contains `supabase.co/storage`, fetch it directly as a blob
-- Use the existing blob URL rendering path (already works for proxy)
-- Remove the 5-second timeout fallback which masks failures
+## SVG Design Per Style
 
-### Issue 2: Bulk Verify Fails - URL Too Long
-Console shows `TypeError: Failed to fetch` when clicking "Verify All with PDFs". The PATCH request includes hundreds of UUIDs in the URL query string, exceeding browser/server URL length limits (~8KB).
+### Ranch (default)
+- Low-profile single-story, wide house from 3/4 angle
+- Two visible wall faces (front lighter, side darker)
+- Low-pitched gable roof with overhang, two color faces (sun side / shade side)
+- Garage door on side, front door with porch
 
-**Fix**: Batch the update into chunks of 50 IDs at a time.
+### Colonial
+- Two-story from 3/4 angle, taller proportions
+- Steep gable roof, dormers, symmetrical windows
 
-**File**: `src/components/admin/ExtractedProductsTab.tsx`
-- In `handleBulkVerify`, split `unverifiedWithPdfs` into chunks of 50
-- Loop through chunks with sequential PATCH requests
-- Update local state after all batches complete
+### Mediterranean
+- Stucco walls (warm tone), barrel tile texture on roof
+- Arched windows, terracotta accents
 
-## Files to Change
+### Modern
+- Flat/low-slope roof, large glass windows
+- Clean geometric lines, minimal overhangs
 
-| File | Change |
-|------|--------|
-| `src/components/ui/PDFViewerDialog.tsx` | Detect Supabase storage URLs and fetch as blob instead of relying on `<object>` tag |
-| `src/components/admin/ExtractedProductsTab.tsx` | Batch bulk verify into chunks of 50 IDs |
+## Rendering Technique
+- Use `selectedColor.hex` as the base roof fill
+- Compute a darker shade (multiply RGB by 0.75) for the shadow side of the roof
+- Add a subtle highlight gradient on the sun-facing side
+- Use `<filter>` for drop shadow beneath house
+- Shingle texture: staggered horizontal lines with slight opacity variation
+- Metal texture: vertical standing seam lines with white highlight
+
+## No functional changes — purely visual enhancement to the SVG illustration.
 
