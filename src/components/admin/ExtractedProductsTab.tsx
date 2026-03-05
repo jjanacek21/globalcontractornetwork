@@ -241,11 +241,16 @@ export default function ExtractedProductsTab() {
       return;
     }
     try {
-      const { error } = await supabase
-        .from("product_approvals")
-        .update({ source_status: "verified", is_active: true })
-        .in("id", unverifiedWithPdfs.map(p => p.id));
-      if (error) throw error;
+      const ids = unverifiedWithPdfs.map(p => p.id);
+      const CHUNK_SIZE = 50;
+      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + CHUNK_SIZE);
+        const { error } = await supabase
+          .from("product_approvals")
+          .update({ source_status: "verified", is_active: true })
+          .in("id", chunk);
+        if (error) throw error;
+      }
       setProducts(prev =>
         prev.map(p =>
           unverifiedWithPdfs.some(u => u.id === p.id)
