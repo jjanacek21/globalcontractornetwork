@@ -255,43 +255,101 @@ serve(async (req) => {
         .single();
       
       if (project) {
-        // Map project fields to form fields
+        // Map project fields to form fields — covers ALL OUR_FIELDS categories
         mergedData = {
           ...mergedData,
+          // Property
           property_address: project.property_address,
+          property_unit: project.property_unit,
           property_city: project.city,
-          property_state: 'FL',
+          property_state: project.state || 'FL',
           property_zip: project.zip_code,
           property_county: project.county || project.jurisdiction_county,
-          owner_name: project.owner_name || project.customer_name,
-          owner_phone: project.owner_phone || project.customer_phone,
-          owner_email: project.owner_email || project.customer_email,
-          owner_address: project.owner_address,
-          pcn: project.pcn || project.folio_number,
+          folio_number: project.folio_number || project.parcel_id,
           legal_description: project.legal_description,
+          flood_zone: project.flood_zone,
+          wind_speed_zone: project.wind_speed_zone,
+
+          // Owner
+          owner_name: project.owner_name || project.customer_name,
+          owner_address: project.owner_address,
+          owner_city: project.owner_city,
+          owner_state: project.owner_state,
+          owner_zip: project.owner_zip,
+          owner_phone: project.owner_phone || project.customer_phone,
+          owner_fax: project.owner_fax,
+          owner_email: project.owner_email || project.customer_email,
+          tenant_name: project.tenant_name,
+
+          // Project
           permit_type: project.permit_type || project.service_type,
-          work_description: project.scope_of_work || project.scope_description,
-          valuation: project.estimated_value || project.valuation,
-          square_footage: project.roof_square_footage || project.square_footage,
-          building_use: project.building_use || 'Residential',
-          roof_slope: project.roof_slope,
-          mean_roof_height: project.mean_roof_height,
+          scope_description: project.scope_description,
+          work_description: project.scope_description,
+          work_type: project.roof_work_type || 'repair',
+          valuation: project.valuation,
+          square_footage: project.square_footage || project.roof_size_sqft,
+          commencement_date: project.commencement_date,
+          expiration_date: project.expiration_date,
+
+          // Roofing
+          roof_work_type: project.roof_work_type,
+          roof_size_sqft: project.roof_size_sqft,
+          roof_pitch: project.roof_pitch,
+          roof_stories: project.roof_stories,
+          existing_roof_material: project.existing_roof_material,
+          new_roof_material: project.new_roof_material || project.roof_type,
+          underlayment_product: project.underlayment_product || project.underlayment_type,
+          underlayment_noa: project.underlayment_noa,
+          roof_covering_product: project.roof_covering_product,
+          roof_covering_noa: project.roof_covering_noa,
+          fastener_product: project.fastener_product,
+          fastener_noa: project.fastener_noa,
           deck_type: project.deck_type,
-          existing_roof_type: project.existing_roof_type,
-          new_roof_type: project.new_roof_type || project.material_type,
-          underlayment_product: project.underlayment_product,
-          is_hoa: project.is_hoa,
-          hoa_name: project.hoa_name,
-          // Section 1524 fields
+          deck_attachment_confirmed: project.deck_attachment_confirmed,
           year_built: project.year_built,
           building_type: project.building_type,
           has_exposed_ceilings: project.has_exposed_ceilings,
           has_ponding_water: project.has_ponding_water,
           requires_overflow_scuppers: project.requires_overflow_scuppers,
-          deck_attachment_confirmed: project.deck_attachment_confirmed,
           fastener_pattern_confirmed: project.fastener_pattern_confirmed,
+          obstacles: project.obstacles,
+
+          // Windows & Doors
+          window_count: project.window_count,
+          door_count: project.door_count,
+          sliding_door_count: project.sliding_door_count,
+          frame_material: project.frame_material,
+          u_factor: project.u_factor,
+          shgc: project.shgc,
+          window_product: project.window_product,
+          window_noa: project.window_noa,
+          door_product: project.door_product,
+          door_noa: project.door_noa,
+
+          // NOC
+          improvement_description: project.improvement_description,
+          lender_name: project.lender_name,
+          lender_address: project.lender_address,
+          bond_amount: project.bond_amount,
+          surety_name: project.surety_name,
+
+          // Compliance
           is_hvhz: project.is_hvhz,
-          ...project.trade_questions, // Spread any trade-specific questions
+          hvhz_protocol: project.hvhz_protocol,
+          energy_code_compliant: project.energy_code_compliant,
+          engineer_required: project.engineer_required,
+
+          // Auto
+          date_today: new Date().toLocaleDateString('en-US'),
+          application_number: project.application_number,
+
+          // Legacy compatibility
+          pcn: project.folio_number || project.parcel_id,
+          building_use: project.building_use || 'Residential',
+          roof_slope: project.roof_pitch,
+          is_hoa: project.hoa_approval,
+
+          ...project.trade_data, // Spread any trade-specific data
         };
         
         // Auto-evaluate Section 1524 checkboxes
