@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Upload, FileText, Settings, Eye, Trash2, Plus, Crown, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,24 +40,104 @@ interface FieldMapping {
 }
 
 const OUR_FIELDS = [
+  // Property
   { id: 'property_address', label: 'Property Address', category: 'Property' },
-  { id: 'owner_name', label: 'Owner Name', category: 'Owner' },
-  { id: 'owner_address', label: 'Owner Address', category: 'Owner' },
-  { id: 'owner_phone', label: 'Owner Phone', category: 'Owner' },
-  { id: 'owner_email', label: 'Owner Email', category: 'Owner' },
-  { id: 'contractor_name', label: 'Contractor Name', category: 'Contractor' },
-  { id: 'contractor_license', label: 'Contractor License #', category: 'Contractor' },
-  { id: 'contractor_phone', label: 'Contractor Phone', category: 'Contractor' },
-  { id: 'contractor_address', label: 'Contractor Address', category: 'Contractor' },
-  { id: 'scope_description', label: 'Scope of Work', category: 'Project' },
-  { id: 'valuation', label: 'Project Valuation', category: 'Project' },
-  { id: 'permit_type', label: 'Permit Type', category: 'Project' },
+  { id: 'property_unit', label: 'Property Unit/Suite', category: 'Property' },
+  { id: 'property_city', label: 'Property City', category: 'Property' },
+  { id: 'property_state', label: 'Property State', category: 'Property' },
+  { id: 'property_zip', label: 'Property ZIP', category: 'Property' },
   { id: 'folio_number', label: 'Folio/Parcel #', category: 'Property' },
   { id: 'legal_description', label: 'Legal Description', category: 'Property' },
-  { id: 'date_today', label: 'Today\'s Date', category: 'Auto' },
+  { id: 'flood_zone', label: 'Flood Zone', category: 'Property' },
+  { id: 'wind_speed_zone', label: 'Wind Speed Zone', category: 'Property' },
+
+  // Owner
+  { id: 'owner_name', label: 'Owner Name', category: 'Owner' },
+  { id: 'owner_address', label: 'Owner Address', category: 'Owner' },
+  { id: 'owner_city', label: 'Owner City', category: 'Owner' },
+  { id: 'owner_state', label: 'Owner State', category: 'Owner' },
+  { id: 'owner_zip', label: 'Owner ZIP', category: 'Owner' },
+  { id: 'owner_phone', label: 'Owner Phone', category: 'Owner' },
+  { id: 'owner_fax', label: 'Owner Fax', category: 'Owner' },
+  { id: 'owner_email', label: 'Owner Email', category: 'Owner' },
+  { id: 'tenant_name', label: 'Tenant Name', category: 'Owner' },
+
+  // Contractor
+  { id: 'contractor_name', label: 'Contractor Name', category: 'Contractor' },
+  { id: 'contractor_company', label: 'Contractor Company/DBA', category: 'Contractor' },
+  { id: 'contractor_license', label: 'Contractor License #', category: 'Contractor' },
+  { id: 'contractor_address', label: 'Contractor Address', category: 'Contractor' },
+  { id: 'contractor_suite', label: 'Contractor Suite', category: 'Contractor' },
+  { id: 'contractor_city', label: 'Contractor City', category: 'Contractor' },
+  { id: 'contractor_state', label: 'Contractor State', category: 'Contractor' },
+  { id: 'contractor_zip', label: 'Contractor ZIP', category: 'Contractor' },
+  { id: 'contractor_phone', label: 'Contractor Phone', category: 'Contractor' },
+  { id: 'contractor_fax', label: 'Contractor Fax', category: 'Contractor' },
+  { id: 'contractor_email', label: 'Contractor Email', category: 'Contractor' },
+  { id: 'contractor_qualifier', label: 'Qualifier Name', category: 'Contractor' },
+
+  // Project
+  { id: 'permit_type', label: 'Permit Type', category: 'Project' },
+  { id: 'scope_description', label: 'Scope of Work', category: 'Project' },
+  { id: 'work_type', label: 'Work Type (New/Repair/etc)', category: 'Project' },
+  { id: 'valuation', label: 'Project Valuation', category: 'Project' },
+  { id: 'square_footage', label: 'Square Footage', category: 'Project' },
   { id: 'commencement_date', label: 'Commencement Date', category: 'Project' },
   { id: 'expiration_date', label: 'Expiration Date', category: 'Project' },
+
+  // Roofing
+  { id: 'roof_work_type', label: 'Roof Work Type', category: 'Roofing' },
+  { id: 'roof_size_sqft', label: 'Roof Size (sq ft)', category: 'Roofing' },
+  { id: 'roof_pitch', label: 'Roof Pitch', category: 'Roofing' },
+  { id: 'roof_stories', label: '# of Stories', category: 'Roofing' },
+  { id: 'existing_roof_material', label: 'Existing Roof Material', category: 'Roofing' },
+  { id: 'new_roof_material', label: 'New Roof Material', category: 'Roofing' },
+  { id: 'underlayment_product', label: 'Underlayment Product', category: 'Roofing' },
+  { id: 'underlayment_noa', label: 'Underlayment NOA #', category: 'Roofing' },
+  { id: 'roof_covering_product', label: 'Roof Covering Product', category: 'Roofing' },
+  { id: 'roof_covering_noa', label: 'Roof Covering NOA #', category: 'Roofing' },
+  { id: 'fastener_product', label: 'Fastener Product', category: 'Roofing' },
+  { id: 'fastener_noa', label: 'Fastener NOA #', category: 'Roofing' },
+  { id: 'deck_type', label: 'Deck Type', category: 'Roofing' },
+  { id: 'deck_attachment_confirmed', label: 'Deck Attachment Confirmed', category: 'Roofing' },
+  { id: 'year_built', label: 'Year Built', category: 'Roofing' },
+  { id: 'building_type', label: 'Building Type', category: 'Roofing' },
+  { id: 'has_exposed_ceilings', label: 'Has Exposed Ceilings', category: 'Roofing' },
+  { id: 'has_ponding_water', label: 'Has Ponding Water', category: 'Roofing' },
+  { id: 'requires_overflow_scuppers', label: 'Requires Overflow Scuppers', category: 'Roofing' },
+  { id: 'obstacles', label: 'Roof Obstacles', category: 'Roofing' },
+
+  // Windows & Doors
+  { id: 'window_count', label: 'Window Count', category: 'Windows & Doors' },
+  { id: 'door_count', label: 'Door Count', category: 'Windows & Doors' },
+  { id: 'sliding_door_count', label: 'Sliding Door Count', category: 'Windows & Doors' },
+  { id: 'frame_material', label: 'Frame Material', category: 'Windows & Doors' },
+  { id: 'u_factor', label: 'U-Factor', category: 'Windows & Doors' },
+  { id: 'shgc', label: 'SHGC', category: 'Windows & Doors' },
+  { id: 'window_product', label: 'Window Product', category: 'Windows & Doors' },
+  { id: 'window_noa', label: 'Window NOA #', category: 'Windows & Doors' },
+  { id: 'door_product', label: 'Door Product', category: 'Windows & Doors' },
+  { id: 'door_noa', label: 'Door NOA #', category: 'Windows & Doors' },
+
+  // NOC
+  { id: 'improvement_description', label: 'Improvement Description', category: 'NOC' },
+  { id: 'lender_name', label: 'Lender Name', category: 'NOC' },
+  { id: 'lender_address', label: 'Lender Address', category: 'NOC' },
+  { id: 'bond_amount', label: 'Bond Amount', category: 'NOC' },
+  { id: 'surety_name', label: 'Surety Name', category: 'NOC' },
+
+  // Compliance
+  { id: 'is_hvhz', label: 'Is HVHZ', category: 'Compliance' },
+  { id: 'hvhz_protocol', label: 'HVHZ Protocol', category: 'Compliance' },
+  { id: 'energy_code_compliant', label: 'Energy Code Compliant', category: 'Compliance' },
+  { id: 'engineer_required', label: 'Engineer Required', category: 'Compliance' },
+
+  // Auto
+  { id: 'date_today', label: 'Today\'s Date', category: 'Auto' },
+  { id: 'application_number', label: 'Application Number', category: 'Auto' },
 ];
+
+const FIELD_CATEGORIES = ['Property', 'Owner', 'Contractor', 'Project', 'Roofing', 'Windows & Doors', 'NOC', 'Compliance', 'Auto'];
 
 export default function PermitQueensAdminTemplates() {
   const navigate = useNavigate();
@@ -512,10 +592,15 @@ export default function PermitQueensAdminTemplates() {
                           <SelectValue placeholder="Map to..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {OUR_FIELDS.map(field => (
-                            <SelectItem key={field.id} value={field.id}>
-                              {field.label}
-                            </SelectItem>
+                          {FIELD_CATEGORIES.map(cat => (
+                            <SelectGroup key={cat}>
+                              <SelectLabel>{cat}</SelectLabel>
+                              {OUR_FIELDS.filter(f => f.category === cat).map(field => (
+                                <SelectItem key={field.id} value={field.id}>
+                                  {field.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
                           ))}
                         </SelectContent>
                       </Select>
