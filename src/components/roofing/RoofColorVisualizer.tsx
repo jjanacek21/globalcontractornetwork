@@ -4,6 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Palette, Star, Home, Building2, Check } from "lucide-react";
+import { RanchHouse } from "./house-svg/RanchHouse";
+import { ColonialHouse } from "./house-svg/ColonialHouse";
+import { MediterraneanHouse } from "./house-svg/MediterraneanHouse";
+import { ModernHouse } from "./house-svg/ModernHouse";
 
 interface ColorSwatch {
   name: string;
@@ -135,62 +139,11 @@ export const RoofColorVisualizer = () => {
                     className="aspect-[4/3] rounded-xl overflow-hidden relative border-2 border-border shadow-lg"
                     style={{ backgroundColor: selectedHouse.baseColor }}
                   >
-                    {/* Simple SVG House Illustration */}
-                    <svg viewBox="0 0 400 300" className="w-full h-full">
-                      {/* Sky */}
-                      <rect x="0" y="0" width="400" height="150" fill="#87CEEB" opacity="0.3" />
-                      
-                      {/* Ground */}
-                      <rect x="0" y="250" width="400" height="50" fill="#7cb342" opacity="0.4" />
-                      
-                      {/* House Body */}
-                      <rect x="60" y="150" width="280" height="100" fill={selectedHouse.baseColor} stroke="#333" strokeWidth="2" />
-                      
-                      {/* Roof */}
-                      <polygon 
-                        points="40,150 200,60 360,150" 
-                        fill={selectedColor.hex}
-                        stroke="#333"
-                        strokeWidth="2"
-                      />
-                      
-                      {/* Roof Texture Lines for Shingles */}
-                      {materialType === "shingles" && (
-                        <>
-                          <line x1="60" y1="130" x2="340" y2="130" stroke="#00000020" strokeWidth="1" />
-                          <line x1="75" y1="115" x2="325" y2="115" stroke="#00000020" strokeWidth="1" />
-                          <line x1="95" y1="100" x2="305" y2="100" stroke="#00000020" strokeWidth="1" />
-                          <line x1="115" y1="85" x2="285" y2="85" stroke="#00000020" strokeWidth="1" />
-                        </>
-                      )}
-                      
-                      {/* Metal Roof Lines */}
-                      {materialType === "metal" && (
-                        <>
-                          <line x1="120" y1="150" x2="160" y2="75" stroke="#ffffff30" strokeWidth="2" />
-                          <line x1="170" y1="150" x2="190" y2="68" stroke="#ffffff30" strokeWidth="2" />
-                          <line x1="220" y1="150" x2="210" y2="65" stroke="#ffffff30" strokeWidth="2" />
-                          <line x1="270" y1="150" x2="230" y2="68" stroke="#ffffff30" strokeWidth="2" />
-                          <line x1="320" y1="150" x2="255" y2="75" stroke="#ffffff30" strokeWidth="2" />
-                        </>
-                      )}
-                      
-                      {/* Door */}
-                      <rect x="175" y="190" width="50" height="60" fill="#5c4033" stroke="#333" strokeWidth="1" />
-                      <circle cx="215" cy="220" r="3" fill="#c9a959" />
-                      
-                      {/* Windows */}
-                      <rect x="90" y="180" width="50" height="40" fill="#87CEEB" stroke="#333" strokeWidth="1" />
-                      <line x1="115" y1="180" x2="115" y2="220" stroke="#333" strokeWidth="1" />
-                      <line x1="90" y1="200" x2="140" y2="200" stroke="#333" strokeWidth="1" />
-                      
-                      <rect x="260" y="180" width="50" height="40" fill="#87CEEB" stroke="#333" strokeWidth="1" />
-                      <line x1="285" y1="180" x2="285" y2="220" stroke="#333" strokeWidth="1" />
-                      <line x1="260" y1="200" x2="310" y2="200" stroke="#333" strokeWidth="1" />
-                      
-                      {/* Chimney */}
-                      <rect x="280" y="70" width="30" height="50" fill="#8b7355" stroke="#333" strokeWidth="1" />
-                    </svg>
+                    {/* 3D House Illustration */}
+                    {selectedHouse.id === "ranch" && <RanchHouse roofColor={selectedColor.hex} materialType={materialType} />}
+                    {selectedHouse.id === "colonial" && <ColonialHouse roofColor={selectedColor.hex} materialType={materialType} />}
+                    {selectedHouse.id === "mediterranean" && <MediterraneanHouse roofColor={selectedColor.hex} materialType={materialType} />}
+                    {selectedHouse.id === "modern" && <ModernHouse roofColor={selectedColor.hex} materialType={materialType} />}
                     
                     {/* Color Overlay Label */}
                     <div className="absolute bottom-3 left-3 right-3">
