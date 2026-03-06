@@ -177,6 +177,74 @@ export function ContractorsTable() {
     }
   };
 
+  const handleOpenAdminDialog = async (contractor: ContractorProfile) => {
+    if (!contractor.user_id) {
+      toast({ title: "No auth account", description: "This contractor has no linked user account", variant: "destructive" });
+      return;
+    }
+    setAdminContractor(contractor);
+    setAdminLoading(true);
+    setAdminDialogOpen(true);
+
+    try {
+      const [superRes, permitRes, companyRes] = await Promise.all([
+        supabase.from('super_admins').select('id').eq('user_id', contractor.user_id).maybeSingle(),
+        supabase.from('permit_admins').select('id').eq('user_id', contractor.user_id).maybeSingle(),
+        contractor.company_id
+          ? supabase.from('company_admins').select('id').eq('user_id', contractor.user_id).eq('company_id', contractor.company_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      setIsSuperAdmin(!!superRes.data);
+      setIsPermitAdmin(!!permitRes.data);
+      setIsCompanyAdmin(!!companyRes.data);
+    } catch {
+      toast({ title: "Error loading admin roles", variant: "destructive" });
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const handleSaveAdminRoles = async () => {
+    if (!adminContractor?.user_id) return;
+    setAdminSaving(true);
+    const userId = adminContractor.user_id;
+
+    try {
+      // Super Admin
+      const { data: existingSuper } = await supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle();
+      if (isSuperAdmin && !existingSuper) {
+        await supabase.from('super_admins').insert({ user_id: userId });
+      } else if (!isSuperAdmin && existingSuper) {
+        await supabase.from('super_admins').delete().eq('user_id', userId);
+      }
+
+      // Permit Admin
+      const { data: existingPermit } = await supabase.from('permit_admins').select('id').eq('user_id', userId).maybeSingle();
+      if (isPermitAdmin && !existingPermit) {
+        await supabase.from('permit_admins').insert({ user_id: userId });
+      } else if (!isPermitAdmin && existingPermit) {
+        await supabase.from('permit_admins').delete().eq('user_id', userId);
+      }
+
+      // Company Admin
+      if (adminContractor.company_id) {
+        const { data: existingCompany } = await supabase.from('company_admins').select('id').eq('user_id', userId).eq('company_id', adminContractor.company_id).maybeSingle();
+        if (isCompanyAdmin && !existingCompany) {
+          await supabase.from('company_admins').insert({ user_id: userId, company_id: adminContractor.company_id });
+        } else if (!isCompanyAdmin && existingCompany) {
+          await supabase.from('company_admins').delete().eq('user_id', userId).eq('company_id', adminContractor.company_id);
+        }
+      }
+
+      toast({ title: "Admin roles updated" });
+      setAdminDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error saving admin roles", description: error.message, variant: "destructive" });
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
   const handleManageFeatures = async (contractor: ContractorProfile) => {
     setSelectedContractor(contractor);
     const { data: features } = await supabase
