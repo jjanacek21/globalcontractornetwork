@@ -51,6 +51,7 @@ import PermitQueens from "./pages/PermitQueens";
 import PermitQueensAuth from "./pages/PermitQueensAuth";
 import PermitQueensDashboard from "./pages/PermitQueensDashboard";
 import PermitQueensNewRequest from "./pages/PermitQueensNewRequest";
+import PermitPacketAssembly from "./pages/PermitPacketAssembly";
 import PermitQueensRequestDetail from "./pages/PermitQueensRequestDetail";
 import PermitQueensAdminBuildingDepts from "./pages/PermitQueensAdminBuildingDepts";
 import PermitQueensAIIntelligence from "./pages/PermitQueensAIIntelligence";
@@ -204,6 +205,11 @@ const GCNRoutes = () => (
           <Route path="/permit-queens/request/:id" element={
             <ProtectedRoute redirectTo="/permit-queens/auth">
               <PermitQueensRequestDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/packet-assembly/:projectId" element={
+            <ProtectedRoute redirectTo="/permit-queens/auth">
+              <PermitPacketAssembly />
             </ProtectedRoute>
           } />
           <Route path="/permit-queens/admin/auth" element={<PermitQueensAdminAuth />} />
