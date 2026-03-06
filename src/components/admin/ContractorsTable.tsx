@@ -466,6 +466,11 @@ export function ContractorsTable() {
                       <Button size="icon" variant="ghost" onClick={() => handleManageFeatures(contractor)} title="Manage Features">
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {contractor.user_id && (
+                        <Button size="icon" variant="ghost" onClick={() => handleOpenAdminDialog(contractor)} title="Admin Access">
+                          <ShieldCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       {contractor.subscription_status === 'pending' && (
                         <Button size="icon" variant="ghost" onClick={() => handleApprove(contractor)} title="Approve">
                           <Check className="h-4 w-4 text-green-600" />
@@ -583,6 +588,59 @@ export function ContractorsTable() {
             <Button variant="outline" onClick={() => setFeatureDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveFeatures} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Access Dialog */}
+      <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              Admin Access
+            </DialogTitle>
+            <DialogDescription>
+              {adminContractor?.company_name} — {adminContractor?.first_name} {adminContractor?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          {adminLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Super Admin</p>
+                  <p className="text-xs text-muted-foreground">Full platform access</p>
+                </div>
+                <Switch checked={isSuperAdmin} onCheckedChange={setIsSuperAdmin} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Permit Admin</p>
+                  <p className="text-xs text-muted-foreground">Manage permits & forms</p>
+                </div>
+                <Switch checked={isPermitAdmin} onCheckedChange={setIsPermitAdmin} />
+              </div>
+              {adminContractor?.company_id && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Company Admin</p>
+                    <p className="text-xs text-muted-foreground">Admin for {adminContractor.company?.name || 'their company'}</p>
+                  </div>
+                  <Switch checked={isCompanyAdmin} onCheckedChange={setIsCompanyAdmin} />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAdminRoles} disabled={adminSaving || adminLoading}>
+              {adminSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save
             </Button>
           </DialogFooter>
