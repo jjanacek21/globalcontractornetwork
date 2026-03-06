@@ -1,69 +1,53 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# Admin Dashboard: User Segmentation and Admin Access Management
 
-## Root Cause
+## Summary
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+Restructure the admin dashboard so **Contractors**, **Companies**, and **Property Owners** are cleanly separated by signup type, and add admin access management (Super Admin, Permit Admin, Company Admin) directly to the Contractors tab.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+## Current Problems
+1. Property Owners table queries `profiles` with `role = 'homeowner'` — but contractors/companies who sign up may also appear if `role` is not set correctly
+2. No way to grant admin access (Super Admin, Permit Admin, Company Admin) from the Contractors tab
+3. CompanyManagementDialog doesn't show signup data like references, job photos, certifications, or insurance documents — all of which exist in the `companies` table
 
-## Fix: Two-Part Solution
+## Changes
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+### 1. ContractorsTable.tsx — Add Admin Access Dialog
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+Add a **Shield** icon button per contractor row. Opens a dialog with checkboxes:
+- **Company Admin** — inserts/removes from `company_admins` (only shown if contractor has a `company_id`)
+- **Permit Admin** — inserts/removes from `permit_admins`  
+- **Super Admin** — inserts/removes from `super_admins`
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+On open: query all three tables by `user_id` to determine current state. On save: insert or delete records accordingly.
 
-### 2. Fix incorrect source types in packet structures
+Only contractors with a `user_id` will show the Shield button (those without auth accounts cannot have admin roles).
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+### 2. CompanyManagementDialog.tsx — Show Signup Submission Data
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+Add new sections to the company view/edit dialog to display data submitted during registration:
+- **Client References** section — render `client_references` JSONB array (name, company, phone, testimonial)
+- **Job Photos** section — render `job_photos` JSONB array as image thumbnails
+- **Insurance Documents** — show links/previews for `insurance_document_url` and `workers_comp_document_url`
+- **Certifications** — render `certifications` JSONB
+- **Licenses** — render `licenses` JSONB array
+- **Directory Approval** — clear "Approve for Directory" button that sets `verification_status = 'verified'` and `verified_at = now()`
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+### 3. PropertyOwnersTable.tsx — Already Correct
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+The current query filters by `role = 'homeowner'`, which already excludes contractors. No changes needed here — the separation is already working via the `profiles.role` column.
 
-## Files to Change
+### 4. Signup Flow Verification
 
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+The existing `register-company` and `ContractorAuth` signup flows already set the correct profile role. Property owner signups set `role = 'homeowner'`. This ensures clean separation.
 
-## Key Logic Change (PermitPacketAssembly.tsx)
+## Files to Modify
 
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
+- **`src/components/admin/ContractorsTable.tsx`** — Add Shield button + Admin Access dialog with Super Admin / Permit Admin / Company Admin checkboxes
+- **`src/components/admin/CompanyManagementDialog.tsx`** — Add sections for references, job photos, insurance docs, certifications, licenses, and a "Approve for Directory" action
 
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
+## No Database Changes Needed
 
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+All tables (`super_admins`, `permit_admins`, `company_admins`, `companies` with its JSONB columns) already exist with the correct schema.
 
