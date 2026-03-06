@@ -35,6 +35,7 @@ interface PacketDocumentRowProps {
   onUpload?: (doc: PacketDocument) => void;
   onRegenerate?: (doc: PacketDocument) => void;
   onSearch?: (doc: PacketDocument) => void;
+  onSelectProduct?: (doc: PacketDocument) => void;
 }
 
 const statusConfig = {
@@ -55,7 +56,7 @@ const sourceBadges: Record<string, { label: string; variant: 'default' | 'second
   conditional: { label: 'Conditional', variant: 'outline' },
 };
 
-export function PacketDocumentRow({ document: doc, onPreview, onUpload, onRegenerate, onSearch }: PacketDocumentRowProps) {
+export function PacketDocumentRow({ document: doc, onPreview, onUpload, onRegenerate, onSearch, onSelectProduct }: PacketDocumentRowProps) {
   const config = statusConfig[doc.status] || statusConfig.missing;
   const StatusIcon = config.icon;
   const sourceBadge = sourceBadges[doc.source] || sourceBadges.user_upload;
@@ -105,10 +106,19 @@ export function PacketDocumentRow({ document: doc, onPreview, onUpload, onRegene
             )}
           </>
         )}
-        {doc.source === 'auto_source' && doc.status === 'needs_sourcing' && onSearch && (
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onSearch(doc)}>
-            <Search className="h-3.5 w-3.5" />
-          </Button>
+        {doc.source === 'auto_source' && doc.status === 'needs_sourcing' && (
+          <>
+            {onSearch && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onSearch(doc)}>
+                <Search className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {onSelectProduct && (
+              <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => onSelectProduct(doc)}>
+                Select Product
+              </Button>
+            )}
+          </>
         )}
         {doc.source === 'auto_source' && doc.status === 'ready' && onPreview && (
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onPreview(doc)}>

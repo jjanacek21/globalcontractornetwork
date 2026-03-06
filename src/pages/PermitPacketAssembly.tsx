@@ -120,7 +120,26 @@ export default function PermitPacketAssembly() {
         .eq('project_id', projectId);
 
       // Fetch selected products from project
-      const selectedProducts = (proj.selected_products as any[]) || [];
+      let productMatches = (proj.selected_products as any[]) || [];
+
+      // Fallback: auto-match from product_approvals table when no products selected
+      if (productMatches.length === 0) {
+        const { data: approvals } = await supabase
+          .from('product_approvals')
+          .select('id, manufacturer, product_name, noa_number, file_url, product_category')
+          .eq('is_active', true)
+          .not('file_url', 'is', null)
+          .limit(500);
+
+        productMatches = (approvals || []).map(a => ({
+          id: a.id,
+          manufacturer: a.manufacturer,
+          product_name: a.product_name,
+          noa_number: a.noa_number,
+          file_url: a.file_url,
+          category: a.product_category,
+        }));
+      }
 
       // Build document list from structure
       const docs: PacketDocument[] = [];
@@ -137,7 +156,6 @@ export default function PermitPacketAssembly() {
         if (item.source === 'generated') {
           status = 'ready';
         } else if (item.source === 'auto_fill') {
-          // Check if form template exists for this
           status = item.needs_signature ? 'needs_signature' : 'ready';
         } else if (item.source === 'user_upload') {
           const uploaded = uploadedDocs?.find(d => d.document_type === item.type);
@@ -148,10 +166,9 @@ export default function PermitPacketAssembly() {
             status = 'missing';
           }
         } else if (item.source === 'auto_source') {
-          // Check product approvals
-          const matchingProduct = selectedProducts.find((p: any) => {
+          const matchingProduct = productMatches.find((p: any) => {
             if (item.product_category) {
-              return (p.category || '').toLowerCase().includes(item.product_category);
+              return (p.category || p.product_category || '').toLowerCase().includes(item.product_category);
             }
             return true;
           });
@@ -164,7 +181,7 @@ export default function PermitPacketAssembly() {
             status = 'needs_sourcing';
             noaNumber = matchingProduct.noa_number;
           } else {
-            status = 'missing';
+            status = 'needs_sourcing';
           }
         } else if (item.source === 'city_specific') {
           status = 'pending';
@@ -316,6 +333,9 @@ export default function PermitPacketAssembly() {
           }}
           onDocumentUpload={(doc) => {
             toast.info(`Upload ${doc.name} from the project wizard upload step.`);
+          }}
+          onSelectProduct={(doc) => {
+            toast.info(`Select a ${doc.productCategory || 'product'} from the Product Approvals library for ${doc.name}.`);
           }}
           onRefresh={loadProjectAndStructure}
         />
