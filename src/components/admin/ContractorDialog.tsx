@@ -44,6 +44,22 @@ const CATEGORY_OPTIONS = [
   'General Contractor', 'Windows & Doors', 'Painting', 'Flooring', 'Other'
 ];
 
+const CONTRACTOR_TYPE_OPTIONS = [
+  { value: 'independent', label: 'Independent' },
+  { value: 'subcontractor', label: 'Sub-Contractor' },
+  { value: 'handyman', label: 'Handyman' },
+];
+
+interface CompanyOption {
+  id: string;
+  name: string;
+}
+
+interface TeamOption {
+  id: string;
+  name: string;
+}
+
 export function ContractorDialog({ 
   open, 
   onOpenChange, 
@@ -57,7 +73,13 @@ export function ContractorDialog({
   const [selectedSource, setSelectedSource] = useState<string>('Directory');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (open) fetchCompanies();
+  }, [open]);
 
   useEffect(() => {
     if (rawData && mode !== 'add') {
@@ -67,6 +89,25 @@ export function ContractorDialog({
       setSelectedSource('Directory');
     }
   }, [rawData, mode]);
+
+  useEffect(() => {
+    const companyId = formData.company_id;
+    if (companyId) {
+      fetchTeams(companyId);
+    } else {
+      setTeams([]);
+    }
+  }, [formData.company_id]);
+
+  const fetchCompanies = async () => {
+    const { data } = await supabase.from('companies').select('id, name').order('name');
+    setCompanies(data || []);
+  };
+
+  const fetchTeams = async (companyId: string) => {
+    const { data } = await supabase.from('teams').select('id, name').eq('company_id', companyId).order('name');
+    setTeams(data || []);
+  };
 
   const tableName = mode === 'add' 
     ? SOURCE_TABLE_MAP[selectedSource] 
@@ -78,7 +119,6 @@ export function ContractorDialog({
     setSaving(true);
     try {
       if (mode === 'add') {
-        // Insert new contractor
         let insertData: any = {};
         
         if (selectedSource === 'Directory') {
@@ -90,6 +130,9 @@ export function ContractorDialog({
             description: formData.description,
             website: formData.website,
             subscription_status: 'active',
+            company_id: formData.company_id || null,
+            team_id: formData.team_id || null,
+            contractor_type: formData.contractor_type || 'independent',
           };
         } else {
           insertData = {
@@ -110,7 +153,6 @@ export function ContractorDialog({
         if (error) throw error;
         toast({ title: "Contractor added successfully" });
       } else {
-        // Update existing
         const { error } = await supabase
           .from(tableName as any)
           .update(formData)
@@ -163,7 +205,72 @@ export function ContractorDialog({
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
+  const handleCompanyChange = (value: string) => {
+    const companyId = value === 'none' ? null : value;
+    setFormData((prev: any) => ({ ...prev, company_id: companyId, team_id: null }));
+  };
+
   const isEditable = mode === 'edit' || mode === 'add';
+
+  const renderCompanyTeamFields = () => (
+    <>
+      <Separator />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Contractor Type</Label>
+          {isEditable ? (
+            <Select value={formData.contractor_type || 'independent'} onValueChange={v => updateField('contractor_type', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CONTRACTOR_TYPE_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm capitalize">{rawData?.contractor_type || 'independent'}</p>
+          )}
+        </div>
+        <div>
+          <Label>Company</Label>
+          {isEditable ? (
+            <Select value={formData.company_id || 'none'} onValueChange={handleCompanyChange}>
+              <SelectTrigger><SelectValue placeholder="No company" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Company</SelectItem>
+                {companies.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm flex items-center gap-1">
+              <Building2 className="h-3 w-3" />
+              {rawData?.company_id ? companies.find(c => c.id === rawData.company_id)?.name || 'Unknown' : 'None'}
+            </p>
+          )}
+        </div>
+        {(formData.company_id || rawData?.company_id) && (
+          <div>
+            <Label>Team</Label>
+            {isEditable ? (
+              <Select value={formData.team_id || 'none'} onValueChange={v => updateField('team_id', v === 'none' ? null : v)}>
+                <SelectTrigger><SelectValue placeholder="No team" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Team</SelectItem>
+                  {teams.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="mt-1 text-sm">{rawData?.team_id ? teams.find(t => t.id === rawData.team_id)?.name || 'Unknown' : 'None'}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
 
   const renderDirectoryFields = () => (
     <div className="space-y-4">
@@ -223,6 +330,7 @@ export function ContractorDialog({
           <p className="mt-1 text-sm text-muted-foreground">{rawData?.description || 'No description'}</p>
         )}
       </div>
+      {renderCompanyTeamFields()}
       {mode !== 'add' && rawData && (
         <>
           <Separator />

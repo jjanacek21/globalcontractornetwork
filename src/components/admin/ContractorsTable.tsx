@@ -4,12 +4,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Eye, Edit, Trash2, Check, Users, Building2, MapPin, Shield, UserCheck, Wrench } from "lucide-react";
+import { Loader2, Search, Eye, Trash2, Check, Users, Building2, Wrench, Shield, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 
 interface ContractorProfile {
@@ -41,6 +42,16 @@ interface FeatureAccess {
   is_approved: boolean;
 }
 
+interface CompanyOption {
+  id: string;
+  name: string;
+}
+
+interface TeamOption {
+  id: string;
+  name: string;
+}
+
 const AVAILABLE_FEATURES = [
   "coating_kings",
   "green_home_solutions",
@@ -66,6 +77,16 @@ export function ContractorsTable() {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Assign company/team dialog state
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignContractor, setAssignContractor] = useState<ContractorProfile | null>(null);
+  const [assignCompanyId, setAssignCompanyId] = useState<string | null>(null);
+  const [assignTeamId, setAssignTeamId] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [assignSaving, setAssignSaving] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,10 +114,61 @@ export function ContractorsTable() {
     }
   };
 
+  const fetchCompanies = async () => {
+    const { data } = await supabase.from('companies').select('id, name').order('name');
+    setCompanies(data || []);
+  };
+
+  const fetchTeams = async (companyId: string) => {
+    const { data } = await supabase.from('teams').select('id, name').eq('company_id', companyId).order('name');
+    setTeams(data || []);
+  };
+
+  const handleOpenAssignDialog = async (contractor: ContractorProfile) => {
+    setAssignContractor(contractor);
+    setAssignCompanyId(contractor.company_id);
+    setAssignTeamId(contractor.team_id);
+    setTeams([]);
+    await fetchCompanies();
+    if (contractor.company_id) {
+      await fetchTeams(contractor.company_id);
+    }
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssignCompanyChange = async (value: string) => {
+    const companyId = value === 'none' ? null : value;
+    setAssignCompanyId(companyId);
+    setAssignTeamId(null);
+    if (companyId) {
+      await fetchTeams(companyId);
+    } else {
+      setTeams([]);
+    }
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!assignContractor) return;
+    setAssignSaving(true);
+    try {
+      const { error } = await supabase
+        .from('contractor_profiles')
+        .update({ company_id: assignCompanyId, team_id: assignTeamId })
+        .eq('id', assignContractor.id);
+
+      if (error) throw error;
+      toast({ title: "Success", description: "Company/team assignment updated" });
+      setAssignDialogOpen(false);
+      fetchContractors();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
   const handleManageFeatures = async (contractor: ContractorProfile) => {
     setSelectedContractor(contractor);
-    
-    // Fetch existing feature access
     const { data: features } = await supabase
       .from('contractor_feature_access')
       .select('*')
@@ -110,15 +182,12 @@ export function ContractorsTable() {
   const handleSaveFeatures = async () => {
     if (!selectedContractor) return;
     setSaving(true);
-
     try {
-      // Delete existing features
       await supabase
         .from('contractor_feature_access')
         .delete()
         .eq('contractor_id', selectedContractor.id);
 
-      // Insert new features
       if (selectedFeatures.length > 0) {
         const { error } = await supabase
           .from('contractor_feature_access')
@@ -128,7 +197,6 @@ export function ContractorsTable() {
             is_approved: true,
             approved_at: new Date().toISOString()
           })));
-
         if (error) throw error;
       }
 
@@ -145,12 +213,8 @@ export function ContractorsTable() {
     try {
       const { error } = await supabase
         .from('contractor_profiles')
-        .update({ 
-          subscription_status: 'active',
-          verification_status: 'approved'
-        })
+        .update({ subscription_status: 'active', verification_status: 'approved' })
         .eq('id', contractor.id);
-
       if (error) throw error;
       toast({ title: "Success", description: "Contractor approved" });
       fetchContractors();
@@ -166,7 +230,6 @@ export function ContractorsTable() {
         .from('contractor_profiles')
         .delete()
         .eq('id', contractor.id);
-
       if (error) throw error;
       toast({ title: "Success", description: "Contractor deleted" });
       fetchContractors();
@@ -208,10 +271,8 @@ export function ContractorsTable() {
       c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone?.includes(searchQuery) ||
       `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesType = typeFilter === 'all' || c.contractor_type === typeFilter;
     const matchesStatus = statusFilter === 'all' || c.verification_status === statusFilter;
-    
     return matchesSearch && matchesType && matchesStatus;
   });
 
@@ -237,9 +298,7 @@ export function ContractorsTable() {
             />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="independent">Independent</SelectItem>
@@ -248,9 +307,7 @@ export function ContractorsTable() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
@@ -298,9 +355,7 @@ export function ContractorsTable() {
                       <p className="text-xs text-muted-foreground">{contractor.email}</p>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getContractorTypeBadge(contractor.contractor_type)}
-                  </TableCell>
+                  <TableCell>{getContractorTypeBadge(contractor.contractor_type)}</TableCell>
                   <TableCell>
                     {contractor.company?.name ? (
                       <div className="flex items-center gap-1 text-sm">
@@ -314,9 +369,7 @@ export function ContractorsTable() {
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(contractor.verification_status)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(contractor.verification_status)}</TableCell>
                   <TableCell>
                     {contractor.is_directory_eligible ? (
                       <Badge className="bg-green-100 text-green-800"><UserCheck className="h-3 w-3 mr-1" />Listed</Badge>
@@ -329,6 +382,9 @@ export function ContractorsTable() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => handleOpenAssignDialog(contractor)} title="Assign to Company/Team">
+                        <Building2 className="h-4 w-4" />
+                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => handleManageFeatures(contractor)} title="Manage Features">
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -351,7 +407,7 @@ export function ContractorsTable() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Contractor</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete {contractor.company_name}? This action cannot be undone and will remove all associated data.
+                              Are you sure you want to delete {contractor.company_name}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -371,14 +427,60 @@ export function ContractorsTable() {
         </Table>
       </div>
 
+      {/* Assign Company/Team Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Assign to Company/Team
+            </DialogTitle>
+            <DialogDescription>{assignContractor?.company_name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Company</Label>
+              <Select value={assignCompanyId || 'none'} onValueChange={handleAssignCompanyChange}>
+                <SelectTrigger><SelectValue placeholder="No company" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Company</SelectItem>
+                  {companies.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {assignCompanyId && (
+              <div>
+                <Label>Team</Label>
+                <Select value={assignTeamId || 'none'} onValueChange={v => setAssignTeamId(v === 'none' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="No team" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Team</SelectItem>
+                    {teams.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAssignment} disabled={assignSaving}>
+              {assignSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Feature Access Dialog */}
       <Dialog open={featureDialogOpen} onOpenChange={setFeatureDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Manage Feature Access</DialogTitle>
-            <DialogDescription>
-              {selectedContractor?.company_name}
-            </DialogDescription>
+            <DialogDescription>{selectedContractor?.company_name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-3">
