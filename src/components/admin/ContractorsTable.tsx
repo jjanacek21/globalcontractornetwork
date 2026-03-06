@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Eye, Trash2, Check, Users, Building2, Wrench, Shield, UserCheck } from "lucide-react";
+import { Loader2, Search, Eye, Trash2, Check, Users, Building2, Wrench, Shield, UserCheck, ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 
 interface ContractorProfile {
@@ -86,6 +87,15 @@ export function ContractorsTable() {
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [assignSaving, setAssignSaving] = useState(false);
+
+  // Admin access dialog state
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminContractor, setAdminContractor] = useState<ContractorProfile | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isPermitAdmin, setIsPermitAdmin] = useState(false);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
 
   const { toast } = useToast();
 
@@ -164,6 +174,74 @@ export function ContractorsTable() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setAssignSaving(false);
+    }
+  };
+
+  const handleOpenAdminDialog = async (contractor: ContractorProfile) => {
+    if (!contractor.user_id) {
+      toast({ title: "No auth account", description: "This contractor has no linked user account", variant: "destructive" });
+      return;
+    }
+    setAdminContractor(contractor);
+    setAdminLoading(true);
+    setAdminDialogOpen(true);
+
+    try {
+      const [superRes, permitRes, companyRes] = await Promise.all([
+        supabase.from('super_admins').select('id').eq('user_id', contractor.user_id).maybeSingle(),
+        supabase.from('permit_admins').select('id').eq('user_id', contractor.user_id).maybeSingle(),
+        contractor.company_id
+          ? supabase.from('company_admins').select('id').eq('user_id', contractor.user_id).eq('company_id', contractor.company_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      setIsSuperAdmin(!!superRes.data);
+      setIsPermitAdmin(!!permitRes.data);
+      setIsCompanyAdmin(!!companyRes.data);
+    } catch {
+      toast({ title: "Error loading admin roles", variant: "destructive" });
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const handleSaveAdminRoles = async () => {
+    if (!adminContractor?.user_id) return;
+    setAdminSaving(true);
+    const userId = adminContractor.user_id;
+
+    try {
+      // Super Admin
+      const { data: existingSuper } = await supabase.from('super_admins').select('id').eq('user_id', userId).maybeSingle();
+      if (isSuperAdmin && !existingSuper) {
+        await supabase.from('super_admins').insert({ user_id: userId });
+      } else if (!isSuperAdmin && existingSuper) {
+        await supabase.from('super_admins').delete().eq('user_id', userId);
+      }
+
+      // Permit Admin
+      const { data: existingPermit } = await supabase.from('permit_admins').select('id').eq('user_id', userId).maybeSingle();
+      if (isPermitAdmin && !existingPermit) {
+        await supabase.from('permit_admins').insert({ user_id: userId });
+      } else if (!isPermitAdmin && existingPermit) {
+        await supabase.from('permit_admins').delete().eq('user_id', userId);
+      }
+
+      // Company Admin
+      if (adminContractor.company_id) {
+        const { data: existingCompany } = await supabase.from('company_admins').select('id').eq('user_id', userId).eq('company_id', adminContractor.company_id).maybeSingle();
+        if (isCompanyAdmin && !existingCompany) {
+          await supabase.from('company_admins').insert({ user_id: userId, company_id: adminContractor.company_id });
+        } else if (!isCompanyAdmin && existingCompany) {
+          await supabase.from('company_admins').delete().eq('user_id', userId).eq('company_id', adminContractor.company_id);
+        }
+      }
+
+      toast({ title: "Admin roles updated" });
+      setAdminDialogOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error saving admin roles", description: error.message, variant: "destructive" });
+    } finally {
+      setAdminSaving(false);
     }
   };
 
@@ -388,6 +466,11 @@ export function ContractorsTable() {
                       <Button size="icon" variant="ghost" onClick={() => handleManageFeatures(contractor)} title="Manage Features">
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {contractor.user_id && (
+                        <Button size="icon" variant="ghost" onClick={() => handleOpenAdminDialog(contractor)} title="Admin Access">
+                          <ShieldCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       {contractor.subscription_status === 'pending' && (
                         <Button size="icon" variant="ghost" onClick={() => handleApprove(contractor)} title="Approve">
                           <Check className="h-4 w-4 text-green-600" />
@@ -505,6 +588,59 @@ export function ContractorsTable() {
             <Button variant="outline" onClick={() => setFeatureDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveFeatures} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Access Dialog */}
+      <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              Admin Access
+            </DialogTitle>
+            <DialogDescription>
+              {adminContractor?.company_name} — {adminContractor?.first_name} {adminContractor?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          {adminLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Super Admin</p>
+                  <p className="text-xs text-muted-foreground">Full platform access</p>
+                </div>
+                <Switch checked={isSuperAdmin} onCheckedChange={setIsSuperAdmin} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Permit Admin</p>
+                  <p className="text-xs text-muted-foreground">Manage permits & forms</p>
+                </div>
+                <Switch checked={isPermitAdmin} onCheckedChange={setIsPermitAdmin} />
+              </div>
+              {adminContractor?.company_id && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Company Admin</p>
+                    <p className="text-xs text-muted-foreground">Admin for {adminContractor.company?.name || 'their company'}</p>
+                  </div>
+                  <Switch checked={isCompanyAdmin} onCheckedChange={setIsCompanyAdmin} />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAdminRoles} disabled={adminSaving || adminLoading}>
+              {adminSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save
             </Button>
           </DialogFooter>
