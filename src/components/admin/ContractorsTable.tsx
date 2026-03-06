@@ -88,6 +88,15 @@ export function ContractorsTable() {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [assignSaving, setAssignSaving] = useState(false);
 
+  // Admin access dialog state
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminContractor, setAdminContractor] = useState<ContractorProfile | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isPermitAdmin, setIsPermitAdmin] = useState(false);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
