@@ -14,6 +14,7 @@ interface PacketAssemblyChecklistProps {
   documents: PacketDocument[];
   onDocumentPreview?: (doc: PacketDocument) => void;
   onDocumentUpload?: (doc: PacketDocument) => void;
+  onSelectProduct?: (doc: PacketDocument) => void;
   onRefresh?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function PacketAssemblyChecklist({
   documents,
   onDocumentPreview,
   onDocumentUpload,
+  onSelectProduct,
   onRefresh,
 }: PacketAssemblyChecklistProps) {
   const [isAssembling, setIsAssembling] = useState(false);
@@ -108,6 +110,7 @@ export function PacketAssemblyChecklist({
               onUpload={onDocumentUpload}
               onRegenerate={onRefresh ? () => onRefresh() : undefined}
               onSearch={handleSearch}
+              onSelectProduct={onSelectProduct}
             />
           ))}
         </div>
