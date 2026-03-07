@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2 } from 'lucide-react';
+import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +17,7 @@ interface PacketContentsPreviewProps {
 
 interface ExpectedDocument {
   name: string;
-  source: 'template' | 'upload' | 'generated' | 'product';
+  source: 'template' | 'upload' | 'generated' | 'product' | 'firecrawl';
   status: 'ready' | 'pending' | 'missing';
   required: boolean;
 }
@@ -32,6 +32,7 @@ export function PacketContentsPreview({
   hasContractorInfo,
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
+  const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,28 +43,42 @@ export function PacketContentsPreview({
       }
 
       try {
+        // Fetch standard templates
         let query = supabase
           .from('permit_form_templates')
-          .select('id, form_name, form_type, category, trade_types, hvhz_only, requires_signature, requires_notary')
+          .select('id, form_name, form_type, category, trade_types, hvhz_only, requires_signature, requires_notary, source')
           .or(`county.eq.${jurisdictionCounty},county.is.null`)
+          .or('source.is.null,source.eq.manual,source.eq.imported')
           .order('category');
 
-        // If not in HVHZ, exclude hvhz_only templates at DB level
         if (!isHVHZ) {
           query = query.eq('hvhz_only', false);
         }
 
         const { data, error } = await query;
-
         if (error) throw error;
 
-        // Filter by trade type
         const filtered = (data || []).filter(t => {
           if (t.trade_types && !t.trade_types.includes('*') && !t.trade_types.includes(permitType)) return false;
           return true;
         });
-
         setTemplates(filtered);
+
+        // Fetch firecrawl-discovered templates for this county
+        const { data: fcData, error: fcError } = await supabase
+          .from('permit_form_templates')
+          .select('id, form_name, document_classification, trade_types, hvhz_only, source')
+          .eq('source', 'firecrawl')
+          .eq('county', jurisdictionCounty);
+
+        if (!fcError && fcData) {
+          const fcFiltered = fcData.filter(t => {
+            if (!isHVHZ && t.hvhz_only) return false;
+            if (t.trade_types && !t.trade_types.includes('*') && !t.trade_types.includes(permitType)) return false;
+            return true;
+          });
+          setFirecrawlTemplates(fcFiltered);
+        }
       } catch (err) {
         console.error('Failed to fetch templates:', err);
       } finally {
@@ -74,81 +89,45 @@ export function PacketContentsPreview({
     fetchTemplates();
   }, [jurisdictionCounty, permitType, isHVHZ]);
 
-  // Build the expected document list
   const expectedDocs: ExpectedDocument[] = [];
 
-  // 1. Cover Sheet (always generated)
-  expectedDocs.push({
-    name: 'Cover Sheet & Document Index',
-    source: 'generated',
-    status: 'ready',
-    required: true,
-  });
+  // 1. Cover Sheet
+  expectedDocs.push({ name: 'Cover Sheet & Document Index', source: 'generated', status: 'ready', required: true });
 
   // 2. Templates from DB
   templates.forEach(t => {
-    expectedDocs.push({
-      name: t.form_name,
-      source: 'template',
-      status: 'ready',
-      required: true,
-    });
+    expectedDocs.push({ name: t.form_name, source: 'template', status: 'ready', required: true });
   });
 
-  // 3. NOC (generated for most permit types)
+  // 3. Firecrawl auto-discovered templates
+  firecrawlTemplates.forEach(t => {
+    expectedDocs.push({ name: t.form_name, source: 'firecrawl', status: 'ready', required: false });
+  });
+
+  // 4. NOC
   if (['roofing', 'general_construction', 'windows_doors'].includes(permitType)) {
-    expectedDocs.push({
-      name: 'Notice of Commencement (NOC)',
-      source: 'generated',
-      status: hasOwnerInfo ? 'ready' : 'pending',
-      required: true,
-    });
+    expectedDocs.push({ name: 'Notice of Commencement (NOC)', source: 'generated', status: hasOwnerInfo ? 'ready' : 'pending', required: true });
   }
 
-  // 4. Roofing Compliance Statement
+  // 5. Roofing Compliance
   if (permitType === 'roofing') {
-    expectedDocs.push({
-      name: 'Roofing Compliance Statement',
-      source: 'generated',
-      status: 'ready',
-      required: true,
-    });
+    expectedDocs.push({ name: 'Roofing Compliance Statement', source: 'generated', status: 'ready', required: true });
   }
 
-  // 5. Product NOA documents
+  // 6. Product NOAs
   if (selectedMaterialCount > 0) {
-    expectedDocs.push({
-      name: `Product NOA Documents (${selectedMaterialCount})`,
-      source: 'product',
-      status: 'ready',
-      required: isHVHZ,
-    });
+    expectedDocs.push({ name: `Product NOA Documents (${selectedMaterialCount})`, source: 'product', status: 'ready', required: isHVHZ });
   } else if (isHVHZ) {
-    expectedDocs.push({
-      name: 'Product NOA Documents',
-      source: 'product',
-      status: 'missing',
-      required: true,
-    });
+    expectedDocs.push({ name: 'Product NOA Documents', source: 'product', status: 'missing', required: true });
   }
 
-  // 6. Contractor uploads
+  // 7. Uploads
   if (uploadedDocumentCount > 0) {
-    expectedDocs.push({
-      name: `Uploaded Documents (${uploadedDocumentCount})`,
-      source: 'upload',
-      status: 'ready',
-      required: false,
-    });
+    expectedDocs.push({ name: `Uploaded Documents (${uploadedDocumentCount})`, source: 'upload', status: 'ready', required: false });
   }
 
-  // 7. Contractor license & insurance
-  expectedDocs.push({
-    name: 'Contractor License & Insurance',
-    source: 'upload',
-    status: hasContractorInfo ? 'ready' : 'pending',
-    required: true,
-  });
+  // 8. Contractor license
+  expectedDocs.push({ name: 'Contractor License & Insurance', source: 'upload', status: hasContractorInfo ? 'ready' : 'pending', required: true });
 
   const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
   const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
@@ -174,6 +153,7 @@ export function PacketContentsPreview({
         <CardDescription>
           {readyCount} of {expectedDocs.length} documents ready
           {missingCount > 0 && ` • ${missingCount} required items missing`}
+          {firecrawlTemplates.length > 0 && ` • ${firecrawlTemplates.length} auto-discovered`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -207,6 +187,12 @@ export function PacketContentsPreview({
                 )}
                 {doc.source === 'template' && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Smart Form</Badge>
+                )}
+                {doc.source === 'firecrawl' && (
+                  <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 border-purple-200">
+                    <Search className="h-2.5 w-2.5 mr-0.5" />
+                    Auto-Discovered
+                  </Badge>
                 )}
               </div>
             </div>

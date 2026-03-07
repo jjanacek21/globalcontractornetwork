@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, MapPin, User, Building2 } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, User, Building2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PacketAssemblyChecklist } from '@/components/permit-queens/PacketAssemblyChecklist';
 import type { PacketDocument } from '@/components/permit-queens/PacketDocumentRow';
@@ -141,6 +141,13 @@ export default function PermitPacketAssembly() {
         }));
       }
 
+      // Fetch firecrawl-discovered templates for this county
+      const { data: firecrawlTemplates } = await supabase
+        .from('permit_form_templates')
+        .select('id, form_name, document_classification, file_path, source')
+        .eq('source', 'firecrawl')
+        .eq('county', county);
+
       // Build document list from structure
       const docs: PacketDocument[] = [];
       const structureDocs = (structure?.document_structure || []) as any[];
@@ -220,6 +227,20 @@ export default function PermitPacketAssembly() {
           url: uploaded?.file_path,
           condition: item.condition,
           requiresNotary: item.needs_notary,
+        });
+      }
+
+      // Add firecrawl auto-discovered documents
+      for (const fcTemplate of (firecrawlTemplates || [])) {
+        docs.push({
+          order: docs.length + 1,
+          type: fcTemplate.document_classification || 'permit_application',
+          name: `${fcTemplate.form_name}`,
+          source: 'auto_fill',
+          status: fcTemplate.file_path ? 'ready' : 'pending',
+          pages: 1,
+          url: fcTemplate.file_path,
+          isFirecrawlDiscovered: true,
         });
       }
 

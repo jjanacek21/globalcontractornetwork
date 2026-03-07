@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Download, RefreshCw, Loader2, Wand2 } from 'lucide-react';
+import { FileText, RefreshCw, Loader2, Wand2, Download, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,25 +17,30 @@ interface DiscoveredDoc {
   county: string;
   is_downloaded: boolean;
   is_converted_to_smart_doc: boolean;
+  smart_doc_id: string | null;
   file_size: number | null;
   created_at: string;
 }
+
+type DocPipelineStatus = 'pending' | 'downloading' | 'converting' | 'ready';
 
 const DiscoveredDocumentsTab = () => {
   const [docs, setDocs] = useState<DiscoveredDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [converting, setConverting] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   const fetchDocs = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('firecrawl_discovered_documents')
-      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, file_size, created_at')
+      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, created_at')
       .order('created_at', { ascending: false })
       .limit(200);
 
-    if (!error && data) setDocs(data);
+    if (!error && data) setDocs(data as DiscoveredDoc[]);
     setLoading(false);
   };
 
@@ -54,6 +59,28 @@ const DiscoveredDocumentsTab = () => {
     else setSelected(new Set(docs.map(d => d.id)));
   };
 
+  const getDocStatus = (doc: DiscoveredDoc): DocPipelineStatus => {
+    if (processingIds.has(doc.id)) {
+      return doc.is_downloaded ? 'converting' : 'downloading';
+    }
+    if (doc.is_converted_to_smart_doc) return 'ready';
+    if (doc.is_downloaded) return 'pending'; // downloaded but not converted
+    return 'pending';
+  };
+
+  const statusBadge = (status: DocPipelineStatus) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'downloading':
+        return <Badge className="bg-blue-500/10 text-blue-500">Downloading...</Badge>;
+      case 'converting':
+        return <Badge className="bg-amber-500/10 text-amber-500">Converting...</Badge>;
+      case 'ready':
+        return <Badge className="bg-green-500/10 text-green-500">Ready</Badge>;
+    }
+  };
+
   const convertToSmartDocs = async () => {
     const unconverted = Array.from(selected).filter(id => !docs.find(d => d.id === id)?.is_converted_to_smart_doc);
     if (unconverted.length === 0) {
@@ -62,6 +89,7 @@ const DiscoveredDocumentsTab = () => {
     }
 
     setConverting(true);
+    setProcessingIds(new Set(unconverted));
     try {
       const { data, error } = await supabase.functions.invoke('firecrawl-to-smart-docs', {
         body: { documentIds: unconverted },
@@ -79,6 +107,38 @@ const DiscoveredDocumentsTab = () => {
     } finally {
       setConverting(false);
       setSelected(new Set());
+      setProcessingIds(new Set());
+    }
+  };
+
+  const downloadAndConvertAll = async () => {
+    const unconverted = docs.filter(d => !d.is_converted_to_smart_doc);
+    if (unconverted.length === 0) {
+      toast.info('All documents already converted');
+      return;
+    }
+
+    setBulkProcessing(true);
+    setProcessingIds(new Set(unconverted.map(d => d.id)));
+    toast.info(`Processing ${unconverted.length} documents...`);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('firecrawl-to-smart-docs', {
+        body: { documentIds: unconverted.map(d => d.id) },
+      });
+
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Converted ${data.converted} of ${data.total} documents`);
+        fetchDocs();
+      } else {
+        toast.error(data?.error || 'Bulk conversion failed');
+      }
+    } catch (err) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setBulkProcessing(false);
+      setProcessingIds(new Set());
     }
   };
 
@@ -88,6 +148,8 @@ const DiscoveredDocumentsTab = () => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
+
+  const unconvertedCount = docs.filter(d => !d.is_converted_to_smart_doc).length;
 
   return (
     <div className="space-y-4">
@@ -102,10 +164,16 @@ const DiscoveredDocumentsTab = () => {
               <Button variant="outline" size="sm" onClick={fetchDocs} disabled={loading}>
                 <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
               </Button>
+              {unconvertedCount > 0 && (
+                <Button size="sm" variant="secondary" onClick={downloadAndConvertAll} disabled={bulkProcessing || converting}>
+                  {bulkProcessing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Download className="h-3 w-3 mr-1" />}
+                  Download & Convert All ({unconvertedCount})
+                </Button>
+              )}
               {selected.size > 0 && (
-                <Button size="sm" onClick={convertToSmartDocs} disabled={converting}>
+                <Button size="sm" onClick={convertToSmartDocs} disabled={converting || bulkProcessing}>
                   {converting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
-                  Convert to Smart Docs ({selected.size})
+                  Convert Selected ({selected.size})
                 </Button>
               )}
             </div>
@@ -122,34 +190,38 @@ const DiscoveredDocumentsTab = () => {
                 <TableHead>Department</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Size</TableHead>
-                <TableHead>Downloaded</TableHead>
-                <TableHead>Smart Doc</TableHead>
+                <TableHead>Pipeline Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {docs.map(doc => (
-                <TableRow key={doc.id}>
-                  <TableCell>
-                    <Checkbox checked={selected.has(doc.id)} onCheckedChange={() => toggleSelect(doc.id)} />
-                  </TableCell>
-                  <TableCell className="max-w-[250px] truncate font-medium">{doc.title || 'Untitled'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{doc.department || '—'}</Badge>
-                  </TableCell>
-                  <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
-                  <TableCell>{formatSize(doc.file_size)}</TableCell>
-                  <TableCell>
-                    {doc.is_downloaded
-                      ? <Badge className="bg-green-500/10 text-green-500">Yes</Badge>
-                      : <Badge variant="secondary">No</Badge>}
-                  </TableCell>
-                  <TableCell>
-                    {doc.is_converted_to_smart_doc
-                      ? <Badge className="bg-blue-500/10 text-blue-500">Converted</Badge>
-                      : <Badge variant="secondary">Pending</Badge>}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {docs.map(doc => {
+                const status = getDocStatus(doc);
+                return (
+                  <TableRow key={doc.id}>
+                    <TableCell>
+                      <Checkbox checked={selected.has(doc.id)} onCheckedChange={() => toggleSelect(doc.id)} />
+                    </TableCell>
+                    <TableCell className="max-w-[250px] truncate font-medium">{doc.title || 'Untitled'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{doc.department || '—'}</Badge>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
+                    <TableCell>{formatSize(doc.file_size)}</TableCell>
+                    <TableCell>{statusBadge(status)}</TableCell>
+                    <TableCell>
+                      {doc.is_converted_to_smart_doc && doc.smart_doc_id ? (
+                        <Button variant="ghost" size="sm" className="text-xs" asChild>
+                          <a href={`/permit-queens/admin/ai-intelligence?template=${doc.smart_doc_id}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View Smart Doc
+                          </a>
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {docs.length === 0 && !loading && (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No discovered documents yet. Use the Building Dept Crawler to discover documents.</TableCell></TableRow>
               )}
