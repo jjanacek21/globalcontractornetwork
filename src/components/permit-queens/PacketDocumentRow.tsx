@@ -27,6 +27,7 @@ export interface PacketDocument {
   requiresNotary?: boolean;
   requiresRecording?: boolean;
   productCategory?: string;
+  isFirecrawlDiscovered?: boolean;
 }
 
 interface PacketDocumentRowProps {
