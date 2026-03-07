@@ -151,6 +151,47 @@ const DiscoveredDocumentsTab = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   };
 
+  const viewSmartDoc = async (smartDocId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('permit_form_templates')
+        .select('form_name, file_path')
+        .eq('id', smartDocId)
+        .maybeSingle();
+
+      if (error || !data) {
+        toast.error('Could not find smart document');
+        return;
+      }
+
+      if (!data.file_path || data.file_path.startsWith('pending/')) {
+        toast.error('Document file is missing or not yet uploaded');
+        return;
+      }
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('permit-form-templates')
+        .createSignedUrl(data.file_path, 3600);
+
+      if (signedError || !signedData?.signedUrl) {
+        toast.error('Could not generate preview URL');
+        return;
+      }
+
+      setViewingDoc({ url: signedData.signedUrl, title: data.form_name || 'Smart Document' });
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    }
+  };
+
+  const viewSourceDoc = (doc: DiscoveredDoc) => {
+    if (!doc.source_url) {
+      toast.error('No source URL available');
+      return;
+    }
+    setViewingDoc({ url: doc.source_url, title: doc.title || 'Source Document' });
+  };
+
   const unconvertedCount = docs.filter(d => !d.is_converted_to_smart_doc).length;
 
   return (
