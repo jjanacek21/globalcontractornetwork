@@ -67,7 +67,7 @@ export function PacketContentsPreview({
         // Fetch firecrawl-discovered templates for this county
         const { data: fcData, error: fcError } = await supabase
           .from('permit_form_templates')
-          .select('id, name, document_classification, trade_types, hvhz_only, source')
+          .select('id, form_name, document_classification, trade_types, hvhz_only, source')
           .eq('source', 'firecrawl')
           .eq('county', jurisdictionCounty);
 
@@ -101,7 +101,7 @@ export function PacketContentsPreview({
 
   // 3. Firecrawl auto-discovered templates
   firecrawlTemplates.forEach(t => {
-    expectedDocs.push({ name: t.name, source: 'firecrawl', status: 'ready', required: false });
+    expectedDocs.push({ name: t.form_name, source: 'firecrawl', status: 'ready', required: false });
   });
 
   // 4. NOC

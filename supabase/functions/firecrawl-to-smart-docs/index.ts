@@ -179,13 +179,14 @@ Deno.serve(async (req) => {
         const { data: template, error: templateError } = await supabase
           .from('permit_form_templates')
           .insert({
-            name: doc.title || 'Untitled Permit Document',
-            department: doc.department || 'Unknown',
+            form_name: doc.title || 'Untitled Permit Document',
+            form_type: classification,
+            jurisdiction_name: doc.department || 'Unknown',
             county,
             trade_types: tradeTypes,
             hvhz_only: hvhzOnly,
-            file_url: doc.storage_path || doc.file_url,
-            field_mappings: fieldMappings,
+            file_path: doc.storage_path || doc.file_url || '',
+            field_mapping: fieldMappings,
             field_count: fieldCount,
             analysis_status: fieldCount > 0 ? 'analyzed' : 'pending',
             last_analyzed_at: fieldCount > 0 ? new Date().toISOString() : null,
