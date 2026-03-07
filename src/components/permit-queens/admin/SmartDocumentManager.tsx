@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { 
   Building2, 
   FileText, 
@@ -15,7 +16,8 @@ import {
   Loader2,
   RefreshCw,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -165,10 +167,19 @@ export function SmartDocumentManager() {
     }
   };
 
+  const getBucketForPath = (filePath: string): string => {
+    if (!filePath) return 'permit-form-templates';
+    if (filePath.startsWith('firecrawl/') || filePath.startsWith('crawled/')) {
+      return 'permit-documents';
+    }
+    return 'permit-form-templates';
+  };
+
   const viewDocument = async (doc: SmartDocument) => {
     try {
+      const bucket = getBucketForPath(doc.file_path);
       const { data, error } = await supabase.storage
-        .from('permit-form-templates')
+        .from(bucket)
         .createSignedUrl(doc.file_path, 3600);
 
       if (error || !data?.signedUrl) {
@@ -184,6 +195,25 @@ export function SmartDocumentManager() {
     } catch (error) {
       console.error('View document error:', error);
       toast.error('Failed to open document');
+    }
+  };
+
+  const deleteDocument = async (doc: SmartDocument) => {
+    try {
+      // Delete storage file
+      if (doc.file_path) {
+        const bucket = getBucketForPath(doc.file_path);
+        await supabase.storage.from(bucket).remove([doc.file_path]);
+      }
+
+      // Delete DB record
+      const { error } = await supabase.from('permit_form_templates').delete().eq('id', doc.id);
+      if (error) throw error;
+
+      toast.success('Document deleted');
+      setDocuments(prev => prev.filter(d => d.id !== doc.id));
+    } catch {
+      toast.error('Failed to delete document');
     }
   };
 
@@ -336,6 +366,27 @@ export function SmartDocumentManager() {
                                   <RefreshCw className="h-4 w-4" />
                                 )}
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete template?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete "{doc.form_name}" and its storage file. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteDocument(doc)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         ))}
