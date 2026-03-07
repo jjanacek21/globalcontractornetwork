@@ -141,6 +141,13 @@ export default function PermitPacketAssembly() {
         }));
       }
 
+      // Fetch firecrawl-discovered templates for this county
+      const { data: firecrawlTemplates } = await supabase
+        .from('permit_form_templates')
+        .select('id, form_name, document_classification, file_path, source')
+        .eq('source', 'firecrawl')
+        .eq('county', county);
+
       // Build document list from structure
       const docs: PacketDocument[] = [];
       const structureDocs = (structure?.document_structure || []) as any[];
