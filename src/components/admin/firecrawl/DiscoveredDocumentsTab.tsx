@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, RefreshCw, Loader2, Wand2, Download, ExternalLink } from 'lucide-react';
+import { FileText, RefreshCw, Loader2, Wand2, Download, ExternalLink, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
 
 interface DiscoveredDoc {
   id: string;
