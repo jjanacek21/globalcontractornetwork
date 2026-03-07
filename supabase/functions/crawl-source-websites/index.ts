@@ -623,7 +623,7 @@ async function crawlStaticSite(
   
   for (const pageUrl of nonPdfPages) {
     try {
-      const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      const scrapeResponse = await fetch('https://api.firecrawl.dev/v2/scrape', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${firecrawlApiKey}`,
