@@ -15,6 +15,10 @@ import { NOABulkManager } from "@/components/permit-queens/admin/NOABulkManager"
 import { NOAUploadQueue } from "@/components/permit-queens/admin/NOAUploadQueue";
 import { NOACSVImporter } from "@/components/permit-queens/admin/NOACSVImporter";
 import { ManufacturerNOASearch } from "@/components/permit-queens/admin/ManufacturerNOASearch";
+import NoaSearchTab from "@/components/admin/firecrawl/NoaSearchTab";
+import BuildingDeptCrawlerTab from "@/components/admin/firecrawl/BuildingDeptCrawlerTab";
+import DiscoveredDocumentsTab from "@/components/admin/firecrawl/DiscoveredDocumentsTab";
+import CrawlJobsTab from "@/components/admin/firecrawl/CrawlJobsTab";
 import PermitBatchUploader from "./PermitBatchUploader";
 import PermitTrainingUploader from "./PermitTrainingUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
@@ -113,6 +117,13 @@ const AITrainingCenter = () => {
             <Brain className="h-4 w-4" />
             NOA Intelligence
           </TabsTrigger>
+          <TabsTrigger 
+            value="firecrawl" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Search className="h-4 w-4" />
+            Firecrawl Intelligence
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
@@ -194,6 +205,34 @@ const AITrainingCenter = () => {
           <div className="space-y-6">
             <NOABulkManager />
             <NOAUploadQueue />
+          </div>
+        </TabsContent>
+        <TabsContent value="firecrawl" className="mt-4">
+          <div className="space-y-4">
+            <Tabs defaultValue="noa-search" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="noa-search" className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  NOA Search
+                </TabsTrigger>
+                <TabsTrigger value="building-depts" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Building Dept Crawler
+                </TabsTrigger>
+                <TabsTrigger value="discovered-docs" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Discovered Documents
+                </TabsTrigger>
+                <TabsTrigger value="crawl-jobs" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Crawl Jobs
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="noa-search"><NoaSearchTab /></TabsContent>
+              <TabsContent value="building-depts"><BuildingDeptCrawlerTab /></TabsContent>
+              <TabsContent value="discovered-docs"><DiscoveredDocumentsTab /></TabsContent>
+              <TabsContent value="crawl-jobs"><CrawlJobsTab /></TabsContent>
+            </Tabs>
           </div>
         </TabsContent>
       </Tabs>
