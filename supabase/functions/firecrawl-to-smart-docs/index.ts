@@ -35,8 +35,19 @@ function inferTradeTypes(title: string, content: string): string[] {
 function inferHvhz(title: string, content: string, county: string): boolean {
   const combined = `${title} ${content}`.toLowerCase();
   if (combined.includes('hvhz') || combined.includes('high velocity')) return true;
-  if (county === 'Miami-Dade') return true; // Miami-Dade is HVHZ by default
+  if (county === 'Miami-Dade') return true;
   return false;
+}
+
+function classifyDocument(title: string, content: string): string {
+  const combined = `${title} ${content}`.toLowerCase();
+  if (combined.includes('application') || combined.includes('permit app')) return 'permit_application';
+  if (combined.includes('checklist') || combined.includes('check list') || combined.includes('requirements list')) return 'checklist';
+  if (combined.includes('affidavit') || combined.includes('sworn') || combined.includes('notarized')) return 'affidavit';
+  if (combined.includes('noa') || combined.includes('notice of acceptance') || combined.includes('product approval')) return 'noa_form';
+  if (combined.includes('inspection') || combined.includes('progress inspect')) return 'inspection_form';
+  if (combined.includes('code') || combined.includes('compliance') || combined.includes('section ')) return 'code_form';
+  return 'permit_application'; // default
 }
 
 Deno.serve(async (req) => {
@@ -83,6 +94,7 @@ Deno.serve(async (req) => {
         const county = doc.county || DEPARTMENT_TO_COUNTY[doc.department || ''] || 'Unknown';
         const tradeTypes = inferTradeTypes(doc.title || '', doc.content_markdown || '');
         const hvhzOnly = inferHvhz(doc.title || '', doc.content_markdown || '', county);
+        const classification = classifyDocument(doc.title || '', doc.content_markdown || '');
 
         // Use AI to analyze content and detect fillable fields
         let fieldMappings: any = {};
@@ -163,7 +175,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Create permit_form_templates entry
+        // Create permit_form_templates entry with source and classification
         const { data: template, error: templateError } = await supabase
           .from('permit_form_templates')
           .insert({
@@ -177,6 +189,9 @@ Deno.serve(async (req) => {
             field_count: fieldCount,
             analysis_status: fieldCount > 0 ? 'analyzed' : 'pending',
             last_analyzed_at: fieldCount > 0 ? new Date().toISOString() : null,
+            source: 'firecrawl',
+            firecrawl_doc_id: doc.id,
+            document_classification: classification,
           })
           .select('id')
           .single();
@@ -195,7 +210,6 @@ Deno.serve(async (req) => {
         // Update crawl job counter
         if (doc.crawl_job_id) {
           await supabase.rpc('increment_documents_converted', { job_id: doc.crawl_job_id }).catch(() => {
-            // Fallback: direct update
             supabase.from('firecrawl_crawl_jobs')
               .update({ documents_converted: converted + 1 })
               .eq('id', doc.crawl_job_id);
@@ -203,7 +217,7 @@ Deno.serve(async (req) => {
         }
 
         converted++;
-        console.log(`✅ Converted ${doc.title} -> smart doc ${template.id}`);
+        console.log(`✅ Converted ${doc.title} -> smart doc ${template.id} [${classification}]`);
 
         // Rate limit between AI calls
         await new Promise(resolve => setTimeout(resolve, 500));

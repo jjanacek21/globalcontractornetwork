@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, MapPin, User, Building2 } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, User, Building2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PacketAssemblyChecklist } from '@/components/permit-queens/PacketAssemblyChecklist';
 import type { PacketDocument } from '@/components/permit-queens/PacketDocumentRow';
