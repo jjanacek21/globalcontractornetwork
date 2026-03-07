@@ -275,7 +275,14 @@ const DiscoveredDocumentsTab = () => {
         </CardContent>
       </Card>
     </div>
-  );
+
+    <PDFViewerDialog
+      open={!!viewingDoc}
+      onOpenChange={(open) => !open && setViewingDoc(null)}
+      url={viewingDoc?.url || ''}
+      title={viewingDoc?.title || 'Document Preview'}
+    />
+  </>;
 };
 
 export default DiscoveredDocumentsTab;
