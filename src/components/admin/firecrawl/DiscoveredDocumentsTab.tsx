@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, RefreshCw, Loader2, Wand2, Download, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { FileText, RefreshCw, Loader2, Wand2, Download, Eye, Upload, ChevronDown, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PDFViewerDialog } from '@/components/ui/PDFViewerDialog';
+import { useDropzone } from 'react-dropzone';
 
 interface DiscoveredDoc {
   id: string;
@@ -20,10 +25,34 @@ interface DiscoveredDoc {
   is_converted_to_smart_doc: boolean;
   smart_doc_id: string | null;
   file_size: number | null;
+  storage_path: string | null;
   created_at: string;
 }
 
 type DocPipelineStatus = 'pending' | 'downloading' | 'converting' | 'ready';
+
+const COUNTIES = ['Miami-Dade', 'Broward', 'Palm Beach'];
+const DEPARTMENTS = [
+  'Miami-Dade County', 'City of Miami', 'Broward County', 'Hollywood',
+  'Fort Lauderdale', 'Coral Springs', 'Pompano Beach', 'Boca Raton',
+  'West Palm Beach', 'Palm Beach County',
+];
+const FORM_TYPES = [
+  { value: 'permit_application', label: 'Permit Application' },
+  { value: 'checklist', label: 'Checklist' },
+  { value: 'affidavit', label: 'Affidavit' },
+  { value: 'noa_form', label: 'NOA Form' },
+  { value: 'inspection_form', label: 'Inspection Form' },
+  { value: 'code_form', label: 'Code/Compliance Form' },
+];
+
+function getBucketForPath(filePath: string): string {
+  if (!filePath) return 'permit-form-templates';
+  if (filePath.startsWith('firecrawl/') || filePath.startsWith('crawled/')) {
+    return 'permit-documents';
+  }
+  return 'permit-form-templates';
+}
 
 const DiscoveredDocumentsTab = () => {
   const [docs, setDocs] = useState<DiscoveredDoc[]>([]);
@@ -33,12 +62,37 @@ const DiscoveredDocumentsTab = () => {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [viewingDoc, setViewingDoc] = useState<{ url: string; title: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Manual upload state
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadDept, setUploadDept] = useState('');
+  const [uploadCounty, setUploadCounty] = useState('');
+  const [uploadFormType, setUploadFormType] = useState('permit_application');
+  const [uploading, setUploading] = useState(false);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      setUploadFile(file);
+      if (!uploadName) setUploadName(file.name.replace(/\.pdf$/i, ''));
+    }
+  }, [uploadName]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    maxFiles: 1,
+    maxSize: 20 * 1024 * 1024,
+  });
 
   const fetchDocs = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('firecrawl_discovered_documents')
-      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, created_at')
+      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, storage_path, created_at')
       .order('created_at', { ascending: false })
       .limit(200);
 
@@ -66,7 +120,6 @@ const DiscoveredDocumentsTab = () => {
       return doc.is_downloaded ? 'converting' : 'downloading';
     }
     if (doc.is_converted_to_smart_doc) return 'ready';
-    if (doc.is_downloaded) return 'pending'; // downloaded but not converted
     return 'pending';
   };
 
@@ -104,7 +157,7 @@ const DiscoveredDocumentsTab = () => {
       } else {
         toast.error(data?.error || 'Conversion failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setConverting(false);
@@ -136,7 +189,7 @@ const DiscoveredDocumentsTab = () => {
       } else {
         toast.error(data?.error || 'Bulk conversion failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
       setBulkProcessing(false);
@@ -169,8 +222,9 @@ const DiscoveredDocumentsTab = () => {
         return;
       }
 
+      const bucket = getBucketForPath(data.file_path);
       const { data: signedData, error: signedError } = await supabase.storage
-        .from('permit-form-templates')
+        .from(bucket)
         .createSignedUrl(data.file_path, 3600);
 
       if (signedError || !signedData?.signedUrl) {
@@ -185,6 +239,20 @@ const DiscoveredDocumentsTab = () => {
   };
 
   const viewSourceDoc = (doc: DiscoveredDoc) => {
+    if (doc.storage_path) {
+      // Try signed URL from storage first
+      const bucket = getBucketForPath(doc.storage_path);
+      supabase.storage.from(bucket).createSignedUrl(doc.storage_path, 3600).then(({ data, error }) => {
+        if (!error && data?.signedUrl) {
+          setViewingDoc({ url: data.signedUrl, title: doc.title || 'Source Document' });
+        } else if (doc.source_url) {
+          setViewingDoc({ url: doc.source_url, title: doc.title || 'Source Document' });
+        } else {
+          toast.error('No viewable file available');
+        }
+      });
+      return;
+    }
     if (!doc.source_url) {
       toast.error('No source URL available');
       return;
@@ -192,11 +260,173 @@ const DiscoveredDocumentsTab = () => {
     setViewingDoc({ url: doc.source_url, title: doc.title || 'Source Document' });
   };
 
+  const deleteDiscoveredDoc = async (doc: DiscoveredDoc) => {
+    setDeletingId(doc.id);
+    try {
+      // If linked to a smart doc, delete that too
+      if (doc.is_converted_to_smart_doc && doc.smart_doc_id) {
+        const { data: smartDoc } = await supabase
+          .from('permit_form_templates')
+          .select('file_path')
+          .eq('id', doc.smart_doc_id)
+          .maybeSingle();
+
+        if (smartDoc?.file_path) {
+          const bucket = getBucketForPath(smartDoc.file_path);
+          await supabase.storage.from(bucket).remove([smartDoc.file_path]);
+        }
+        await supabase.from('permit_form_templates').delete().eq('id', doc.smart_doc_id);
+      }
+
+      // Delete storage file if exists
+      if (doc.storage_path) {
+        const bucket = getBucketForPath(doc.storage_path);
+        await supabase.storage.from(bucket).remove([doc.storage_path]);
+      }
+
+      // Delete discovered doc record
+      const { error } = await supabase.from('firecrawl_discovered_documents').delete().eq('id', doc.id);
+      if (error) throw error;
+
+      toast.success('Document deleted');
+      setDocs(prev => prev.filter(d => d.id !== doc.id));
+      setSelected(prev => { const n = new Set(prev); n.delete(doc.id); return n; });
+    } catch {
+      toast.error('Failed to delete document');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleManualUpload = async () => {
+    if (!uploadFile || !uploadName || !uploadDept || !uploadCounty) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileName = `manual/${uploadCounty}/${uploadDept}/${Date.now()}_${uploadFile.name}`;
+      const { error: storageError } = await supabase.storage
+        .from('permit-form-templates')
+        .upload(fileName, uploadFile, { contentType: 'application/pdf' });
+
+      if (storageError) throw storageError;
+
+      const { data: template, error: insertError } = await supabase
+        .from('permit_form_templates')
+        .insert({
+          form_name: uploadName,
+          form_type: uploadFormType,
+          jurisdiction_name: uploadDept,
+          county: uploadCounty,
+          file_path: fileName,
+          source: 'manual',
+          analysis_status: 'pending',
+          trade_types: ['general'],
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Trigger AI analysis
+      const { data: urlData } = await supabase.storage
+        .from('permit-form-templates')
+        .createSignedUrl(fileName, 3600);
+
+      if (urlData?.signedUrl && template?.id) {
+        supabase.functions.invoke('permit-packet-analyzer', {
+          body: { mode: 'detect_and_analyze', templateId: template.id, fileUrl: urlData.signedUrl },
+        }).catch(() => { /* analysis is best-effort */ });
+      }
+
+      toast.success('Document uploaded and queued for AI analysis');
+      setUploadFile(null);
+      setUploadName('');
+      setUploadDept('');
+      setUploadCounty('');
+      setUploadFormType('permit_application');
+    } catch {
+      toast.error('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const unconvertedCount = docs.filter(d => !d.is_converted_to_smart_doc).length;
 
   return (
     <>
       <div className="space-y-4">
+        {/* Manual Upload Section */}
+        <Collapsible open={uploadOpen} onOpenChange={setUploadOpen}>
+          <Card>
+            <CardHeader className="pb-3">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Upload className="h-5 w-5" />
+                    Manual Document Upload
+                  </CardTitle>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${uploadOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  {uploadFile ? (
+                    <p className="text-sm font-medium">{uploadFile.name} ({formatSize(uploadFile.size)})</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Drop a PDF here or click to browse</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Document name"
+                    value={uploadName}
+                    onChange={e => setUploadName(e.target.value)}
+                  />
+                  <Select value={uploadFormType} onValueChange={setUploadFormType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FORM_TYPES.map(ft => (
+                        <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={uploadCounty} onValueChange={setUploadCounty}>
+                    <SelectTrigger><SelectValue placeholder="County" /></SelectTrigger>
+                    <SelectContent>
+                      {COUNTIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={uploadDept} onValueChange={setUploadDept}>
+                    <SelectTrigger><SelectValue placeholder="Department" /></SelectTrigger>
+                    <SelectContent>
+                      {DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button onClick={handleManualUpload} disabled={uploading || !uploadFile}>
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Upload & Analyze
+                </Button>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
+        {/* Discovered Documents Table */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -253,17 +483,42 @@ const DiscoveredDocumentsTab = () => {
                       <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
                       <TableCell>{formatSize(doc.file_size)}</TableCell>
                       <TableCell>{statusBadge(status)}</TableCell>
-                      <TableCell className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSourceDoc(doc)}>
-                          <Eye className="h-3 w-3 mr-1" />
-                          Source
-                        </Button>
-                        {doc.is_converted_to_smart_doc && doc.smart_doc_id && (
-                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSmartDoc(doc.smart_doc_id!)}>
-                            <FileText className="h-3 w-3 mr-1" />
-                            Smart Doc
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSourceDoc(doc)}>
+                            <Eye className="h-3 w-3 mr-1" />
+                            Source
                           </Button>
-                        )}
+                          {doc.is_converted_to_smart_doc && doc.smart_doc_id && (
+                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSmartDoc(doc.smart_doc_id!)}>
+                              <FileText className="h-3 w-3 mr-1" />
+                              Smart Doc
+                            </Button>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive" disabled={deletingId === doc.id}>
+                                {deletingId === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete document?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete "{doc.title || 'Untitled'}"
+                                  {doc.is_converted_to_smart_doc && ' and its linked smart document template'}.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteDiscoveredDoc(doc)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

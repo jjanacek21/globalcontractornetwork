@@ -47,7 +47,40 @@ function classifyDocument(title: string, content: string): string {
   if (combined.includes('noa') || combined.includes('notice of acceptance') || combined.includes('product approval')) return 'noa_form';
   if (combined.includes('inspection') || combined.includes('progress inspect')) return 'inspection_form';
   if (combined.includes('code') || combined.includes('compliance') || combined.includes('section ')) return 'code_form';
-  return 'permit_application'; // default
+  return 'permit_application';
+}
+
+async function copyFileBetweenBuckets(
+  supabase: any,
+  sourceBucket: string,
+  sourcePath: string,
+  destBucket: string,
+  destPath: string
+): Promise<boolean> {
+  try {
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from(sourceBucket)
+      .download(sourcePath);
+
+    if (downloadError || !fileData) {
+      console.warn(`Could not download from ${sourceBucket}/${sourcePath}:`, downloadError);
+      return false;
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from(destBucket)
+      .upload(destPath, fileData, { contentType: 'application/pdf', upsert: true });
+
+    if (uploadError) {
+      console.warn(`Could not upload to ${destBucket}/${destPath}:`, uploadError);
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.warn('File copy failed:', e);
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -175,7 +208,24 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Create permit_form_templates entry with source and classification
+        // Copy file from permit-documents to permit-form-templates bucket
+        const sourcePath = doc.storage_path || '';
+        let finalFilePath = doc.storage_path || doc.file_url || '';
+
+        if (sourcePath && (sourcePath.startsWith('firecrawl/') || sourcePath.startsWith('crawled/'))) {
+          const destPath = `converted/${county}/${doc.department || 'unknown'}/${Date.now()}_${sourcePath.split('/').pop()}`;
+          const copied = await copyFileBetweenBuckets(
+            supabase, 'permit-documents', sourcePath, 'permit-form-templates', destPath
+          );
+          if (copied) {
+            finalFilePath = destPath;
+            console.log(`📁 Copied ${sourcePath} -> permit-form-templates/${destPath}`);
+          } else {
+            console.warn(`⚠️ Could not copy file, keeping original path: ${sourcePath}`);
+          }
+        }
+
+        // Create permit_form_templates entry
         const { data: template, error: templateError } = await supabase
           .from('permit_form_templates')
           .insert({
@@ -185,7 +235,7 @@ Deno.serve(async (req) => {
             county,
             trade_types: tradeTypes,
             hvhz_only: hvhzOnly,
-            file_path: doc.storage_path || doc.file_url || '',
+            file_path: finalFilePath,
             field_mapping: fieldMappings,
             field_count: fieldCount,
             analysis_status: fieldCount > 0 ? 'analyzed' : 'pending',
