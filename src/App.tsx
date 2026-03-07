@@ -90,6 +90,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
+const AdminFirecrawl = lazy(() => import("./pages/AdminFirecrawl"));
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,11 @@ const GCNRoutes = () => (
     <Route path="/admin/dashboard" element={
       <ProtectedRoute redirectTo="/admin/auth">
         <SuperAdminDashboard />
+      </ProtectedRoute>
+    } />
+    <Route path="/admin/firecrawl" element={
+      <ProtectedRoute redirectTo="/admin/auth">
+        <AdminFirecrawl />
       </ProtectedRoute>
     } />
     

@@ -2940,6 +2940,131 @@ export type Database = {
           },
         ]
       }
+      firecrawl_crawl_jobs: {
+        Row: {
+          completed_at: string | null
+          config: Json | null
+          created_at: string
+          documents_converted: number | null
+          documents_downloaded: number | null
+          documents_found: number | null
+          error_message: string | null
+          firecrawl_job_id: string | null
+          id: string
+          job_type: string
+          results_summary: Json | null
+          started_at: string | null
+          status: string
+          target_department: string | null
+          target_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string
+          documents_converted?: number | null
+          documents_downloaded?: number | null
+          documents_found?: number | null
+          error_message?: string | null
+          firecrawl_job_id?: string | null
+          id?: string
+          job_type: string
+          results_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          target_department?: string | null
+          target_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string
+          documents_converted?: number | null
+          documents_downloaded?: number | null
+          documents_found?: number | null
+          error_message?: string | null
+          firecrawl_job_id?: string | null
+          id?: string
+          job_type?: string
+          results_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          target_department?: string | null
+          target_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      firecrawl_discovered_documents: {
+        Row: {
+          content_markdown: string | null
+          county: string | null
+          crawl_job_id: string
+          created_at: string
+          department: string | null
+          description: string | null
+          document_type: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          is_converted_to_smart_doc: boolean | null
+          is_downloaded: boolean | null
+          metadata: Json | null
+          smart_doc_id: string | null
+          source_url: string | null
+          storage_path: string | null
+          title: string | null
+        }
+        Insert: {
+          content_markdown?: string | null
+          county?: string | null
+          crawl_job_id: string
+          created_at?: string
+          department?: string | null
+          description?: string | null
+          document_type?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_converted_to_smart_doc?: boolean | null
+          is_downloaded?: boolean | null
+          metadata?: Json | null
+          smart_doc_id?: string | null
+          source_url?: string | null
+          storage_path?: string | null
+          title?: string | null
+        }
+        Update: {
+          content_markdown?: string | null
+          county?: string | null
+          crawl_job_id?: string
+          created_at?: string
+          department?: string | null
+          description?: string | null
+          document_type?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_converted_to_smart_doc?: boolean | null
+          is_downloaded?: boolean | null
+          metadata?: Json | null
+          smart_doc_id?: string | null
+          source_url?: string | null
+          storage_path?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firecrawl_discovered_documents_crawl_job_id_fkey"
+            columns: ["crawl_job_id"]
+            isOneToOne: false
+            referencedRelation: "firecrawl_crawl_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homeowner_appointments: {
         Row: {
           appointment_type: string
