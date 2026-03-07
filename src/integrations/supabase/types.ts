@@ -5103,9 +5103,11 @@ export type Database = {
           conditional_logic: Json | null
           county: string | null
           created_at: string | null
+          document_classification: string | null
           field_count: number | null
           field_mapping: Json | null
           file_path: string
+          firecrawl_doc_id: string | null
           form_name: string
           form_type: string
           form_version: string | null
@@ -5125,6 +5127,7 @@ export type Database = {
           sections_required: Json | null
           signature_fields: Json | null
           signature_locations: Json | null
+          source: string | null
           trade_types: string[] | null
           updated_at: string | null
         }
@@ -5137,9 +5140,11 @@ export type Database = {
           conditional_logic?: Json | null
           county?: string | null
           created_at?: string | null
+          document_classification?: string | null
           field_count?: number | null
           field_mapping?: Json | null
           file_path: string
+          firecrawl_doc_id?: string | null
           form_name: string
           form_type: string
           form_version?: string | null
@@ -5159,6 +5164,7 @@ export type Database = {
           sections_required?: Json | null
           signature_fields?: Json | null
           signature_locations?: Json | null
+          source?: string | null
           trade_types?: string[] | null
           updated_at?: string | null
         }
@@ -5171,9 +5177,11 @@ export type Database = {
           conditional_logic?: Json | null
           county?: string | null
           created_at?: string | null
+          document_classification?: string | null
           field_count?: number | null
           field_mapping?: Json | null
           file_path?: string
+          firecrawl_doc_id?: string | null
           form_name?: string
           form_type?: string
           form_version?: string | null
@@ -5193,6 +5201,7 @@ export type Database = {
           sections_required?: Json | null
           signature_fields?: Json | null
           signature_locations?: Json | null
+          source?: string | null
           trade_types?: string[] | null
           updated_at?: string | null
         }
@@ -5202,6 +5211,13 @@ export type Database = {
             columns: ["building_dept_id"]
             isOneToOne: false
             referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permit_form_templates_firecrawl_doc_id_fkey"
+            columns: ["firecrawl_doc_id"]
+            isOneToOne: false
+            referencedRelation: "firecrawl_discovered_documents"
             referencedColumns: ["id"]
           },
           {
