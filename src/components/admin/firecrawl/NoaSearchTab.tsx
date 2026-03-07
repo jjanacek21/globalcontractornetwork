@@ -91,10 +91,10 @@ const NoaSearchTab = () => {
             </div>
             <div className="space-y-2">
               <Label>Category (optional)</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category || 'all'} onValueChange={(v) => setCategory(v === 'all' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="Roofing">Roofing</SelectItem>
                   <SelectItem value="Windows">Windows</SelectItem>
                   <SelectItem value="Doors">Doors</SelectItem>
