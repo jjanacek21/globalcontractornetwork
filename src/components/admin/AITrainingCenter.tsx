@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload, Brain } from "lucide-react";
+import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload, Brain, Search } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
