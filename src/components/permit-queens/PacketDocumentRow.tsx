@@ -107,16 +107,17 @@ export function PacketDocumentRow({ document: doc, onPreview, onUpload, onRegene
             )}
           </>
         )}
-        {doc.source === 'auto_source' && doc.status === 'needs_sourcing' && (
+        {doc.source === 'auto_source' && (doc.status === 'needs_sourcing' || doc.status === 'missing') && (
           <>
             {onSearch && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onSearch(doc)}>
-                <Search className="h-3.5 w-3.5" />
+              <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 gap-1" onClick={() => onSearch(doc)}>
+                <Search className="h-3 w-3" />
+                Search & Source
               </Button>
             )}
-            {onSelectProduct && (
-              <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => onSelectProduct(doc)}>
-                Select Product
+            {onUpload && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUpload(doc)}>
+                <Upload className="h-3.5 w-3.5" />
               </Button>
             )}
           </>
