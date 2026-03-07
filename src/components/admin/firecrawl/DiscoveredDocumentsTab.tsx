@@ -195,95 +195,96 @@ const DiscoveredDocumentsTab = () => {
   const unconvertedCount = docs.filter(d => !d.is_converted_to_smart_doc).length;
 
   return (
-  return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Discovered Documents ({docs.length})
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchDocs} disabled={loading}>
-                <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
-              </Button>
-              {unconvertedCount > 0 && (
-                <Button size="sm" variant="secondary" onClick={downloadAndConvertAll} disabled={bulkProcessing || converting}>
-                  {bulkProcessing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Download className="h-3 w-3 mr-1" />}
-                  Download & Convert All ({unconvertedCount})
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Discovered Documents ({docs.length})
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchDocs} disabled={loading}>
+                  <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
                 </Button>
-              )}
-              {selected.size > 0 && (
-                <Button size="sm" onClick={convertToSmartDocs} disabled={converting || bulkProcessing}>
-                  {converting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
-                  Convert Selected ({selected.size})
-                </Button>
-              )}
+                {unconvertedCount > 0 && (
+                  <Button size="sm" variant="secondary" onClick={downloadAndConvertAll} disabled={bulkProcessing || converting}>
+                    {bulkProcessing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Download className="h-3 w-3 mr-1" />}
+                    Download & Convert All ({unconvertedCount})
+                  </Button>
+                )}
+                {selected.size > 0 && (
+                  <Button size="sm" onClick={convertToSmartDocs} disabled={converting || bulkProcessing}>
+                    {converting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                    Convert Selected ({selected.size})
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8">
-                  <Checkbox checked={selected.size === docs.length && docs.length > 0} onCheckedChange={selectAll} />
-                </TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Pipeline Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {docs.map(doc => {
-                const status = getDocStatus(doc);
-                return (
-                  <TableRow key={doc.id}>
-                    <TableCell>
-                      <Checkbox checked={selected.has(doc.id)} onCheckedChange={() => toggleSelect(doc.id)} />
-                    </TableCell>
-                    <TableCell className="max-w-[250px] truncate font-medium">{doc.title || 'Untitled'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{doc.department || '—'}</Badge>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
-                    <TableCell>{formatSize(doc.file_size)}</TableCell>
-                    <TableCell>{statusBadge(status)}</TableCell>
-                    <TableCell className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSourceDoc(doc)}>
-                        <Eye className="h-3 w-3 mr-1" />
-                        Source
-                      </Button>
-                      {doc.is_converted_to_smart_doc && doc.smart_doc_id && (
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSmartDoc(doc.smart_doc_id!)}>
-                          <FileText className="h-3 w-3 mr-1" />
-                          Smart Doc
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8">
+                    <Checkbox checked={selected.size === docs.length && docs.length > 0} onCheckedChange={selectAll} />
+                  </TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Pipeline Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {docs.map(doc => {
+                  const status = getDocStatus(doc);
+                  return (
+                    <TableRow key={doc.id}>
+                      <TableCell>
+                        <Checkbox checked={selected.has(doc.id)} onCheckedChange={() => toggleSelect(doc.id)} />
+                      </TableCell>
+                      <TableCell className="max-w-[250px] truncate font-medium">{doc.title || 'Untitled'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{doc.department || '—'}</Badge>
+                      </TableCell>
+                      <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
+                      <TableCell>{formatSize(doc.file_size)}</TableCell>
+                      <TableCell>{statusBadge(status)}</TableCell>
+                      <TableCell className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSourceDoc(doc)}>
+                          <Eye className="h-3 w-3 mr-1" />
+                          Source
                         </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {docs.length === 0 && !loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No discovered documents yet. Use the Building Dept Crawler to discover documents.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                        {doc.is_converted_to_smart_doc && doc.smart_doc_id && (
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSmartDoc(doc.smart_doc_id!)}>
+                            <FileText className="h-3 w-3 mr-1" />
+                            Smart Doc
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {docs.length === 0 && !loading && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No discovered documents yet. Use the Building Dept Crawler to discover documents.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
-    <PDFViewerDialog
-      open={!!viewingDoc}
-      onOpenChange={(open) => !open && setViewingDoc(null)}
-      url={viewingDoc?.url || ''}
-      title={viewingDoc?.title || 'Document Preview'}
-    />
-  </>;
+      <PDFViewerDialog
+        open={!!viewingDoc}
+        onOpenChange={(open) => !open && setViewingDoc(null)}
+        url={viewingDoc?.url || ''}
+        title={viewingDoc?.title || 'Document Preview'}
+      />
+    </>
+  );
 };
 
 export default DiscoveredDocumentsTab;
