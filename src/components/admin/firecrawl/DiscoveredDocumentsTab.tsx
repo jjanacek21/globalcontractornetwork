@@ -252,15 +252,17 @@ const DiscoveredDocumentsTab = () => {
                     <TableCell><Badge variant="secondary">{doc.document_type || '—'}</Badge></TableCell>
                     <TableCell>{formatSize(doc.file_size)}</TableCell>
                     <TableCell>{statusBadge(status)}</TableCell>
-                    <TableCell>
-                      {doc.is_converted_to_smart_doc && doc.smart_doc_id ? (
-                        <Button variant="ghost" size="sm" className="text-xs" asChild>
-                          <a href={`/permit-queens/admin/ai-intelligence?template=${doc.smart_doc_id}`} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            View Smart Doc
-                          </a>
+                    <TableCell className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSourceDoc(doc)}>
+                        <Eye className="h-3 w-3 mr-1" />
+                        Source
+                      </Button>
+                      {doc.is_converted_to_smart_doc && doc.smart_doc_id && (
+                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => viewSmartDoc(doc.smart_doc_id!)}>
+                          <FileText className="h-3 w-3 mr-1" />
+                          Smart Doc
                         </Button>
-                      ) : null}
+                      )}
                     </TableCell>
                   </TableRow>
                 );
