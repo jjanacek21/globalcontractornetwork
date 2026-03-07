@@ -195,7 +195,8 @@ const DiscoveredDocumentsTab = () => {
   const unconvertedCount = docs.filter(d => !d.is_converted_to_smart_doc).length;
 
   return (
-    <div className="space-y-4">
+  return (
+    <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
