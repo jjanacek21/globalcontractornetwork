@@ -32,6 +32,7 @@ const DiscoveredDocumentsTab = () => {
   const [converting, setConverting] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [viewingDoc, setViewingDoc] = useState<{ url: string; title: string } | null>(null);
 
   const fetchDocs = async () => {
     setLoading(true);
