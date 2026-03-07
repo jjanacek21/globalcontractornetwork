@@ -230,6 +230,20 @@ export default function PermitPacketAssembly() {
         });
       }
 
+      // Add firecrawl auto-discovered documents
+      for (const fcTemplate of (firecrawlTemplates || [])) {
+        docs.push({
+          order: docs.length + 1,
+          type: fcTemplate.document_classification || 'permit_application',
+          name: `${fcTemplate.form_name}`,
+          source: 'auto_fill',
+          status: fcTemplate.file_path ? 'ready' : 'pending',
+          pages: 1,
+          url: fcTemplate.file_path,
+          isFirecrawlDiscovered: true,
+        });
+      }
+
       setDocuments(docs);
     } catch (err: any) {
       console.error('Load error:', err);
