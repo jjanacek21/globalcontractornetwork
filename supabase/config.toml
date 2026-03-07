@@ -170,3 +170,12 @@ verify_jwt = false
 
 [functions.instant-roof-estimate]
 verify_jwt = false
+
+[functions.firecrawl-noa-scraper]
+verify_jwt = false
+
+[functions.firecrawl-permit-docs-crawler]
+verify_jwt = false
+
+[functions.firecrawl-to-smart-docs]
+verify_jwt = false
