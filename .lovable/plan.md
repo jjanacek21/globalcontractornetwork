@@ -1,69 +1,53 @@
 
 
-# Fix Missing Documents in Packet Assembly
+## Problem Analysis
 
-## Root Cause
+There are three issues to fix:
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+### 1. Smart Document Previews Fail (Storage Bucket Mismatch)
+The crawler (`firecrawl-permit-docs-crawler`) uploads PDFs to the **`permit-documents`** bucket at paths like `firecrawl/Miami-Dade/...`. When `firecrawl-to-smart-docs` converts these to `permit_form_templates` records, it sets `file_path = doc.storage_path` -- which is a path inside `permit-documents`. But both `SmartDocumentManager` and `DiscoveredDocumentsTab` call `createSignedUrl` on the **`permit-form-templates`** bucket, so the file is never found.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+**Fix:** Two changes needed:
+- Add a `storage_bucket` column to track which bucket the file lives in (or standardize). The simplest fix: update `viewDocument` and `viewSmartDoc` to check if the `file_path` starts with `firecrawl/` and use the `permit-documents` bucket in that case, otherwise use `permit-form-templates`.
+- Alternatively, update `firecrawl-to-smart-docs` to copy the file from `permit-documents` into `permit-form-templates` during conversion. This is cleaner long-term since all smart docs live in one bucket.
 
-## Fix: Two-Part Solution
+**Recommended approach:** Add bucket-aware preview logic in the frontend (fast fix), plus update `firecrawl-to-smart-docs` to copy files to the correct bucket going forward.
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+### 2. No Manual Upload Path for City Documents to Convert as Smart Docs
+The `SmartDocumentManager` only shows documents tied to a `building_dept_id`. But from the Firecrawl Intelligence Center (where the user currently is on `/admin/dashboard`), there is no way to manually upload a PDF and have it converted into a smart document template.
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+**Fix:** Add a manual upload section to the `DiscoveredDocumentsTab`:
+- A drop zone that accepts PDFs with department/county selector fields.
+- On upload: store the PDF in `permit-form-templates` bucket, create a `permit_form_templates` record with `source = 'manual'`, and trigger AI analysis.
+- This lets the admin upload city forms directly from the Firecrawl dashboard without needing to navigate to the Smart Document Manager.
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+### 3. No Delete Capability for Duplicates
+There is no delete functionality anywhere for `permit_form_templates` records. Duplicates from crawling cannot be removed.
 
-### 2. Fix incorrect source types in packet structures
+**Fix:** Add delete buttons to both:
+- `DiscoveredDocumentsTab` -- delete the `firecrawl_discovered_documents` record and optionally its linked smart doc.
+- `SmartDocumentManager` -- delete individual smart doc templates (remove from DB + storage).
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+Include a confirmation dialog before deletion.
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+## Implementation Plan
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+### A. Fix bucket-aware PDF preview
+- In `DiscoveredDocumentsTab.viewSmartDoc()` and `SmartDocumentManager.viewDocument()`, detect the bucket from `file_path`:
+  - If path starts with `firecrawl/` -> use `permit-documents` bucket
+  - Otherwise -> use `permit-form-templates` bucket
+- Same logic for the `SmartDocumentManager` view button.
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+### B. Add manual upload to DiscoveredDocumentsTab
+- Add a collapsible upload section at the top with: file drop zone, department/county selector, form name input, trade type, and form type.
+- Upload to `permit-form-templates` bucket, insert into `permit_form_templates` with `source = 'manual'`, trigger `permit-packet-analyzer`.
 
-## Files to Change
+### C. Add delete functionality
+- Add a Trash icon button on each document row in both `DiscoveredDocumentsTab` and `SmartDocumentManager`.
+- Use an `AlertDialog` for confirmation.
+- On confirm: delete the `permit_form_templates` record and the storage file.
+- For `DiscoveredDocumentsTab`: also allow deleting the `firecrawl_discovered_documents` record (with option to also delete its linked smart doc).
 
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+### D. Update firecrawl-to-smart-docs edge function
+- After conversion, copy the PDF from `permit-documents` to `permit-form-templates` bucket and update the `file_path` to the new location. This ensures all smart doc files live in the correct bucket going forward.
 
