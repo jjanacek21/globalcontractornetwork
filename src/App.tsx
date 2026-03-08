@@ -10,6 +10,17 @@ import { AnimatePresence } from "framer-motion";
 
 // Social Coming Soon Page
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
+
+// CRM Pages
+import { CRMLayout } from "./components/crm/CRMLayout";
+const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
+const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
+const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
+const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
+const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
+const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
+const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
+const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -142,6 +153,92 @@ const GCNRoutes = () => (
       </ProtectedRoute>
     } />
     <Route path="/member/dashboard" element={<MemberDashboard />} />
+    
+    {/* CRM Routes */}
+    <Route path="/member/crm" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout>
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+            <CRMDashboard />
+          </Suspense>
+        </CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/pipeline" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPipeline /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/contacts" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMContacts /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/jobs" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMJobs /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/estimates" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMEstimates /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/production" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMProduction /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/calendar" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMCalendar /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/field-map" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><FieldMap /></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/presentations" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Presentations /></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/smart-docs" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Smart Docs" description="Manage your smart document templates and auto-fill forms." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/follow-up/*" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Follow Up Hub" description="Manage call queues, tasks, and follow-up reminders." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/*" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Insurance" description="Track insurance claims, supplements, and documentation." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/surveys" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Surveys" description="Create and manage customer satisfaction surveys." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/referrals" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Referrals" description="Track and manage your referral network." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/help" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Help Center" /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/settings" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Settings" description="Configure your CRM preferences and integrations." /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
     <Route path="/my-profile" element={
       <ProtectedRoute redirectTo="/network-login">
         <MyProfile />

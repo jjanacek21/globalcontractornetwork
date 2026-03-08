@@ -188,6 +188,14 @@ const MemberDashboard = () => {
 
   const services = [
     {
+      icon: ClipboardList,
+      title: "Roofing CRM",
+      description: "Full CRM with pipeline, contacts, jobs & estimates",
+      link: "/member/crm",
+      color: "bg-primary/10 text-primary",
+      category: "business" as ServiceCategory
+    },
+    {
       icon: Search,
       title: "Contractor Directory",
       description: "Browse 500+ verified local contractors",
