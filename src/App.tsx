@@ -16,6 +16,7 @@ import { CRMLayout } from "./components/crm/CRMLayout";
 const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
 const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
 const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
+const CRMContactDetail = lazy(() => import("./pages/crm/CRMContactDetail"));
 const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
 const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
 const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
