@@ -199,6 +199,11 @@ export default function CRMContactDetail() {
               <Button variant="outline" size="sm" onClick={() => handleLogComm("call")}>
                 <Phone className="mr-1 h-4 w-4" /> Call
               </Button>
+              {contact.email && (
+                <Button variant="outline" size="sm" onClick={() => setShowSendEmail(true)}>
+                  <Mail className="mr-1 h-4 w-4" /> Email
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setShowEditContact(true)}>
                 <Edit className="mr-1 h-4 w-4" /> Edit
               </Button>
