@@ -189,6 +189,11 @@ const GCNRoutes = () => (
         <CRMLayout><Suspense fallback={<div />}><CRMContacts /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
+    <Route path="/member/crm/contacts/:contactId" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMContactDetail /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
     <Route path="/member/crm/jobs" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMJobs /></Suspense></CRMLayout>
