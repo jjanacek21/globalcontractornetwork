@@ -4,6 +4,9 @@ import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
 import { useNotes } from "@/hooks/useNotes";
 import { NotesList } from "@/components/crm/NotesList";
+import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
+import { useLead } from "@/hooks/useLeads";
+import { useLeads } from "@/hooks/useLeads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +43,10 @@ export default function CRMContactDetail() {
   const { toast } = useToast();
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
+  const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
+  const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
 
   if (isLoading) {
     return (
@@ -179,7 +185,7 @@ export default function CRMContactDetail() {
                 )}
                 <Badge variant="outline">{contact.leads[0].status || "new"}</Badge>
               </div>
-              <Button variant="outline" size="sm">View Details</Button>
+              <Button variant="outline" size="sm" onClick={() => setSelectedLeadId(contact.leads![0].id)}>View Details</Button>
             </div>
           </CardContent>
         </Card>
@@ -343,7 +349,7 @@ export default function CRMContactDetail() {
                         <p className="text-sm text-green-600 mt-1">${lead.expected_value.toLocaleString()}</p>
                       )}
                     </div>
-                    <Button variant="outline" size="sm">View</Button>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedLeadId(lead.id)}>View</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -442,6 +448,20 @@ export default function CRMContactDetail() {
         onContactUpdated={() => {
           refetch();
           setShowEditContact(false);
+        }}
+      />
+
+      {/* Lead Detail Sheet */}
+      <LeadDetailSheet
+        lead={selectedLead}
+        open={!!selectedLeadId}
+        onOpenChange={(open) => { if (!open) setSelectedLeadId(null); }}
+        onStatusChange={async (status) => {
+          if (selectedLeadId) {
+            await updateLeadStatus(selectedLeadId, status as any);
+            refetchLead();
+            refetch();
+          }
         }}
       />
     </div>
