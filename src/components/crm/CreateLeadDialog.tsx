@@ -62,6 +62,9 @@ export function CreateLeadDialog({
     source: "" as ContactSource | "",
     expected_value: "",
     qualification_notes: "",
+    roof_type: "",
+    roof_age: "",
+    priority: "medium",
     // Inline address fields
     address_line1: "",
     city: "",
@@ -134,8 +137,11 @@ export function CreateLeadDialog({
       source: formData.source || null,
       expected_value: formData.expected_value ? parseFloat(formData.expected_value) : null,
       qualification_notes: formData.qualification_notes || null,
+      roof_type: formData.roof_type || null,
+      roof_age: formData.roof_age ? parseInt(formData.roof_age) : null,
+      priority: formData.priority || "medium",
       status: "new",
-    });
+    } as any);
 
     setIsSubmitting(false);
 
@@ -148,6 +154,9 @@ export function CreateLeadDialog({
         source: "",
         expected_value: "",
         qualification_notes: "",
+        roof_type: "",
+        roof_age: "",
+        priority: "medium",
         address_line1: "",
         city: "",
         state: "",
@@ -270,6 +279,54 @@ export function CreateLeadDialog({
               onChange={(e) => setFormData({ ...formData, expected_value: e.target.value })}
               placeholder="15000"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Roof Type</Label>
+            <Select
+              value={formData.roof_type}
+              onValueChange={(value) => setFormData({ ...formData, roof_type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select roof type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="shingle">Shingle</SelectItem>
+                <SelectItem value="tile">Tile</SelectItem>
+                <SelectItem value="metal">Metal</SelectItem>
+                <SelectItem value="flat">Flat</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="roof_age">Roof Age (years)</Label>
+              <Input
+                id="roof_age"
+                type="number"
+                value={formData.roof_age}
+                onChange={(e) => setFormData({ ...formData, roof_age: e.target.value })}
+                placeholder="10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(value) => setFormData({ ...formData, priority: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
