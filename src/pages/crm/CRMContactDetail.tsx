@@ -40,7 +40,7 @@ export default function CRMContactDetail() {
   const { toast } = useToast();
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
-  const [newNote, setNewNote] = useState("");
+  const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
 
   if (isLoading) {
     return (
