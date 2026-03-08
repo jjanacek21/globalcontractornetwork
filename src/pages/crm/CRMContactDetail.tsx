@@ -590,6 +590,24 @@ export default function CRMContactDetail() {
           }
         }}
       />
+
+      {/* Send Email Dialog */}
+      {contact.email && (
+        <SendEmailDialog
+          open={showSendEmail}
+          onOpenChange={setShowSendEmail}
+          contactEmail={contact.email}
+          contactName={fullName}
+          onEmailSent={() => {
+            logCommunication({
+              comm_type: "email",
+              direction: "outbound",
+              content: "Email sent via GCN-CRM",
+              company_id: contact.company_id || undefined,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
