@@ -434,6 +434,11 @@ export default function CRMContactDetail() {
             <Button variant="outline" size="sm" onClick={() => handleLogComm("email")}>
               <Mail className="mr-1 h-4 w-4" /> Log Email
             </Button>
+            {contact.email && (
+              <Button size="sm" onClick={() => setShowSendEmail(true)}>
+                <Send className="mr-1 h-4 w-4" /> Send Email
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => handleLogComm("sms")}>
               <MessageSquare className="mr-1 h-4 w-4" /> Log SMS
             </Button>
