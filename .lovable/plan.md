@@ -1,69 +1,75 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# Plan: Build Documents, Communication, Enhanced Lead Dialog, and Lead Detail Page
 
-## Root Cause
+## Overview
+Implement the four priority features from the Pitch CRM reference: document uploads, communication tracking, an enhanced Create Lead dialog, and a full-page lead detail view. This is a large scope, so the plan is structured in phases.
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+## Database Changes
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+### New Tables
 
-## Fix: Two-Part Solution
+**`contact_documents`** — File attachments for contacts and leads
+- `id`, `contact_id`, `lead_id` (nullable), `file_name`, `file_path`, `file_type`, `file_size`, `uploaded_by`, `created_at`
+- RLS: authenticated users can CRUD
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+**`contact_communications`** — Communication log (calls, emails, SMS)
+- `id`, `contact_id`, `lead_id` (nullable), `type` (call/email/sms/system), `direction` (inbound/outbound), `subject`, `content`, `created_by`, `created_at`
+- RLS: authenticated users can CRUD
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+### Storage
+- Create `contact-documents` bucket (private) with RLS for authenticated uploads
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+### Leads Table Update
+- Add columns: `roof_type`, `roof_age`, `priority` (text, default 'medium')
 
-### 2. Fix incorrect source types in packet structures
+## File Changes
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+### 1. Enhanced Create Lead Dialog (`CreateLeadDialog.tsx`)
+Inspired by the Pitch reference screenshots:
+- Add fields: **Roof Type** (select: shingle, tile, metal, flat, other), **Roof Age** (number input), **Priority** (low/medium/high select)
+- Pre-fill contact name and phone at top of form (read-only display)
+- Show "Use same info as contact" checkbox (already exists, keep it)
+- Add Notes textarea (already exists)
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+### 2. Communication Tab (`CRMContactDetail.tsx`)
+- Create a `useContactCommunications` hook to fetch/create communications
+- Wire "Call Now", "Send Email", "Send SMS" buttons to log communication entries
+- Display communication timeline with type badges, direction, content, and timestamps
+- Show stat cards with actual counts from the database
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+### 3. Documents Tab (`CRMContactDetail.tsx`)
+- Create a `useContactDocuments` hook to fetch/upload/delete documents
+- Wire the "Upload" button to a file input (accept: jpg, jpeg, png, pdf)
+- Upload files to `contact-documents` bucket, save metadata to `contact_documents` table
+- Display uploaded files as a list with file name, type icon, size, date, and delete button
+- Support image preview for screenshots
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+### 4. Lead Detail — Full Page Route
+- Create new page `src/pages/crm/CRMLeadDetail.tsx` at route `/member/crm/leads/:leadId`
+- Replace the current `LeadDetailSheet` slide-out with navigation to this full page
+- Page layout inspired by Pitch reference:
+  - Header: contact name, status dropdown, address, phone, email, roof details
+  - Internal Team Notes section (using `useNotes` hook with entity type "lead")
+  - Communication sub-tabs (Comms, Photos, Activity, Timeline)
+  - Activity timeline using existing `ActivityTimeline` component
 
-## Files to Change
+### New Hooks
+- `src/hooks/useContactDocuments.tsx` — CRUD for `contact_documents` + storage upload/delete
+- `src/hooks/useContactCommunications.tsx` — CRUD for `contact_communications`
 
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+## Files Modified
+- Database migration (2 new tables, storage bucket, leads column additions)
+- `src/components/crm/CreateLeadDialog.tsx` — add roof type, roof age, priority fields
+- `src/pages/crm/CRMContactDetail.tsx` — wire documents + communication tabs
+- `src/hooks/useContactDocuments.tsx` — new hook
+- `src/hooks/useContactCommunications.tsx` — new hook
+- `src/pages/crm/CRMLeadDetail.tsx` — new full-page lead detail
+- `src/App.tsx` — add route for lead detail page
 
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+## Technical Notes
+- File uploads restricted to jpg, jpeg, png, pdf (max 10MB enforced client-side)
+- Storage paths: `{userId}/{contactId}/{timestamp}_{filename}`
+- All new tables have RLS policies for authenticated users
+- The leads table additions (`roof_type`, `roof_age`, `priority`) are nullable to avoid breaking existing data
 
