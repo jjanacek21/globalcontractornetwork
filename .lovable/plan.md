@@ -1,85 +1,69 @@
 
 
-# Plan: Build Functional Contact Detail Page and Fix CRM Data Layer
+# Fix Missing Documents in Packet Assembly
 
-## Problem Summary
-The current CRM is UI-only scaffolding. The PITCH reference screenshots show a fully functional contact detail page with tabs, actions, and working CRUD. Additionally, contacts cannot be created due to an RLS policy violation (403 on INSERT).
+## Root Cause
 
-## What Will Be Built
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### 1. Fix Contacts RLS Policy (Database Migration)
-The POST to `contacts` returns 403. Need to add an INSERT policy for authenticated users so contacts can actually be created.
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-### 2. Contact Detail Page (`/member/crm/contacts/:id`)
-New page matching the PITCH screenshots exactly:
+## Fix: Two-Part Solution
 
-**Header Section:**
-- Large avatar with initials, contact name, company name, contact number badge, status dropdown (Qualified/New/etc.)
-- Contact info row: phone, email, address
-- Action buttons: Call, Skip Trace, Rep assignment dropdown, Edit, + Create Lead (navy)
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-**Pipeline Lead Summary Card:**
-- Shows lead type with "project" badge, estimated value, contact/lead ID badges, win probability bar, "View Details" button
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
-**5-Tab Interface:**
-- **Details tab**: Homeowner Portal Access toggle with Active badge, Copy Link / Send Email buttons, Portal URL display. Below: 5 stat cards (Lead Score, Created, Source, Status, Total Jobs). Contact Information section with Edit button showing company, address, phones, email.
-- **Pipeline tab**: 3 stat cards (Leads, Active Jobs, Closed). Pipeline items list showing lead cards and job cards with View buttons.
-- **Notes tab**: "Add a contact note..." input, chronological note list.
-- **Communication tab**: Call Now / Send Email / Send SMS buttons. 4 stat cards (Total, Calls, Emails, SMS). Communication Timeline with entries.
-- **Documents tab**: Documents & Files section with upload placeholder.
-
-### 3. Enhanced Create Contact Dialog
-Replace the simple 4-field form with the full PITCH form:
-- First Name*, Last Name*, Email (required if no phone), Phone (required if no email)
-- Secondary Phone, Additional Phone Numbers (+ Add Phone)
-- Company Name, Contact Type dropdown (Homeowner default)
-- Lead Source* dropdown, Qualification Status dropdown
-- Assign to Sales Rep dropdown
-- Contact Address section with autocomplete, City, State, ZIP
-- Tags input with Add button
-- Notes textarea
-- Create Contact button (navy) + Cancel button
-
-### 4. Create Lead Dialog (from Contact Detail)
-Dialog triggered by "+ Create Lead" button on contact detail:
-- Lead Name (pre-filled), Phone Number (pre-filled)
-- Roof Age (years), "Use same info as contact" checkbox
-- Pipeline Status (Lead/Qualified/etc.), Roof Type dropdown, Priority dropdown
-- Estimated Value input
-- Address with geocoding verification (showing verified address options)
-- Assign Sales Representatives (up to 2) with tag chips
-- Notes textarea
-- Cancel + Complete Required Fields button
-
-### 5. Route Wiring
-Add route: `/member/crm/contacts/:contactId` in App.tsx pointing to new `CRMContactDetail.tsx`.
-
-## Technical Details
-
-### Database Migration
-```sql
--- Allow authenticated users to insert contacts
-CREATE POLICY "Users can insert contacts"
-ON public.contacts FOR INSERT TO authenticated
-WITH CHECK (true);
-
--- Allow authenticated users to update their contacts  
-CREATE POLICY "Users can update contacts"
-ON public.contacts FOR UPDATE TO authenticated
-USING (true) WITH CHECK (true);
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
 ```
 
-### New Files
-- `src/pages/crm/CRMContactDetail.tsx` - Full contact detail page (~500 lines)
-- `src/components/crm/CreateContactDialog.tsx` - Enhanced create contact form
-- `src/components/crm/CreateLeadFromContactDialog.tsx` - Create lead dialog
+### 2. Fix incorrect source types in packet structures
 
-### Modified Files
-- `src/App.tsx` - Add contactId route
-- `src/pages/crm/CRMContacts.tsx` - Wire View buttons to navigate to detail, use new CreateContactDialog
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
 
-### Data Flow
-- Uses existing `useContact(id)` hook from `useContacts.tsx` which already fetches contact + properties + leads
-- Board/table view "View" links navigate to `/member/crm/contacts/:id`
-- Contact detail fetches related leads, jobs, and properties via existing hooks
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 

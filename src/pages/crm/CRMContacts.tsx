@@ -1,19 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContacts } from "@/hooks/useContacts";
-import { UserPlus, Search, Phone, Mail, User, Upload, Settings2, Plus, ArrowDownRight, ArrowUpRight, Users, LayoutGrid, List, Eye } from "lucide-react";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
+import { UserPlus, Search, Plus, ArrowDownRight, ArrowUpRight, Users, LayoutGrid, List, Eye, Upload, Settings2, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 const BOARD_COLUMNS = [
@@ -24,11 +20,11 @@ const BOARD_COLUMNS = [
 ];
 
 export default function CRMContacts() {
-  const { contacts, isLoading, createContact } = useContacts();
+  const navigate = useNavigate();
+  const { contacts, isLoading, fetchContacts } = useContacts();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [viewMode, setViewMode] = useState<"board" | "table">("board");
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", primary_phone: "" });
 
   const filtered = contacts.filter(c => {
     const q = search.toLowerCase();
@@ -37,19 +33,14 @@ export default function CRMContacts() {
       c.primary_phone?.includes(q);
   });
 
-  const handleCreate = async () => {
-    if (!form.first_name || !form.last_name) return;
-    await createContact(form as any);
-    setForm({ first_name: "", last_name: "", email: "", primary_phone: "" });
-    setShowAdd(false);
-  };
-
   const stats = [
     { label: "Leads Converted to...", value: contacts.filter(c => c.status === "converted").length, icon: ArrowUpRight, iconColor: "text-green-500" },
     { label: "New (2 Weeks)", value: contacts.filter(c => { const d = new Date(c.created_at || ""); return d > new Date(Date.now() - 14 * 86400000); }).length, icon: ArrowUpRight, iconColor: "text-green-500" },
     { label: "Leads", value: contacts.length, icon: ArrowDownRight, iconColor: "text-orange-500" },
     { label: "Avg Score", value: "0%", icon: User, iconColor: "text-blue-500" },
   ];
+
+  const goToContact = (id: string) => navigate(`/member/crm/contacts/${id}`);
 
   return (
     <div className="space-y-6">
@@ -65,25 +56,9 @@ export default function CRMContacts() {
           <Button size="sm" className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white">
             <Plus className="mr-2 h-4 w-4" />Add Lead
           </Button>
-          <Dialog open={showAdd} onOpenChange={setShowAdd}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white">
-                <UserPlus className="mr-2 h-4 w-4" />New Contact
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Add New Contact</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>First Name</Label><Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} /></div>
-                  <div><Label>Last Name</Label><Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} /></div>
-                </div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
-                <div><Label>Phone</Label><Input value={form.primary_phone} onChange={e => setForm(f => ({ ...f, primary_phone: e.target.value }))} /></div>
-                <Button onClick={handleCreate} className="w-full">Create Contact</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white" onClick={() => setShowAdd(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />New Contact
+          </Button>
         </div>
       </div>
 
@@ -139,7 +114,6 @@ export default function CRMContacts() {
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-40" />)}
         </div>
       ) : viewMode === "board" ? (
-        /* Board View */
         <div>
           <h2 className="text-lg font-semibold mb-3">Contacts by Status</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -153,12 +127,12 @@ export default function CRMContacts() {
                   </div>
                   <div className="space-y-2 min-h-[120px] bg-muted/30 rounded-lg p-2">
                     {colContacts.map(contact => (
-                      <Card key={contact.id} className="hover:shadow-md transition-shadow">
+                      <Card key={contact.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => goToContact(contact.id)}>
                         <CardContent className="p-3">
                           <p className="font-medium text-sm">{contact.first_name} {contact.last_name}</p>
                           <p className="text-xs text-muted-foreground mt-1">Primary Owner</p>
                           <p className="text-xs text-muted-foreground">—</p>
-                          <Button variant="link" size="sm" className="p-0 h-auto text-xs text-primary mt-1">
+                          <Button variant="link" size="sm" className="p-0 h-auto text-xs text-primary mt-1" onClick={(e) => { e.stopPropagation(); goToContact(contact.id); }}>
                             <Eye className="mr-1 h-3 w-3" />View
                           </Button>
                         </CardContent>
@@ -171,7 +145,6 @@ export default function CRMContacts() {
           </div>
         </div>
       ) : (
-        /* Table View */
         <Card>
           <Table>
             <TableHeader>
@@ -187,7 +160,7 @@ export default function CRMContacts() {
             </TableHeader>
             <TableBody>
               {filtered.map(c => (
-                <TableRow key={c.id}>
+                <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => goToContact(c.id)}>
                   <TableCell className="font-medium">{c.first_name} {c.last_name}</TableCell>
                   <TableCell>{c.email || "—"}</TableCell>
                   <TableCell>{c.primary_phone || "—"}</TableCell>
@@ -206,6 +179,8 @@ export default function CRMContacts() {
           </Table>
         </Card>
       )}
+
+      <CreateContactDialog open={showAdd} onOpenChange={setShowAdd} onContactCreated={fetchContacts} />
     </div>
   );
 }
