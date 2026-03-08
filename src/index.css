@@ -70,14 +70,14 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    /* Sidebar - matching the brand */
-    --sidebar-background: 152 45% 28%;
+    /* Sidebar - glassmorphic brand */
+    --sidebar-background: 152 45% 22%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 43 85% 58%;
     --sidebar-primary-foreground: 150 30% 15%;
-    --sidebar-accent: 152 45% 35%;
+    --sidebar-accent: 152 45% 30%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 152 45% 35%;
+    --sidebar-border: 152 40% 35%;
     --sidebar-ring: 43 85% 58%;
 
     /* Custom gradients */
@@ -129,13 +129,13 @@ All colors MUST be HSL.
     --input: 150 30% 20%;
     --ring: 152 45% 40%;
 
-    --sidebar-background: 152 45% 12%;
+    --sidebar-background: 152 45% 10%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 43 85% 58%;
     --sidebar-primary-foreground: 150 30% 10%;
-    --sidebar-accent: 152 45% 18%;
+    --sidebar-accent: 152 45% 16%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 152 45% 18%;
+    --sidebar-border: 152 40% 20%;
     --sidebar-ring: 43 85% 58%;
 
     --shadow-soft: 0 2px 8px hsla(0, 0%, 0%, 0.3);
