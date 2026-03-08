@@ -9,6 +9,8 @@ import { useLead } from "@/hooks/useLeads";
 import { useLeads } from "@/hooks/useLeads";
 import { useContactDocuments } from "@/hooks/useContactDocuments";
 import { useContactCommunications } from "@/hooks/useContactCommunications";
+import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
+import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,7 @@ export default function CRMContactDetail() {
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [showSendEmail, setShowSendEmail] = useState(false);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
@@ -196,6 +199,11 @@ export default function CRMContactDetail() {
               <Button variant="outline" size="sm" onClick={() => handleLogComm("call")}>
                 <Phone className="mr-1 h-4 w-4" /> Call
               </Button>
+              {contact.email && (
+                <Button variant="outline" size="sm" onClick={() => setShowSendEmail(true)}>
+                  <Mail className="mr-1 h-4 w-4" /> Email
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setShowEditContact(true)}>
                 <Edit className="mr-1 h-4 w-4" /> Edit
               </Button>
@@ -334,7 +342,13 @@ export default function CRMContactDetail() {
             <CardHeader>
               <CardTitle className="text-base">Properties ({propertyCount})</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <AddressGeocoder
+                placeholder="Search to add a property address..."
+                onSelect={(address, coords) => {
+                  toast({ title: "Address selected", description: `${address} [${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}]` });
+                }}
+              />
               {contact.properties && contact.properties.length > 0 ? (
                 <div className="space-y-3">
                   {contact.properties.map((p) => (
@@ -426,6 +440,11 @@ export default function CRMContactDetail() {
             <Button variant="outline" size="sm" onClick={() => handleLogComm("email")}>
               <Mail className="mr-1 h-4 w-4" /> Log Email
             </Button>
+            {contact.email && (
+              <Button size="sm" onClick={() => setShowSendEmail(true)}>
+                <Send className="mr-1 h-4 w-4" /> Send Email
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => handleLogComm("sms")}>
               <MessageSquare className="mr-1 h-4 w-4" /> Log SMS
             </Button>
@@ -571,6 +590,24 @@ export default function CRMContactDetail() {
           }
         }}
       />
+
+      {/* Send Email Dialog */}
+      {contact.email && (
+        <SendEmailDialog
+          open={showSendEmail}
+          onOpenChange={setShowSendEmail}
+          contactEmail={contact.email}
+          contactName={fullName}
+          onEmailSent={() => {
+            logCommunication({
+              comm_type: "email",
+              direction: "outbound",
+              content: "Email sent via GCN-CRM",
+              company_id: contact.company_id || undefined,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
