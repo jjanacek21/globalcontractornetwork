@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLeads } from "@/hooks/useLeads";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -53,26 +55,80 @@ export function CreateLeadDialog({
 }: CreateLeadDialogProps) {
   const { createLead } = useLeads();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useExistingProperty, setUseExistingProperty] = useState(properties.length > 0);
   const [formData, setFormData] = useState({
-    property_id: "",
+    property_id: properties.length > 0 ? properties[0].id : "",
     lead_type: "retail" as LeadType,
     source: "" as ContactSource | "",
     expected_value: "",
     qualification_notes: "",
+    // Inline address fields
+    address_line1: "",
+    city: "",
+    state: "",
+    zip: "",
   });
+
+  const handleUseSameAddress = (checked: boolean) => {
+    if (checked && properties.length > 0) {
+      setUseExistingProperty(true);
+      setFormData(prev => ({
+        ...prev,
+        property_id: properties[0].id,
+        address_line1: properties[0].address_line1 || "",
+        city: properties[0].city || "",
+        state: properties[0].state || "",
+        zip: properties[0].zip || "",
+      }));
+    } else {
+      setUseExistingProperty(false);
+      setFormData(prev => ({
+        ...prev,
+        property_id: "",
+        address_line1: "",
+        city: "",
+        state: "",
+        zip: "",
+      }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.property_id) {
+    setIsSubmitting(true);
+
+    let propertyId = formData.property_id;
+
+    // If no existing property selected, create one from inline address
+    if (!propertyId && formData.address_line1.trim()) {
+      const { data: newProperty, error } = await supabase
+        .from("properties")
+        .insert({
+          contact_id: contactId,
+          company_id: companyId || null,
+          address_line1: formData.address_line1,
+          city: formData.city || null,
+          state: formData.state || null,
+          zip: formData.zip || null,
+        })
+        .select()
+        .single();
+
+      if (error || !newProperty) {
+        setIsSubmitting(false);
+        return;
+      }
+      propertyId = newProperty.id;
+    }
+
+    if (!propertyId) {
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
-
     const lead = await createLead({
       contact_id: contactId,
-      property_id: formData.property_id,
+      property_id: propertyId,
       company_id: companyId,
       lead_type: formData.lead_type,
       source: formData.source || null,
@@ -85,30 +141,48 @@ export function CreateLeadDialog({
 
     if (lead) {
       onLeadCreated();
+      onOpenChange(false);
       setFormData({
         property_id: "",
         lead_type: "retail",
         source: "",
         expected_value: "",
         qualification_notes: "",
+        address_line1: "",
+        city: "",
+        state: "",
+        zip: "",
       });
     }
   };
 
+  const hasAddress = useExistingProperty ? !!formData.property_id : !!formData.address_line1.trim();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Lead</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="property_id">Property *</Label>
-            {properties.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No properties available. Add a property first.
-              </p>
-            ) : (
+          {/* Property Selection / Address Entry */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Property Address *</Label>
+
+            {properties.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="use_same"
+                  checked={useExistingProperty}
+                  onCheckedChange={(checked) => handleUseSameAddress(!!checked)}
+                />
+                <Label htmlFor="use_same" className="text-sm font-normal cursor-pointer">
+                  Use existing property address
+                </Label>
+              </div>
+            )}
+
+            {useExistingProperty && properties.length > 0 ? (
               <Select
                 value={formData.property_id}
                 onValueChange={(value) => setFormData({ ...formData, property_id: value })}
@@ -119,11 +193,36 @@ export function CreateLeadDialog({
                 <SelectContent>
                   {properties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
-                      {property.address_line1}, {property.city}
+                      {property.address_line1}{property.city ? `, ${property.city}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            ) : (
+              <div className="space-y-3">
+                <Input
+                  placeholder="Street Address"
+                  value={formData.address_line1}
+                  onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    placeholder="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                  <Input
+                    placeholder="State"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  />
+                  <Input
+                    placeholder="ZIP"
+                    value={formData.zip}
+                    onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -174,7 +273,7 @@ export function CreateLeadDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="qualification_notes">Qualification Notes</Label>
+            <Label htmlFor="qualification_notes">Notes</Label>
             <Textarea
               id="qualification_notes"
               value={formData.qualification_notes}
@@ -188,7 +287,7 @@ export function CreateLeadDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || properties.length === 0}>
+            <Button type="submit" disabled={isSubmitting || !hasAddress}>
               {isSubmitting ? "Creating..." : "Create Lead"}
             </Button>
           </div>

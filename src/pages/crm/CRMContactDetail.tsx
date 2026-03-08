@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateLeadDialog } from "@/components/crm/CreateLeadDialog";
+import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
@@ -37,7 +37,7 @@ export default function CRMContactDetail() {
   const { updateContact } = useContacts();
   const { toast } = useToast();
   const [showCreateLead, setShowCreateLead] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [showEditContact, setShowEditContact] = useState(false);
   const [newNote, setNewNote] = useState("");
 
   if (isLoading) {
@@ -65,6 +65,10 @@ export default function CRMContactDetail() {
   const fullName = `${contact.first_name} ${contact.last_name}`;
   const leadCount = contact.leads?.length || 0;
   const propertyCount = contact.properties?.length || 0;
+  const primaryProperty = contact.properties?.[0];
+  const primaryAddress = primaryProperty
+    ? [primaryProperty.address_line1, primaryProperty.city, primaryProperty.state, primaryProperty.zip].filter(Boolean).join(", ")
+    : null;
 
   const handleStatusChange = async (status: string) => {
     await updateContact(contact.id, { status });
@@ -107,7 +111,7 @@ export default function CRMContactDetail() {
                     Source: {contact.source.replace(/_/g, " ")}
                   </p>
                 )}
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
                   {contact.primary_phone && (
                     <span className="flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5" /> {contact.primary_phone}
@@ -116,6 +120,11 @@ export default function CRMContactDetail() {
                   {contact.email && (
                     <span className="flex items-center gap-1">
                       <Mail className="h-3.5 w-3.5" /> {contact.email}
+                    </span>
+                  )}
+                  {primaryAddress && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {primaryAddress}
                     </span>
                   )}
                 </div>
@@ -137,7 +146,7 @@ export default function CRMContactDetail() {
               <Button variant="outline" size="sm">
                 <Phone className="mr-1 h-4 w-4" /> Call
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowEditContact(true)}>
                 <Edit className="mr-1 h-4 w-4" /> Edit
               </Button>
               <Button
@@ -237,7 +246,7 @@ export default function CRMContactDetail() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Contact Information</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
+                <Button variant="outline" size="sm" onClick={() => setShowEditContact(true)}>
                   <Edit className="mr-1 h-4 w-4" /> Edit
                 </Button>
               </div>
@@ -267,8 +276,8 @@ export default function CRMContactDetail() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground mb-1">Source Details</p>
-                  <p className="font-medium">{contact.source_details || "—"}</p>
+                  <p className="text-muted-foreground mb-1">Address</p>
+                  <p className="font-medium">{primaryAddress || "—"}</p>
                 </div>
               </div>
             </CardContent>
@@ -435,6 +444,18 @@ export default function CRMContactDetail() {
         properties={contact.properties || []}
         companyId={contact.company_id || undefined}
         onLeadCreated={refetch}
+      />
+
+      {/* Edit Contact Dialog */}
+      <EditContactDialog
+        open={showEditContact}
+        onOpenChange={setShowEditContact}
+        contact={contact}
+        properties={contact.properties}
+        onContactUpdated={() => {
+          refetch();
+          setShowEditContact(false);
+        }}
       />
     </div>
   );
