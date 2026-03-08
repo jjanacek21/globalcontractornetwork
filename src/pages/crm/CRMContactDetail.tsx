@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
+import { useNotes } from "@/hooks/useNotes";
+import { NotesList } from "@/components/crm/NotesList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
