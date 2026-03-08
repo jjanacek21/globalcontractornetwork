@@ -48,6 +48,7 @@ export default function CRMContactDetail() {
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [showSendEmail, setShowSendEmail] = useState(false);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
