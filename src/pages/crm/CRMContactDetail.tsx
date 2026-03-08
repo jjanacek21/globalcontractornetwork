@@ -9,6 +9,8 @@ import { useLead } from "@/hooks/useLeads";
 import { useLeads } from "@/hooks/useLeads";
 import { useContactDocuments } from "@/hooks/useContactDocuments";
 import { useContactCommunications } from "@/hooks/useContactCommunications";
+import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
+import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
