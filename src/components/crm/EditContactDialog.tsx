@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useContacts } from "@/hooks/useContacts";
+import { useProperties } from "@/hooks/useProperties";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +23,13 @@ import type { Database } from "@/integrations/supabase/types";
 type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 type ContactSource = Database["public"]["Enums"]["contact_source"];
 type ContactMethod = Database["public"]["Enums"]["contact_method"];
+type Property = Database["public"]["Tables"]["properties"]["Row"];
 
 interface EditContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contact: Contact;
+  properties?: Property[];
   onContactUpdated: () => void;
 }
 
@@ -50,6 +54,7 @@ export function EditContactDialog({
   open,
   onOpenChange,
   contact,
+  properties = [],
   onContactUpdated,
 }: EditContactDialogProps) {
   const { updateContact } = useContacts();
@@ -66,7 +71,14 @@ export function EditContactDialog({
     source_details: "",
     preferred_contact_method: "call" as ContactMethod,
     status: "",
+    // Address fields from property
+    address_line1: "",
+    city: "",
+    state: "",
+    zip: "",
   });
+
+  const primaryProperty = properties.length > 0 ? properties[0] : null;
 
   useEffect(() => {
     if (contact) {
@@ -82,14 +94,19 @@ export function EditContactDialog({
         source_details: contact.source_details || "",
         preferred_contact_method: contact.preferred_contact_method || "call",
         status: contact.status || "",
+        address_line1: primaryProperty?.address_line1 || "",
+        city: primaryProperty?.city || "",
+        state: primaryProperty?.state || "",
+        zip: primaryProperty?.zip || "",
       });
     }
-  }, [contact]);
+  }, [contact, primaryProperty]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Update contact
     const updated = await updateContact(contact.id, {
       first_name: formData.first_name,
       last_name: formData.last_name,
@@ -103,6 +120,32 @@ export function EditContactDialog({
       preferred_contact_method: formData.preferred_contact_method,
       status: formData.status || null,
     });
+
+    // Upsert property if address provided
+    if (formData.address_line1.trim()) {
+      if (primaryProperty) {
+        await supabase
+          .from("properties")
+          .update({
+            address_line1: formData.address_line1,
+            city: formData.city || null,
+            state: formData.state || null,
+            zip: formData.zip || null,
+          })
+          .eq("id", primaryProperty.id);
+      } else {
+        await supabase
+          .from("properties")
+          .insert({
+            contact_id: contact.id,
+            company_id: contact.company_id,
+            address_line1: formData.address_line1,
+            city: formData.city || null,
+            state: formData.state || null,
+            zip: formData.zip || null,
+          });
+      }
+    }
 
     setIsSubmitting(false);
 
@@ -257,6 +300,50 @@ export function EditContactDialog({
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Address Section */}
+          <div className="border-t pt-4">
+            <Label className="text-base font-semibold mb-3 block">Property Address</Label>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="address_line1">Street Address</Label>
+                <Input
+                  id="address_line1"
+                  value={formData.address_line1}
+                  onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
+                  placeholder="123 Main Street"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="FL"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zip">ZIP</Label>
+                  <Input
+                    id="zip"
+                    value={formData.zip}
+                    onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                    placeholder="33101"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
