@@ -342,7 +342,13 @@ export default function CRMContactDetail() {
             <CardHeader>
               <CardTitle className="text-base">Properties ({propertyCount})</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <AddressGeocoder
+                placeholder="Search to add a property address..."
+                onSelect={(address, coords) => {
+                  toast({ title: "Address selected", description: `${address} [${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}]` });
+                }}
+              />
               {contact.properties && contact.properties.length > 0 ? (
                 <div className="space-y-3">
                   {contact.properties.map((p) => (
