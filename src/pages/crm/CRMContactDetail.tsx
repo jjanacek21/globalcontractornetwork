@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
+import { useNotes } from "@/hooks/useNotes";
+import { NotesList } from "@/components/crm/NotesList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +40,7 @@ export default function CRMContactDetail() {
   const { toast } = useToast();
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
-  const [newNote, setNewNote] = useState("");
+  const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
 
   if (isLoading) {
     return (
@@ -358,26 +360,11 @@ export default function CRMContactDetail() {
 
         {/* Notes Tab */}
         <TabsContent value="notes" className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a contact note..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white"
-              disabled={!newNote.trim()}
-            >
-              Add Note
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No notes yet. Add your first note above.</p>
-            </CardContent>
-          </Card>
+          <NotesList
+            notes={notes}
+            onAddNote={createNote}
+            onDeleteNote={deleteNote}
+          />
         </TabsContent>
 
         {/* Communication Tab */}

@@ -3,9 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
-import type { Database } from "@/integrations/supabase/types";
-
-type Note = Database["public"]["Tables"]["notes"]["Row"];
+type Note = {
+  id: string;
+  content: string;
+  created_at: string | null;
+  [key: string]: any;
+};
 
 interface NotesListProps {
   notes: Note[];
