@@ -10,6 +10,17 @@ import { AnimatePresence } from "framer-motion";
 
 // Social Coming Soon Page
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
+
+// CRM Pages
+import { CRMLayout } from "./components/crm/CRMLayout";
+const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
+const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
+const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
+const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
+const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
+const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
+const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
+const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
