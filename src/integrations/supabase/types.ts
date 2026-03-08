@@ -2148,6 +2148,194 @@ export type Database = {
           },
         ]
       }
+      crm_jobs: {
+        Row: {
+          assigned_rep_id: string | null
+          collected_amount: number | null
+          company_id: string | null
+          completion_date: string | null
+          contact_id: string | null
+          contract_amount: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          job_number: string | null
+          job_type: string | null
+          lead_id: string | null
+          notes: string | null
+          priority: string | null
+          property_id: string | null
+          scheduled_date: string | null
+          stage: string
+          start_date: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_rep_id?: string | null
+          collected_amount?: number | null
+          company_id?: string | null
+          completion_date?: string | null
+          contact_id?: string | null
+          contract_amount?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_number?: string | null
+          job_type?: string | null
+          lead_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          property_id?: string | null
+          scheduled_date?: string | null
+          stage?: string
+          start_date?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_rep_id?: string | null
+          collected_amount?: number | null
+          company_id?: string | null
+          completion_date?: string | null
+          contact_id?: string | null
+          contract_amount?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          job_number?: string | null
+          job_type?: string | null
+          lead_id?: string | null
+          notes?: string | null
+          priority?: string | null
+          property_id?: string | null
+          scheduled_date?: string | null
+          stage?: string
+          start_date?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_jobs_assigned_rep_id_fkey"
+            columns: ["assigned_rep_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_jobs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_jobs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_jobs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_production: {
+        Row: {
+          assigned_to: string | null
+          company_id: string | null
+          completed_date: string | null
+          created_at: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          phase: string
+          scheduled_date: string | null
+          sort_order: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          phase: string
+          scheduled_date?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          phase?: string
+          scheduled_date?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_production_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_production_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_production_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "crm_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_source_websites: {
         Row: {
           crawl_depth: number
