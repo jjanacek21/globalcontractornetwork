@@ -1183,6 +1183,142 @@ export type Database = {
           },
         ]
       }
+      contact_communications: {
+        Row: {
+          comm_type: string
+          company_id: string | null
+          contact_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          id: string
+          lead_id: string | null
+          subject: string | null
+        }
+        Insert: {
+          comm_type?: string
+          company_id?: string | null
+          contact_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          lead_id?: string | null
+          subject?: string | null
+        }
+        Update: {
+          comm_type?: string
+          company_id?: string | null
+          contact_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          lead_id?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_communications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_communications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_communications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_communications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_documents: {
+        Row: {
+          company_id: string | null
+          contact_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          lead_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          lead_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          lead_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_documents_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_requests: {
         Row: {
           created_at: string | null
@@ -4331,8 +4467,11 @@ export type Database = {
           expected_value: number | null
           id: string
           lead_type: Database["public"]["Enums"]["lead_type"]
+          priority: string | null
           property_id: string
           qualification_notes: string | null
+          roof_age: number | null
+          roof_type: string | null
           source: Database["public"]["Enums"]["contact_source"] | null
           status: Database["public"]["Enums"]["lead_status"] | null
           updated_at: string | null
@@ -4347,8 +4486,11 @@ export type Database = {
           expected_value?: number | null
           id?: string
           lead_type?: Database["public"]["Enums"]["lead_type"]
+          priority?: string | null
           property_id: string
           qualification_notes?: string | null
+          roof_age?: number | null
+          roof_type?: string | null
           source?: Database["public"]["Enums"]["contact_source"] | null
           status?: Database["public"]["Enums"]["lead_status"] | null
           updated_at?: string | null
@@ -4363,8 +4505,11 @@ export type Database = {
           expected_value?: number | null
           id?: string
           lead_type?: Database["public"]["Enums"]["lead_type"]
+          priority?: string | null
           property_id?: string
           qualification_notes?: string | null
+          roof_age?: number | null
+          roof_type?: string | null
           source?: Database["public"]["Enums"]["contact_source"] | null
           status?: Database["public"]["Enums"]["lead_status"] | null
           updated_at?: string | null

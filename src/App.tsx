@@ -37,6 +37,7 @@ const CRMInsuranceClaims = lazy(() => import("./pages/crm/CRMInsuranceClaims"));
 const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence"));
 const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
+const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -193,6 +194,11 @@ const GCNRoutes = () => (
     <Route path="/member/crm/contacts/:contactId" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMContactDetail /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/leads/:leadId" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMLeadDetail /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/jobs" element={

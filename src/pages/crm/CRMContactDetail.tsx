@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
@@ -7,6 +7,8 @@ import { NotesList } from "@/components/crm/NotesList";
 import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
 import { useLead } from "@/hooks/useLeads";
 import { useLeads } from "@/hooks/useLeads";
+import { useContactDocuments } from "@/hooks/useContactDocuments";
+import { useContactCommunications } from "@/hooks/useContactCommunications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +23,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
-  FileText, Upload, PhoneCall, Clock, User, TrendingUp
+  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +49,12 @@ export default function CRMContactDetail() {
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
+
+  // Documents & Communications
+  const { documents, isLoading: docsLoading, isUploading, uploadDocument, deleteDocument, getSignedUrl } = useContactDocuments(contactId || null);
+  const { communications, isLoading: commsLoading, stats: commStats, logCommunication } = useContactCommunications(contactId || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [commNote, setCommNote] = useState("");
 
   if (isLoading) {
     return (
@@ -89,6 +97,42 @@ export default function CRMContactDetail() {
     toast({ title: "Portal link copied to clipboard" });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      await uploadDocument(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleLogComm = async (type: string) => {
+    await logCommunication({
+      comm_type: type,
+      direction: "outbound",
+      content: commNote || `${type.charAt(0).toUpperCase() + type.slice(1)} initiated`,
+      company_id: contact.company_id || undefined,
+    });
+    setCommNote("");
+  };
+
+  const handleViewDocument = async (doc: any) => {
+    const url = await getSignedUrl(doc.file_path);
+    if (url) window.open(url, "_blank");
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (type: string | null) => {
+    if (type?.startsWith("image/")) return <Image className="h-4 w-4 text-blue-500" />;
+    return <File className="h-4 w-4 text-orange-500" />;
+  };
+
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -100,7 +144,6 @@ export default function CRMContactDetail() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Avatar & Name */}
             <div className="flex items-start gap-4">
               <Avatar className="h-20 w-20 text-2xl">
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
@@ -139,7 +182,6 @@ export default function CRMContactDetail() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex flex-wrap items-start gap-2 lg:ml-auto">
               <Select value={contact.status || "new"} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-[140px]">
@@ -151,7 +193,7 @@ export default function CRMContactDetail() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => handleLogComm("call")}>
                 <Phone className="mr-1 h-4 w-4" /> Call
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowEditContact(true)}>
@@ -185,7 +227,7 @@ export default function CRMContactDetail() {
                 )}
                 <Badge variant="outline">{contact.leads[0].status || "new"}</Badge>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setSelectedLeadId(contact.leads![0].id)}>View Details</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/member/crm/leads/${contact.leads![0].id}`)}>View Details</Button>
             </div>
           </CardContent>
         </Card>
@@ -203,7 +245,6 @@ export default function CRMContactDetail() {
 
         {/* Details Tab */}
         <TabsContent value="details" className="space-y-6">
-          {/* Portal Access */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -228,7 +269,6 @@ export default function CRMContactDetail() {
             </CardContent>
           </Card>
 
-          {/* Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
               { label: "Lead Score", value: "—", icon: Star },
@@ -249,7 +289,6 @@ export default function CRMContactDetail() {
             ))}
           </div>
 
-          {/* Contact Info */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -291,7 +330,6 @@ export default function CRMContactDetail() {
             </CardContent>
           </Card>
 
-          {/* Properties */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Properties ({propertyCount})</CardTitle>
@@ -349,7 +387,7 @@ export default function CRMContactDetail() {
                         <p className="text-sm text-green-600 mt-1">${lead.expected_value.toLocaleString()}</p>
                       )}
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedLeadId(lead.id)}>View</Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/member/crm/leads/${lead.id}`)}>View</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -375,23 +413,29 @@ export default function CRMContactDetail() {
 
         {/* Communication Tab */}
         <TabsContent value="communication" className="space-y-6">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <PhoneCall className="mr-1 h-4 w-4" /> Call Now
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Add a note to the communication log..."
+              value={commNote}
+              onChange={(e) => setCommNote(e.target.value)}
+              className="flex-1 min-w-[200px]"
+            />
+            <Button variant="outline" size="sm" onClick={() => handleLogComm("call")}>
+              <PhoneCall className="mr-1 h-4 w-4" /> Log Call
             </Button>
-            <Button variant="outline" size="sm">
-              <Mail className="mr-1 h-4 w-4" /> Send Email
+            <Button variant="outline" size="sm" onClick={() => handleLogComm("email")}>
+              <Mail className="mr-1 h-4 w-4" /> Log Email
             </Button>
-            <Button variant="outline" size="sm">
-              <MessageSquare className="mr-1 h-4 w-4" /> Send SMS
+            <Button variant="outline" size="sm" onClick={() => handleLogComm("sms")}>
+              <MessageSquare className="mr-1 h-4 w-4" /> Log SMS
             </Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "Total", value: 0 },
-              { label: "Calls", value: 0 },
-              { label: "Emails", value: 0 },
-              { label: "SMS", value: 0 },
+              { label: "Total", value: commStats.total },
+              { label: "Calls", value: commStats.calls },
+              { label: "Emails", value: commStats.emails },
+              { label: "SMS", value: commStats.sms },
             ].map((s, i) => (
               <Card key={i}>
                 <CardContent className="p-4 text-center">
@@ -403,27 +447,90 @@ export default function CRMContactDetail() {
           </div>
           <Card>
             <CardHeader><CardTitle className="text-base">Communication Timeline</CardTitle></CardHeader>
-            <CardContent className="text-center text-muted-foreground py-8">
-              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No communication history yet.</p>
+            <CardContent>
+              {communications.length > 0 ? (
+                <div className="space-y-3">
+                  {communications.map((comm) => (
+                    <div key={comm.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                      <div className="mt-0.5">
+                        {comm.comm_type === "call" && <PhoneCall className="h-4 w-4 text-green-600" />}
+                        {comm.comm_type === "email" && <Mail className="h-4 w-4 text-blue-600" />}
+                        {comm.comm_type === "sms" && <MessageSquare className="h-4 w-4 text-purple-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">{comm.comm_type}</Badge>
+                          <Badge variant="outline" className="text-xs capitalize">{comm.direction}</Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {format(new Date(comm.created_at), "MMM d, yyyy h:mm a")}
+                          </span>
+                        </div>
+                        {comm.content && <p className="text-sm mt-1">{comm.content}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No communication history yet.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            multiple
+            className="hidden"
+            onChange={handleFileUpload}
+          />
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Documents & Files</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Upload className="mr-1 h-4 w-4" /> Upload
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-1 h-4 w-4" /> {isUploading ? "Uploading..." : "Upload"}
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="text-center text-muted-foreground py-8">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No documents uploaded yet.</p>
+            <CardContent>
+              {documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      {getFileIcon(doc.file_type)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(doc.file_size)} · {format(new Date(doc.created_at), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleViewDocument(doc)}>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => deleteDocument(doc)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No documents uploaded yet.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
