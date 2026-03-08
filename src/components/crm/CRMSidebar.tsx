@@ -2,7 +2,8 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, TrendingUp, Users, Briefcase, FileText,
   Factory, CalendarDays, Map, FileStack, Presentation, Crown,
-  PhoneCall, Shield, Star, Gift, Settings, HelpCircle, ChevronRight,
+  Shield, Settings, HelpCircle, ChevronRight, Inbox, Brain,
+  Phone, Bot, Eye, Home, HardHat,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -18,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 const mainNav = [
   { title: "Dashboard", url: "/member/crm", icon: LayoutDashboard },
   { title: "Pipeline", url: "/member/crm/pipeline", icon: TrendingUp },
-  { title: "Contacts", url: "/member/crm/contacts", icon: Users },
+  { title: "Client Management", url: "/member/crm/contacts", icon: Users },
   { title: "Jobs", url: "/member/crm/jobs", icon: Briefcase },
   { title: "Estimates", url: "/member/crm/estimates", icon: FileText },
   { title: "Production", url: "/member/crm/production", icon: Factory },
@@ -26,22 +27,25 @@ const mainNav = [
   { title: "Storm Canvas Pro", url: "/member/crm/field-map", icon: Map },
   { title: "Smart Docs", url: "/member/crm/smart-docs", icon: FileStack },
   { title: "Presentations", url: "/member/crm/presentations", icon: Presentation },
-  { title: "Permit Expediter", url: "/permit-queens/dashboard", icon: Crown },
+  { title: "Permit Expediter", url: "/member/crm/permit-expediter", icon: Crown },
 ];
 
 const followUpItems = [
-  { title: "Call Queue", url: "/member/crm/follow-up/calls", icon: PhoneCall },
-  { title: "Tasks", url: "/member/crm/follow-up/tasks", icon: FileText },
+  { title: "Inbox", url: "/member/crm/follow-up/inbox", icon: Inbox },
+  { title: "Unmatched", url: "/member/crm/follow-up/unmatched", icon: Eye },
+  { title: "AI Queue", url: "/member/crm/follow-up/ai-queue", icon: Brain },
+  { title: "Call Center", url: "/member/crm/follow-up/call-center", icon: Phone },
+  { title: "AI Agent", url: "/member/crm/follow-up/ai-agent", icon: Bot },
 ];
 
 const insuranceItems = [
   { title: "Claims", url: "/member/crm/insurance/claims", icon: Shield },
-  { title: "Supplements", url: "/supplement-kings", icon: FileText },
+  { title: "Scope Intelligence", url: "/member/crm/insurance/scope-intelligence", icon: Brain },
 ];
 
 const portalNav = [
-  { title: "Surveys", url: "/member/crm/surveys", icon: Star },
-  { title: "Referrals", url: "/member/crm/referrals", icon: Gift },
+  { title: "Crew Portal", url: "/member/crm/crew-portal", icon: HardHat },
+  { title: "Homeowner Portal", url: "/member/crm/homeowner-portal", icon: Home },
 ];
 
 const bottomNav = [
@@ -68,7 +72,24 @@ export function CRMSidebar() {
     loadProfile();
   }, []);
 
-  const isActive = (path: string) => location.pathname === path;
+  const renderNavItem = (item: { title: string; url: string; icon: any }) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton asChild>
+        <NavLink
+          to={item.url}
+          end={item.url === "/member/crm"}
+          className={({ isActive: active }) =>
+            active
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          }
+        >
+          <item.icon className="w-4 h-4" />
+          {!collapsed && <span>{item.title}</span>}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -87,34 +108,13 @@ export function CRMSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto">
-        {/* Main Nav */}
         <SidebarGroup>
           <SidebarGroupLabel>MAIN</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/member/crm"}
-                      className={({ isActive: active }) =>
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarMenu>{mainNav.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Follow Up Hub */}
         <SidebarGroup>
           <Collapsible>
             <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider w-full hover:text-sidebar-foreground">
@@ -122,30 +122,11 @@ export function CRMSidebar() {
               {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform data-[state=open]:rotate-90" />}
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarMenu>
-                {followUpItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        className={({ isActive: active }) =>
-                          active
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                        }
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              <SidebarMenu>{followUpItems.map(renderNavItem)}</SidebarMenu>
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
 
-        {/* Insurance */}
         <SidebarGroup>
           <Collapsible>
             <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider w-full hover:text-sidebar-foreground">
@@ -153,57 +134,19 @@ export function CRMSidebar() {
               {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform data-[state=open]:rotate-90" />}
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <SidebarMenu>
-                {insuranceItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        className={({ isActive: active }) =>
-                          active
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                        }
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              <SidebarMenu>{insuranceItems.map(renderNavItem)}</SidebarMenu>
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
 
-        {/* Portals */}
         <SidebarGroup>
           <SidebarGroupLabel>PORTALS</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {[...portalNav, ...bottomNav].map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive: active }) =>
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            <SidebarMenu>{[...portalNav, ...bottomNav].map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with user */}
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-bold">

@@ -21,6 +21,21 @@ const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
 const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
 const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
 const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
+const CRMStormCanvas = lazy(() => import("./pages/crm/CRMStormCanvas"));
+const CRMSmartDocs = lazy(() => import("./pages/crm/CRMSmartDocs"));
+const CRMPresentations = lazy(() => import("./pages/crm/CRMPresentations"));
+const CRMPermitExpediter = lazy(() => import("./pages/crm/CRMPermitExpediter"));
+const CRMSettings = lazy(() => import("./pages/crm/CRMSettings"));
+const CRMHelp = lazy(() => import("./pages/crm/CRMHelp"));
+const CRMFollowUpInbox = lazy(() => import("./pages/crm/CRMFollowUpInbox"));
+const CRMFollowUpUnmatched = lazy(() => import("./pages/crm/CRMFollowUpUnmatched"));
+const CRMFollowUpAIQueue = lazy(() => import("./pages/crm/CRMFollowUpAIQueue"));
+const CRMFollowUpCallCenter = lazy(() => import("./pages/crm/CRMFollowUpCallCenter"));
+const CRMFollowUpAIAgent = lazy(() => import("./pages/crm/CRMFollowUpAIAgent"));
+const CRMInsuranceClaims = lazy(() => import("./pages/crm/CRMInsuranceClaims"));
+const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence"));
+const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
+const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -196,47 +211,77 @@ const GCNRoutes = () => (
     } />
     <Route path="/member/crm/field-map" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><FieldMap /></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMStormCanvas /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/presentations" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Presentations /></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMPresentations /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/smart-docs" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Smart Docs" description="Manage your smart document templates and auto-fill forms." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMSmartDocs /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
-    <Route path="/member/crm/follow-up/*" element={
+    <Route path="/member/crm/permit-expediter" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Follow Up Hub" description="Manage call queues, tasks, and follow-up reminders." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMPermitExpediter /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
-    <Route path="/member/crm/insurance/*" element={
+    <Route path="/member/crm/follow-up/inbox" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Insurance" description="Track insurance claims, supplements, and documentation." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpInbox /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
-    <Route path="/member/crm/surveys" element={
+    <Route path="/member/crm/follow-up/unmatched" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Surveys" description="Create and manage customer satisfaction surveys." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpUnmatched /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
-    <Route path="/member/crm/referrals" element={
+    <Route path="/member/crm/follow-up/ai-queue" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Referrals" description="Track and manage your referral network." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpAIQueue /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/follow-up/call-center" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpCallCenter /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/follow-up/ai-agent" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpAIAgent /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/claims" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceClaims /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/scope-intelligence" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMScopeIntelligence /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/crew-portal" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMCrewPortal /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/homeowner-portal" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMHomeownerPortal /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/help" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Help Center" /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMHelp /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/settings" element={
       <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPlaceholder title="Settings" description="Configure your CRM preferences and integrations." /></Suspense></CRMLayout>
+        <CRMLayout><Suspense fallback={<div />}><CRMSettings /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/my-profile" element={
