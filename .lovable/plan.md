@@ -1,36 +1,69 @@
 
 
-# Plan: Rebrand CRM to GCN-CRM with Modern 3D Glassmorphic UI
+# Fix Missing Documents in Packet Assembly
 
-## Overview
-Rename "PITCH Roofing CRM" to "GCN-CRM" across the sidebar and layout. Redesign the sidebar and top bar with a transparent glassmorphic aesthetic, animated icons, and modern 3D styling.
+## Root Cause
 
-## Changes
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### 1. CRMSidebar.tsx — Rebrand + Glassmorphic Sidebar
-- Change header brand from "PITCH / Roofing CRM" to "GCN-CRM / Contractor Suite"
-- Replace the `<Sidebar>` with transparent/glass styling:
-  - Semi-transparent background with `backdrop-blur-xl`
-  - Glowing border accents using the gold brand color
-  - Active nav items get a subtle glass highlight + left accent bar
-- Add hover animations to nav icons: scale + subtle rotation on hover via `group-hover` transitions
-- Animate collapsible group chevrons with smooth rotation
-- Footer user avatar gets a pulsing ring effect
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-### 2. CRMLayout.tsx — Modern Top Bar
-- Make top bar glassmorphic: `bg-background/80 backdrop-blur-md` instead of solid
-- Add subtle bottom glow/gradient border instead of plain `border-b`
-- Search input gets a glass effect with focus glow animation
-- Bell icon gets a subtle bounce animation on hover
+## Fix: Two-Part Solution
 
-### 3. index.css — Sidebar CSS Variables
-- Update sidebar background variables for both light and dark modes to support transparency:
-  - Light: semi-transparent dark green `--sidebar-background`
-  - Dark: semi-transparent deeper green
-- Add CSS utility classes for glass effects and icon hover animations used in the sidebar
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-### Files Modified
-- `src/components/crm/CRMSidebar.tsx` — rebrand + glassmorphic nav + animated icons
-- `src/components/crm/CRMLayout.tsx` — glass top bar
-- `src/index.css` — sidebar transparency variables + utility classes
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
+```
+
+### 2. Fix incorrect source types in packet structures
+
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 

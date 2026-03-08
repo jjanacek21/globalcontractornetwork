@@ -70,14 +70,14 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    /* Sidebar - matching the brand */
-    --sidebar-background: 152 45% 28%;
+    /* Sidebar - glassmorphic brand */
+    --sidebar-background: 152 45% 22%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 43 85% 58%;
     --sidebar-primary-foreground: 150 30% 15%;
-    --sidebar-accent: 152 45% 35%;
+    --sidebar-accent: 152 45% 30%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 152 45% 35%;
+    --sidebar-border: 152 40% 35%;
     --sidebar-ring: 43 85% 58%;
 
     /* Custom gradients */
@@ -129,13 +129,13 @@ All colors MUST be HSL.
     --input: 150 30% 20%;
     --ring: 152 45% 40%;
 
-    --sidebar-background: 152 45% 12%;
+    --sidebar-background: 152 45% 10%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 43 85% 58%;
     --sidebar-primary-foreground: 150 30% 10%;
-    --sidebar-accent: 152 45% 18%;
+    --sidebar-accent: 152 45% 16%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 152 45% 18%;
+    --sidebar-border: 152 40% 20%;
     --sidebar-ring: 43 85% 58%;
 
     --shadow-soft: 0 2px 8px hsla(0, 0%, 0%, 0.3);
@@ -152,6 +152,15 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* GCN-CRM Glassmorphic Sidebar */
+.crm-glass-sidebar [data-sidebar="sidebar"] {
+  background: hsl(var(--sidebar-background) / 0.85) !important;
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border-right: 1px solid hsl(var(--sidebar-border) / 0.3);
+  box-shadow: 4px 0 24px -8px hsl(var(--sidebar-background) / 0.4);
 }
 
 /* Shimmer animation for confetti/celebration effects */

@@ -79,12 +79,14 @@ export function CRMSidebar() {
           to={item.url}
           end={item.url === "/member/crm"}
           className={({ isActive: active }) =>
-            active
-              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+            `group relative transition-all duration-200 ${
+              active
+                ? "bg-sidebar-accent/60 text-sidebar-accent-foreground font-medium backdrop-blur-sm before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r-full before:bg-sidebar-primary"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground hover:backdrop-blur-sm"
+            }`
           }
         >
-          <item.icon className="w-4 h-4" />
+          <item.icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3" />
           {!collapsed && <span>{item.title}</span>}
         </NavLink>
       </SidebarMenuButton>
@@ -92,16 +94,16 @@ export function CRMSidebar() {
   );
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <NavLink to="/member/crm" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary">
+    <Sidebar collapsible="icon" className="crm-glass-sidebar">
+      <SidebarHeader className="border-b border-sidebar-border/30 p-4">
+        <NavLink to="/member/crm" className="flex items-center gap-2 group">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary shadow-lg shadow-sidebar-primary/30 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
             <LayoutDashboard className="w-4 h-4 text-sidebar-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-sidebar-foreground tracking-tight">PITCH</span>
-              <span className="text-[10px] text-sidebar-foreground/60">Roofing CRM</span>
+              <span className="text-sm font-bold text-sidebar-foreground tracking-tight">GCN-CRM</span>
+              <span className="text-[10px] text-sidebar-foreground/50">Contractor Suite</span>
             </div>
           )}
         </NavLink>
@@ -109,7 +111,7 @@ export function CRMSidebar() {
 
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
-          <SidebarGroupLabel>MAIN</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] tracking-[0.15em]">MAIN</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>{mainNav.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
@@ -117,9 +119,9 @@ export function CRMSidebar() {
 
         <SidebarGroup>
           <Collapsible>
-            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider w-full hover:text-sidebar-foreground">
+            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-medium text-sidebar-foreground/40 uppercase tracking-[0.15em] w-full hover:text-sidebar-foreground/70 transition-colors duration-200">
               {!collapsed && <span>Follow Up Hub</span>}
-              {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform data-[state=open]:rotate-90" />}
+              {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform duration-300 data-[state=open]:rotate-90" />}
             </CollapsibleTrigger>
             <CollapsibleContent>
               <SidebarMenu>{followUpItems.map(renderNavItem)}</SidebarMenu>
@@ -129,9 +131,9 @@ export function CRMSidebar() {
 
         <SidebarGroup>
           <Collapsible>
-            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider w-full hover:text-sidebar-foreground">
+            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-medium text-sidebar-foreground/40 uppercase tracking-[0.15em] w-full hover:text-sidebar-foreground/70 transition-colors duration-200">
               {!collapsed && <span>Insurance</span>}
-              {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform data-[state=open]:rotate-90" />}
+              {!collapsed && <ChevronRight className="w-3 h-3 ml-auto transition-transform duration-300 data-[state=open]:rotate-90" />}
             </CollapsibleTrigger>
             <CollapsibleContent>
               <SidebarMenu>{insuranceItems.map(renderNavItem)}</SidebarMenu>
@@ -140,22 +142,25 @@ export function CRMSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>PORTALS</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] tracking-[0.15em]">PORTALS</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>{[...portalNav, ...bottomNav].map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className="border-t border-sidebar-border/30 p-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-bold">
-            {profileName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          <div className="relative">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-bold shadow-lg shadow-sidebar-primary/30">
+              {profileName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+            <div className="absolute -inset-0.5 rounded-full border border-sidebar-primary/40 animate-[pulse_3s_ease-in-out_infinite]" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-medium text-sidebar-foreground truncate">{profileName || "User"}</span>
-              <span className="text-[10px] text-sidebar-foreground/60 truncate">{companyName || "Corporate"}</span>
+              <span className="text-[10px] text-sidebar-foreground/50 truncate">{companyName || "Corporate"}</span>
             </div>
           )}
         </div>
