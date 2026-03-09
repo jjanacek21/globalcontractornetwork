@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
@@ -14,6 +14,7 @@ import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
 import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
 import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
-  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File
+  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +58,24 @@ export default function CRMContactDetail() {
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
   const { estimates, isLoading: estimatesLoading, refetch: refetchEstimates } = useContactEstimates(contactId || null);
+
+  // Measurements
+  const [measurements, setMeasurements] = useState<any[]>([]);
+  const [measurementsLoading, setMeasurementsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!contactId) return;
+    setMeasurementsLoading(true);
+    supabase
+      .from("roof_measurements")
+      .select("*")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setMeasurements(data || []);
+        setMeasurementsLoading(false);
+      });
+  }, [contactId]);
 
   // Documents & Communications
   const { documents, isLoading: docsLoading, isUploading, uploadDocument, deleteDocument, getSignedUrl } = useContactDocuments(contactId || null);
@@ -213,6 +232,20 @@ export default function CRMContactDetail() {
                 <Edit className="mr-1 h-4 w-4" /> Edit
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/member/crm/measurements")}
+              >
+                <Ruler className="mr-1 h-4 w-4" /> Measure Roof
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEstimateBuilder(true)}
+              >
+                <FileText className="mr-1 h-4 w-4" /> Create Estimate
+              </Button>
+              <Button
                 size="sm"
                 className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white"
                 onClick={() => setShowCreateLead(true)}
@@ -251,6 +284,7 @@ export default function CRMContactDetail() {
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="measurements">Measurements</TabsTrigger>
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="communication">Communication</TabsTrigger>
@@ -417,6 +451,79 @@ export default function CRMContactDetail() {
               <CardContent className="p-8 text-center text-muted-foreground">
                 <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No leads yet. Click "+ Create Lead" to get started.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Measurements Tab */}
+        <TabsContent value="measurements" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Roof Measurements</h3>
+            <Button size="sm" onClick={() => navigate("/member/crm/measurements")}>
+              <Ruler className="mr-1 h-4 w-4" /> New Measurement
+            </Button>
+          </div>
+          {measurementsLoading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : measurements.length > 0 ? (
+            <div className="space-y-3">
+              {measurements.map((m) => (
+                <Card key={m.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{m.address}</p>
+                          <Badge variant="outline" className="text-xs capitalize">{m.source}</Badge>
+                          {m.quality && (
+                            <Badge className={`text-xs ${
+                              m.quality === "high" ? "bg-green-100 text-green-800" :
+                              m.quality === "medium" ? "bg-yellow-100 text-yellow-800" :
+                              "bg-red-100 text-red-800"
+                            }`}>{m.quality}</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span><strong>{m.total_squares}</strong> squares</span>
+                          <span><strong>{m.total_area_sqft?.toLocaleString()}</strong> sq ft</span>
+                          {m.pitch && <span>Pitch: {m.pitch}</span>}
+                          {m.complexity && <span>Complexity: {m.complexity}</span>}
+                          {m.waste_percent && <span>Waste: {m.waste_percent}%</span>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {m.created_at ? format(new Date(m.created_at), "MMM d, yyyy h:mm a") : "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {m.lead_id && (
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/member/crm/leads/${m.lead_id}`)}>
+                            View Lead
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowEstimateBuilder(true);
+                          }}
+                        >
+                          Create Estimate
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <Ruler className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No measurements yet for this contact.</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/member/crm/measurements")}>
+                  <Plus className="mr-1 h-4 w-4" /> Take First Measurement
+                </Button>
               </CardContent>
             </Card>
           )}
