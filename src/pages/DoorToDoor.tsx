@@ -180,6 +180,13 @@ export default function DoorToDoor() {
     try {
       const session = await startSession();
       if (session) {
+        // Link storm event to session if selected
+        if (selectedStormId) {
+          await supabase
+            .from('field_sessions')
+            .update({ storm_event_id: selectedStormId } as any)
+            .eq('id', session.id);
+        }
         startTracking();
         setSessionStartTime(new Date());
         setLastVideoCheck(Date.now());
