@@ -270,6 +270,7 @@ export function AIRoofMeasurement() {
           </Card>
 
           {/* Measurement Summary Cards */}
+          {displayValues && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
@@ -285,7 +286,7 @@ export function AIRoofMeasurement() {
                 <CardTitle className="text-base">Pitched Area</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">{result.total_pitched_area_sqft.toLocaleString()} sq ft</p>
+                <p className="text-2xl font-bold text-foreground">{displayValues.pitchedArea.toLocaleString()} sq ft</p>
               </CardContent>
             </Card>
 
@@ -294,21 +295,33 @@ export function AIRoofMeasurement() {
                 <CardTitle className="text-base">Total Squares</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-primary">{result.total_squares.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">{displayValues.totalSquares.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground mt-1">Includes {result.waste_percent}% waste</p>
               </CardContent>
             </Card>
 
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Avg Pitch</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Avg Pitch
+                  {isOverrideActive && (
+                    <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                      User Override
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">{result.average_pitch_degrees.toFixed(1)}°</p>
-                <p className="text-xs text-muted-foreground mt-1">{result.complexity} • {result.quality} quality</p>
+                <p className="text-2xl font-bold text-foreground">{displayValues.pitchDisplay}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isOverrideActive
+                    ? `API reported ${result.average_pitch_degrees.toFixed(1)}° — overridden to ${OVERRIDE_CONFIG[roofType].label}`
+                    : `${result.complexity} • ${result.quality} quality`}
+                </p>
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Segments Table */}
           <Card className="shadow-card">
