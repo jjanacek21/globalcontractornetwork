@@ -30,7 +30,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
-  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler
+  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler, DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
