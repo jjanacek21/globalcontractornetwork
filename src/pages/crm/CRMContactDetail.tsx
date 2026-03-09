@@ -52,9 +52,11 @@ export default function CRMContactDetail() {
   const [showEditContact, setShowEditContact] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showSendEmail, setShowSendEmail] = useState(false);
+  const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
+  const { estimates, isLoading: estimatesLoading, refetch: refetchEstimates } = useContactEstimates(contactId || null);
 
   // Documents & Communications
   const { documents, isLoading: docsLoading, isUploading, uploadDocument, deleteDocument, getSignedUrl } = useContactDocuments(contactId || null);
