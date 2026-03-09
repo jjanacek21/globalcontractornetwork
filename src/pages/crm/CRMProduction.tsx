@@ -354,6 +354,12 @@ export default function CRMProduction() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="crew" className="mt-4">
+          <CrewManagementTab jobs={productionJobs} onAssignCrew={handleAssignCrew} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
