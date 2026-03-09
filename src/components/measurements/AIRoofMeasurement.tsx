@@ -35,7 +35,7 @@ interface SolarMeasurementData {
   total_with_waste_sqft: number;
   total_squares: number;
   max_panels_count: number;
-  satellite_image_url: string;
+  satellite_image: string;
   center: { latitude: number; longitude: number };
   segments: Segment[];
 }
