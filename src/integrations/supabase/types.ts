@@ -8308,6 +8308,56 @@ export type Database = {
           },
         ]
       }
+      roofing_materials: {
+        Row: {
+          category: string
+          company_id: string | null
+          cost_per_unit: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          supplier: string | null
+          unit_of_measure: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          company_id?: string | null
+          cost_per_unit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          supplier?: string | null
+          unit_of_measure?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          company_id?: string | null
+          cost_per_unit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          supplier?: string | null
+          unit_of_measure?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roofing_materials_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roofing_quiz_responses: {
         Row: {
           address: string
