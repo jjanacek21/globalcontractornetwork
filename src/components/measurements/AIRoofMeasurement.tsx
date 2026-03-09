@@ -87,7 +87,7 @@ export function AIRoofMeasurement() {
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Roof className="h-5 w-5 text-primary" />
+            <House className="h-5 w-5 text-primary" />
             AI Roof Measurement
           </CardTitle>
         </CardHeader>
