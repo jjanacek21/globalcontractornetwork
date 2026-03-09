@@ -245,11 +245,11 @@ export default function CRMContactDetail() {
                 <Ruler className="mr-1 h-4 w-4" /> Measure Roof
               </Button>
               <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setShowEstimateBuilder(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contact.id}`)}
               >
-                <FileText className="mr-1 h-4 w-4" /> Create Estimate
+                <DollarSign className="mr-1 h-4 w-4" /> New Estimate
               </Button>
               <Button
                 size="sm"
