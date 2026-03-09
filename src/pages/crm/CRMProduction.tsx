@@ -19,9 +19,34 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
-const PRODUCTION_STAGES = JOB_STAGES.filter((s) =>
-  ["contract_signed", "submit_documents", "permit", "material_order", "scheduled", "in_progress", "quality_check", "completed", "invoiced"].includes(s.value)
-);
+const PRODUCTION_COLUMNS = [
+  { value: "material_order", label: "Ordered", color: "bg-purple-500" },
+  { value: "in_progress", label: "In Progress", color: "bg-blue-500" },
+  { value: "quality_check", label: "Quality Check", color: "bg-amber-500" },
+  { value: "completed", label: "Complete", color: "bg-green-500" },
+];
+
+// Map which job stages fall into which production column
+const STAGE_TO_COLUMN: Record<string, string> = {
+  material_order: "material_order",
+  scheduled: "in_progress",
+  in_progress: "in_progress",
+  quality_check: "quality_check",
+  completed: "completed",
+  invoiced: "completed",
+};
+
+function getJobProgress(stage: string): number {
+  const map: Record<string, number> = {
+    material_order: 15,
+    scheduled: 30,
+    in_progress: 55,
+    quality_check: 80,
+    completed: 100,
+    invoiced: 100,
+  };
+  return map[stage] ?? 0;
+}
 
 export default function CRMProduction() {
   const { jobs, isLoading, updateJob, fetchJobs } = useCRMJobs();
