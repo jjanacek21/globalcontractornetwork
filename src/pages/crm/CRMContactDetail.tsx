@@ -286,7 +286,7 @@ export default function CRMContactDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="details">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
@@ -470,6 +470,7 @@ export default function CRMContactDetail() {
             contactAddress={primaryAddress}
             companyId={contact.company_id}
             leadId={contact.leads?.[0]?.id}
+            autoTrigger={autoTriggerMeasurement}
             onMeasurementSaved={() => {
               // Refresh measurements list
               supabase
