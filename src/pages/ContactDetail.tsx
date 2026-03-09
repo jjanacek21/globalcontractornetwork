@@ -18,6 +18,8 @@ import { AddPropertyDialog } from "@/components/crm/AddPropertyDialog";
 import { CreateLeadDialog } from "@/components/crm/CreateLeadDialog";
 import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import { NotesList } from "@/components/crm/NotesList";
+import { ApprovalCards } from "@/components/crm/ApprovalCards";
+import { FinancialSummaryBar } from "@/components/crm/FinancialSummaryBar";
 import {
   AlertDialog,
   AlertDialogAction,
