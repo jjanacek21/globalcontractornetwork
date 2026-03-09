@@ -38,6 +38,7 @@ export default function DoorToDoor() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [selectedStormId, setSelectedStormId] = useState<string | null>(null);
   
   // Side panel state
   const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
@@ -179,6 +180,13 @@ export default function DoorToDoor() {
     try {
       const session = await startSession();
       if (session) {
+        // Link storm event to session if selected
+        if (selectedStormId) {
+          await supabase
+            .from('field_sessions')
+            .update({ storm_event_id: selectedStormId } as any)
+            .eq('id', session.id);
+        }
         startTracking();
         setSessionStartTime(new Date());
         setLastVideoCheck(Date.now());
@@ -387,6 +395,8 @@ export default function DoorToDoor() {
         session={activeSession}
         allTimeStats={stats}
         sessionStartTime={sessionStartTime || undefined}
+        selectedStormId={selectedStormId}
+        onStormChange={setSelectedStormId}
       />
 
       {/* Goals Progress Bar (during active session) */}

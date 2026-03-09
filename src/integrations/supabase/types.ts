@@ -3360,6 +3360,7 @@ export type Database = {
           route_geojson: Json | null
           started_at: string
           status: string | null
+          storm_event_id: string | null
           total_doors: number
           total_points: number
           user_id: string
@@ -3374,6 +3375,7 @@ export type Database = {
           route_geojson?: Json | null
           started_at?: string
           status?: string | null
+          storm_event_id?: string | null
           total_doors?: number
           total_points?: number
           user_id: string
@@ -3388,11 +3390,19 @@ export type Database = {
           route_geojson?: Json | null
           started_at?: string
           status?: string | null
+          storm_event_id?: string | null
           total_doors?: number
           total_points?: number
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "field_sessions_storm_event_id_fkey"
+            columns: ["storm_event_id"]
+            isOneToOne: false
+            referencedRelation: "storm_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "field_sessions_user_id_fkey"
             columns: ["user_id"]
@@ -9533,6 +9543,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      storm_events: {
+        Row: {
+          affected_area: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          severity: string | null
+          storm_date: string
+          updated_at: string
+        }
+        Insert: {
+          affected_area: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          severity?: string | null
+          storm_date: string
+          updated_at?: string
+        }
+        Update: {
+          affected_area?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          severity?: string | null
+          storm_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storm_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storm_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       super_admins: {
         Row: {
