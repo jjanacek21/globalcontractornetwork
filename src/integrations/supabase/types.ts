@@ -2814,6 +2814,7 @@ export type Database = {
       }
       estimate_line_items: {
         Row: {
+          category: string | null
           created_at: string | null
           description: string | null
           estimate_id: string
@@ -2822,9 +2823,11 @@ export type Database = {
           quantity: number
           sort_order: number | null
           total: number
+          unit: string | null
           unit_price: number
         }
         Insert: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
           estimate_id: string
@@ -2833,9 +2836,11 @@ export type Database = {
           quantity: number
           sort_order?: number | null
           total: number
+          unit?: string | null
           unit_price: number
         }
         Update: {
+          category?: string | null
           created_at?: string | null
           description?: string | null
           estimate_id?: string
@@ -2844,6 +2849,7 @@ export type Database = {
           quantity?: number
           sort_order?: number | null
           total?: number
+          unit?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -2897,59 +2903,137 @@ export type Database = {
           },
         ]
       }
+      estimate_templates: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          labor_cost_per_sq: number
+          material_cost_per_sq: number
+          name: string
+          trade: string
+          waste_factor: number
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          labor_cost_per_sq?: number
+          material_cost_per_sq?: number
+          name: string
+          trade?: string
+          waste_factor?: number
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          labor_cost_per_sq?: number
+          material_cost_per_sq?: number
+          name?: string
+          trade?: string
+          waste_factor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimates: {
         Row: {
+          contact_id: string | null
           created_at: string | null
           created_by: string | null
           customer_id: string
           discount_amount: number | null
           estimate_number: string | null
           id: string
+          labor_cost: number | null
+          lead_id: string | null
+          materials_cost: number | null
           measurement_id: string | null
           notes: string | null
+          overhead_cost: number | null
+          overhead_percent: number | null
+          profit_percent: number | null
+          quick_price_adjust_percent: number | null
           status: string | null
           subtotal: number | null
           tax_amount: number | null
           tax_rate: number | null
+          template_id: string | null
           total: number | null
           updated_at: string | null
           version: number | null
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           customer_id: string
           discount_amount?: number | null
           estimate_number?: string | null
           id?: string
+          labor_cost?: number | null
+          lead_id?: string | null
+          materials_cost?: number | null
           measurement_id?: string | null
           notes?: string | null
+          overhead_cost?: number | null
+          overhead_percent?: number | null
+          profit_percent?: number | null
+          quick_price_adjust_percent?: number | null
           status?: string | null
           subtotal?: number | null
           tax_amount?: number | null
           tax_rate?: number | null
+          template_id?: string | null
           total?: number | null
           updated_at?: string | null
           version?: number | null
         }
         Update: {
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           customer_id?: string
           discount_amount?: number | null
           estimate_number?: string | null
           id?: string
+          labor_cost?: number | null
+          lead_id?: string | null
+          materials_cost?: number | null
           measurement_id?: string | null
           notes?: string | null
+          overhead_cost?: number | null
+          overhead_percent?: number | null
+          profit_percent?: number | null
+          quick_price_adjust_percent?: number | null
           status?: string | null
           subtotal?: number | null
           tax_amount?: number | null
           tax_rate?: number | null
+          template_id?: string | null
           total?: number | null
           updated_at?: string | null
           version?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "estimates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "estimates_created_by_fkey"
             columns: ["created_by"]
@@ -2965,10 +3049,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "estimates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "estimates_measurement_id_fkey"
             columns: ["measurement_id"]
             isOneToOne: false
             referencedRelation: "measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_templates"
             referencedColumns: ["id"]
           },
         ]
