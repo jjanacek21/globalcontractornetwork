@@ -7940,6 +7940,128 @@ export type Database = {
         }
         Relationships: []
       }
+      roof_measurements: {
+        Row: {
+          address: string
+          company_id: string | null
+          complexity: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          eave_ft: number | null
+          hip_ft: number | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          lead_id: string | null
+          longitude: number | null
+          notes: string | null
+          perimeter_ft: number | null
+          pitch: string | null
+          pitch_degrees: number | null
+          pitch_multiplier: number | null
+          quality: string | null
+          ridge_ft: number | null
+          segments_count: number | null
+          solar_api_response: Json | null
+          source: string
+          total_area_sqft: number
+          total_squares: number
+          updated_at: string
+          valley_ft: number | null
+          waste_percent: number | null
+        }
+        Insert: {
+          address: string
+          company_id?: string | null
+          complexity?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          eave_ft?: number | null
+          hip_ft?: number | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          lead_id?: string | null
+          longitude?: number | null
+          notes?: string | null
+          perimeter_ft?: number | null
+          pitch?: string | null
+          pitch_degrees?: number | null
+          pitch_multiplier?: number | null
+          quality?: string | null
+          ridge_ft?: number | null
+          segments_count?: number | null
+          solar_api_response?: Json | null
+          source?: string
+          total_area_sqft?: number
+          total_squares?: number
+          updated_at?: string
+          valley_ft?: number | null
+          waste_percent?: number | null
+        }
+        Update: {
+          address?: string
+          company_id?: string | null
+          complexity?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          eave_ft?: number | null
+          hip_ft?: number | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          lead_id?: string | null
+          longitude?: number | null
+          notes?: string | null
+          perimeter_ft?: number | null
+          pitch?: string | null
+          pitch_degrees?: number | null
+          pitch_multiplier?: number | null
+          quality?: string | null
+          ridge_ft?: number | null
+          segments_count?: number | null
+          solar_api_response?: Json | null
+          source?: string
+          total_area_sqft?: number
+          total_squares?: number
+          updated_at?: string
+          valley_ft?: number | null
+          waste_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roof_measurements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roof_measurements_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roof_measurements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roof_measurements_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roof_photos: {
         Row: {
           address: string
