@@ -65,15 +65,16 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
       // Geocode if we don't have overrides
       if (latitude == null || longitude == null) {
         const { data: geoData, error: geoError } = await supabase.functions.invoke("geocode-address", {
-          body: { address },
+          body: { query: address, limit: 1 },
         });
-        if (geoError || !geoData?.latitude || !geoData?.longitude) {
+        if (geoError || !geoData?.success || !geoData?.features?.length) {
           setError("Could not geocode this address. Please verify the property address is correct.");
           setLoading(false);
           return;
         }
-        latitude = geoData.latitude;
-        longitude = geoData.longitude;
+        const [lng, lat] = geoData.features[0].center;
+        latitude = lat;
+        longitude = lng;
       }
 
       const { data, error: invokeError } = await supabase.functions.invoke("solar-roof-measure", {
