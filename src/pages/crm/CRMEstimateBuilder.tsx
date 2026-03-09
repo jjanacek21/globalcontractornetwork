@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEstimateBuilder } from "@/hooks/useEstimateBuilder";
 import { StepIndicator } from "@/components/estimates/builder/StepIndicator";
 import { CustomerStep } from "@/components/estimates/builder/CustomerStep";
@@ -10,7 +11,16 @@ import { ArrowLeft } from "lucide-react";
 
 export default function CRMEstimateBuilder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const builder = useEstimateBuilder();
+
+  // Auto-select contact from URL param
+  useEffect(() => {
+    const contactId = searchParams.get("contact_id");
+    if (contactId && builder.customers.length > 0 && !builder.state.customer_id) {
+      builder.setCustomer(contactId);
+    }
+  }, [searchParams, builder.customers]);
 
   const handleSave = async () => {
     const result = await builder.saveEstimate();

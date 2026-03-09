@@ -30,7 +30,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
-  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler
+  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler, DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -245,11 +245,11 @@ export default function CRMContactDetail() {
                 <Ruler className="mr-1 h-4 w-4" /> Measure Roof
               </Button>
               <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setShowEstimateBuilder(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contact.id}`)}
               >
-                <FileText className="mr-1 h-4 w-4" /> Create Estimate
+                <DollarSign className="mr-1 h-4 w-4" /> New Estimate
               </Button>
               <Button
                 size="sm"
@@ -545,10 +545,43 @@ export default function CRMContactDetail() {
 
         {/* Estimates Tab */}
         <TabsContent value="estimates" className="space-y-4">
+          {/* Active Measurement Summary */}
+          {measurements.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Ruler className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Active Measurement</p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-sm font-bold">{measurements[0].total_squares?.toFixed(2)} squares</span>
+                        <span className="text-sm text-muted-foreground">{measurements[0].total_area_sqft?.toLocaleString()} sq ft</span>
+                        {(measurements[0].pitch || measurements[0].pitch_degrees) && (
+                          <span className="text-sm text-muted-foreground">
+                            Pitch: {measurements[0].pitch || `${Number(measurements[0].pitch_degrees).toFixed(1)}°`}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {measurements[0].source === "ai_solar" ? "AI" : measurements[0].source || "—"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("measurements")}>
+                    View All
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <ContactEstimatesCard
             estimates={estimates}
             isLoading={estimatesLoading}
-            onCreateNew={() => setShowEstimateBuilder(true)}
+            onCreateNew={() => navigate(`/member/crm/estimates/new?contact_id=${contact.id}`)}
           />
         </TabsContent>
 
