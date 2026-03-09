@@ -1,69 +1,35 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# Fix Missing Satellite Map View in AI Roof Measurement
 
-## Root Cause
+## Problem
+The satellite verification image likely isn't loading because the Google Maps Static API URL (containing the API key) is returned directly to the client. The API key may have HTTP referrer restrictions that block requests from the preview domain, causing the image to silently fail.
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+Additionally, returning the raw API key in the URL to the client is a security concern.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+## Solution
+Proxy the satellite image through a new edge function endpoint so the API key never leaves the server and referrer restrictions don't apply.
 
-## Fix: Two-Part Solution
+### 1. Update Edge Function (`supabase/functions/solar-roof-measure/index.ts`)
+- Instead of returning the raw Google Maps URL, fetch the satellite image server-side within the edge function
+- Convert the image to a base64 data URL
+- Return `satellite_image_base64` as a `data:image/png;base64,...` string in the response
+- This avoids API key exposure and bypasses any referrer restrictions on the Google API key
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
-
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
-
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
-
-### 2. Fix incorrect source types in packet structures
-
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
-
-Update these two records in `permit_packet_structures` to use the correct source type.
-
-### 3. Add "Select Products" action for unmatched auto_source docs
-
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
+Key logic:
+```text
+1. Build static map URL with API key (server-side only)
+2. fetch() the image from Google
+3. Convert response to base64
+4. Return as data URI in the JSON response
 ```
 
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+### 2. Update Frontend (`src/components/measurements/AIRoofMeasurement.tsx`)
+- Update `SolarMeasurementData` interface: rename `satellite_image_url` to `satellite_image` (accepts both URL and data URI)
+- Update the `<img>` src to use the new base64 field
+- Add an `onError` fallback on the image in case it still fails — show a placeholder message
+
+### Files to Modify
+- `supabase/functions/solar-roof-measure/index.ts` — fetch image server-side, return base64
+- `src/components/measurements/AIRoofMeasurement.tsx` — use base64 image data, add error fallback
 
