@@ -237,7 +237,10 @@ export default function CRMContactDetail() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/member/crm/measurements")}
+                onClick={() => {
+                  setActiveTab("measurements");
+                  setAutoTriggerMeasurement(true);
+                }}
               >
                 <Ruler className="mr-1 h-4 w-4" /> Measure Roof
               </Button>
