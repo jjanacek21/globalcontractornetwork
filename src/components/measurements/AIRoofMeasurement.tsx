@@ -205,12 +205,19 @@ export function AIRoofMeasurement() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="relative w-full">
+                {result.satellite_image ? (
                 <img
-                  src={result.satellite_image_url}
+                  src={result.satellite_image}
                   alt={`Satellite view of ${result.address || "property"}`}
                   className="w-full rounded-lg border border-border"
                   loading="eager"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
+                ) : (
+                  <div className="w-full h-48 rounded-lg border border-border bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                    Satellite image unavailable for this location
+                  </div>
+                )}
                 {/* Nudge controls overlay */}
                 <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-0.5">
                   <div />
