@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_jobs ADD COLUMN IF NOT EXISTS assigned_crew_id uuid REFERENCES public.company_members(id);
