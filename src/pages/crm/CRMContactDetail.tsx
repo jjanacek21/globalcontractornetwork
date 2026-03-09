@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, type ContactWithDetails } from "@/hooks/useContacts";
 import { useContacts } from "@/hooks/useContacts";
@@ -14,6 +14,7 @@ import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
 import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
 import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit, Plus, Copy, Send,
   ExternalLink, Calendar, Star, Briefcase, MessageSquare,
-  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File
+  FileText, Upload, PhoneCall, Clock, User, TrendingUp, Trash2, Image, File, Ruler
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
