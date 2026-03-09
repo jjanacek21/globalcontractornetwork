@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type Customer = Database["public"]["Tables"]["customers"]["Row"];
+type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 type Trade = Database["public"]["Tables"]["trades"]["Row"];
 type CatalogItem = Database["public"]["Tables"]["catalog_items"]["Row"];
 type RoofMeasurement = Database["public"]["Tables"]["roof_measurements"]["Row"];
@@ -32,8 +32,8 @@ export interface BuilderPackage {
 
 export interface EstimateBuilderState {
   step: number;
-  customer_id: string;
-  customer: Customer | null;
+  contact_id: string;
+  contact: Contact | null;
   measurement_id: string;
   measurement: RoofMeasurement | null;
   selectedTrades: string[];
@@ -47,8 +47,8 @@ export interface EstimateBuilderState {
 
 const INITIAL_STATE: EstimateBuilderState = {
   step: 0,
-  customer_id: "",
-  customer: null,
+  contact_id: "",
+  contact: null,
   measurement_id: "",
   measurement: null,
   selectedTrades: [],
@@ -62,7 +62,7 @@ const INITIAL_STATE: EstimateBuilderState = {
 
 export function useEstimateBuilder(editEstimateId?: string) {
   const [state, setState] = useState<EstimateBuilderState>(INITIAL_STATE);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [measurements, setMeasurements] = useState<RoofMeasurement[]>([]);
@@ -72,21 +72,21 @@ export function useEstimateBuilder(editEstimateId?: string) {
   // Load reference data
   useEffect(() => {
     const load = async () => {
-      const [custRes, tradeRes, catalogRes] = await Promise.all([
-        supabase.from("customers").select("*").order("name"),
+      const [contactRes, tradeRes, catalogRes] = await Promise.all([
+        supabase.from("contacts").select("*").order("first_name"),
         supabase.from("trades").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("catalog_items").select("*").eq("is_active", true).order("name"),
       ]);
-      setCustomers(custRes.data || []);
+      setContacts(contactRes.data || []);
       setTrades(tradeRes.data || []);
       setCatalogItems(catalogRes.data || []);
     };
     load();
   }, []);
 
-  // Load measurements when customer changes — filter by contact_id
+  // Load measurements when contact changes
   useEffect(() => {
-    if (!state.customer_id) {
+    if (!state.contact_id) {
       setMeasurements([]);
       return;
     }
@@ -94,12 +94,12 @@ export function useEstimateBuilder(editEstimateId?: string) {
       const { data } = await supabase
         .from("roof_measurements")
         .select("*")
-        .eq("contact_id", state.customer_id)
+        .eq("contact_id", state.contact_id)
         .order("created_at", { ascending: false });
       setMeasurements(data || []);
     };
     loadMeasurements();
-  }, [state.customer_id]);
+  }, [state.contact_id]);
 
   const setStep = useCallback((step: number) => {
     setState(prev => ({ ...prev, step }));
@@ -109,10 +109,10 @@ export function useEstimateBuilder(editEstimateId?: string) {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const setCustomer = useCallback((customer_id: string) => {
-    const customer = customers.find(c => c.id === customer_id) || null;
-    setState(prev => ({ ...prev, customer_id, customer }));
-  }, [customers]);
+  const setContact = useCallback((contact_id: string) => {
+    const contact = contacts.find(c => c.id === contact_id) || null;
+    setState(prev => ({ ...prev, contact_id, contact }));
+  }, [contacts]);
 
   const setMeasurement = useCallback((measurement_id: string) => {
     const measurement = measurements.find(m => m.id === measurement_id) || null;
@@ -202,8 +202,8 @@ export function useEstimateBuilder(editEstimateId?: string) {
   }, [catalogItems, trades]);
 
   const saveEstimate = useCallback(async () => {
-    if (!state.customer_id) {
-      toast({ title: "Please select a customer", variant: "destructive" });
+    if (!state.contact_id) {
+      toast({ title: "Please select a contact", variant: "destructive" });
       return null;
     }
 
@@ -214,7 +214,8 @@ export function useEstimateBuilder(editEstimateId?: string) {
       const { data: estimate, error } = await supabase
         .from("estimates")
         .insert({
-          customer_id: state.customer_id,
+          contact_id: state.contact_id,
+          customer_id: state.contact_id,
           measurement_id: state.measurement_id || null,
           estimate_number: estimateNumber,
           status: "draft",
@@ -281,7 +282,7 @@ export function useEstimateBuilder(editEstimateId?: string) {
 
   return {
     state,
-    customers,
+    contacts,
     trades,
     catalogItems,
     catalogByTrade,
@@ -292,7 +293,7 @@ export function useEstimateBuilder(editEstimateId?: string) {
     grandTotal,
     setStep,
     updateState,
-    setCustomer,
+    setContact,
     setMeasurement,
     addCatalogItemToLineItems,
     addManualLineItem,

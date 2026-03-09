@@ -1,0 +1,1 @@
+ALTER TABLE public.estimates ALTER COLUMN customer_id DROP NOT NULL;
