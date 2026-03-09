@@ -3,7 +3,7 @@ import {
   LayoutDashboard, TrendingUp, Users, Briefcase, FileText,
   Factory, CalendarDays, Map, FileStack, Presentation, Crown,
   Shield, Settings, HelpCircle, ChevronRight, Inbox, Brain,
-  Phone, Bot, Eye, Home, HardHat,
+  Phone, Bot, Eye, Home, HardHat, Ruler,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -22,6 +22,7 @@ const mainNav = [
   { title: "Client Management", url: "/member/crm/contacts", icon: Users },
   { title: "Jobs", url: "/member/crm/jobs", icon: Briefcase },
   { title: "Estimates", url: "/member/crm/estimates", icon: FileText },
+  { title: "Measurements", url: "/member/crm/measurements", icon: Ruler },
   { title: "Production", url: "/member/crm/production", icon: Factory },
   { title: "Calendar", url: "/member/crm/calendar", icon: CalendarDays },
   { title: "Storm Canvas Pro", url: "/member/crm/field-map", icon: Map },
