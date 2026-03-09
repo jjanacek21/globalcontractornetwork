@@ -299,6 +299,56 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_rules: {
+        Row: {
+          action_label: string
+          action_type: string
+          company_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          total_runs: number
+          trigger_event: string
+          trigger_label: string
+          updated_at: string
+        }
+        Insert: {
+          action_label: string
+          action_type: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          total_runs?: number
+          trigger_event: string
+          trigger_label: string
+          updated_at?: string
+        }
+        Update: {
+          action_label?: string
+          action_type?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          total_runs?: number
+          trigger_event?: string
+          trigger_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           category: string
@@ -3951,6 +4001,57 @@ export type Database = {
             columns: ["referring_contractor_id"]
             isOneToOne: false
             referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_checklists: {
+        Row: {
+          category: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          items: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          items?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          items?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_checklists_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_checklists_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
