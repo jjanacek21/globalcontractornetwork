@@ -145,6 +145,16 @@ export default function CRMProduction() {
         </div>
       </div>
 
+      <Tabs defaultValue="board" className="w-full">
+        <TabsList>
+          <TabsTrigger value="board">Production Board</TabsTrigger>
+          <TabsTrigger value="crew" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Crew Management
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="mt-4 space-y-6">
       {/* Overview Progress */}
       <Card>
         <CardContent className="p-4">
