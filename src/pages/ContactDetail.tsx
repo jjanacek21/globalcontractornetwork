@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useContact, useContacts } from "@/hooks/useContacts";
 import { useProperties } from "@/hooks/useProperties";
 import { useLeads } from "@/hooks/useLeads";
 import { useNotes } from "@/hooks/useNotes";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Phone, Mail, MapPin, Plus, Edit, Trash2, User, Home, FileText, Clock } from "lucide-react";
+import { ArrowLeft, Phone, Mail, Plus, Edit, Trash2, User, Home, FileText, Clock } from "lucide-react";
 import { PropertyCard } from "@/components/crm/PropertyCard";
 import { LeadCard } from "@/components/crm/LeadCard";
 import { ActivityTimeline } from "@/components/crm/ActivityTimeline";
@@ -20,6 +21,7 @@ import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import { NotesList } from "@/components/crm/NotesList";
 import { ApprovalCards } from "@/components/crm/ApprovalCards";
 import { FinancialSummaryBar } from "@/components/crm/FinancialSummaryBar";
+import { JobProgressTracker } from "@/components/crm/JobProgressTracker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,12 @@ import {
 
 type LeadStatus = Database["public"]["Enums"]["lead_status"];
 
+interface EstimateSummary {
+  total: number;
+  approved: number;
+  status: string | null;
+}
+
 const ContactDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,20 +49,86 @@ const ContactDetail = () => {
   const { properties, createProperty } = useProperties(id || undefined);
   const { leads, createLead, updateLeadStatus, deleteLead } = useLeads();
   const { notes, createNote, deleteNote } = useNotes("contact", id || "");
-  
+
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [showEditContact, setShowEditContact] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [estimates, setEstimates] = useState<EstimateSummary[]>([]);
+  const [docCount, setDocCount] = useState(0);
 
-  const contactLeads = leads.filter(l => l.contact_id === id);
+  const contactLeads = leads.filter((l) => l.contact_id === id);
+
+  // Fetch estimates and documents for this contact
+  useEffect(() => {
+    if (!id) return;
+    const fetchExtras = async () => {
+      const [estRes, docRes] = await Promise.all([
+        supabase.from("estimates").select("total, status").eq("contact_id", id),
+        supabase.from("contact_documents").select("id").eq("contact_id", id),
+      ]);
+      if (estRes.data) {
+        setEstimates(
+          estRes.data.map((e) => ({
+            total: Number(e.total) || 0,
+            approved: e.status === "approved" ? Number(e.total) || 0 : 0,
+            status: e.status,
+          }))
+        );
+      }
+      if (docRes.data) setDocCount(docRes.data.length);
+    };
+    fetchExtras();
+  }, [id]);
+
+  // Derive financial summary
+  const financials = useMemo(() => {
+    const totalEstimate = estimates.reduce((s, e) => s + e.total, 0);
+    const approvedAmount = estimates.reduce((s, e) => s + e.approved, 0);
+    const outstanding = totalEstimate - approvedAmount;
+    const paymentStatus: "unpaid" | "partial" | "paid" =
+      approvedAmount === 0 ? "unpaid" : approvedAmount >= totalEstimate ? "paid" : "partial";
+    return { totalEstimate, approvedAmount, outstanding, paymentStatus };
+  }, [estimates]);
+
+  // Derive approval card statuses
+  const approvalStatuses = useMemo(() => {
+    const hasApprovedEstimate = estimates.some((e) => e.status === "approved");
+    const hasSentEstimate = estimates.some((e) => e.status === "sent" || e.status === "approved");
+    const estimateStatus: "not_sent" | "sent" | "approved" = hasApprovedEstimate
+      ? "approved"
+      : hasSentEstimate
+      ? "sent"
+      : "not_sent";
+
+    // Contract: derive from lead status closed_won
+    const hasClosedWon = contactLeads.some((l) => l.status === "closed_won");
+    const hasNegotiating = contactLeads.some((l) => l.status === "negotiating" || l.status === "estimate_sent");
+    const contractStatus: "not_sent" | "sent" | "signed" = hasClosedWon
+      ? "signed"
+      : hasNegotiating
+      ? "sent"
+      : "not_sent";
+
+    return { estimateStatus, contractStatus, photosCount: docCount };
+  }, [estimates, contactLeads, docCount]);
+
+  // Derive best lead status for progress tracker
+  const bestLeadStatus = useMemo(() => {
+    const priority: LeadStatus[] = [
+      "closed_won", "negotiating", "estimate_sent", "inspected",
+      "inspection_scheduled", "contact_made", "new",
+    ];
+    for (const p of priority) {
+      if (contactLeads.some((l) => l.status === p)) return p;
+    }
+    return contactLeads[0]?.status || "new";
+  }, [contactLeads]);
 
   const handleDeleteContact = async () => {
     if (id) {
       const success = await deleteContact(id);
-      if (success) {
-        navigate("/crm/contacts");
-      }
+      if (success) navigate("/crm/contacts");
     }
   };
 
@@ -128,16 +202,27 @@ const ContactDetail = () => {
         )}
       </div>
 
+      {/* Job Progress Tracker */}
+      <Card>
+        <CardContent className="py-4 px-6">
+          <JobProgressTracker leadStatus={bestLeadStatus} />
+        </CardContent>
+      </Card>
+
       {/* Financial Summary */}
       <FinancialSummaryBar
-        totalEstimate={0}
-        approvedAmount={0}
-        outstandingBalance={0}
-        paymentStatus="unpaid"
+        totalEstimate={financials.totalEstimate}
+        approvedAmount={financials.approvedAmount}
+        outstandingBalance={financials.outstanding}
+        paymentStatus={financials.paymentStatus}
       />
 
       {/* Approval Requirements */}
-      <ApprovalCards />
+      <ApprovalCards
+        contractStatus={approvalStatuses.contractStatus}
+        estimateStatus={approvalStatuses.estimateStatus}
+        photosCount={approvalStatuses.photosCount}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
@@ -298,7 +383,7 @@ const ContactDetail = () => {
         open={showAddProperty}
         onOpenChange={setShowAddProperty}
         contactId={id || ""}
-        onPropertyCreated={(property) => {
+        onPropertyCreated={() => {
           refetch();
           setShowAddProperty(false);
         }}

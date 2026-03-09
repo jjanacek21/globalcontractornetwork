@@ -1,45 +1,84 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCRMJobs, JOB_STAGES } from "@/hooks/useCRMJobs";
-import { FileText, Clock, AlertTriangle, XCircle, Package, Ruler, PenTool, Camera, Search, RefreshCw, GripVertical, User, DollarSign } from "lucide-react";
+import { useCRMJobs, JOB_STAGES, CRMJob } from "@/hooks/useCRMJobs";
+import {
+  FileText, Clock, AlertTriangle, XCircle, Package, Ruler,
+  PenTool, Camera, Search, RefreshCw, GripVertical, User,
+  DollarSign, ChevronRight, Calendar, CheckCircle,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
 
-const PRODUCTION_KANBAN = [
-  { value: "submit_documents", label: "Submit Documents", color: "bg-blue-500" },
-  { value: "permit", label: "Permit Processing", color: "bg-yellow-500" },
-  { value: "material_order", label: "Materials and Labor", color: "bg-purple-500" },
-  { value: "in_progress", label: "In Progress", color: "bg-green-500" },
-];
+const PRODUCTION_STAGES = JOB_STAGES.filter((s) =>
+  ["contract_signed", "submit_documents", "permit", "material_order", "scheduled", "in_progress", "quality_check", "completed", "invoiced"].includes(s.value)
+);
 
 export default function CRMProduction() {
-  const { jobs, isLoading } = useCRMJobs();
+  const { jobs, isLoading, updateJob, fetchJobs } = useCRMJobs();
   const [search, setSearch] = useState("");
+  const [selectedJob, setSelectedJob] = useState<CRMJob | null>(null);
+  const [stageUpdate, setStageUpdate] = useState("");
+  const [jobNotes, setJobNotes] = useState("");
 
-  const productionJobs = jobs.filter(j => ["contract_signed", "permit", "material_order", "scheduled", "in_progress", "quality_check", "completed", "submit_documents"].includes(j.stage));
+  const productionJobs = jobs.filter((j) =>
+    ["contract_signed", "permit", "material_order", "scheduled", "in_progress", "quality_check", "completed", "submit_documents", "invoiced"].includes(j.stage)
+  );
+
+  const filteredJobs = search
+    ? productionJobs.filter(
+        (j) =>
+          j.title.toLowerCase().includes(search.toLowerCase()) ||
+          j.contact?.first_name?.toLowerCase().includes(search.toLowerCase()) ||
+          j.contact?.last_name?.toLowerCase().includes(search.toLowerCase()) ||
+          j.job_number?.toLowerCase().includes(search.toLowerCase())
+      )
+    : productionJobs;
+
+  const totalValue = productionJobs.reduce((s, j) => s + (Number(j.contract_amount) || 0), 0);
+  const collectedValue = productionJobs.reduce((s, j) => s + (Number(j.collected_amount) || 0), 0);
+  const completedCount = productionJobs.filter((j) => j.stage === "completed" || j.stage === "invoiced").length;
 
   const financialCards = [
-    { label: "Financial Worksheets", count: 0, icon: FileText, color: "text-blue-500" },
-    { label: "Pending Invoices", count: 0, icon: Clock, color: "text-yellow-500" },
-    { label: "Overdue Invoices", count: 0, icon: AlertTriangle, color: "text-red-500" },
-    { label: "Canceled Jobs w/Outstanding", count: 0, icon: XCircle, color: "text-gray-500" },
+    { label: "Total Pipeline Value", count: `$${totalValue.toLocaleString()}`, icon: DollarSign, color: "text-primary" },
+    { label: "Collected Amount", count: `$${collectedValue.toLocaleString()}`, icon: CheckCircle, color: "text-green-600 dark:text-green-400" },
+    { label: "Outstanding", count: `$${(totalValue - collectedValue).toLocaleString()}`, icon: AlertTriangle, color: "text-destructive" },
+    { label: "Completed Jobs", count: `${completedCount}`, icon: FileText, color: "text-primary" },
   ];
 
   const managementCards = [
-    { label: "Material Orders to Place", count: 0, icon: Package, color: "text-purple-500" },
-    { label: "Measurement Requests", count: 0, icon: Ruler, color: "text-indigo-500" },
-    { label: "Pending Signatures", count: 0, icon: PenTool, color: "text-orange-500" },
-    { label: "Photos Today", count: 0, icon: Camera, color: "text-green-500" },
+    { label: "Material Orders", count: productionJobs.filter((j) => j.stage === "material_order").length, icon: Package, color: "text-purple-600 dark:text-purple-400" },
+    { label: "In Progress", count: productionJobs.filter((j) => j.stage === "in_progress").length, icon: Ruler, color: "text-blue-600 dark:text-blue-400" },
+    { label: "Pending QC", count: productionJobs.filter((j) => j.stage === "quality_check").length, icon: PenTool, color: "text-orange-600 dark:text-orange-400" },
+    { label: "Scheduled", count: productionJobs.filter((j) => j.stage === "scheduled").length, icon: Calendar, color: "text-green-600 dark:text-green-400" },
   ];
+
+  const handleStageChange = async () => {
+    if (!selectedJob || !stageUpdate) return;
+    await updateJob(selectedJob.id, { stage: stageUpdate, notes: jobNotes || selectedJob.notes });
+    setSelectedJob(null);
+    setStageUpdate("");
+    setJobNotes("");
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <h1 className="text-3xl font-bold">Production Tracking</h1>
-        <div className="grid grid-cols-4 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-24" />)}</div>
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -54,12 +93,36 @@ export default function CRMProduction() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-48" />
+            <Input
+              placeholder="Search jobs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 w-56"
+            />
           </div>
-          <Button variant="outline" size="sm"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
-          <Badge variant="secondary">{productionJobs.length} active projects</Badge>
+          <Button variant="outline" size="sm" onClick={() => fetchJobs()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Badge variant="secondary">{productionJobs.length} active</Badge>
         </div>
       </div>
+
+      {/* Overview Progress */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Pipeline Completion</span>
+            <span className="text-sm text-muted-foreground">
+              {completedCount}/{productionJobs.length} jobs complete
+            </span>
+          </div>
+          <Progress
+            value={productionJobs.length > 0 ? (completedCount / productionJobs.length) * 100 : 0}
+            className="h-2"
+          />
+        </CardContent>
+      </Card>
 
       {/* Financial Section */}
       <div>
@@ -68,11 +131,11 @@ export default function CRMProduction() {
           {financialCards.map((c, i) => (
             <Card key={i}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
-                  <c.icon className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <c.icon className={`w-5 h-5 ${c.color}`} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{c.count}</p>
+                  <p className="text-xl font-bold">{c.count}</p>
                   <p className="text-xs text-muted-foreground">{c.label}</p>
                 </div>
               </CardContent>
@@ -88,8 +151,8 @@ export default function CRMProduction() {
           {managementCards.map((c, i) => (
             <Card key={i}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
-                  <c.icon className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <c.icon className={`w-5 h-5 ${c.color}`} />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{c.count}</p>
@@ -101,31 +164,46 @@ export default function CRMProduction() {
         </div>
       </div>
 
-      {/* Kanban */}
+      {/* Kanban Board */}
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4 min-w-max">
-          {PRODUCTION_KANBAN.map(stage => {
-            const stageJobs = productionJobs.filter(j => j.stage === stage.value);
-            const totalValue = stageJobs.reduce((sum, j) => sum + (Number(j.contract_amount) || 0), 0);
+          {PRODUCTION_STAGES.map((stage) => {
+            const stageJobs = filteredJobs.filter((j) => j.stage === stage.value);
+            const stageValue = stageJobs.reduce((sum, j) => sum + (Number(j.contract_amount) || 0), 0);
             return (
               <div key={stage.value} className="min-w-[280px] max-w-[300px]">
                 <div className="flex items-center gap-2 mb-3">
                   <div className={`w-3 h-3 rounded-full ${stage.color}`} />
                   <h3 className="font-semibold text-sm">{stage.label}</h3>
-                  <Badge variant="outline" className="ml-auto text-xs">{stageJobs.length} · ${totalValue.toLocaleString()}</Badge>
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    {stageJobs.length} · ${stageValue.toLocaleString()}
+                  </Badge>
                 </div>
                 <div className="space-y-2 min-h-[200px] bg-muted/30 rounded-lg p-2">
-                  {stageJobs.map(job => (
-                    <Card key={job.id} className="hover:shadow-md transition-shadow">
+                  {stageJobs.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-8">No jobs</p>
+                  )}
+                  {stageJobs.map((job) => (
+                    <Card
+                      key={job.id}
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => {
+                        setSelectedJob(job);
+                        setStageUpdate(job.stage);
+                        setJobNotes(job.notes || "");
+                      }}
+                    >
                       <CardContent className="p-3">
                         <div className="flex items-start gap-2">
                           <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between">
                               <Badge variant="secondary" className="text-[10px]">
-                                {Math.floor((Date.now() - new Date(job.created_at || "").getTime()) / 86400000)}d
+                                {job.job_number || "—"}
                               </Badge>
-                              <span className="text-[10px] text-muted-foreground">Assigned</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {job.created_at ? `${Math.floor((Date.now() - new Date(job.created_at).getTime()) / 86400000)}d` : ""}
+                              </span>
                             </div>
                             <div className="flex items-center gap-1 mt-1">
                               <User className="w-3 h-3 text-muted-foreground" />
@@ -136,9 +214,20 @@ export default function CRMProduction() {
                             {job.contract_amount && (
                               <div className="flex items-center gap-1 mt-1">
                                 <DollarSign className="w-3 h-3 text-primary" />
-                                <span className="text-xs font-medium text-primary">${Number(job.contract_amount).toLocaleString()}</span>
+                                <span className="text-xs font-medium text-primary">
+                                  ${Number(job.contract_amount).toLocaleString()}
+                                </span>
                               </div>
                             )}
+                            {job.scheduled_date && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Calendar className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-[10px] text-muted-foreground">
+                                  {format(new Date(job.scheduled_date), "MMM d")}
+                                </span>
+                              </div>
+                            )}
+                            <ChevronRight className="w-3 h-3 text-muted-foreground mt-1 ml-auto" />
                           </div>
                         </div>
                       </CardContent>
@@ -150,6 +239,75 @@ export default function CRMProduction() {
           })}
         </div>
       </ScrollArea>
+
+      {/* Job Detail Dialog */}
+      <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedJob?.contact
+                ? `${selectedJob.contact.first_name} ${selectedJob.contact.last_name}`
+                : selectedJob?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedJob && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <label className="text-muted-foreground text-xs">Job Number</label>
+                  <p className="font-medium">{selectedJob.job_number || "—"}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-xs">Contract Amount</label>
+                  <p className="font-medium">${Number(selectedJob.contract_amount || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-xs">Collected</label>
+                  <p className="font-medium">${Number(selectedJob.collected_amount || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-xs">Scheduled</label>
+                  <p className="font-medium">
+                    {selectedJob.scheduled_date ? format(new Date(selectedJob.scheduled_date), "MMM d, yyyy") : "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1 block">Update Stage</label>
+                <Select value={stageUpdate} onValueChange={setStageUpdate}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_STAGES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1 block">Notes</label>
+                <Textarea
+                  value={jobNotes}
+                  onChange={(e) => setJobNotes(e.target.value)}
+                  placeholder="Add production notes..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedJob(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStageChange}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
