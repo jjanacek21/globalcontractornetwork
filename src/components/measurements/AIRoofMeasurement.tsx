@@ -143,6 +143,25 @@ export function AIRoofMeasurement() {
             placeholder="Search property address to measure roof..."
           />
 
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Roof Type</p>
+            <ToggleGroup
+              type="single"
+              value={roofType}
+              onValueChange={(v) => { if (v) setRoofType(v as RoofTypeOverride); }}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="flat" className="text-xs px-3">Flat Roof</ToggleGroupItem>
+              <ToggleGroupItem value="low" className="text-xs px-3">Low Slope</ToggleGroupItem>
+              <ToggleGroupItem value="pitched" className="text-xs px-3">Pitched</ToggleGroupItem>
+            </ToggleGroup>
+            <p className="text-xs text-muted-foreground">
+              {roofType === "flat" && "Forces pitch multiplier to 1.00 — no slope adjustment"}
+              {roofType === "low" && "Forces pitch multiplier to 1.05 — slight slope adjustment"}
+              {roofType === "pitched" && "Uses Google Solar API pitch data as-is"}
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => runMeasurement()} disabled={!canMeasure} className="shadow-soft">
               {loading ? (
