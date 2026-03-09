@@ -218,6 +218,15 @@ const ContactDetail = () => {
                 />
               </CardContent>
             </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ActivityTimeline entityType="contact" entityId={id || ""} />
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
