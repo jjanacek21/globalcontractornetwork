@@ -284,6 +284,7 @@ export default function CRMContactDetail() {
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="measurements">Measurements</TabsTrigger>
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="communication">Communication</TabsTrigger>
