@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEstimates, ESTIMATE_STATUSES } from "@/hooks/useEstimates";
 import { Plus, Search, FileText, DollarSign, Eye, History, Download, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function CRMEstimates() {
   const { estimates, isLoading } = useEstimates();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [repFilter, setRepFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -30,7 +32,7 @@ export default function CRMEstimates() {
           <h1 className="text-3xl font-bold text-foreground">Estimates</h1>
           <p className="text-muted-foreground">View all company estimates</p>
         </div>
-        <Button className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white">
+        <Button onClick={() => navigate("/member/crm/estimates/new")} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <FileText className="mr-2 h-4 w-4" />Create Estimate
         </Button>
       </div>
