@@ -128,6 +128,17 @@ const ContactDetail = () => {
         )}
       </div>
 
+      {/* Financial Summary */}
+      <FinancialSummaryBar
+        totalEstimate={0}
+        approvedAmount={0}
+        outstandingBalance={0}
+        paymentStatus="unpaid"
+      />
+
+      {/* Approval Requirements */}
+      <ApprovalCards />
+
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
         <TabsList>
