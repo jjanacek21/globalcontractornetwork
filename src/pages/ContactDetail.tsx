@@ -18,6 +18,8 @@ import { AddPropertyDialog } from "@/components/crm/AddPropertyDialog";
 import { CreateLeadDialog } from "@/components/crm/CreateLeadDialog";
 import { EditContactDialog } from "@/components/crm/EditContactDialog";
 import { NotesList } from "@/components/crm/NotesList";
+import { ApprovalCards } from "@/components/crm/ApprovalCards";
+import { FinancialSummaryBar } from "@/components/crm/FinancialSummaryBar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,6 +128,17 @@ const ContactDetail = () => {
         )}
       </div>
 
+      {/* Financial Summary */}
+      <FinancialSummaryBar
+        totalEstimate={0}
+        approvedAmount={0}
+        outstandingBalance={0}
+        paymentStatus="unpaid"
+      />
+
+      {/* Approval Requirements */}
+      <ApprovalCards />
+
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
         <TabsList>
@@ -203,6 +216,15 @@ const ContactDetail = () => {
                   onAddNote={(content) => createNote(content)}
                   onDeleteNote={(noteId) => deleteNote(noteId)}
                 />
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ActivityTimeline entityType="contact" entityId={id || ""} />
               </CardContent>
             </Card>
           </div>
