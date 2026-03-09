@@ -456,6 +456,79 @@ export default function CRMContactDetail() {
           )}
         </TabsContent>
 
+        {/* Measurements Tab */}
+        <TabsContent value="measurements" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Roof Measurements</h3>
+            <Button size="sm" onClick={() => navigate("/member/crm/measurements")}>
+              <Ruler className="mr-1 h-4 w-4" /> New Measurement
+            </Button>
+          </div>
+          {measurementsLoading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : measurements.length > 0 ? (
+            <div className="space-y-3">
+              {measurements.map((m) => (
+                <Card key={m.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{m.address}</p>
+                          <Badge variant="outline" className="text-xs capitalize">{m.source}</Badge>
+                          {m.quality && (
+                            <Badge className={`text-xs ${
+                              m.quality === "high" ? "bg-green-100 text-green-800" :
+                              m.quality === "medium" ? "bg-yellow-100 text-yellow-800" :
+                              "bg-red-100 text-red-800"
+                            }`}>{m.quality}</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span><strong>{m.total_squares}</strong> squares</span>
+                          <span><strong>{m.total_area_sqft?.toLocaleString()}</strong> sq ft</span>
+                          {m.pitch && <span>Pitch: {m.pitch}</span>}
+                          {m.complexity && <span>Complexity: {m.complexity}</span>}
+                          {m.waste_percent && <span>Waste: {m.waste_percent}%</span>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {m.created_at ? format(new Date(m.created_at), "MMM d, yyyy h:mm a") : "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {m.lead_id && (
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/member/crm/leads/${m.lead_id}`)}>
+                            View Lead
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowEstimateBuilder(true);
+                          }}
+                        >
+                          Create Estimate
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <Ruler className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No measurements yet for this contact.</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/member/crm/measurements")}>
+                  <Plus className="mr-1 h-4 w-4" /> Take First Measurement
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         {/* Estimates Tab */}
         <TabsContent value="estimates" className="space-y-4">
           <ContactEstimatesCard
