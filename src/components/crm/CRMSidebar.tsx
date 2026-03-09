@@ -25,7 +25,7 @@ const mainNav = [
   { title: "Measurements", url: "/member/crm/measurements", icon: Ruler },
   { title: "Production", url: "/member/crm/production", icon: Factory },
   { title: "Calendar", url: "/member/crm/calendar", icon: CalendarDays },
-  { title: "Storm Canvas Pro", url: "/member/crm/storm-canvas", icon: Map },
+  { title: "iCanvas", url: "/member/crm/storm-canvas", icon: Map },
   { title: "Smart Docs", url: "/member/crm/smart-docs", icon: FileStack },
   { title: "Presentations", url: "/member/crm/presentations", icon: Presentation },
   { title: "Permit Expediter", url: "/member/crm/permit-expediter", icon: Crown },

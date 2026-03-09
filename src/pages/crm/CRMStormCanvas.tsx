@@ -23,7 +23,7 @@ export default function CRMStormCanvas() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Storm Canvas Pro</h1>
+        <h1 className="text-3xl font-bold text-foreground">iCanvas</h1>
         <Badge className="bg-green-100 text-green-700 border-green-200">Integration Ready</Badge>
       </div>
 
