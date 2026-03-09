@@ -545,10 +545,43 @@ export default function CRMContactDetail() {
 
         {/* Estimates Tab */}
         <TabsContent value="estimates" className="space-y-4">
+          {/* Active Measurement Summary */}
+          {measurements.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Ruler className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Active Measurement</p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-sm font-bold">{measurements[0].total_squares?.toFixed(2)} squares</span>
+                        <span className="text-sm text-muted-foreground">{measurements[0].total_area_sqft?.toLocaleString()} sq ft</span>
+                        {(measurements[0].pitch || measurements[0].pitch_degrees) && (
+                          <span className="text-sm text-muted-foreground">
+                            Pitch: {measurements[0].pitch || `${Number(measurements[0].pitch_degrees).toFixed(1)}°`}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {measurements[0].source === "ai_solar" ? "AI" : measurements[0].source || "—"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("measurements")}>
+                    View All
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <ContactEstimatesCard
             estimates={estimates}
             isLoading={estimatesLoading}
-            onCreateNew={() => setShowEstimateBuilder(true)}
+            onCreateNew={() => navigate(`/member/crm/estimates/new?contact_id=${contact.id}`)}
           />
         </TabsContent>
 
