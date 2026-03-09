@@ -11,6 +11,9 @@ import { useContactDocuments } from "@/hooks/useContactDocuments";
 import { useContactCommunications } from "@/hooks/useContactCommunications";
 import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
+import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
+import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
+import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +52,11 @@ export default function CRMContactDetail() {
   const [showEditContact, setShowEditContact] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showSendEmail, setShowSendEmail] = useState(false);
+  const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
+  const { estimates, isLoading: estimatesLoading, refetch: refetchEstimates } = useContactEstimates(contactId || null);
 
   // Documents & Communications
   const { documents, isLoading: docsLoading, isUploading, uploadDocument, deleteDocument, getSignedUrl } = useContactDocuments(contactId || null);
@@ -246,6 +251,7 @@ export default function CRMContactDetail() {
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="communication">Communication</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -414,6 +420,15 @@ export default function CRMContactDetail() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Estimates Tab */}
+        <TabsContent value="estimates" className="space-y-4">
+          <ContactEstimatesCard
+            estimates={estimates}
+            isLoading={estimatesLoading}
+            onCreateNew={() => setShowEstimateBuilder(true)}
+          />
         </TabsContent>
 
         {/* Notes Tab */}
@@ -608,6 +623,18 @@ export default function CRMContactDetail() {
           }}
         />
       )}
+
+      {/* Estimate Builder Dialog */}
+      <EstimateBuilderDialog
+        open={showEstimateBuilder}
+        onOpenChange={setShowEstimateBuilder}
+        contactId={contact.id}
+        contactName={fullName}
+        contactAddress={primaryAddress || undefined}
+        customerId={contact.id}
+        leadId={contact.leads?.[0]?.id}
+        onEstimateCreated={refetchEstimates}
+      />
     </div>
   );
 }
