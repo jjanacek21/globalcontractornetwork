@@ -1,0 +1,1 @@
+ALTER TABLE public.roof_measurements ADD COLUMN IF NOT EXISTS roof_type text DEFAULT 'pitched';

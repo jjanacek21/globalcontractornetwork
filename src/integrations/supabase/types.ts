@@ -8218,6 +8218,7 @@ export type Database = {
           pitch_multiplier: number | null
           quality: string | null
           ridge_ft: number | null
+          roof_type: string | null
           segments_count: number | null
           solar_api_response: Json | null
           source: string
@@ -8248,6 +8249,7 @@ export type Database = {
           pitch_multiplier?: number | null
           quality?: string | null
           ridge_ft?: number | null
+          roof_type?: string | null
           segments_count?: number | null
           solar_api_response?: Json | null
           source?: string
@@ -8278,6 +8280,7 @@ export type Database = {
           pitch_multiplier?: number | null
           quality?: string | null
           ridge_ft?: number | null
+          roof_type?: string | null
           segments_count?: number | null
           solar_api_response?: Json | null
           source?: string
