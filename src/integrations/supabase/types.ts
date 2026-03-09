@@ -5032,6 +5032,82 @@ export type Database = {
           },
         ]
       }
+      material_orders: {
+        Row: {
+          actual_delivery_date: string | null
+          company_id: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          expected_date: string | null
+          id: string
+          job_id: string
+          material_name: string
+          notes: string | null
+          quantity: number
+          status: string
+          supplier: string | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          company_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          expected_date?: string | null
+          id?: string
+          job_id: string
+          material_name: string
+          notes?: string | null
+          quantity?: number
+          status?: string
+          supplier?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          company_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          expected_date?: string | null
+          id?: string
+          job_id?: string
+          material_name?: string
+          notes?: string | null
+          quantity?: number
+          status?: string
+          supplier?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_orders_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "crm_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_requests: {
         Row: {
           approved_by: string | null
