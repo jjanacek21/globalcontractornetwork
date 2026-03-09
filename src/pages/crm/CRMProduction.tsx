@@ -149,9 +149,13 @@ export default function CRMProduction() {
       <Tabs defaultValue="board" className="w-full">
         <TabsList>
           <TabsTrigger value="board">Production Board</TabsTrigger>
+          <TabsTrigger value="materials" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Materials
+          </TabsTrigger>
           <TabsTrigger value="crew" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Crew Management
+            Crew
           </TabsTrigger>
         </TabsList>
 
