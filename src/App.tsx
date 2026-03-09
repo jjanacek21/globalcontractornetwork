@@ -19,6 +19,7 @@ const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
 const CRMContactDetail = lazy(() => import("./pages/crm/CRMContactDetail"));
 const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
 const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
+const CRMEstimateBuilder = lazy(() => import("./pages/crm/CRMEstimateBuilder"));
 const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
 const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
 const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
@@ -209,6 +210,11 @@ const GCNRoutes = () => (
     <Route path="/member/crm/estimates" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMEstimates /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/estimates/new" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMEstimateBuilder /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/measurements" element={
