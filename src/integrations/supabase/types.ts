@@ -3049,7 +3049,7 @@ export type Database = {
           contact_id: string | null
           created_at: string | null
           created_by: string | null
-          customer_id: string
+          customer_id: string | null
           discount_amount: number | null
           estimate_number: string | null
           id: string
@@ -3075,7 +3075,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          customer_id: string
+          customer_id?: string | null
           discount_amount?: number | null
           estimate_number?: string | null
           id?: string
@@ -3101,7 +3101,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          customer_id?: string
+          customer_id?: string | null
           discount_amount?: number | null
           estimate_number?: string | null
           id?: string
