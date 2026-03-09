@@ -1,15 +1,24 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Map, Target, Zap, Camera, BarChart3, Settings, Upload, MapPin } from "lucide-react";
 
 export default function CRMStormCanvas() {
+  const navigate = useNavigate();
+
   const stats = [
     { label: "Active Canvassers", value: 0, subtitle: "Ready to deploy", icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
     { label: "Territories", value: 0, subtitle: "Waiting for setup", icon: Map, color: "text-purple-500", bg: "bg-purple-50" },
     { label: "Doors Knocked", value: 0, subtitle: "Today", icon: Target, color: "text-green-500", bg: "bg-green-50" },
     { label: "Leads Generated", value: 0, subtitle: "This week", icon: Zap, color: "text-orange-500", bg: "bg-orange-50" },
   ];
+
+  const handleFeatureClick = (btn: string) => {
+    if (btn === "Start Canvassing") {
+      navigate("/member/crm/storm-canvas/canvass");
+    }
+  };
 
   const features = [
     { title: "Field Canvassing", desc: "Territory mapping with real-time GPS tracking and mobile-optimized lead capture", btn: "Start Canvassing", icon: MapPin, primary: true },
@@ -55,7 +64,12 @@ export default function CRMStormCanvas() {
                 <h3 className="font-semibold">{f.title}</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">{f.desc}</p>
-              <Button size="sm" className={f.primary ? "bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white" : ""} variant={f.primary ? "default" : "outline"}>
+              <Button
+                size="sm"
+                className={f.primary ? "bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white" : ""}
+                variant={f.primary ? "default" : "outline"}
+                onClick={() => handleFeatureClick(f.btn)}
+              >
                 {f.btn}
               </Button>
             </CardContent>

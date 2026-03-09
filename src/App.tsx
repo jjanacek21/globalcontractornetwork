@@ -24,6 +24,7 @@ const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
 const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
 const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
 const CRMStormCanvas = lazy(() => import("./pages/crm/CRMStormCanvas"));
+const CanvassMap = lazy(() => import("./pages/crm/CanvassMap"));
 const CRMSmartDocs = lazy(() => import("./pages/crm/CRMSmartDocs"));
 const CRMPresentations = lazy(() => import("./pages/crm/CRMPresentations"));
 const CRMPermitExpediter = lazy(() => import("./pages/crm/CRMPermitExpediter"));
@@ -235,6 +236,11 @@ const GCNRoutes = () => (
     <Route path="/member/crm/storm-canvas" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMStormCanvas /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/storm-canvas/canvass" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CanvassMap /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/presentations" element={
