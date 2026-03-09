@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCRMJobs, JOB_STAGES, CRMJob } from "@/hooks/useCRMJobs";
 import { CrewManagementTab } from "@/components/crm/CrewManagementTab";
+import { MaterialOrdersTab } from "@/components/crm/MaterialOrdersTab";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Clock, AlertTriangle, XCircle, Package, Ruler,
@@ -148,9 +149,13 @@ export default function CRMProduction() {
       <Tabs defaultValue="board" className="w-full">
         <TabsList>
           <TabsTrigger value="board">Production Board</TabsTrigger>
+          <TabsTrigger value="materials" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Materials
+          </TabsTrigger>
           <TabsTrigger value="crew" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Crew Management
+            Crew
           </TabsTrigger>
         </TabsList>
 
@@ -354,6 +359,10 @@ export default function CRMProduction() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="materials" className="mt-4">
+          <MaterialOrdersTab jobs={productionJobs} />
         </TabsContent>
 
         <TabsContent value="crew" className="mt-4">
