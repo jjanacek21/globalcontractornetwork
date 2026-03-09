@@ -90,6 +90,15 @@ export default function CRMProduction() {
     { label: "Scheduled", count: productionJobs.filter((j) => j.stage === "scheduled").length, icon: Calendar, color: "text-green-600 dark:text-green-400" },
   ];
 
+  const handleAssignCrew = async (jobId: string, crewMemberId: string) => {
+    const { error } = await supabase
+      .from("crm_jobs")
+      .update({ assigned_crew_id: crewMemberId } as any)
+      .eq("id", jobId);
+    if (error) throw error;
+    await fetchJobs();
+  };
+
   const handleStageChange = async () => {
     if (!selectedJob || !stageUpdate) return;
     await updateJob(selectedJob.id, { stage: stageUpdate, notes: jobNotes || selectedJob.notes });
