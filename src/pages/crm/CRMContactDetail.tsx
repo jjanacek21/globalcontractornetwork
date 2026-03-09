@@ -523,7 +523,7 @@ export default function CRMContactDetail() {
                               View Lead
                             </Button>
                           )}
-                          <Button variant="outline" size="sm" onClick={() => setShowEstimateBuilder(true)}>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contact.id}&measurement_id=${m.id}`)}>
                             Use for Estimate
                           </Button>
                         </div>

@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLead, useLeads, LEAD_STATUSES } from "@/hooks/useLeads";
 import { useNotes } from "@/hooks/useNotes";
 import { NotesList } from "@/components/crm/NotesList";
 import { useContactDocuments } from "@/hooks/useContactDocuments";
 import { useContactCommunications } from "@/hooks/useContactCommunications";
+import { InlineRoofMeasurement } from "@/components/crm/InlineRoofMeasurement";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Phone, Mail, MapPin, PhoneCall, MessageSquare,
-  FileText, Upload, Clock, ExternalLink, Trash2, Image, File, Home, DollarSign
+  FileText, Upload, Clock, ExternalLink, Trash2, Image, File, Home, DollarSign, Ruler
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -29,6 +31,20 @@ export default function CRMLeadDetail() {
   const { communications, stats: commStats, logCommunication } = useContactCommunications(contactId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commNote, setCommNote] = useState("");
+  const [activeTab, setActiveTab] = useState("notes");
+  const [autoTriggerMeasurement, setAutoTriggerMeasurement] = useState(false);
+  const [measurements, setMeasurements] = useState<any[]>([]);
+
+  // Load measurements for this contact
+  useEffect(() => {
+    if (!contactId) return;
+    supabase
+      .from("roof_measurements")
+      .select("*")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setMeasurements(data || []));
+  }, [contactId]);
 
   if (isLoading) {
     return (
@@ -87,6 +103,16 @@ export default function CRMLeadDetail() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const refreshMeasurements = () => {
+    if (!contactId) return;
+    supabase
+      .from("roof_measurements")
+      .select("*")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setMeasurements(data || []));
+  };
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
@@ -139,6 +165,25 @@ export default function CRMLeadDetail() {
                   View Contact
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setActiveTab("measurements");
+                  setAutoTriggerMeasurement(true);
+                }}
+              >
+                <Ruler className="mr-1 h-4 w-4" /> Measure Roof
+              </Button>
+              {contactId && (
+                <Button
+                  size="sm"
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contactId}`)}
+                >
+                  <DollarSign className="mr-1 h-4 w-4" /> New Estimate
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -177,15 +222,75 @@ export default function CRMLeadDetail() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="notes">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="measurements">Measurements</TabsTrigger>
           <TabsTrigger value="communication">Communication</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notes" className="space-y-4">
           <NotesList notes={notes} onAddNote={createNote} onDeleteNote={deleteNote} />
+        </TabsContent>
+
+        {/* Measurements Tab */}
+        <TabsContent value="measurements" className="space-y-6">
+          {contactId && (
+            <InlineRoofMeasurement
+              contactId={contactId}
+              contactAddress={address !== "—" ? address : null}
+              companyId={lead.company_id || null}
+              leadId={leadId}
+              autoTrigger={autoTriggerMeasurement}
+              onMeasurementSaved={refreshMeasurements}
+            />
+          )}
+
+          {/* Saved Measurements */}
+          {measurements.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Saved Measurements</h3>
+              <div className="space-y-3">
+                {measurements.map((m) => (
+                  <Card key={m.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{m.address}</p>
+                            <Badge variant="outline" className="text-xs capitalize">{m.source === "ai_solar" ? "AI" : m.source}</Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span><strong>{m.total_squares?.toFixed(2)}</strong> squares</span>
+                            <span><strong>{m.total_area_sqft?.toLocaleString()}</strong> sq ft</span>
+                            {m.pitch_degrees && <span>Pitch: {Number(m.pitch_degrees).toFixed(1)}°</span>}
+                            {m.complexity && <span>{m.complexity}</span>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {m.created_at ? format(new Date(m.created_at), "MMM d, yyyy h:mm a") : "—"}
+                          </p>
+                        </div>
+                        {contactId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contactId}&measurement_id=${m.id}`)}
+                          >
+                            Use for Estimate
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!contactId && (
+            <p className="text-sm text-muted-foreground">This lead has no linked contact. Measurements require a contact.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="communication" className="space-y-6">

@@ -14,13 +14,24 @@ export default function CRMEstimateBuilder() {
   const [searchParams] = useSearchParams();
   const builder = useEstimateBuilder();
 
-  // Auto-select contact from URL param
+  // Auto-select contact and measurement from URL params
   useEffect(() => {
     const contactId = searchParams.get("contact_id");
     if (contactId && builder.customers.length > 0 && !builder.state.customer_id) {
       builder.setCustomer(contactId);
     }
   }, [searchParams, builder.customers]);
+
+  useEffect(() => {
+    const measurementId = searchParams.get("measurement_id");
+    if (measurementId && builder.measurements.length > 0 && !builder.state.measurement_id) {
+      builder.setMeasurement(measurementId);
+      // Auto-advance to line items if both contact and measurement are set
+      if (builder.state.customer_id) {
+        builder.setStep(2);
+      }
+    }
+  }, [searchParams, builder.measurements, builder.state.customer_id]);
 
   const handleSave = async () => {
     const result = await builder.saveEstimate();

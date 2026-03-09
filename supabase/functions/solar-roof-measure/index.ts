@@ -9,6 +9,7 @@ interface MeasurementRequest {
   latitude: number;
   longitude: number;
   address?: string;
+  roof_type_override?: "flat" | "low_slope" | "pitched";
 }
 
 const M2_TO_SQFT = 10.7639;
@@ -31,7 +32,7 @@ serve(async (req) => {
   }
 
   try {
-    const { latitude, longitude, address = "" } = (await req.json()) as MeasurementRequest;
+    const { latitude, longitude, address = "", roof_type_override } = (await req.json()) as MeasurementRequest;
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return new Response(JSON.stringify({ success: false, error: "Invalid coordinates" }), {
@@ -125,13 +126,20 @@ serve(async (req) => {
     const averagePitchDegrees = totalFlatAreaM2 > 0 ? weightedPitchSum / totalFlatAreaM2 : 0;
 
     const pitchRadians = (averagePitchDegrees * Math.PI) / 180;
-    const pitchMultiplier = averagePitchDegrees > 0 ? 1 / Math.cos(pitchRadians) : 1;
+    const rawPitchMultiplier = averagePitchDegrees > 0 ? 1 / Math.cos(pitchRadians) : 1;
+
+    // Apply roof type override if provided
+    const pitchMultiplier = roof_type_override === "flat" ? 1.0
+      : roof_type_override === "low_slope" ? 1.02
+      : rawPitchMultiplier;
 
     const totalFlatSqFt = totalFlatAreaM2 * M2_TO_SQFT;
     const totalPitchedSqFt = totalFlatSqFt * pitchMultiplier;
 
-    const wastePercent =
+    const defaultWaste =
       segmentCount <= 2 ? 10 : segmentCount <= 6 ? 13 : segmentCount <= 12 ? 15 : 17;
+
+    const wastePercent = (roof_type_override === "flat" || roof_type_override === "low_slope") ? 5 : defaultWaste;
 
     const totalWithWasteSqFt = totalPitchedSqFt * (1 + wastePercent / 100);
     const totalSquares = totalWithWasteSqFt / 100;

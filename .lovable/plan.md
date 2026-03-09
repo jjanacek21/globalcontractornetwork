@@ -1,70 +1,69 @@
 
 
-## Plan: Fix Measurement-to-Estimate Flow and Flat Roof Handling
+# Fix Missing Documents in Packet Assembly
 
-### Problems Identified
+## Root Cause
 
-1. **"Measure Roof" from lead page** — no inline measurement on the Lead Detail page; it should work the same as Contact Detail.
-2. **"Use for Estimate" button** on saved measurements opens a dialog instead of navigating to the estimate builder with the measurement pre-selected.
-3. **Estimate builder doesn't auto-select measurement** — when navigating from a contact with `contact_id`, the measurement step loads ALL measurements instead of filtering by that contact, and doesn't auto-select the most recent one.
-4. **Flat roof not accounted for** — The edge function applies `1/cos(pitch)` even when the AI identifies the roof as flat. There's no mechanism to override the calculation based on the AI's suggestion or user's flat roof selection. For coatings/flat roofs, `pitched_area` should equal `flat_area` (multiplier = 1.0).
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### Changes
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-#### 1. Edge Function: `solar-roof-measure/index.ts`
-- Add an optional `roof_type_override` parameter (`"flat"` | `"low_slope"` | `"pitched"`).
-- When `roof_type_override === "flat"`, force `pitchMultiplier = 1.0` and `wastePercent = 5` (flat roof waste).
-- When `roof_type_override === "low_slope"`, force `pitchMultiplier = 1.02` and `wastePercent = 5`.
-- This lets the client-side override take effect in the actual calculation.
+## Fix: Two-Part Solution
 
-#### 2. `InlineRoofMeasurement.tsx` — Flat Roof Override
-- Add a roof type toggle group (Flat / Low Slope / Pitched) like `AIRoofMeasurement.tsx` has.
-- When user selects "Flat", recalculate displayed values locally: set `total_pitched_area_sqft = total_flat_area_sqft`, `pitch_multiplier = 1.0`, `waste_percent = 5`, and recompute squares.
-- Auto-select "Flat" when AI suggests `flat`.
-- Pass the override when saving so the stored measurement reflects the corrected values.
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-#### 3. `InlineRoofMeasurement.tsx` — Save Function Improvement
-- After save, show a "Create Estimate" button that navigates to `/member/crm/estimates/new?contact_id={contactId}&measurement_id={savedMeasurementId}`.
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
-#### 4. `CRMContactDetail.tsx` — "Use for Estimate" Button Fix
-- Change the "Use for Estimate" button on each measurement card to navigate to `/member/crm/estimates/new?contact_id={contactId}&measurement_id={m.id}` instead of opening a dialog.
-
-#### 5. `CRMEstimateBuilder.tsx` — Auto-select Measurement
-- Read `measurement_id` from URL search params.
-- After measurements load, auto-select the matching measurement and skip to step 2 (line items) if both contact and measurement are pre-selected.
-
-#### 6. `useEstimateBuilder.ts` — Filter Measurements by Contact
-- When `customer_id` is set, filter `roof_measurements` by `contact_id` matching the customer's linked contact instead of loading all measurements.
-- Since `estimates` table has `contact_id` and `customer_id`, and `roof_measurements` has `contact_id`, filter by `contact_id` when available (pass as additional param).
-- Add a `setContactId` method to allow setting `contact_id` directly from URL params, and filter measurements by it.
-
-#### 7. `CRMLeadDetail.tsx` — Add Inline Measurement
-- Add an `InlineRoofMeasurement` component to the lead detail page using the lead's property address.
-- Wire the "Measure Roof" action to auto-trigger measurement using the lead's address.
-
-### Technical Details
-
-**Flat roof calculation fix** (core logic in `InlineRoofMeasurement.tsx`):
-```text
-User selects "Flat" override:
-  displayPitchedArea = result.total_flat_area_sqft  (no multiplier)
-  displayWaste = 5%
-  displaySquares = (flatArea * 1.05) / 100
-
-User selects "Low Slope":
-  displayPitchedArea = result.total_flat_area_sqft * 1.02
-  displayWaste = 5%
-
-Default "Pitched":
-  Use API values as-is
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
 ```
 
-**Estimate builder auto-population flow**:
-```text
-URL: /member/crm/estimates/new?contact_id=X&measurement_id=Y
-  → useEffect reads params
-  → setCustomer(X) triggers measurement fetch filtered by contact
-  → setMeasurement(Y) selects measurement
-  → auto-advance to step 2 if both set
+### 2. Fix incorrect source types in packet structures
+
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
 ```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
