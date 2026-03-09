@@ -24,6 +24,7 @@ const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
 const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
 const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
 const CRMStormCanvas = lazy(() => import("./pages/crm/CRMStormCanvas"));
+const CanvassMap = lazy(() => import("./pages/crm/CanvassMap"));
 const CRMSmartDocs = lazy(() => import("./pages/crm/CRMSmartDocs"));
 const CRMPresentations = lazy(() => import("./pages/crm/CRMPresentations"));
 const CRMPermitExpediter = lazy(() => import("./pages/crm/CRMPermitExpediter"));
