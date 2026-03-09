@@ -12,6 +12,7 @@ import { useContactCommunications } from "@/hooks/useContactCommunications";
 import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
+import { InlineRoofMeasurement } from "@/components/crm/InlineRoofMeasurement";
 import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
 import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
 import { supabase } from "@/integrations/supabase/client";
