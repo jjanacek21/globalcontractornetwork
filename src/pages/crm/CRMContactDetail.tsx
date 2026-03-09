@@ -59,6 +59,24 @@ export default function CRMContactDetail() {
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
   const { estimates, isLoading: estimatesLoading, refetch: refetchEstimates } = useContactEstimates(contactId || null);
 
+  // Measurements
+  const [measurements, setMeasurements] = useState<any[]>([]);
+  const [measurementsLoading, setMeasurementsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!contactId) return;
+    setMeasurementsLoading(true);
+    supabase
+      .from("roof_measurements")
+      .select("*")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setMeasurements(data || []);
+        setMeasurementsLoading(false);
+      });
+  }, [contactId]);
+
   // Documents & Communications
   const { documents, isLoading: docsLoading, isUploading, uploadDocument, deleteDocument, getSignedUrl } = useContactDocuments(contactId || null);
   const { communications, isLoading: commsLoading, stats: commStats, logCommunication } = useContactCommunications(contactId || null);
