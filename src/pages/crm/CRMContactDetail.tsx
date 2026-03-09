@@ -55,6 +55,8 @@ export default function CRMContactDetail() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showSendEmail, setShowSendEmail] = useState(false);
   const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [autoTriggerMeasurement, setAutoTriggerMeasurement] = useState(false);
   const { notes, isLoading: notesLoading, createNote, deleteNote } = useNotes("contact", contactId || null);
   const { lead: selectedLead, isLoading: leadLoading, refetch: refetchLead } = useLead(selectedLeadId);
   const { updateLeadStatus } = useLeads(contact?.company_id || undefined);
@@ -235,7 +237,10 @@ export default function CRMContactDetail() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/member/crm/measurements")}
+                onClick={() => {
+                  setActiveTab("measurements");
+                  setAutoTriggerMeasurement(true);
+                }}
               >
                 <Ruler className="mr-1 h-4 w-4" /> Measure Roof
               </Button>
@@ -281,7 +286,7 @@ export default function CRMContactDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="details">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
@@ -465,6 +470,7 @@ export default function CRMContactDetail() {
             contactAddress={primaryAddress}
             companyId={contact.company_id}
             leadId={contact.leads?.[0]?.id}
+            autoTrigger={autoTriggerMeasurement}
             onMeasurementSaved={() => {
               // Refresh measurements list
               supabase

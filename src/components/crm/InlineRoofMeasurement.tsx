@@ -1,12 +1,14 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, Ruler, House, AlertCircle, MapPin, BrainCircuit,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Save, CheckCircle
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Save, CheckCircle, PenLine
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,18 +36,31 @@ interface Props {
   contactAddress: string | null;
   companyId: string | null;
   leadId?: string;
+  autoTrigger?: boolean;
   onMeasurementSaved: () => void;
 }
 
 const NUDGE_AMOUNT = 0.00015;
 
-export function InlineRoofMeasurement({ contactId, contactAddress, companyId, leadId, onMeasurementSaved }: Props) {
+export function InlineRoofMeasurement({ contactId, contactAddress, companyId, leadId, autoTrigger, onMeasurementSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SolarMeasurementData | null>(null);
+  const [showManual, setShowManual] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualData, setManualData] = useState({ squares: "", sqft: "", pitch: "4/12", complexity: "moderate" });
+  const hasAutoTriggered = useRef(false);
   const { toast } = useToast();
+
+  // Auto-trigger AI measurement when requested from header button
+  useEffect(() => {
+    if (autoTrigger && contactAddress && !hasAutoTriggered.current && !loading && !result) {
+      hasAutoTriggered.current = true;
+      runMeasurement();
+    }
+  }, [autoTrigger, contactAddress]);
 
   const runMeasurement = async (latOverride?: number, lngOverride?: number) => {
     if (!contactAddress && latOverride == null) {
@@ -136,57 +151,157 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     }
   };
 
+  const saveManualMeasurement = async () => {
+    const squares = parseFloat(manualData.squares);
+    const sqft = parseFloat(manualData.sqft);
+    if (!squares || !sqft) {
+      toast({ title: "Missing fields", description: "Please enter both squares and sq ft.", variant: "destructive" });
+      return;
+    }
+    setManualSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error: insertError } = await supabase.from("roof_measurements").insert({
+        contact_id: contactId,
+        company_id: companyId,
+        lead_id: leadId || null,
+        created_by: session?.user?.id || null,
+        address: contactAddress || "Manual entry",
+        source: "manual",
+        complexity: manualData.complexity,
+        pitch: manualData.pitch,
+        total_area_sqft: sqft,
+        total_squares: squares,
+      });
+      if (insertError) throw insertError;
+      toast({ title: "Manual measurement saved", description: `${squares} squares recorded.` });
+      setManualData({ squares: "", sqft: "", pitch: "4/12", complexity: "moderate" });
+      setShowManual(false);
+      onMeasurementSaved();
+    } catch (err: any) {
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Run Measurement CTA */}
-      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-        <CardContent className="p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BrainCircuit className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">AI Roof Measurement</p>
-                <p className="text-xs text-muted-foreground">
-                  {contactAddress
-                    ? `Measure roof at: ${contactAddress}`
-                    : "No property address — add one in the Details tab"}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => runMeasurement()}
-              disabled={loading || !contactAddress}
-              className="sm:ml-auto bg-primary hover:bg-primary/90"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Measuring...
-                </>
-              ) : (
-                <>
-                  <Ruler className="mr-2 h-4 w-4" />
-                  Run AI Measurement
-                </>
-              )}
-            </Button>
-          </div>
-
-          {error && (
-            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-              {error}
-            </div>
+      {/* Action Buttons Row */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          onClick={() => runMeasurement()}
+          disabled={loading || !contactAddress}
+          className="bg-primary hover:bg-primary/90"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Measuring...
+            </>
+          ) : (
+            <>
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              Run AI Measurement
+            </>
           )}
-        </CardContent>
-      </Card>
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setShowManual(!showManual)}
+        >
+          <PenLine className="mr-2 h-4 w-4" />
+          Enter Manual Measurement
+        </Button>
+      </div>
 
-      {/* Inline Results */}
+      {/* AI Address Info */}
+      {!result && !showManual && (
+        <p className="text-sm text-muted-foreground">
+          {contactAddress
+            ? `Will measure roof at: ${contactAddress}`
+            : "No property address found — add one in the Details tab first."}
+        </p>
+      )}
+
+      {error && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Manual Entry Form */}
+      {showManual && (
+        <Card className="border-dashed border-2 border-muted-foreground/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <PenLine className="h-4 w-4" />
+              Manual Measurement Entry
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Total Squares</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 28.5"
+                  value={manualData.squares}
+                  onChange={(e) => setManualData(prev => ({ ...prev, squares: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Total Sq Ft</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 2850"
+                  value={manualData.sqft}
+                  onChange={(e) => setManualData(prev => ({ ...prev, sqft: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pitch</Label>
+                <Select value={manualData.pitch} onValueChange={(v) => setManualData(prev => ({ ...prev, pitch: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Flat", "1/12", "2/12", "3/12", "4/12", "5/12", "6/12", "7/12", "8/12", "9/12", "10/12", "11/12", "12/12"].map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Complexity</Label>
+                <Select value={manualData.complexity} onValueChange={(v) => setManualData(prev => ({ ...prev, complexity: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="simple">Simple (Gable)</SelectItem>
+                    <SelectItem value="moderate">Moderate (Hip)</SelectItem>
+                    <SelectItem value="complex">Complex (10+ facets)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={saveManualMeasurement} disabled={manualSaving} size="sm">
+                {manualSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save Manual Measurement
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowManual(false)}>Cancel</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Inline AI Results */}
       {result && (
         <div className="space-y-4">
-          {/* AI Warning Banner */}
           {result.ai_roof_type_warning && (
             <div className="rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-foreground flex items-start gap-3">
               <BrainCircuit className="h-5 w-5 text-primary mt-0.5 shrink-0" />
@@ -197,7 +312,7 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
             </div>
           )}
 
-          {/* Satellite Image with Nudge Controls */}
+          {/* Satellite Image */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
