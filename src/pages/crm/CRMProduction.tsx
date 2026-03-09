@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCRMJobs, JOB_STAGES, CRMJob } from "@/hooks/useCRMJobs";
+import { CrewManagementTab } from "@/components/crm/CrewManagementTab";
+import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Clock, AlertTriangle, XCircle, Package, Ruler,
-  PenTool, Camera, Search, RefreshCw, GripVertical, User,
+  PenTool, Camera, Search, RefreshCw, GripVertical, User, Users,
   DollarSign, ChevronRight, Calendar, CheckCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -87,6 +90,15 @@ export default function CRMProduction() {
     { label: "Scheduled", count: productionJobs.filter((j) => j.stage === "scheduled").length, icon: Calendar, color: "text-green-600 dark:text-green-400" },
   ];
 
+  const handleAssignCrew = async (jobId: string, crewMemberId: string) => {
+    const { error } = await supabase
+      .from("crm_jobs")
+      .update({ assigned_crew_id: crewMemberId } as any)
+      .eq("id", jobId);
+    if (error) throw error;
+    await fetchJobs();
+  };
+
   const handleStageChange = async () => {
     if (!selectedJob || !stageUpdate) return;
     await updateJob(selectedJob.id, { stage: stageUpdate, notes: jobNotes || selectedJob.notes });
@@ -133,6 +145,16 @@ export default function CRMProduction() {
         </div>
       </div>
 
+      <Tabs defaultValue="board" className="w-full">
+        <TabsList>
+          <TabsTrigger value="board">Production Board</TabsTrigger>
+          <TabsTrigger value="crew" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Crew Management
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="mt-4 space-y-6">
       {/* Overview Progress */}
       <Card>
         <CardContent className="p-4">
@@ -332,6 +354,12 @@ export default function CRMProduction() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="crew" className="mt-4">
+          <CrewManagementTab jobs={productionJobs} onAssignCrew={handleAssignCrew} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

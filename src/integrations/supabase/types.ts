@@ -2383,6 +2383,7 @@ export type Database = {
       }
       crm_jobs: {
         Row: {
+          assigned_crew_id: string | null
           assigned_rep_id: string | null
           collected_amount: number | null
           company_id: string | null
@@ -2408,6 +2409,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          assigned_crew_id?: string | null
           assigned_rep_id?: string | null
           collected_amount?: number | null
           company_id?: string | null
@@ -2433,6 +2435,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          assigned_crew_id?: string | null
           assigned_rep_id?: string | null
           collected_amount?: number | null
           company_id?: string | null
@@ -2458,6 +2461,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_jobs_assigned_crew_id_fkey"
+            columns: ["assigned_crew_id"]
+            isOneToOne: false
+            referencedRelation: "company_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_jobs_assigned_rep_id_fkey"
             columns: ["assigned_rep_id"]
