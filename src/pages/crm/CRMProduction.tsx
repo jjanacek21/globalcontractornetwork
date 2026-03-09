@@ -192,72 +192,77 @@ export default function CRMProduction() {
       {/* Kanban Board */}
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4 min-w-max">
-          {PRODUCTION_STAGES.map((stage) => {
-            const stageJobs = filteredJobs.filter((j) => j.stage === stage.value);
-            const stageValue = stageJobs.reduce((sum, j) => sum + (Number(j.contract_amount) || 0), 0);
+          {PRODUCTION_COLUMNS.map((col) => {
+            const colJobs = filteredJobs.filter((j) => STAGE_TO_COLUMN[j.stage] === col.value);
+            const colValue = colJobs.reduce((sum, j) => sum + (Number(j.contract_amount) || 0), 0);
             return (
-              <div key={stage.value} className="min-w-[280px] max-w-[300px]">
+              <div key={col.value} className="min-w-[300px] max-w-[320px] flex-1">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={`w-3 h-3 rounded-full ${stage.color}`} />
-                  <h3 className="font-semibold text-sm">{stage.label}</h3>
+                  <div className={`w-3 h-3 rounded-full ${col.color}`} />
+                  <h3 className="font-semibold text-sm">{col.label}</h3>
                   <Badge variant="outline" className="ml-auto text-xs">
-                    {stageJobs.length} · ${stageValue.toLocaleString()}
+                    {colJobs.length} · ${colValue.toLocaleString()}
                   </Badge>
                 </div>
                 <div className="space-y-2 min-h-[200px] bg-muted/30 rounded-lg p-2">
-                  {stageJobs.length === 0 && (
+                  {colJobs.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-8">No jobs</p>
                   )}
-                  {stageJobs.map((job) => (
-                    <Card
-                      key={job.id}
-                      className="hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => {
-                        setSelectedJob(job);
-                        setStageUpdate(job.stage);
-                        setJobNotes(job.notes || "");
-                      }}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <Badge variant="secondary" className="text-[10px]">
-                                {job.job_number || "—"}
-                              </Badge>
-                              <span className="text-[10px] text-muted-foreground">
-                                {job.created_at ? `${Math.floor((Date.now() - new Date(job.created_at).getTime()) / 86400000)}d` : ""}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <User className="w-3 h-3 text-muted-foreground" />
-                              <p className="font-medium text-sm truncate">
-                                {job.contact ? `${job.contact.first_name} ${job.contact.last_name}` : job.title}
-                              </p>
-                            </div>
-                            {job.contract_amount && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <DollarSign className="w-3 h-3 text-primary" />
-                                <span className="text-xs font-medium text-primary">
-                                  ${Number(job.contract_amount).toLocaleString()}
-                                </span>
-                              </div>
-                            )}
-                            {job.scheduled_date && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Calendar className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-[10px] text-muted-foreground">
-                                  {format(new Date(job.scheduled_date), "MMM d")}
-                                </span>
-                              </div>
-                            )}
-                            <ChevronRight className="w-3 h-3 text-muted-foreground mt-1 ml-auto" />
+                  {colJobs.map((job) => {
+                    const progress = getJobProgress(job.stage);
+                    return (
+                      <Card
+                        key={job.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setStageUpdate(job.stage);
+                          setJobNotes(job.notes || "");
+                        }}
+                      >
+                        <CardContent className="p-3 space-y-2">
+                          {/* Address */}
+                          {job.property && (
+                            <p className="text-xs font-medium text-foreground truncate">
+                              {job.property.address_line1}{job.property.city ? `, ${job.property.city}` : ""}
+                            </p>
+                          )}
+
+                          {/* Customer */}
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <p className="text-sm font-semibold truncate">
+                              {job.contact ? `${job.contact.first_name} ${job.contact.last_name}` : job.title}
+                            </p>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+
+                          {/* Crew & Start Date row */}
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <GripVertical className="w-3 h-3" />
+                              {job.tags?.length ? job.tags[0] : "Unassigned"}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {job.start_date ? format(new Date(job.start_date), "MMM d") : job.scheduled_date ? format(new Date(job.scheduled_date), "MMM d") : "TBD"}
+                            </span>
+                          </div>
+
+                          {/* Progress */}
+                          <div className="flex items-center gap-2">
+                            <Progress value={progress} className="h-1.5 flex-1" />
+                            <span className="text-[10px] font-bold text-muted-foreground">{progress}%</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
                 </div>
               </div>
             );
