@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +40,14 @@ interface SolarMeasurementData {
   segments: Segment[];
 }
 
+type RoofTypeOverride = "flat" | "low" | "pitched";
+
+const OVERRIDE_CONFIG: Record<RoofTypeOverride, { label: string; multiplier: number; pitchDisplay: string }> = {
+  flat: { label: "Flat Roof", multiplier: 1.00, pitchDisplay: "0°" },
+  low: { label: "Low Slope", multiplier: 1.05, pitchDisplay: "~3°" },
+  pitched: { label: "Pitched", multiplier: 0, pitchDisplay: "" }, // 0 = use API data
+};
+
 const NUDGE_AMOUNT = 0.00015; // ~15 meters
 
 export function AIRoofMeasurement() {
@@ -46,8 +56,35 @@ export function AIRoofMeasurement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SolarMeasurementData | null>(null);
+  const [roofType, setRoofType] = useState<RoofTypeOverride>("pitched");
 
   const canMeasure = useMemo(() => !!coordinates && !loading, [coordinates, loading]);
+
+  const isOverrideActive = roofType !== "pitched";
+
+  const displayValues = useMemo(() => {
+    if (!result) return null;
+    if (!isOverrideActive) {
+      return {
+        pitchedArea: result.total_pitched_area_sqft,
+        totalWithWaste: result.total_with_waste_sqft,
+        totalSquares: result.total_squares,
+        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}°`,
+        pitchMultiplier: result.pitch_multiplier,
+      };
+    }
+    const cfg = OVERRIDE_CONFIG[roofType];
+    const pitchedArea = Math.round(result.total_flat_area_sqft * cfg.multiplier);
+    const totalWithWaste = Math.round(pitchedArea * (1 + result.waste_percent / 100));
+    const totalSquares = totalWithWaste / 100;
+    return {
+      pitchedArea,
+      totalWithWaste,
+      totalSquares,
+      pitchDisplay: cfg.pitchDisplay,
+      pitchMultiplier: cfg.multiplier,
+    };
+  }, [result, roofType, isOverrideActive]);
 
   const handleAddressSelect = (address: string, coords: [number, number]) => {
     setSelectedAddress(address);
@@ -105,6 +142,25 @@ export function AIRoofMeasurement() {
             onSelect={handleAddressSelect}
             placeholder="Search property address to measure roof..."
           />
+
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-muted-foreground">Roof Type</p>
+            <ToggleGroup
+              type="single"
+              value={roofType}
+              onValueChange={(v) => { if (v) setRoofType(v as RoofTypeOverride); }}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="flat" className="text-xs px-3">Flat Roof</ToggleGroupItem>
+              <ToggleGroupItem value="low" className="text-xs px-3">Low Slope</ToggleGroupItem>
+              <ToggleGroupItem value="pitched" className="text-xs px-3">Pitched</ToggleGroupItem>
+            </ToggleGroup>
+            <p className="text-xs text-muted-foreground">
+              {roofType === "flat" && "Forces pitch multiplier to 1.00 — no slope adjustment"}
+              {roofType === "low" && "Forces pitch multiplier to 1.05 — slight slope adjustment"}
+              {roofType === "pitched" && "Uses Google Solar API pitch data as-is"}
+            </p>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => runMeasurement()} disabled={!canMeasure} className="shadow-soft">
@@ -214,6 +270,7 @@ export function AIRoofMeasurement() {
           </Card>
 
           {/* Measurement Summary Cards */}
+          {displayValues && (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
@@ -229,7 +286,7 @@ export function AIRoofMeasurement() {
                 <CardTitle className="text-base">Pitched Area</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">{result.total_pitched_area_sqft.toLocaleString()} sq ft</p>
+                <p className="text-2xl font-bold text-foreground">{displayValues.pitchedArea.toLocaleString()} sq ft</p>
               </CardContent>
             </Card>
 
@@ -238,21 +295,33 @@ export function AIRoofMeasurement() {
                 <CardTitle className="text-base">Total Squares</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-primary">{result.total_squares.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">{displayValues.totalSquares.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground mt-1">Includes {result.waste_percent}% waste</p>
               </CardContent>
             </Card>
 
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Avg Pitch</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Avg Pitch
+                  {isOverrideActive && (
+                    <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                      User Override
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-foreground">{result.average_pitch_degrees.toFixed(1)}°</p>
-                <p className="text-xs text-muted-foreground mt-1">{result.complexity} • {result.quality} quality</p>
+                <p className="text-2xl font-bold text-foreground">{displayValues.pitchDisplay}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isOverrideActive
+                    ? `API reported ${result.average_pitch_degrees.toFixed(1)}° — overridden to ${OVERRIDE_CONFIG[roofType].label}`
+                    : `${result.complexity} • ${result.quality} quality`}
+                </p>
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Segments Table */}
           <Card className="shadow-card">

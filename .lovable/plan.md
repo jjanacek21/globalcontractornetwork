@@ -1,33 +1,69 @@
 
 
-# Add Roof Type Override Selector to AI Roof Measurement
+# Fix Missing Documents in Packet Assembly
 
-## Problem
-The Google Solar API sometimes reports inaccurate pitch data (e.g., 13.5° for a flat roof). Users need to override the roof type to correct the pitch multiplier and recalculate squares.
+## Root Cause
 
-## Approach
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### Modify `AIRoofMeasurement.tsx`
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-1. **Add a Roof Type selector** between the address input and the Measure button — three toggle buttons: **Flat Roof**, **Low Slope**, **Pitched**. User can select before or after measuring.
+## Fix: Two-Part Solution
 
-2. **Override logic**: When a roof type is selected and results exist, recalculate the displayed values client-side:
-   - **Flat Roof** → pitch multiplier 1.00 (overrides API's `average_pitch_degrees` display to show "0°")
-   - **Low Slope** → pitch multiplier 1.05 (display "~3°")
-   - **Pitched** → use API data as-is (no override)
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-3. **Recalculated fields** when override is active:
-   - `total_pitched_area_sqft` = `total_flat_area_sqft × overrideMultiplier`
-   - `total_with_waste_sqft` = pitched area × (1 + waste_percent/100)
-   - `total_squares` = total_with_waste / 100
-   - Show a badge/indicator that values are user-adjusted
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
-4. **UI placement**: A small card or inline toggle group placed inside the main input card, below the address geocoder and above the Measure button. Use the existing `PITCH_OPTIONS` data from `roofMeasurements.ts` for the flat/low multipliers, but present only 3 simplified choices (not all 5 pitch buckets).
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
+```
 
-5. **Visual indicator**: When an override is active, show an amber badge on the Avg Pitch card like "User Override" so it's clear the API pitch was corrected.
+### 2. Fix incorrect source types in packet structures
 
-### Files to Modify
-- `src/components/measurements/AIRoofMeasurement.tsx` — add state for roof type override, toggle UI, and recalculation logic using `useMemo`
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
 
-No edge function or database changes needed — this is purely a client-side override on top of the existing API data.
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
