@@ -232,6 +232,20 @@ export default function CRMContactDetail() {
                 <Edit className="mr-1 h-4 w-4" /> Edit
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/member/crm/measurements")}
+              >
+                <Ruler className="mr-1 h-4 w-4" /> Measure Roof
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEstimateBuilder(true)}
+              >
+                <FileText className="mr-1 h-4 w-4" /> Create Estimate
+              </Button>
+              <Button
                 size="sm"
                 className="bg-[hsl(220,60%,25%)] hover:bg-[hsl(220,60%,30%)] text-white"
                 onClick={() => setShowCreateLead(true)}
