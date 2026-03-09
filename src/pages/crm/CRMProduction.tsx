@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCRMJobs, JOB_STAGES, CRMJob } from "@/hooks/useCRMJobs";
+import { CrewManagementTab } from "@/components/crm/CrewManagementTab";
+import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Clock, AlertTriangle, XCircle, Package, Ruler,
   PenTool, Camera, Search, RefreshCw, GripVertical, User,
