@@ -84,17 +84,17 @@ export function useEstimateBuilder(editEstimateId?: string) {
     load();
   }, []);
 
-  // Load measurements when customer changes
+  // Load measurements when customer changes — filter by contact_id
   useEffect(() => {
     if (!state.customer_id) {
       setMeasurements([]);
       return;
     }
     const loadMeasurements = async () => {
-      // Find contact linked to this customer (by name match or direct)
       const { data } = await supabase
         .from("roof_measurements")
         .select("*")
+        .eq("contact_id", state.customer_id)
         .order("created_at", { ascending: false });
       setMeasurements(data || []);
     };
