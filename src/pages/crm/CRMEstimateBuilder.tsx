@@ -14,24 +14,26 @@ export default function CRMEstimateBuilder() {
   const [searchParams] = useSearchParams();
   const builder = useEstimateBuilder();
 
-  // Auto-select contact and measurement from URL params
+  // Auto-select contact from URL params and skip to measurement step
   useEffect(() => {
     const contactId = searchParams.get("contact_id");
-    if (contactId && builder.customers.length > 0 && !builder.state.customer_id) {
-      builder.setCustomer(contactId);
+    if (contactId && builder.contacts.length > 0 && !builder.state.contact_id) {
+      builder.setContact(contactId);
+      builder.setStep(1); // Skip to measurement step
     }
-  }, [searchParams, builder.customers]);
+  }, [searchParams, builder.contacts]);
 
+  // Auto-select measurement from URL params
   useEffect(() => {
     const measurementId = searchParams.get("measurement_id");
     if (measurementId && builder.measurements.length > 0 && !builder.state.measurement_id) {
       builder.setMeasurement(measurementId);
       // Auto-advance to line items if both contact and measurement are set
-      if (builder.state.customer_id) {
+      if (builder.state.contact_id) {
         builder.setStep(2);
       }
     }
-  }, [searchParams, builder.measurements, builder.state.customer_id]);
+  }, [searchParams, builder.measurements, builder.state.contact_id]);
 
   const handleSave = async () => {
     const result = await builder.saveEstimate();
@@ -57,9 +59,9 @@ export default function CRMEstimateBuilder() {
       <div className="mt-8">
         {builder.state.step === 0 && (
           <CustomerStep
-            customers={builder.customers}
-            selectedCustomerId={builder.state.customer_id}
-            onSelect={builder.setCustomer}
+            contacts={builder.contacts}
+            selectedContactId={builder.state.contact_id}
+            onSelect={builder.setContact}
             onNext={() => builder.setStep(1)}
           />
         )}

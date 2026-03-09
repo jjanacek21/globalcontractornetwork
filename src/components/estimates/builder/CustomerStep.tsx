@@ -7,7 +7,7 @@ import { User, Search, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import type { Database } from "@/integrations/supabase/types";
 
-type Customer = Database["public"]["Tables"]["customers"]["Row"];
+type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 
 const LEAD_STATUSES = [
   { value: "contacted", label: "Contacted" },
@@ -19,23 +19,28 @@ const LEAD_STATUSES = [
 ] as const;
 
 interface CustomerStepProps {
-  customers: Customer[];
-  selectedCustomerId: string;
+  contacts: Contact[];
+  selectedContactId: string;
   onSelect: (id: string) => void;
   onNext: () => void;
 }
 
-export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }: CustomerStepProps) {
+export function CustomerStep({ contacts, selectedContactId, onSelect, onNext }: CustomerStepProps) {
   const [search, setSearch] = useState("");
   const [leadStatus, setLeadStatus] = useState("contacted");
 
-  const filtered = customers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.address?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = contacts.filter(c => {
+    const q = search.toLowerCase();
+    const fullName = `${c.first_name} ${c.last_name}`.toLowerCase();
+    return fullName.includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.primary_phone?.toLowerCase().includes(q);
+  });
 
-  const selected = customers.find(c => c.id === selectedCustomerId);
+  const selected = contacts.find(c => c.id === selectedContactId);
+
+  const displayName = (c: Contact) => `${c.first_name} ${c.last_name}`;
+  const initials = (c: Contact) => `${c.first_name?.[0] || ""}${c.last_name?.[0] || ""}`.toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -43,14 +48,14 @@ export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <User className="h-5 w-5 text-primary" />
-            Select Customer
+            Select Contact
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search customers by name, email, or address..."
+              placeholder="Search contacts by name, email, or phone..."
               className="pl-9"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -58,28 +63,28 @@ export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }
           </div>
 
           {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No customers found.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">No contacts found.</p>
           ) : (
             <div className="grid gap-2 max-h-80 overflow-y-auto">
-              {filtered.slice(0, 20).map(customer => (
+              {filtered.slice(0, 20).map(contact => (
                 <button
-                  key={customer.id}
-                  onClick={() => onSelect(customer.id)}
+                  key={contact.id}
+                  onClick={() => onSelect(contact.id)}
                   className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-all duration-200 ${
-                    selectedCustomerId === customer.id
+                    selectedContactId === contact.id
                       ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                       : "border-border hover:border-primary/40 hover:bg-muted/30"
                   }`}
                 >
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-xs font-bold text-primary">
-                      {customer.name.slice(0, 2).toUpperCase()}
+                      {initials(contact)}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{customer.name}</p>
-                    {customer.email && <p className="text-xs text-muted-foreground truncate">{customer.email}</p>}
-                    {customer.address && <p className="text-xs text-muted-foreground truncate">{customer.address}</p>}
+                    <p className="font-medium text-sm truncate">{displayName(contact)}</p>
+                    {contact.email && <p className="text-xs text-muted-foreground truncate">{contact.email}</p>}
+                    {contact.primary_phone && <p className="text-xs text-muted-foreground truncate">{contact.primary_phone}</p>}
                   </div>
                 </button>
               ))}
@@ -93,8 +98,8 @@ export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }
           <CardContent className="pt-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
-                <p className="font-semibold">{selected.name}</p>
-                <p className="text-sm text-muted-foreground">{selected.address || selected.email || "No address"}</p>
+                <p className="font-semibold">{displayName(selected)}</p>
+                <p className="text-sm text-muted-foreground">{selected.email || selected.primary_phone || "No contact info"}</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-44">
