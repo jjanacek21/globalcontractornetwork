@@ -836,6 +836,53 @@ export type Database = {
           },
         ]
       }
+      commission_rules: {
+        Row: {
+          bonus_percent: number | null
+          bonus_threshold: number | null
+          commission_percent: number
+          company_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          payment_schedule: string
+          rep_name: string
+          updated_at: string
+        }
+        Insert: {
+          bonus_percent?: number | null
+          bonus_threshold?: number | null
+          commission_percent?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          payment_schedule?: string
+          rep_name: string
+          updated_at?: string
+        }
+        Update: {
+          bonus_percent?: number | null
+          bonus_threshold?: number | null
+          commission_percent?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          payment_schedule?: string
+          rep_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -9662,6 +9709,56 @@ export type Database = {
             columns: ["referral_contractor_id"]
             isOneToOne: false
             referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          account_number: string | null
+          company_id: string | null
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          company_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          company_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
