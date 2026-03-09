@@ -361,6 +361,10 @@ export default function CRMProduction() {
       </Dialog>
         </TabsContent>
 
+        <TabsContent value="materials" className="mt-4">
+          <MaterialOrdersTab jobs={productionJobs} />
+        </TabsContent>
+
         <TabsContent value="crew" className="mt-4">
           <CrewManagementTab jobs={productionJobs} onAssignCrew={handleAssignCrew} />
         </TabsContent>
