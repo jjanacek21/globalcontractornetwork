@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +40,14 @@ interface SolarMeasurementData {
   segments: Segment[];
 }
 
+type RoofTypeOverride = "flat" | "low" | "pitched";
+
+const OVERRIDE_CONFIG: Record<RoofTypeOverride, { label: string; multiplier: number; pitchDisplay: string }> = {
+  flat: { label: "Flat Roof", multiplier: 1.00, pitchDisplay: "0°" },
+  low: { label: "Low Slope", multiplier: 1.05, pitchDisplay: "~3°" },
+  pitched: { label: "Pitched", multiplier: 0, pitchDisplay: "" }, // 0 = use API data
+};
+
 const NUDGE_AMOUNT = 0.00015; // ~15 meters
 
 export function AIRoofMeasurement() {
@@ -46,8 +56,35 @@ export function AIRoofMeasurement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SolarMeasurementData | null>(null);
+  const [roofType, setRoofType] = useState<RoofTypeOverride>("pitched");
 
   const canMeasure = useMemo(() => !!coordinates && !loading, [coordinates, loading]);
+
+  const isOverrideActive = roofType !== "pitched";
+
+  const displayValues = useMemo(() => {
+    if (!result) return null;
+    if (!isOverrideActive) {
+      return {
+        pitchedArea: result.total_pitched_area_sqft,
+        totalWithWaste: result.total_with_waste_sqft,
+        totalSquares: result.total_squares,
+        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}°`,
+        pitchMultiplier: result.pitch_multiplier,
+      };
+    }
+    const cfg = OVERRIDE_CONFIG[roofType];
+    const pitchedArea = Math.round(result.total_flat_area_sqft * cfg.multiplier);
+    const totalWithWaste = Math.round(pitchedArea * (1 + result.waste_percent / 100));
+    const totalSquares = totalWithWaste / 100;
+    return {
+      pitchedArea,
+      totalWithWaste,
+      totalSquares,
+      pitchDisplay: cfg.pitchDisplay,
+      pitchMultiplier: cfg.multiplier,
+    };
+  }, [result, roofType, isOverrideActive]);
 
   const handleAddressSelect = (address: string, coords: [number, number]) => {
     setSelectedAddress(address);
