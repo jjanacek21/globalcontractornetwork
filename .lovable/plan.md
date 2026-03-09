@@ -1,69 +1,48 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# Fix Satellite Image + Enhanced AI Measurement
 
-## Root Cause
+## Problem
+The Google Maps Static API returns an empty image (likely the API isn't enabled or has restrictions on the key). Meanwhile, the `roof-vision-ai` function already successfully uses **Mapbox** satellite imagery with a working token. The measurement data from Google Solar API is fine — only the satellite image is broken.
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+## Plan
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+### 1. Fix satellite image in `solar-roof-measure/index.ts`
+Replace the Google Static Maps fetch with a **Mapbox Static Images API** call using the same token already used in `roof-vision-ai`:
 
-## Fix: Two-Part Solution
-
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
-
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
-
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
+```text
+Mapbox URL pattern:
+https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/
+  pin-s+ff0000({lng},{lat})/{lng},{lat},19,0/600x400@2x
+  ?access_token={MAPBOX_TOKEN}
 ```
 
-### 2. Fix incorrect source types in packet structures
+- Use `VITE_MAPBOX_TOKEN` secret (already configured)
+- Fetch server-side, convert to base64 data URI (same pattern as current code)
+- Falls back gracefully if Mapbox also fails
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+### 2. Add AI-enhanced verification in `solar-roof-measure/index.ts`
+After fetching the Mapbox satellite image, optionally call the **Lovable AI Gateway** (Gemini) to cross-validate the Solar API's pitch and area data against the satellite image:
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+- Send the satellite image to Gemini with a prompt: "Does this appear to be a flat roof, low-slope, or pitched roof?"
+- Return an `ai_roof_type_suggestion` field (e.g., `"flat"`, `"low_slope"`, `"pitched"`) alongside the Solar API data
+- If AI detects a mismatch (e.g., Solar says 13.5° but AI sees flat), include a warning message
+- Uses `LOVABLE_API_KEY` (already configured)
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+### 3. Surface AI suggestion in frontend (`AIRoofMeasurement.tsx`)
+- Show an info banner when `ai_roof_type_suggestion` differs from the Solar API pitch classification
+- Example: "AI analysis suggests this is a flat roof. The Solar API reported 13.5° avg pitch. Consider selecting 'Flat Roof' above."
+- Auto-select the suggested roof type override (user can still change it)
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+### Files to Modify
+- `supabase/functions/solar-roof-measure/index.ts` — swap Google Static Maps for Mapbox, add AI verification call
+- `src/components/measurements/AIRoofMeasurement.tsx` — display AI suggestion banner, auto-select override
 
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
+### Data Flow
+```text
+Address → Google Solar API (segments, pitch, area)
+       → Mapbox Static Image (satellite photo, base64)
+       → Gemini AI (analyze satellite image → roof type suggestion)
+       → Client receives all three data sources combined
 ```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
