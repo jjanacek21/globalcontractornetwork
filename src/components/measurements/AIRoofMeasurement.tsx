@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Ruler, House, AlertCircle, MapPin, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Ruler, House, AlertCircle, MapPin, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, BrainCircuit } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -38,6 +38,8 @@ interface SolarMeasurementData {
   satellite_image: string;
   center: { latitude: number; longitude: number };
   segments: Segment[];
+  ai_roof_type_suggestion: string | null;
+  ai_roof_type_warning: string | null;
 }
 
 type RoofTypeOverride = "flat" | "low" | "pitched";
@@ -45,10 +47,16 @@ type RoofTypeOverride = "flat" | "low" | "pitched";
 const OVERRIDE_CONFIG: Record<RoofTypeOverride, { label: string; multiplier: number; pitchDisplay: string }> = {
   flat: { label: "Flat Roof", multiplier: 1.00, pitchDisplay: "0°" },
   low: { label: "Low Slope", multiplier: 1.05, pitchDisplay: "~3°" },
-  pitched: { label: "Pitched", multiplier: 0, pitchDisplay: "" }, // 0 = use API data
+  pitched: { label: "Pitched", multiplier: 0, pitchDisplay: "" },
 };
 
-const NUDGE_AMOUNT = 0.00015; // ~15 meters
+const AI_TO_OVERRIDE: Record<string, RoofTypeOverride> = {
+  flat: "flat",
+  low_slope: "low",
+  pitched: "pitched",
+};
+
+const NUDGE_AMOUNT = 0.00015;
 
 export function AIRoofMeasurement() {
   const [selectedAddress, setSelectedAddress] = useState("");
@@ -61,6 +69,16 @@ export function AIRoofMeasurement() {
   const canMeasure = useMemo(() => !!coordinates && !loading, [coordinates, loading]);
 
   const isOverrideActive = roofType !== "pitched";
+
+  // Auto-select roof type when AI suggests a mismatch
+  useEffect(() => {
+    if (result?.ai_roof_type_suggestion && result.ai_roof_type_warning) {
+      const mapped = AI_TO_OVERRIDE[result.ai_roof_type_suggestion];
+      if (mapped) {
+        setRoofType(mapped);
+      }
+    }
+  }, [result?.ai_roof_type_suggestion, result?.ai_roof_type_warning]);
 
   const displayValues = useMemo(() => {
     if (!result) return null;
@@ -177,7 +195,7 @@ export function AIRoofMeasurement() {
               )}
             </Button>
             <p className="text-sm text-muted-foreground">
-              Uses Google Solar Building Insights for segment-level roof geometry.
+              Uses Google Solar API + Mapbox satellite imagery + AI verification.
             </p>
           </div>
 
@@ -192,6 +210,17 @@ export function AIRoofMeasurement() {
 
       {result && (
         <>
+          {/* AI Roof Type Suggestion Banner */}
+          {result.ai_roof_type_warning && (
+            <div className="rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-foreground flex items-start gap-3">
+              <BrainCircuit className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">AI Roof Analysis</p>
+                <p className="text-muted-foreground mt-1">{result.ai_roof_type_warning}</p>
+              </div>
+            </div>
+          )}
+
           {/* Satellite Verification Card */}
           <Card className="shadow-card overflow-hidden">
             <CardHeader className="pb-2">
@@ -206,13 +235,13 @@ export function AIRoofMeasurement() {
             <CardContent className="space-y-3">
               <div className="relative w-full">
                 {result.satellite_image ? (
-                <img
-                  src={result.satellite_image}
-                  alt={`Satellite view of ${result.address || "property"}`}
-                  className="w-full rounded-lg border border-border"
-                  loading="eager"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
+                  <img
+                    src={result.satellite_image}
+                    alt={`Satellite view of ${result.address || "property"}`}
+                    className="w-full rounded-lg border border-border"
+                    loading="eager"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
                 ) : (
                   <div className="w-full h-48 rounded-lg border border-border bg-muted flex items-center justify-center text-sm text-muted-foreground">
                     Satellite image unavailable for this location
@@ -278,56 +307,56 @@ export function AIRoofMeasurement() {
 
           {/* Measurement Summary Cards */}
           {displayValues && (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="shadow-soft">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Flat Area</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-foreground">{result.total_flat_area_sqft.toLocaleString()} sq ft</p>
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Card className="shadow-soft">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Flat Area</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-foreground">{result.total_flat_area_sqft.toLocaleString()} sq ft</p>
+                </CardContent>
+              </Card>
 
-            <Card className="shadow-soft">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Pitched Area</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-foreground">{displayValues.pitchedArea.toLocaleString()} sq ft</p>
-              </CardContent>
-            </Card>
+              <Card className="shadow-soft">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Pitched Area</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-foreground">{displayValues.pitchedArea.toLocaleString()} sq ft</p>
+                </CardContent>
+              </Card>
 
-            <Card className="shadow-soft">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Total Squares</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-primary">{displayValues.totalSquares.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Includes {result.waste_percent}% waste</p>
-              </CardContent>
-            </Card>
+              <Card className="shadow-soft">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Total Squares</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-primary">{displayValues.totalSquares.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Includes {result.waste_percent}% waste</p>
+                </CardContent>
+              </Card>
 
-            <Card className="shadow-soft">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  Avg Pitch
-                  {isOverrideActive && (
-                    <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
-                      User Override
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-foreground">{displayValues.pitchDisplay}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isOverrideActive
-                    ? `API reported ${result.average_pitch_degrees.toFixed(1)}° — overridden to ${OVERRIDE_CONFIG[roofType].label}`
-                    : `${result.complexity} • ${result.quality} quality`}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="shadow-soft">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    Avg Pitch
+                    {isOverrideActive && (
+                      <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                        User Override
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold text-foreground">{displayValues.pitchDisplay}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isOverrideActive
+                      ? `API reported ${result.average_pitch_degrees.toFixed(1)}° — overridden to ${OVERRIDE_CONFIG[roofType].label}`
+                      : `${result.complexity} • ${result.quality} quality`}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Segments Table */}

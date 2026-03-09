@@ -55,6 +55,7 @@ serve(async (req) => {
       });
     }
 
+    // --- Google Solar API ---
     const callBuildingInsights = async (requiredQuality: "HIGH" | "MEDIUM") => {
       const endpoint = new URL("https://solar.googleapis.com/v1/buildingInsights:findClosest");
       endpoint.searchParams.set("location.latitude", latitude.toString());
@@ -144,24 +145,94 @@ serve(async (req) => {
             ? "Complex"
             : "Very Complex";
 
-    // Build satellite verification image — fetch server-side and return as base64
+    // --- Mapbox Satellite Image (replaces Google Static Maps) ---
     const centerLat = toNumber(solarResponse.payload?.center?.latitude ?? latitude);
     const centerLng = toNumber(solarResponse.payload?.center?.longitude ?? longitude);
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${centerLat},${centerLng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7C${centerLat},${centerLng}&key=${apiKey}`;
 
+    const mapboxToken = Deno.env.get("VITE_MAPBOX_TOKEN");
     let satellite_image = "";
-    try {
-      const imgRes = await fetch(staticMapUrl);
-      if (imgRes.ok) {
-        const buf = new Uint8Array(await imgRes.arrayBuffer());
-        let binary = "";
-        for (let i = 0; i < buf.length; i++) {
-          binary += String.fromCharCode(buf[i]);
+
+    if (mapboxToken) {
+      try {
+        const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-s+ff0000(${centerLng},${centerLat})/${centerLng},${centerLat},19,0/600x400@2x?access_token=${mapboxToken}`;
+        const imgRes = await fetch(mapboxUrl);
+        if (imgRes.ok) {
+          const buf = new Uint8Array(await imgRes.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < buf.length; i++) {
+            binary += String.fromCharCode(buf[i]);
+          }
+          satellite_image = `data:image/png;base64,${btoa(binary)}`;
+        } else {
+          await imgRes.text(); // consume body
         }
-        satellite_image = `data:image/png;base64,${btoa(binary)}`;
+      } catch {
+        // non-critical
       }
-    } catch {
-      // non-critical — image simply won't render
+    }
+
+    // --- AI Roof Type Verification via Lovable AI Gateway (Gemini) ---
+    let ai_roof_type_suggestion: string | null = null;
+    let ai_roof_type_warning: string | null = null;
+
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (lovableApiKey && satellite_image) {
+      try {
+        const aiPrompt = `Analyze this satellite image of a roof. Based on what you see, classify the roof type as exactly one of: "flat", "low_slope", or "pitched".
+
+Rules:
+- "flat" = no visible slope, commercial-style flat roof
+- "low_slope" = slight slope, barely visible pitch (typically under 5 degrees)
+- "pitched" = clearly visible slope/angles on the roof
+
+The Google Solar API reports an average pitch of ${averagePitchDegrees.toFixed(1)} degrees for this roof.
+
+Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "confidence": "high"|"medium"|"low"}`;
+
+        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: aiPrompt },
+                  { type: "image_url", image_url: { url: satellite_image } },
+                ],
+              },
+            ],
+          }),
+        });
+
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          const rawContent = aiData?.choices?.[0]?.message?.content ?? "";
+          // Extract JSON from response
+          const jsonMatch = rawContent.match(/\{[^}]+\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            ai_roof_type_suggestion = parsed.roof_type ?? null;
+
+            // Generate warning if AI disagrees with Solar API
+            if (ai_roof_type_suggestion) {
+              const solarClassification = averagePitchDegrees < 2 ? "flat" : averagePitchDegrees < 5 ? "low_slope" : "pitched";
+              if (ai_roof_type_suggestion !== solarClassification) {
+                const labels: Record<string, string> = { flat: "Flat Roof", low_slope: "Low Slope", pitched: "Pitched" };
+                ai_roof_type_warning = `AI analysis suggests this is a ${labels[ai_roof_type_suggestion] ?? ai_roof_type_suggestion}. The Solar API reported ${averagePitchDegrees.toFixed(1)}° avg pitch (${labels[solarClassification]}). Consider selecting "${labels[ai_roof_type_suggestion]}" above.`;
+              }
+            }
+          }
+        } else {
+          await aiRes.text(); // consume body
+        }
+      } catch {
+        // non-critical — AI verification is optional
+      }
     }
 
     const responseData = {
@@ -181,6 +252,8 @@ serve(async (req) => {
       satellite_image,
       center: { latitude: centerLat, longitude: centerLng },
       segments,
+      ai_roof_type_suggestion,
+      ai_roof_type_warning,
     };
 
     return new Response(JSON.stringify({ success: true, data: responseData }), {
