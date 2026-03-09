@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Ruler, Roof, AlertCircle } from "lucide-react";
+import { Loader2, Ruler, House, AlertCircle } from "lucide-react";
 
 interface Segment {
   id: string;
