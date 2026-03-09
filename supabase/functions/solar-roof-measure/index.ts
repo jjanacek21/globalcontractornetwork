@@ -144,10 +144,25 @@ serve(async (req) => {
             ? "Complex"
             : "Very Complex";
 
-    // Build satellite verification image URL
+    // Build satellite verification image — fetch server-side and return as base64
     const centerLat = toNumber(solarResponse.payload?.center?.latitude ?? latitude);
     const centerLng = toNumber(solarResponse.payload?.center?.longitude ?? longitude);
-    const satelliteImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${centerLat},${centerLng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7C${centerLat},${centerLng}&key=${apiKey}`;
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${centerLat},${centerLng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7C${centerLat},${centerLng}&key=${apiKey}`;
+
+    let satellite_image = "";
+    try {
+      const imgRes = await fetch(staticMapUrl);
+      if (imgRes.ok) {
+        const buf = new Uint8Array(await imgRes.arrayBuffer());
+        let binary = "";
+        for (let i = 0; i < buf.length; i++) {
+          binary += String.fromCharCode(buf[i]);
+        }
+        satellite_image = `data:image/png;base64,${btoa(binary)}`;
+      }
+    } catch {
+      // non-critical — image simply won't render
+    }
 
     const responseData = {
       address,
@@ -163,7 +178,7 @@ serve(async (req) => {
       total_squares: +totalSquares.toFixed(2),
       max_panels_count: toNumber(solarPotential?.maxArrayPanelsCount),
       carbon_offset_factor_kg_per_mwh: toNumber(solarPotential?.carbonOffsetFactorKgPerMwh),
-      satellite_image_url: satelliteImageUrl,
+      satellite_image,
       center: { latitude: centerLat, longitude: centerLng },
       segments,
     };
