@@ -623,6 +623,18 @@ export default function CRMContactDetail() {
           }}
         />
       )}
+
+      {/* Estimate Builder Dialog */}
+      <EstimateBuilderDialog
+        open={showEstimateBuilder}
+        onOpenChange={setShowEstimateBuilder}
+        contactId={contact.id}
+        contactName={fullName}
+        contactAddress={primaryAddress || undefined}
+        customerId={contact.id}
+        leadId={contact.leads?.[0]?.id}
+        onEstimateCreated={refetchEstimates}
+      />
     </div>
   );
 }
