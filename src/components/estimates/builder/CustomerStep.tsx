@@ -9,6 +9,15 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 
+const LEAD_STATUSES = [
+  { value: "contacted", label: "Contacted" },
+  { value: "qualified", label: "Qualified" },
+  { value: "proposal_sent", label: "Proposal Sent" },
+  { value: "negotiating", label: "Negotiating" },
+  { value: "closed_won", label: "Closed Won" },
+  { value: "closed_lost", label: "Closed Lost" },
+] as const;
+
 interface CustomerStepProps {
   customers: Customer[];
   selectedCustomerId: string;
@@ -18,6 +27,7 @@ interface CustomerStepProps {
 
 export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }: CustomerStepProps) {
   const [search, setSearch] = useState("");
+  const [leadStatus, setLeadStatus] = useState("contacted");
 
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,14 +91,29 @@ export function CustomerStep({ customers, selectedCustomerId, onSelect, onNext }
       {selected && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
                 <p className="font-semibold">{selected.name}</p>
                 <p className="text-sm text-muted-foreground">{selected.address || selected.email || "No address"}</p>
               </div>
-              <Button onClick={onNext}>
-                Next: Measurement <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-3">
+                <div className="w-44">
+                  <Label className="text-xs text-muted-foreground mb-1 block">Lead Status</Label>
+                  <Select value={leadStatus} onValueChange={setLeadStatus}>
+                    <SelectTrigger className="h-9 text-sm bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_STATUSES.map(s => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={onNext} className="self-end">
+                  Next: Measurement <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
