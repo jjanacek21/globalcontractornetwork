@@ -263,12 +263,6 @@ export default function CRMProduction() {
           })}
         </div>
       </ScrollArea>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </ScrollArea>
 
       {/* Job Detail Dialog */}
       <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
