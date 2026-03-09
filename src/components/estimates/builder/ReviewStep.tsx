@@ -44,8 +44,8 @@ export function ReviewStep({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="font-semibold">{state.customer?.name || "—"}</p>
-          <p className="text-sm text-muted-foreground">{state.customer?.address || state.customer?.email || ""}</p>
+          <p className="font-semibold">{state.contact ? `${state.contact.first_name} ${state.contact.last_name}` : "—"}</p>
+          <p className="text-sm text-muted-foreground">{state.contact?.email || state.contact?.primary_phone || ""}</p>
         </CardContent>
       </Card>
 
