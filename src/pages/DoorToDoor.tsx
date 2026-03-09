@@ -38,6 +38,7 @@ export default function DoorToDoor() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [selectedStormId, setSelectedStormId] = useState<string | null>(null);
   
   // Side panel state
   const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
@@ -387,6 +388,8 @@ export default function DoorToDoor() {
         session={activeSession}
         allTimeStats={stats}
         sessionStartTime={sessionStartTime || undefined}
+        selectedStormId={selectedStormId}
+        onStormChange={setSelectedStormId}
       />
 
       {/* Goals Progress Bar (during active session) */}
