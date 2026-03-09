@@ -238,6 +238,11 @@ const GCNRoutes = () => (
         <CRMLayout><Suspense fallback={<div />}><CRMStormCanvas /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
+    <Route path="/member/crm/storm-canvas/canvass" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CanvassMap /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
     <Route path="/member/crm/presentations" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMPresentations /></Suspense></CRMLayout>
