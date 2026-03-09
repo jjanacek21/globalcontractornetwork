@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Ruler, House, AlertCircle } from "lucide-react";
+import { Loader2, Ruler, House, AlertCircle, MapPin, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -33,8 +33,12 @@ interface SolarMeasurementData {
   total_with_waste_sqft: number;
   total_squares: number;
   max_panels_count: number;
+  satellite_image_url: string;
+  center: { latitude: number; longitude: number };
   segments: Segment[];
 }
+
+const NUDGE_AMOUNT = 0.00015; // ~15 meters
 
 export function AIRoofMeasurement() {
   const [selectedAddress, setSelectedAddress] = useState("");
@@ -51,20 +55,18 @@ export function AIRoofMeasurement() {
     setError("");
   };
 
-  const runMeasurement = async () => {
-    if (!coordinates) return;
+  const runMeasurement = async (latOverride?: number, lngOverride?: number) => {
+    const coords = coordinates;
+    if (!coords && latOverride == null) return;
 
     setLoading(true);
     setError("");
 
     try {
-      const [longitude, latitude] = coordinates;
+      const longitude = lngOverride ?? coords![0];
+      const latitude = latOverride ?? coords![1];
       const { data, error: invokeError } = await supabase.functions.invoke("solar-roof-measure", {
-        body: {
-          latitude,
-          longitude,
-          address: selectedAddress,
-        },
+        body: { latitude, longitude, address: selectedAddress },
       });
 
       if (invokeError || !data?.success || !data?.data) {
@@ -80,6 +82,13 @@ export function AIRoofMeasurement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const nudge = (dLat: number, dLng: number) => {
+    if (!result) return;
+    const newLat = result.center.latitude + dLat;
+    const newLng = result.center.longitude + dLng;
+    runMeasurement(newLat, newLng);
   };
 
   return (
@@ -98,7 +107,7 @@ export function AIRoofMeasurement() {
           />
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={runMeasurement} disabled={!canMeasure} className="shadow-soft">
+            <Button onClick={() => runMeasurement()} disabled={!canMeasure} className="shadow-soft">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -127,6 +136,84 @@ export function AIRoofMeasurement() {
 
       {result && (
         <>
+          {/* Satellite Verification Card */}
+          <Card className="shadow-card overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MapPin className="h-5 w-5 text-primary" />
+                Verify Property Location
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Confirm the red marker is on the correct roof. Use arrows to nudge.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="relative w-full">
+                <img
+                  src={result.satellite_image_url}
+                  alt={`Satellite view of ${result.address || "property"}`}
+                  className="w-full rounded-lg border border-border"
+                  loading="eager"
+                />
+                {/* Nudge controls overlay */}
+                <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-0.5">
+                  <div />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7 opacity-80 hover:opacity-100"
+                    onClick={() => nudge(NUDGE_AMOUNT, 0)}
+                    disabled={loading}
+                    title="Nudge North"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <div />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7 opacity-80 hover:opacity-100"
+                    onClick={() => nudge(0, -NUDGE_AMOUNT)}
+                    disabled={loading}
+                    title="Nudge West"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7 opacity-80 hover:opacity-100"
+                    onClick={() => nudge(0, NUDGE_AMOUNT)}
+                    disabled={loading}
+                    title="Nudge East"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <div />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-7 w-7 opacity-80 hover:opacity-100"
+                    onClick={() => nudge(-NUDGE_AMOUNT, 0)}
+                    disabled={loading}
+                    title="Nudge South"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                  <div />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground">
+                <span>{result.address}</span>
+                <span>
+                  {result.center.latitude.toFixed(6)}, {result.center.longitude.toFixed(6)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Measurement Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
@@ -167,6 +254,7 @@ export function AIRoofMeasurement() {
             </Card>
           </div>
 
+          {/* Segments Table */}
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle>Roof Segments ({result.roof_segments_count})</CardTitle>

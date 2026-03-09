@@ -144,6 +144,11 @@ serve(async (req) => {
             ? "Complex"
             : "Very Complex";
 
+    // Build satellite verification image URL
+    const centerLat = toNumber(solarResponse.payload?.center?.latitude ?? latitude);
+    const centerLng = toNumber(solarResponse.payload?.center?.longitude ?? longitude);
+    const satelliteImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${centerLat},${centerLng}&zoom=20&size=600x400&maptype=satellite&markers=color:red%7C${centerLat},${centerLng}&key=${apiKey}`;
+
     const responseData = {
       address,
       quality: solarResponse.requiredQuality,
@@ -158,6 +163,8 @@ serve(async (req) => {
       total_squares: +totalSquares.toFixed(2),
       max_panels_count: toNumber(solarPotential?.maxArrayPanelsCount),
       carbon_offset_factor_kg_per_mwh: toNumber(solarPotential?.carbonOffsetFactorKgPerMwh),
+      satellite_image_url: satelliteImageUrl,
+      center: { latitude: centerLat, longitude: centerLng },
       segments,
     };
 
