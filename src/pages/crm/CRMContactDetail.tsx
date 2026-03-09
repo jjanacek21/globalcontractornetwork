@@ -251,6 +251,7 @@ export default function CRMContactDetail() {
         <TabsList className="w-full justify-start">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="communication">Communication</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -419,6 +420,15 @@ export default function CRMContactDetail() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Estimates Tab */}
+        <TabsContent value="estimates" className="space-y-4">
+          <ContactEstimatesCard
+            estimates={estimates}
+            isLoading={estimatesLoading}
+            onCreateNew={() => setShowEstimateBuilder(true)}
+          />
         </TabsContent>
 
         {/* Notes Tab */}
