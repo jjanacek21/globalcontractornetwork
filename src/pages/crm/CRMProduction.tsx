@@ -9,7 +9,7 @@ import { CrewManagementTab } from "@/components/crm/CrewManagementTab";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FileText, Clock, AlertTriangle, XCircle, Package, Ruler,
-  PenTool, Camera, Search, RefreshCw, GripVertical, User,
+  PenTool, Camera, Search, RefreshCw, GripVertical, User, Users,
   DollarSign, ChevronRight, Calendar, CheckCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
