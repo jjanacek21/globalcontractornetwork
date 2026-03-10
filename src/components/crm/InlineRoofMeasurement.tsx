@@ -570,8 +570,17 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
             </Card>
           </div>
 
+          {/* Flat Roof Info Banner */}
+          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-foreground flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Does this property have additional roof sections?</p>
+              <p className="text-muted-foreground mt-1">The AI may not detect flat or white roofs (e.g. flat porches, garages, additions). Use the sections below to include any missed areas.</p>
+            </div>
+          </div>
+
           {/* Additional Roof Sections */}
-          <Card className="border-dashed border-2 border-muted-foreground/20">
+          <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Additional Roof Sections</CardTitle>

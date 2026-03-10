@@ -291,6 +291,21 @@ const GCNRoutes = () => (
         <CRMLayout><Suspense fallback={<div />}><CRMInsuranceClaims /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
+    <Route path="/member/crm/insurance/carriers" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceCarriers /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/adjusters" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceAdjusters /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/supplements" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceSupplements /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
     <Route path="/member/crm/insurance/scope-intelligence" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMScopeIntelligence /></Suspense></CRMLayout>

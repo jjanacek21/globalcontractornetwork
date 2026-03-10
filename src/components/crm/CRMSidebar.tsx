@@ -41,6 +41,9 @@ const followUpItems = [
 
 const insuranceItems = [
   { title: "Claims", url: "/member/crm/insurance/claims", icon: Shield },
+  { title: "Carriers", url: "/member/crm/insurance/carriers", icon: Factory },
+  { title: "Adjusters", url: "/member/crm/insurance/adjusters", icon: Users },
+  { title: "Supplements", url: "/member/crm/insurance/supplements", icon: FileStack },
   { title: "Scope Intelligence", url: "/member/crm/insurance/scope-intelligence", icon: Brain },
 ];
 
