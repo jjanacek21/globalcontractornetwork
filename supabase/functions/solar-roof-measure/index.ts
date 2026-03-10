@@ -14,6 +14,9 @@ interface MeasurementRequest {
 
 const M2_TO_SQFT = 10.7639;
 
+const toPitchOver12 = (deg: number): number =>
+  Math.round(Math.tan((deg * Math.PI) / 180) * 12);
+
 const toNumber = (value: unknown): number => {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
