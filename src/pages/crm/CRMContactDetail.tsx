@@ -13,7 +13,7 @@ import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
 import { InlineRoofMeasurement } from "@/components/crm/InlineRoofMeasurement";
-import { ContactPropertyMap } from "@/components/crm/ContactPropertyMap";
+import { ContactPropertyMap, type MeasurementPin } from "@/components/crm/ContactPropertyMap";
 import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
 import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
 import { supabase } from "@/integrations/supabase/client";
