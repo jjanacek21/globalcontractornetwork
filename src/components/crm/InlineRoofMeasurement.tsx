@@ -179,7 +179,18 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         return;
       }
 
-      setResult(data.data as SolarMeasurementData);
+      const measData = data.data as SolarMeasurementData;
+      setResult(measData);
+
+      // Auto-add a flat roof placeholder if AI detected a pitched roof
+      if (measData.average_pitch_degrees > 5 && additionalSections.length === 0) {
+        setAdditionalSections([{
+          id: crypto.randomUUID(),
+          label: "Flat Roof (not detected by AI)",
+          sqft: 0,
+          roofType: "flat",
+        }]);
+      }
     } catch {
       setResult(null);
       setError("Unable to measure this roof right now.");
