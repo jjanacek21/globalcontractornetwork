@@ -40,7 +40,7 @@ export default function CRMInsuranceCarriers() {
     setSaving(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSaving(false); return; }
-    const { error } = await supabase.from("insurance_carriers").insert({
+    const { error } = await (supabase as any).from("insurance_carriers").insert({
       user_id: session.user.id,
       name: form.name.trim(),
       phone: form.phone || null,
