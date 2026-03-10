@@ -272,6 +272,7 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       satellite_image,
       center: { latitude: centerLat, longitude: centerLng },
       segments,
+      filtered_segments_count: filteredSegmentsCount,
       ai_roof_type_suggestion,
       ai_roof_type_warning,
     };
