@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { Badge } from "@/components/ui/badge";
 
 export interface MeasurementPin {
   id: string;
@@ -16,17 +17,109 @@ interface ContactPropertyMapProps {
   lng: number;
   address?: string;
   measurements?: MeasurementPin[];
+  onPinDragged?: (id: string, lat: number, lng: number) => void;
+  onPinTypeToggle?: (id: string, newType: string) => void;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
-export function ContactPropertyMap({ lat, lng, address, measurements = [] }: ContactPropertyMapProps) {
+function pinColor(roofType: string | null): string {
+  const t = roofType?.toLowerCase();
+  return t === "flat" || t === "low slope" ? "#3b82f6" : "#ef4444";
+}
+
+function pinLabel(roofType: string | null): string {
+  const t = roofType?.toLowerCase();
+  return t === "flat" || t === "low slope" ? "Flat" : "Pitched";
+}
+
+export function ContactPropertyMap({
+  lat, lng, address, measurements = [],
+  onPinDragged, onPinTypeToggle,
+}: ContactPropertyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
+  const isDraggable = !!onPinDragged;
+
+  const rebuildMarkers = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.clear();
+
+    if (measurements.length === 0) {
+      const marker = new mapboxgl.Marker({ color: "#ef4444" })
+        .setLngLat([lng, lat])
+        .setPopup(address ? new mapboxgl.Popup({ offset: 25 }).setText(address) : undefined)
+        .addTo(map);
+      markersRef.current.set("__default", marker);
+      return;
+    }
+
+    measurements.forEach((m) => {
+      const color = pinColor(m.roof_type);
+      const label = pinLabel(m.roof_type);
+      const isFlat = label === "Flat";
+
+      const toggleBtnHtml = onPinTypeToggle
+        ? `<button data-pin-toggle="${m.id}" style="margin-top:6px;padding:2px 8px;font-size:11px;border:1px solid #888;border-radius:4px;cursor:pointer;background:${isFlat ? "#ef4444" : "#3b82f6"};color:#fff;border:none;">
+            Switch to ${isFlat ? "Pitched" : "Flat"}
+          </button>`
+        : "";
+
+      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(
+        `<div style="font-family:system-ui;font-size:13px;text-align:center;">
+          <strong style="color:${color}">${label}</strong><br/>
+          <span>${m.total_squares.toFixed(1)} sq</span>
+          ${isDraggable ? '<br/><span style="font-size:10px;color:#888;">Drag to reposition</span>' : ""}
+          ${toggleBtnHtml}
+        </div>`
+      );
+
+      const marker = new mapboxgl.Marker({ color, draggable: isDraggable })
+        .setLngLat([m.lng, m.lat])
+        .setPopup(popup)
+        .addTo(map);
+
+      if (isDraggable) {
+        marker.on("dragend", () => {
+          const { lng: newLng, lat: newLat } = marker.getLngLat();
+          onPinDragged!(m.id, newLat, newLng);
+        });
+      }
+
+      // Toggle click handler via event delegation
+      if (onPinTypeToggle) {
+        popup.on("open", () => {
+          setTimeout(() => {
+            const btn = document.querySelector(`[data-pin-toggle="${m.id}"]`);
+            if (btn) {
+              btn.addEventListener("click", () => {
+                const newType = isFlat ? "Pitched" : "Flat";
+                onPinTypeToggle(m.id, newType);
+              });
+            }
+          }, 0);
+        });
+      }
+
+      markersRef.current.set(m.id, marker);
+    });
+
+    if (measurements.length > 1) {
+      const bounds = new mapboxgl.LngLatBounds();
+      measurements.forEach((m) => bounds.extend([m.lng, m.lat]));
+      map.fitBounds(bounds, { padding: 60, maxZoom: 19 });
+    }
+  }, [measurements, lat, lng, address, isDraggable, onPinDragged, onPinTypeToggle]);
+
+  // Init map once
   useEffect(() => {
     if (!mapContainer.current || !MAPBOX_TOKEN) return;
-
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
     const map = new mapboxgl.Map({
@@ -38,52 +131,25 @@ export function ContactPropertyMap({ lat, lng, address, measurements = [] }: Con
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-
-    // Property pin (red, default)
-    if (measurements.length === 0) {
-      new mapboxgl.Marker({ color: "#ef4444" })
-        .setLngLat([lng, lat])
-        .setPopup(
-          address
-            ? new mapboxgl.Popup({ offset: 25 }).setText(address)
-            : undefined
-        )
-        .addTo(map);
-    }
-
-    // Measurement pins
-    measurements.forEach((m) => {
-      const isFlat = m.roof_type?.toLowerCase() === "flat" || m.roof_type?.toLowerCase() === "low slope";
-      const color = isFlat ? "#3b82f6" : "#ef4444"; // blue for flat, red for pitched
-      const label = m.roof_type || "Pitched";
-
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-        `<div style="font-family:system-ui;font-size:13px;">
-          <strong style="color:${color}">${label}</strong><br/>
-          <span>${m.total_squares.toFixed(1)} squares</span>
-        </div>`
-      );
-
-      new mapboxgl.Marker({ color })
-        .setLngLat([m.lng, m.lat])
-        .setPopup(popup)
-        .addTo(map);
-    });
-
-    // Fit bounds if multiple pins
-    if (measurements.length > 1) {
-      const bounds = new mapboxgl.LngLatBounds();
-      measurements.forEach((m) => bounds.extend([m.lng, m.lat]));
-      map.fitBounds(bounds, { padding: 60, maxZoom: 19 });
-    }
-
     mapRef.current = map;
 
+    map.on("load", () => rebuildMarkers());
+
     return () => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current.clear();
       map.remove();
       mapRef.current = null;
     };
-  }, [lat, lng, address, measurements]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng]);
+
+  // Update markers when measurements change
+  useEffect(() => {
+    if (mapRef.current?.isStyleLoaded()) {
+      rebuildMarkers();
+    }
+  }, [rebuildMarkers]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -95,10 +161,7 @@ export function ContactPropertyMap({ lat, lng, address, measurements = [] }: Con
 
   return (
     <div className="space-y-2">
-      <div
-        ref={mapContainer}
-        className="h-[300px] rounded-lg overflow-hidden border border-border"
-      />
+      <div ref={mapContainer} className="h-[300px] rounded-lg overflow-hidden border border-border" />
       {measurements.length > 0 && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
           <span className="flex items-center gap-1">
@@ -107,6 +170,9 @@ export function ContactPropertyMap({ lat, lng, address, measurements = [] }: Con
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#3b82f6]" /> Flat
           </span>
+          {isDraggable && (
+            <span className="ml-auto italic">Drag pins to reposition</span>
+          )}
         </div>
       )}
     </div>
