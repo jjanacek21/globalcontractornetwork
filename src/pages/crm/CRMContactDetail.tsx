@@ -443,6 +443,48 @@ export default function CRMContactDetail() {
                         );
                         toast({ title: `Switched to ${newType}` });
                       }}
+                      onMeasureAll={async () => {
+                        const pins = measurements.filter((m: any) => m.latitude && m.longitude);
+                        const results: any[] = [];
+                        for (const pin of pins) {
+                          const roofTypeOverride = pin.roof_type?.toLowerCase() === "flat" ? "flat"
+                            : pin.roof_type?.toLowerCase() === "low slope" ? "low_slope"
+                            : undefined;
+                          const { data } = await supabase.functions.invoke("solar-roof-measure", {
+                            body: {
+                              latitude: pin.latitude,
+                              longitude: pin.longitude,
+                              address: pin.address,
+                              roof_type_override: roofTypeOverride,
+                            },
+                          });
+                          if (data?.success) {
+                            const d = data.data;
+                            await supabase.from("roof_measurements").update({
+                              total_area_sqft: d.total_with_waste_sqft,
+                              total_squares: d.total_squares,
+                              pitch_degrees: d.average_pitch_degrees,
+                              pitch_multiplier: d.pitch_multiplier,
+                              waste_percent: d.waste_percent,
+                              complexity: d.complexity,
+                              segments_count: d.roof_segments_count,
+                              quality: d.quality,
+                              solar_api_response: d,
+                            }).eq("id", pin.id);
+                            results.push({ ...pin, total_squares: d.total_squares, total_area_sqft: d.total_with_waste_sqft });
+                          } else {
+                            results.push(pin);
+                          }
+                        }
+                        // Refresh measurements
+                        const { data: refreshed } = await supabase
+                          .from("roof_measurements")
+                          .select("*")
+                          .eq("contact_id", contactId!)
+                          .order("created_at", { ascending: false });
+                        setMeasurements(refreshed || []);
+                        toast({ title: "Measurement complete", description: `${pins.length} pin${pins.length > 1 ? "s" : ""} measured.` });
+                      }}
                     />
                   )}
                 </div>

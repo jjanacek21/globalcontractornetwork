@@ -1,7 +1,8 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2, Ruler } from "lucide-react";
 
 export interface MeasurementPin {
   id: string;
@@ -19,6 +20,7 @@ interface ContactPropertyMapProps {
   measurements?: MeasurementPin[];
   onPinDragged?: (id: string, lat: number, lng: number) => void;
   onPinTypeToggle?: (id: string, newType: string) => void;
+  onMeasureAll?: () => Promise<void>;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
@@ -35,11 +37,12 @@ function pinLabel(roofType: string | null): string {
 
 export function ContactPropertyMap({
   lat, lng, address, measurements = [],
-  onPinDragged, onPinTypeToggle,
+  onPinDragged, onPinTypeToggle, onMeasureAll,
 }: ContactPropertyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const [measuring, setMeasuring] = useState(false);
 
   const isDraggable = !!onPinDragged;
 
@@ -159,6 +162,16 @@ export function ContactPropertyMap({
     );
   }
 
+  const handleMeasureAll = async () => {
+    if (!onMeasureAll) return;
+    setMeasuring(true);
+    try {
+      await onMeasureAll();
+    } finally {
+      setMeasuring(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div ref={mapContainer} className="h-[300px] rounded-lg overflow-hidden border border-border" />
@@ -174,6 +187,21 @@ export function ContactPropertyMap({
             <span className="ml-auto italic">Drag pins to reposition</span>
           )}
         </div>
+      )}
+      {onMeasureAll && measurements.length > 0 && (
+        <Button
+          size="sm"
+          className="w-full"
+          variant="outline"
+          disabled={measuring}
+          onClick={handleMeasureAll}
+        >
+          {measuring ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Measuring {measurements.length} pin{measurements.length > 1 ? "s" : ""}…</>
+          ) : (
+            <><Ruler className="mr-2 h-4 w-4" /> Measure All Pins ({measurements.length})</>
+          )}
+        </Button>
       )}
     </div>
   );
