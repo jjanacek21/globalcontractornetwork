@@ -9,6 +9,7 @@ import {
   Plus, Edit, Phone, Mail,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { ReturnHomeButton } from "@/components/layout/ReturnHomeButton";
 
 const PIPELINE_STAGES = [
   { key: "new", label: "New Lead", color: "bg-blue-500" },
