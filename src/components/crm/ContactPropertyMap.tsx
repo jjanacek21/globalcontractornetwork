@@ -37,11 +37,12 @@ function pinLabel(roofType: string | null): string {
 
 export function ContactPropertyMap({
   lat, lng, address, measurements = [],
-  onPinDragged, onPinTypeToggle,
+  onPinDragged, onPinTypeToggle, onMeasureAll,
 }: ContactPropertyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const [measuring, setMeasuring] = useState(false);
 
   const isDraggable = !!onPinDragged;
 
