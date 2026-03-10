@@ -1,69 +1,41 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# Fix: Roof Measurement Segment Splitting
 
-## Root Cause
+## Problem
+The Google Solar API returns segments for the **entire building**. The current filtering has a critical fallback: if no segments match the filter criteria (lines 117, 120), it silently falls back to using **all** segments (`useSegments = segments`). Additionally, when `roof_type_override` is `"pitched"`, there's **no filter at all** — it uses every segment including flat ones.
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+This means a Pitched pin and a Flat pin on the same building both report the full building area.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+## Fix (edge function only)
 
-## Fix: Two-Part Solution
+**File:** `supabase/functions/solar-roof-measure/index.ts`
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+Three changes to the segment filtering block (lines 113-121):
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
-
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
-
-### 2. Fix incorrect source types in packet structures
-
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
-
-Update these two records in `permit_packet_structures` to use the correct source type.
-
-### 3. Add "Select Products" action for unmatched auto_source docs
-
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
+1. **Add a "pitched" filter** — when `roof_type_override` is `"pitched"`, only include segments with pitch > 5°.
+2. **Remove the fallback** — if the filter returns zero segments, return those zero segments (resulting in 0 sqft) rather than silently using all segments. This is the correct behavior: if someone places a "flat" pin but the building has no flat segments, the answer should be 0, not the whole building.
+3. **No override = all segments** — when no override is provided (standalone measurement), keep current behavior of using all segments.
 
 ```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
+// Replace lines 113-121
+let useSegments = segments;
+if (roof_type_override === "flat") {
+  useSegments = segments.filter((s) => s.pitch_degrees <= 5);
+} else if (roof_type_override === "low_slope") {
+  useSegments = segments.filter((s) => s.pitch_degrees <= 10);
+} else if (roof_type_override === "pitched") {
+  useSegments = segments.filter((s) => s.pitch_degrees > 5);
 }
 ```
 
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+Also update line 137 to not fall back to `wholeRoofAreaM2` when an override is active:
+
+```typescript
+const totalFlatAreaM2 = (segmentAreaM2 > 0 || roof_type_override)
+  ? segmentAreaM2
+  : wholeRoofAreaM2;
+```
+
+This ensures that a Flat pin only counts low-pitch segments and a Pitched pin only counts high-pitch segments — they partition the building correctly.
 
