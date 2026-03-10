@@ -110,14 +110,14 @@ serve(async (req) => {
       .filter((segment: { area_m2: number }) => segment.area_m2 > 0)
       .sort((a: { area_m2: number }, b: { area_m2: number }) => b.area_m2 - a.area_m2);
 
-    // Filter segments for flat/low_slope overrides
+    // Filter segments by roof_type_override — no fallback to all segments
     let useSegments = segments;
     if (roof_type_override === "flat") {
-      const flat = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5);
-      if (flat.length > 0) useSegments = flat;
+      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5);
     } else if (roof_type_override === "low_slope") {
-      const low = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 10);
-      if (low.length > 0) useSegments = low;
+      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 10);
+    } else if (roof_type_override === "pitched") {
+      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees > 5);
     }
 
     const segmentCount = segments.length;
