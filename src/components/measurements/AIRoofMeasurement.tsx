@@ -381,7 +381,7 @@ export function AIRoofMeasurement() {
                     <TableRow key={`${segment.id}-${index}`}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{segment.area_sqft.toLocaleString()}</TableCell>
-                      <TableCell>{segment.pitch_degrees.toFixed(1)}</TableCell>
+                      <TableCell>{segment.pitch_degrees.toFixed(1)}° ({segment.pitch_over_12}/12)</TableCell>
                       <TableCell>{segment.azimuth_degrees.toFixed(1)}</TableCell>
                     </TableRow>
                   ))}
