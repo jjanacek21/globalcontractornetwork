@@ -372,7 +372,7 @@ export function AIRoofMeasurement() {
                   <TableRow>
                     <TableHead>Segment</TableHead>
                     <TableHead>Area (sq ft)</TableHead>
-                    <TableHead>Pitch (°)</TableHead>
+                    <TableHead>Pitch</TableHead>
                     <TableHead>Azimuth (°)</TableHead>
                   </TableRow>
                 </TableHeader>
