@@ -415,6 +415,15 @@ export default function CRMContactDetail() {
                       lat={primaryProperty.lat}
                       lng={primaryProperty.lng}
                       address={primaryAddress || undefined}
+                      measurements={measurements
+                        .filter((m: any) => m.latitude && m.longitude)
+                        .map((m: any): MeasurementPin => ({
+                          id: m.id,
+                          lat: m.latitude,
+                          lng: m.longitude,
+                          roof_type: m.roof_type,
+                          total_squares: m.total_squares || 0,
+                        }))}
                     />
                   )}
                 </div>
