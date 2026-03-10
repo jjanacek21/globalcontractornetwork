@@ -89,7 +89,7 @@ export function AIRoofMeasurement() {
         pitchedArea: result.total_pitched_area_sqft,
         totalWithWaste: result.total_with_waste_sqft,
         totalSquares: result.total_squares,
-        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}°`,
+        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}° (${result.average_pitch_over_12}/12)`,
         pitchMultiplier: result.pitch_multiplier,
       };
     }
