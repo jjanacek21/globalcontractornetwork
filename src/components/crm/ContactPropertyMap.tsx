@@ -162,6 +162,16 @@ export function ContactPropertyMap({
     );
   }
 
+  const handleMeasureAll = async () => {
+    if (!onMeasureAll) return;
+    setMeasuring(true);
+    try {
+      await onMeasureAll();
+    } finally {
+      setMeasuring(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div ref={mapContainer} className="h-[300px] rounded-lg overflow-hidden border border-border" />
@@ -177,6 +187,21 @@ export function ContactPropertyMap({
             <span className="ml-auto italic">Drag pins to reposition</span>
           )}
         </div>
+      )}
+      {onMeasureAll && measurements.length > 0 && (
+        <Button
+          size="sm"
+          className="w-full"
+          variant="outline"
+          disabled={measuring}
+          onClick={handleMeasureAll}
+        >
+          {measuring ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Measuring {measurements.length} pin{measurements.length > 1 ? "s" : ""}…</>
+          ) : (
+            <><Ruler className="mr-2 h-4 w-4" /> Measure All Pins ({measurements.length})</>
+          )}
+        </Button>
       )}
     </div>
   );
