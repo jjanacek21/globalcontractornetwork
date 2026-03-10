@@ -40,7 +40,7 @@ export default function CRMInsuranceSupplements() {
   const { toast } = useToast();
 
   const load = async () => {
-    const { data } = await supabase.from("insurance_supplements").select("*").order("created_at", { ascending: false });
+    const { data } = await (supabase as any).from("insurance_supplements").select("*").order("created_at", { ascending: false });
     setSupplements((data as Supplement[]) || []);
     setLoading(false);
   };
