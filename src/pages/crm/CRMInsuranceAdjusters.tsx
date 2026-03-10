@@ -34,8 +34,8 @@ export default function CRMInsuranceAdjusters() {
 
   const load = async () => {
     const [{ data: adj }, { data: carr }] = await Promise.all([
-      supabase.from("insurance_adjusters").select("*, insurance_carriers(name)").order("created_at", { ascending: false }),
-      supabase.from("insurance_carriers").select("id, name").order("name"),
+      (supabase as any).from("insurance_adjusters").select("*, insurance_carriers(name)").order("created_at", { ascending: false }),
+      (supabase as any).from("insurance_carriers").select("id, name").order("name"),
     ]);
     setAdjusters((adj as Adjuster[]) || []);
     setCarriers((carr as Carrier[]) || []);
