@@ -1,7 +1,8 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2, Ruler } from "lucide-react";
 
 export interface MeasurementPin {
   id: string;
@@ -19,6 +20,7 @@ interface ContactPropertyMapProps {
   measurements?: MeasurementPin[];
   onPinDragged?: (id: string, lat: number, lng: number) => void;
   onPinTypeToggle?: (id: string, newType: string) => void;
+  onMeasureAll?: () => Promise<void>;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
