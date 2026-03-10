@@ -487,6 +487,64 @@ export default function CRMContactDetail() {
                       }}
                     />
                   )}
+
+                  {/* Per-pin results & combined totals */}
+                  {(() => {
+                    const measured = measurements.filter((m: any) => m.latitude && m.longitude && m.total_squares > 0);
+                    if (measured.length === 0) return null;
+
+                    const combinedSqft = measured.reduce((s: number, m: any) => s + (m.total_area_sqft || 0), 0);
+                    const combinedSquares = measured.reduce((s: number, m: any) => s + (m.total_squares || 0), 0);
+
+                    return (
+                      <div className="space-y-2 mt-3">
+                        {measured.map((m: any, i: number) => {
+                          const isFlat = m.roof_type?.toLowerCase() === "flat" || m.roof_type?.toLowerCase() === "low slope";
+                          return (
+                            <div key={m.id} className="flex items-center justify-between p-2.5 rounded-lg border text-sm">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ background: isFlat ? "#3b82f6" : "#ef4444" }}
+                                />
+                                <span className="font-medium">Pin {i + 1} – {m.roof_type || "Pitched"}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-muted-foreground">
+                                <span>{(m.total_area_sqft || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} sq ft</span>
+                                <span className="font-semibold text-foreground">{(m.total_squares || 0).toFixed(1)} sq</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {measured.length > 1 && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 font-semibold text-sm">
+                            <span>Combined Total</span>
+                            <div className="flex items-center gap-4">
+                              <span>{combinedSqft.toLocaleString(undefined, { maximumFractionDigits: 0 })} sq ft</span>
+                              <span className="text-primary text-base">{combinedSquares.toFixed(1)} sq</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          size="sm"
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                          onClick={() => {
+                            const params = new URLSearchParams({
+                              contact_id: contact.id,
+                              total_sqft: combinedSqft.toFixed(0),
+                              total_squares: combinedSquares.toFixed(1),
+                              pin_count: measured.length.toString(),
+                            });
+                            navigate(`/member/crm/estimates/new?${params.toString()}`);
+                          }}
+                        >
+                          <DollarSign className="mr-1 h-4 w-4" /> Create Estimate ({combinedSquares.toFixed(1)} squares)
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No properties added yet.</p>
