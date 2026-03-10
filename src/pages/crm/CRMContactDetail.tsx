@@ -424,6 +424,25 @@ export default function CRMContactDetail() {
                           roof_type: m.roof_type,
                           total_squares: m.total_squares || 0,
                         }))}
+                      onPinDragged={async (id, newLat, newLng) => {
+                        await supabase.from("roof_measurements").update({
+                          latitude: newLat,
+                          longitude: newLng,
+                        }).eq("id", id);
+                        setMeasurements((prev) =>
+                          prev.map((m) => m.id === id ? { ...m, latitude: newLat, longitude: newLng } : m)
+                        );
+                        toast({ title: "Pin moved", description: "Measurement location updated." });
+                      }}
+                      onPinTypeToggle={async (id, newType) => {
+                        await supabase.from("roof_measurements").update({
+                          roof_type: newType,
+                        }).eq("id", id);
+                        setMeasurements((prev) =>
+                          prev.map((m) => m.id === id ? { ...m, roof_type: newType } : m)
+                        );
+                        toast({ title: `Switched to ${newType}` });
+                      }}
                     />
                   )}
                 </div>
