@@ -13,7 +13,7 @@ import { SendEmailDialog } from "@/components/crm/SendEmailDialog";
 import { AddressGeocoder } from "@/components/crm/AddressGeocoder";
 import { EstimateBuilderDialog } from "@/components/estimates/EstimateBuilderDialog";
 import { InlineRoofMeasurement } from "@/components/crm/InlineRoofMeasurement";
-import { ContactPropertyMap } from "@/components/crm/ContactPropertyMap";
+import { ContactPropertyMap, type MeasurementPin } from "@/components/crm/ContactPropertyMap";
 import { ContactEstimatesCard } from "@/components/estimates/ContactEstimatesCard";
 import { useContactEstimates } from "@/hooks/useEstimateBuilderV2";
 import { supabase } from "@/integrations/supabase/client";
@@ -415,6 +415,15 @@ export default function CRMContactDetail() {
                       lat={primaryProperty.lat}
                       lng={primaryProperty.lng}
                       address={primaryAddress || undefined}
+                      measurements={measurements
+                        .filter((m: any) => m.latitude && m.longitude)
+                        .map((m: any): MeasurementPin => ({
+                          id: m.id,
+                          lat: m.latitude,
+                          lng: m.longitude,
+                          roof_type: m.roof_type,
+                          total_squares: m.total_squares || 0,
+                        }))}
                     />
                   )}
                 </div>
