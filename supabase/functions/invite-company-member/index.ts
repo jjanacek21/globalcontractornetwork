@@ -289,4 +289,4 @@ async function sendInvitationEmail(body: InviteRequest, resetLink: string | null
   }
 }
 
-serve(handler);
+Deno.serve(handler);
