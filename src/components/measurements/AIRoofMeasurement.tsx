@@ -29,6 +29,7 @@ interface SolarMeasurementData {
   complexity: string;
   roof_segments_count: number;
   average_pitch_degrees: number;
+  average_pitch_over_12: number;
   pitch_multiplier: number;
   waste_percent: number;
   total_flat_area_sqft: number;

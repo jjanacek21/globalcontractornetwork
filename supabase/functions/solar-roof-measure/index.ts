@@ -265,6 +265,7 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       complexity,
       roof_segments_count: segmentCount,
       average_pitch_degrees: +averagePitchDegrees.toFixed(2),
+      average_pitch_over_12: toPitchOver12(averagePitchDegrees),
       pitch_multiplier: +pitchMultiplier.toFixed(4),
       waste_percent: wastePercent,
       total_flat_area_sqft: +totalFlatSqFt.toFixed(2),
