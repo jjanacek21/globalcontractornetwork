@@ -179,7 +179,18 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         return;
       }
 
-      setResult(data.data as SolarMeasurementData);
+      const measData = data.data as SolarMeasurementData;
+      setResult(measData);
+
+      // Auto-add a flat roof placeholder if AI detected a pitched roof
+      if (measData.average_pitch_degrees > 5 && additionalSections.length === 0) {
+        setAdditionalSections([{
+          id: crypto.randomUUID(),
+          label: "Flat Roof (not detected by AI)",
+          sqft: 0,
+          roofType: "flat",
+        }]);
+      }
     } catch {
       setResult(null);
       setError("Unable to measure this roof right now.");
@@ -559,8 +570,17 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
             </Card>
           </div>
 
+          {/* Flat Roof Info Banner */}
+          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-foreground flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Does this property have additional roof sections?</p>
+              <p className="text-muted-foreground mt-1">The AI may not detect flat or white roofs (e.g. flat porches, garages, additions). Use the sections below to include any missed areas.</p>
+            </div>
+          </div>
+
           {/* Additional Roof Sections */}
-          <Card className="border-dashed border-2 border-muted-foreground/20">
+          <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Additional Roof Sections</CardTitle>

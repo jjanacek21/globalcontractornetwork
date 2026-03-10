@@ -36,6 +36,9 @@ const CRMFollowUpAIQueue = lazy(() => import("./pages/crm/CRMFollowUpAIQueue"));
 const CRMFollowUpCallCenter = lazy(() => import("./pages/crm/CRMFollowUpCallCenter"));
 const CRMFollowUpAIAgent = lazy(() => import("./pages/crm/CRMFollowUpAIAgent"));
 const CRMInsuranceClaims = lazy(() => import("./pages/crm/CRMInsuranceClaims"));
+const CRMInsuranceCarriers = lazy(() => import("./pages/crm/CRMInsuranceCarriers"));
+const CRMInsuranceAdjusters = lazy(() => import("./pages/crm/CRMInsuranceAdjusters"));
+const CRMInsuranceSupplements = lazy(() => import("./pages/crm/CRMInsuranceSupplements"));
 const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence"));
 const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
@@ -286,6 +289,21 @@ const GCNRoutes = () => (
     <Route path="/member/crm/insurance/claims" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMInsuranceClaims /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/carriers" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceCarriers /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/adjusters" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceAdjusters /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/insurance/supplements" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceSupplements /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/member/crm/insurance/scope-intelligence" element={
