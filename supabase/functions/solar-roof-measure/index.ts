@@ -107,6 +107,7 @@ serve(async (req) => {
           area_m2: areaM2,
           area_sqft: +(areaM2 * M2_TO_SQFT).toFixed(2),
           pitch_degrees: +pitchDegrees.toFixed(2),
+          pitch_over_12: toPitchOver12(pitchDegrees),
           azimuth_degrees: +azimuthDegrees.toFixed(2),
         };
       })
