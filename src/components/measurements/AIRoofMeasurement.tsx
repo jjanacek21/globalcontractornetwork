@@ -19,6 +19,7 @@ interface Segment {
   id: string;
   area_sqft: number;
   pitch_degrees: number;
+  pitch_over_12: number;
   azimuth_degrees: number;
 }
 
