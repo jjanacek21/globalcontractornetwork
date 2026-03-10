@@ -131,17 +131,26 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     }
   }, [contactAddress]);
 
+  // Pending center to init map after container mounts
+  const pendingCenter = useRef<{ lat: number; lng: number } | null>(null);
+
   // ── Initialize Mapbox map ──
-  const initMap = (lat: number, lng: number) => {
+  const initMap = useCallback((lat: number, lng: number) => {
     if (mapRef.current) {
       mapRef.current.flyTo({ center: [lng, lat], zoom: 19 });
-      // Add initial pin
       addPinAtLocation(lat, lng, "pitched", "Main Roof");
       return;
     }
 
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
-    if (!token || !mapContainerRef.current) return;
+    if (!token) return;
+
+    // If container not yet mounted, store pending center and add pin to trigger render
+    if (!mapContainerRef.current) {
+      pendingCenter.current = { lat, lng };
+      addPinAtLocation(lat, lng, "pitched", "Main Roof");
+      return;
+    }
 
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
@@ -158,7 +167,33 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
       setMapReady(true);
       addPinAtLocation(lat, lng, "pitched", "Main Roof");
     });
-  };
+  }, []);
+
+  // ── Init map when container becomes available after pin triggers render ──
+  useEffect(() => {
+    if (pendingCenter.current && mapContainerRef.current && !mapRef.current) {
+      const { lat, lng } = pendingCenter.current;
+      pendingCenter.current = null;
+
+      const token = import.meta.env.VITE_MAPBOX_TOKEN;
+      if (!token) return;
+
+      mapboxgl.accessToken = token;
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/satellite-v9",
+        center: [lng, lat],
+        zoom: 19,
+        pitch: 0,
+        bearing: 0,
+      });
+
+      map.on("load", () => {
+        mapRef.current = map;
+        setMapReady(true);
+      });
+    }
+  }, [pins.length]);
 
   // ── Auto-trigger ──
   useEffect(() => {
