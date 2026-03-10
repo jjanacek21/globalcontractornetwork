@@ -1,50 +1,69 @@
 
 
-## Issues Identified
+# Fix Missing Documents in Packet Assembly
 
-### 1. Cannot Save Measurement (RLS Policy Error)
-The `roof_measurements` table requires `company_id` to match a record in `company_members`. The contact's `company_id` is `null`, so the insert fails with an RLS violation.
+## Root Cause
 
-**Fix**: Update the RLS INSERT policy to also allow inserts where `created_by = auth.uid()` (the logged-in user), not only company-based access. This way measurements can be saved by the user who created them regardless of company association. Also update SELECT/UPDATE/DELETE policies similarly.
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### 2. Flat + Pitched Roof Not Both Measured
-The Google Solar API returns segments it detects, but for properties with mixed roof types (a pitched house + a flat-roof structure), it may only capture the pitched portion. The current UI has no way to combine two separate measurements or add a second roof section.
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-**Fix**: Add a "Multi-Section Roof" feature to `InlineRoofMeasurement`:
-- After AI measurement, show a button "Add Additional Roof Section" 
-- Allow the user to manually enter a second section (flat area sqft) that gets added to the total
-- The save function combines both sections into the final measurement record
+## Fix: Two-Part Solution
 
-### 3. No "Create Detailed Report" functionality
-The Measurements page and inline measurement have no report generation button.
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-**Fix**: Add a "Generate Report" button that creates a printable/downloadable summary using the existing `MeasurementReport` component pattern, or navigates to a report view.
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
----
-
-## Implementation Plan
-
-### Step 1: Fix RLS policies for roof_measurements
-Run a migration to add policies allowing `created_by = auth.uid()` access:
-```sql
-DROP POLICY IF EXISTS "Company members can insert measurements" ON roof_measurements;
-CREATE POLICY "Users can insert measurements" ON roof_measurements
-  FOR INSERT TO authenticated
-  WITH CHECK (created_by = auth.uid());
-
--- Similar for SELECT, UPDATE, DELETE
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
 ```
 
-### Step 2: Fix companyId fallback in InlineRoofMeasurement
-When `companyId` is null, look up the user's company from `company_members` table before inserting. This ensures the company_id field is populated when possible.
+### 2. Fix incorrect source types in packet structures
 
-### Step 3: Add multi-section roof support
-In `InlineRoofMeasurement.tsx`:
-- Add state for additional roof sections (flat area additions)
-- After AI results display, show "Add Flat Roof Section" button
-- Show a small form for additional sqft entry
-- Combine totals in the display and save logic
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
 
-### Step 4: Add report/PDF generation button
-Add a "Generate Report" button next to the save button that produces a printable measurement summary using jspdf (already installed).
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
