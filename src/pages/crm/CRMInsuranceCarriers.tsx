@@ -28,7 +28,7 @@ export default function CRMInsuranceCarriers() {
   const { toast } = useToast();
 
   const load = async () => {
-    const { data } = await supabase.from("insurance_carriers").select("*").order("created_at", { ascending: false });
+    const { data } = await (supabase as any).from("insurance_carriers").select("*").order("created_at", { ascending: false });
     setCarriers((data as Carrier[]) || []);
     setLoading(false);
   };
