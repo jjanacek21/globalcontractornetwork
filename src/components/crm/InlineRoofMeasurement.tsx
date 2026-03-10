@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,15 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Loader2, Ruler, AlertCircle, MapPin, BrainCircuit,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Save, CheckCircle, PenLine, DollarSign,
-  Plus, Trash2, FileText
+  Loader2, AlertCircle, MapPin, BrainCircuit,
+  Save, CheckCircle, PenLine, DollarSign,
+  Plus, Trash2, FileText, LocateFixed
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface SolarMeasurementData {
   address: string;
@@ -35,13 +38,26 @@ interface SolarMeasurementData {
   ai_roof_type_warning: string | null;
 }
 
-type RoofTypeOverride = "flat" | "low_slope" | "pitched";
+type PinRoofType = "flat" | "pitched";
 
-interface AdditionalSection {
+interface RoofPin {
   id: string;
+  lat: number;
+  lng: number;
+  roofType: PinRoofType;
   label: string;
-  sqft: number;
-  roofType: "flat" | "low_slope" | "pitched";
+  loading: boolean;
+  result: SolarMeasurementData | null;
+  error: string | null;
+}
+
+interface PinCalc {
+  flatSqft: number;
+  multiplier: number;
+  waste: number;
+  pitchedSqft: number;
+  withWaste: number;
+  squares: number;
 }
 
 interface Props {
@@ -53,157 +69,240 @@ interface Props {
   onMeasurementSaved: (measurementId?: string) => void;
 }
 
-const NUDGE_AMOUNT = 0.00015;
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function recalcForRoofType(result: SolarMeasurementData, roofType: RoofTypeOverride) {
-  const flatSqft = result.total_flat_area_sqft;
-  let multiplier: number;
-  let waste: number;
-
-  if (roofType === "flat") {
-    multiplier = 1.0;
-    waste = 5;
-  } else if (roofType === "low_slope") {
-    multiplier = 1.02;
-    waste = 5;
-  } else {
-    multiplier = result.pitch_multiplier;
-    waste = result.waste_percent;
-  }
-
-  const pitched = flatSqft * multiplier;
-  const withWaste = pitched * (1 + waste / 100);
+function calcPin(pin: RoofPin): PinCalc | null {
+  if (!pin.result) return null;
+  const flatSqft = pin.result.total_flat_area_sqft;
+  const multiplier = pin.roofType === "flat" ? 1.0 : pin.result.pitch_multiplier;
+  const waste = pin.roofType === "flat" ? 5 : pin.result.waste_percent;
+  const pitchedSqft = flatSqft * multiplier;
+  const withWaste = pitchedSqft * (1 + waste / 100);
   const squares = withWaste / 100;
-
-  return { pitched, waste, squares, multiplier, withWaste };
+  return { flatSqft, multiplier, waste, pitchedSqft, withWaste, squares };
 }
 
-function calcSectionSquares(section: AdditionalSection): number {
-  const mult = section.roofType === "flat" ? 1.0 : section.roofType === "low_slope" ? 1.02 : 1.10;
-  const waste = section.roofType === "pitched" ? 10 : 5;
-  return (section.sqft * mult * (1 + waste / 100)) / 100;
-}
+const PIN_COLORS: Record<PinRoofType, string> = { flat: "#3b82f6", pitched: "#ef4444" };
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function InlineRoofMeasurement({ contactId, contactAddress, companyId, leadId, autoTrigger, onMeasurementSaved }: Props) {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const hasAutoTriggered = useRef(false);
+
+  const [pins, setPins] = useState<RoofPin[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedMeasurementId, setSavedMeasurementId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<SolarMeasurementData | null>(null);
-  const [roofType, setRoofType] = useState<RoofTypeOverride>("pitched");
+
+  // Manual entry
   const [showManual, setShowManual] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
   const [manualData, setManualData] = useState({ squares: "", sqft: "", pitch: "4/12", complexity: "moderate" });
-  const [additionalSections, setAdditionalSections] = useState<AdditionalSection[]>([]);
-  const hasAutoTriggered = useRef(false);
-  const { toast } = useToast();
 
-  useEffect(() => {
-    if (autoTrigger && contactAddress && !hasAutoTriggered.current && !loading && !result) {
-      hasAutoTriggered.current = true;
-      runMeasurement();
-    }
-  }, [autoTrigger, contactAddress]);
-
-  useEffect(() => {
-    if (result?.ai_roof_type_suggestion) {
-      const suggestion = result.ai_roof_type_suggestion as RoofTypeOverride;
-      if (["flat", "low_slope", "pitched"].includes(suggestion)) {
-        setRoofType(suggestion);
+  // ── Geocode address → initial center ──
+  const geocodeAndInit = useCallback(async () => {
+    if (!contactAddress) return;
+    setGeocoding(true);
+    setError("");
+    try {
+      const { data: geoData, error: geoError } = await supabase.functions.invoke("geocode-address", {
+        body: { query: contactAddress, limit: 1 },
+      });
+      if (geoError || !geoData?.success || !geoData?.features?.length) {
+        setError("Could not geocode this address.");
+        return;
       }
+      const [lng, lat] = geoData.features[0].center;
+      initMap(lat, lng);
+    } catch {
+      setError("Could not geocode this address.");
+    } finally {
+      setGeocoding(false);
     }
-  }, [result?.ai_roof_type_suggestion]);
+  }, [contactAddress]);
 
-  const display = result ? recalcForRoofType(result, roofType) : null;
-
-  const additionalSquares = additionalSections.reduce((sum, s) => sum + (s.sqft > 0 ? calcSectionSquares(s) : 0), 0);
-  const additionalSqft = additionalSections.reduce((sum, s) => sum + (s.sqft || 0), 0);
-  const combinedSquares = (display?.squares || 0) + additionalSquares;
-
-  const addSection = () => {
-    setAdditionalSections(prev => [...prev, {
-      id: crypto.randomUUID(),
-      label: `Section ${prev.length + 2}`,
-      sqft: 0,
-      roofType: "flat",
-    }]);
-  };
-
-  const removeSection = (id: string) => {
-    setAdditionalSections(prev => prev.filter(s => s.id !== id));
-  };
-
-  const updateSection = (id: string, field: keyof AdditionalSection, value: any) => {
-    setAdditionalSections(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
-  };
-
-  const runMeasurement = async (latOverride?: number, lngOverride?: number) => {
-    if (!contactAddress && latOverride == null) {
-      setError("No property address found for this contact. Add a property first.");
+  // ── Initialize Mapbox map ──
+  const initMap = (lat: number, lng: number) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 19 });
+      // Add initial pin
+      addPinAtLocation(lat, lng, "pitched", "Main Roof");
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setSaved(false);
-    setSavedMeasurementId(null);
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token || !mapContainerRef.current) return;
 
-    try {
-      let latitude = latOverride;
-      let longitude = lngOverride;
-      const address = contactAddress || "";
+    mapboxgl.accessToken = token;
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/satellite-v9",
+      center: [lng, lat],
+      zoom: 19,
+      pitch: 0,
+      bearing: 0,
+    });
 
-      if (latitude == null || longitude == null) {
-        const { data: geoData, error: geoError } = await supabase.functions.invoke("geocode-address", {
-          body: { query: address, limit: 1 },
+    map.on("load", () => {
+      mapRef.current = map;
+      setMapReady(true);
+      addPinAtLocation(lat, lng, "pitched", "Main Roof");
+    });
+  };
+
+  // ── Auto-trigger ──
+  useEffect(() => {
+    if (autoTrigger && contactAddress && !hasAutoTriggered.current && !geocoding && pins.length === 0) {
+      hasAutoTriggered.current = true;
+      geocodeAndInit();
+    }
+  }, [autoTrigger, contactAddress, geocoding, pins.length, geocodeAndInit]);
+
+  // ── Sync markers with pins ──
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    const currentIds = new Set(pins.map(p => p.id));
+
+    // Remove stale markers
+    markersRef.current.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        marker.remove();
+        markersRef.current.delete(id);
+      }
+    });
+
+    // Add / update markers
+    pins.forEach((pin) => {
+      let marker = markersRef.current.get(pin.id);
+      if (!marker) {
+        const el = document.createElement("div");
+        el.style.width = "28px";
+        el.style.height = "28px";
+        el.style.borderRadius = "50%";
+        el.style.border = "3px solid white";
+        el.style.cursor = "grab";
+        el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
+        el.style.transition = "background-color 0.2s";
+        el.title = pin.label;
+
+        marker = new mapboxgl.Marker({ element: el, draggable: true })
+          .setLngLat([pin.lng, pin.lat])
+          .addTo(map);
+
+        marker.on("dragend", () => {
+          const lngLat = marker!.getLngLat();
+          setPins(prev => prev.map(p =>
+            p.id === pin.id ? { ...p, lat: lngLat.lat, lng: lngLat.lng, result: null, error: null } : p
+          ));
         });
-        if (geoError || !geoData?.success || !geoData?.features?.length) {
-          setError("Could not geocode this address. Please verify the property address is correct.");
-          setLoading(false);
-          return;
-        }
-        const [lng, lat] = geoData.features[0].center;
-        latitude = lat;
-        longitude = lng;
+
+        markersRef.current.set(pin.id, marker);
       }
 
+      // Update color
+      const el = marker.getElement();
+      el.style.backgroundColor = PIN_COLORS[pin.roofType];
+      el.title = pin.label;
+
+      // Update position if not dragging
+      const currentPos = marker.getLngLat();
+      if (Math.abs(currentPos.lat - pin.lat) > 0.000001 || Math.abs(currentPos.lng - pin.lng) > 0.000001) {
+        marker.setLngLat([pin.lng, pin.lat]);
+      }
+    });
+  }, [pins]);
+
+  // ── Pin management ──
+  const addPinAtLocation = (lat: number, lng: number, roofType: PinRoofType, label: string) => {
+    setPins(prev => {
+      // Don't add if one already exists at almost the same spot
+      const exists = prev.some(p => Math.abs(p.lat - lat) < 0.00001 && Math.abs(p.lng - lng) < 0.00001);
+      if (exists) return prev;
+      return [...prev, {
+        id: crypto.randomUUID(),
+        lat, lng, roofType, label,
+        loading: false, result: null, error: null,
+      }];
+    });
+  };
+
+  const addPin = () => {
+    if (pins.length === 0) return;
+    const last = pins[pins.length - 1];
+    // Offset slightly so the new pin is visible
+    const offset = 0.00015;
+    addPinAtLocation(
+      last.lat + offset,
+      last.lng + offset,
+      "flat",
+      `Flat Roof ${pins.filter(p => p.roofType === "flat").length + 1}`
+    );
+  };
+
+  const removePin = (id: string) => {
+    setPins(prev => prev.filter(p => p.id !== id));
+  };
+
+  const updatePinField = (id: string, field: Partial<RoofPin>) => {
+    setPins(prev => prev.map(p => p.id === id ? { ...p, ...field, result: field.roofType !== undefined ? null : p.result } : p));
+  };
+
+  // ── Measure a single pin ──
+  const measurePin = async (pin: RoofPin): Promise<RoofPin> => {
+    try {
       const { data, error: invokeError } = await supabase.functions.invoke("solar-roof-measure", {
-        body: { latitude, longitude, address },
+        body: {
+          latitude: pin.lat,
+          longitude: pin.lng,
+          address: contactAddress || "",
+          roof_type_override: pin.roofType === "flat" ? "flat" : undefined,
+        },
       });
 
       if (invokeError || !data?.success || !data?.data) {
-        setResult(null);
-        setError(data?.error || "Unable to measure this roof right now.");
-        return;
+        return { ...pin, loading: false, error: data?.error || "Unable to measure at this location.", result: null };
       }
 
-      const measData = data.data as SolarMeasurementData;
-      setResult(measData);
-
-      // Auto-add a flat roof placeholder if AI detected a pitched roof
-      if (measData.average_pitch_degrees > 5 && additionalSections.length === 0) {
-        setAdditionalSections([{
-          id: crypto.randomUUID(),
-          label: "Flat Roof (not detected by AI)",
-          sqft: 0,
-          roofType: "flat",
-        }]);
-      }
+      return { ...pin, loading: false, error: null, result: data.data as SolarMeasurementData };
     } catch {
-      setResult(null);
-      setError("Unable to measure this roof right now.");
-    } finally {
-      setLoading(false);
+      return { ...pin, loading: false, error: "Measurement failed.", result: null };
     }
   };
 
-  const nudge = (dLat: number, dLng: number) => {
-    if (!result) return;
-    runMeasurement(result.center.latitude + dLat, result.center.longitude + dLng);
+  // ── Measure all pins ──
+  const measureAllPins = async () => {
+    if (pins.length === 0) return;
+    setMeasuring(true);
+    setSaved(false);
+    setSavedMeasurementId(null);
+
+    // Mark all as loading
+    setPins(prev => prev.map(p => ({ ...p, loading: true, error: null })));
+
+    const results = await Promise.all(pins.map(p => measurePin(p)));
+    setPins(results);
+    setMeasuring(false);
   };
 
+  // ── Computed totals ──
+  const pinCalcs = pins.map(p => ({ pin: p, calc: calcPin(p) }));
+  const measuredPins = pinCalcs.filter(pc => pc.calc !== null);
+  const totalSquares = measuredPins.reduce((sum, pc) => sum + (pc.calc?.squares || 0), 0);
+  const totalSqft = measuredPins.reduce((sum, pc) => sum + (pc.calc?.pitchedSqft || 0), 0);
+  const hasMeasurements = measuredPins.length > 0;
+
+  // ── Save ──
   const resolveCompanyId = async (): Promise<string | null> => {
     if (companyId) return companyId;
     const { data: { session } } = await supabase.auth.getSession();
@@ -219,7 +318,7 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
   };
 
   const saveMeasurement = async () => {
-    if (!result || !display) return;
+    if (!hasMeasurements) return;
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -228,36 +327,45 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         return;
       }
       const resolvedCompanyId = await resolveCompanyId();
-      const totalSqft = Math.round(display.pitched) + additionalSqft;
-      const totalSquares = combinedSquares;
+      const firstMeasured = measuredPins[0];
+      const primaryResult = firstMeasured.pin.result!;
 
       const { data: inserted, error: insertError } = await supabase.from("roof_measurements").insert({
         contact_id: contactId,
         company_id: resolvedCompanyId,
         lead_id: leadId || null,
         created_by: session.user.id,
-        address: result.address,
-        latitude: result.center.latitude,
-        longitude: result.center.longitude,
+        address: primaryResult.address || contactAddress || "",
+        latitude: primaryResult.center.latitude,
+        longitude: primaryResult.center.longitude,
         source: "ai_solar",
-        quality: result.quality,
-        complexity: result.complexity,
-        segments_count: result.roof_segments_count,
-        pitch_degrees: result.average_pitch_degrees,
-        pitch_multiplier: display.multiplier,
-        waste_percent: display.waste,
-        total_area_sqft: totalSqft,
+        quality: primaryResult.quality,
+        complexity: primaryResult.complexity,
+        segments_count: primaryResult.roof_segments_count,
+        pitch_degrees: primaryResult.average_pitch_degrees,
+        pitch_multiplier: firstMeasured.calc!.multiplier,
+        waste_percent: firstMeasured.calc!.waste,
+        total_area_sqft: Math.round(totalSqft),
         total_squares: totalSquares,
-        roof_type: roofType,
+        roof_type: pins.some(p => p.roofType === "pitched") ? "pitched" : "flat",
         solar_api_response: {
-          ...result,
-          additional_sections: additionalSections.filter(s => s.sqft > 0),
+          pins: pins.map(p => ({
+            id: p.id,
+            label: p.label,
+            roofType: p.roofType,
+            lat: p.lat,
+            lng: p.lng,
+            result: p.result,
+            calc: calcPin(p),
+          })),
+          combined_squares: totalSquares,
+          combined_sqft: Math.round(totalSqft),
         } as any,
       }).select("id").single();
       if (insertError) throw insertError;
       setSaved(true);
       setSavedMeasurementId(inserted.id);
-      toast({ title: "Measurement saved", description: `${totalSquares.toFixed(2)} squares recorded for this contact.` });
+      toast({ title: "Measurement saved", description: `${totalSquares.toFixed(2)} combined squares recorded.` });
       onMeasurementSaved(inserted.id);
     } catch (err: any) {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -266,6 +374,7 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     }
   };
 
+  // ── Manual save ──
   const saveManualMeasurement = async () => {
     const squares = parseFloat(manualData.squares);
     const sqft = parseFloat(manualData.sqft);
@@ -277,7 +386,7 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
-        toast({ title: "Authentication required", description: "Please log in to save measurements.", variant: "destructive" });
+        toast({ title: "Authentication required", variant: "destructive" });
         return;
       }
       const resolvedCompanyId = await resolveCompanyId();
@@ -307,93 +416,71 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     }
   };
 
+  // ── PDF Report ──
   const generateReport = () => {
-    if (!result || !display) return;
+    if (!hasMeasurements) return;
     const doc = new jsPDF();
     const margin = 20;
     let y = margin;
 
     doc.setFontSize(18);
-    doc.text("Roof Measurement Report", margin, y);
-    y += 12;
-
+    doc.text("Roof Measurement Report", margin, y); y += 12;
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, y);
-    y += 14;
-
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, y); y += 14;
     doc.setTextColor(0);
-    doc.setFontSize(12);
-    doc.text("Property Details", margin, y);
-    y += 8;
-    doc.setFontSize(10);
-    doc.text(`Address: ${result.address}`, margin, y); y += 6;
-    doc.text(`Coordinates: ${result.center.latitude.toFixed(6)}, ${result.center.longitude.toFixed(6)}`, margin, y); y += 6;
-    doc.text(`Data Quality: ${result.quality}`, margin, y); y += 6;
-    doc.text(`Roof Complexity: ${result.complexity}`, margin, y); y += 6;
-    doc.text(`Segments Detected: ${result.roof_segments_count}`, margin, y); y += 12;
 
     doc.setFontSize(12);
-    doc.text("Primary Roof Section (AI Measured)", margin, y); y += 8;
+    doc.text("Property Details", margin, y); y += 8;
     doc.setFontSize(10);
-    doc.text(`Flat Area: ${result.total_flat_area_sqft.toLocaleString()} sq ft`, margin, y); y += 6;
-    doc.text(`Roof Type: ${roofType === "flat" ? "Flat" : roofType === "low_slope" ? "Low Slope" : "Pitched"}`, margin, y); y += 6;
-    doc.text(`Pitch: ${result.average_pitch_degrees.toFixed(1)}° (×${display.multiplier.toFixed(2)})`, margin, y); y += 6;
-    doc.text(`Pitched Area: ${Math.round(display.pitched).toLocaleString()} sq ft`, margin, y); y += 6;
-    doc.text(`Waste Factor: ${display.waste}%`, margin, y); y += 6;
-    doc.text(`Squares (this section): ${display.squares.toFixed(2)}`, margin, y); y += 12;
+    doc.text(`Address: ${contactAddress || "N/A"}`, margin, y); y += 6;
+    doc.text(`Total Pins Measured: ${measuredPins.length}`, margin, y); y += 12;
 
-    if (additionalSections.length > 0) {
+    measuredPins.forEach(({ pin, calc }, idx) => {
+      if (y > 250) { doc.addPage(); y = margin; }
       doc.setFontSize(12);
-      doc.text("Additional Roof Sections", margin, y); y += 8;
+      doc.text(`Pin ${idx + 1}: ${pin.label} (${pin.roofType === "flat" ? "Flat" : "Pitched"})`, margin, y); y += 7;
       doc.setFontSize(10);
-      additionalSections.filter(s => s.sqft > 0).forEach((section) => {
-        const sq = calcSectionSquares(section);
-        doc.text(`${section.label}: ${section.sqft.toLocaleString()} sq ft (${section.roofType}) → ${sq.toFixed(2)} squares`, margin, y);
-        y += 6;
-      });
-      y += 6;
-    }
+      doc.text(`Coordinates: ${pin.lat.toFixed(6)}, ${pin.lng.toFixed(6)}`, margin, y); y += 5;
+      doc.text(`Flat Area: ${calc!.flatSqft.toLocaleString()} sq ft`, margin, y); y += 5;
+      doc.text(`Multiplier: ×${calc!.multiplier.toFixed(2)} | Waste: ${calc!.waste}%`, margin, y); y += 5;
+      doc.text(`Pitched Area: ${Math.round(calc!.pitchedSqft).toLocaleString()} sq ft`, margin, y); y += 5;
+      doc.text(`Squares: ${calc!.squares.toFixed(2)}`, margin, y); y += 10;
+    });
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(`Combined Total: ${combinedSquares.toFixed(2)} squares`, margin, y); y += 8;
+    doc.text(`Combined Total: ${totalSquares.toFixed(2)} squares (${Math.round(totalSqft).toLocaleString()} sq ft)`, margin, y);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Total Area: ${(Math.round(display.pitched) + additionalSqft).toLocaleString()} sq ft`, margin, y); y += 12;
 
-    if (result.segments.length > 0) {
-      doc.setFontSize(12);
-      doc.text("Segment Breakdown", margin, y); y += 8;
-      doc.setFontSize(9);
-      doc.text("Segment | Area (sq ft) | Pitch (°) | Azimuth (°)", margin, y); y += 5;
-      doc.setDrawColor(200);
-      doc.line(margin, y, 190, y); y += 3;
-      result.segments.forEach((seg, i) => {
-        if (y > 270) { doc.addPage(); y = margin; }
-        doc.text(`${i + 1}        | ${seg.area_sqft.toLocaleString().padStart(10)}    | ${seg.pitch_degrees.toFixed(1).padStart(8)}  | ${seg.azimuth_degrees.toFixed(1)}`, margin, y);
-        y += 5;
-      });
-    }
-
-    const filename = `roof-report-${(result.address || "property").replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
+    const filename = `roof-report-${(contactAddress || "property").replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
     doc.save(filename);
     toast({ title: "Report downloaded", description: filename });
   };
 
+  // ── Cleanup ──
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach(m => m.remove());
+      mapRef.current?.remove();
+    };
+  }, []);
+
+  // ─── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      {/* Action Buttons Row */}
+      {/* Action Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button
-          onClick={() => runMeasurement()}
-          disabled={loading || !contactAddress}
+          onClick={geocodeAndInit}
+          disabled={geocoding || !contactAddress}
           className="bg-primary hover:bg-primary/90"
         >
-          {loading ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Measuring...</>
+          {geocoding ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Locating...</>
           ) : (
-            <><BrainCircuit className="mr-2 h-4 w-4" />Run AI Measurement</>
+            <><LocateFixed className="mr-2 h-4 w-4" />Load Satellite Map</>
           )}
         </Button>
         <Button variant="outline" onClick={() => setShowManual(!showManual)}>
@@ -401,11 +488,11 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         </Button>
       </div>
 
-      {/* AI Address Info */}
-      {!result && !showManual && (
+      {/* Address info */}
+      {pins.length === 0 && !showManual && (
         <p className="text-sm text-muted-foreground">
           {contactAddress
-            ? `Will measure roof at: ${contactAddress}`
+            ? `Will load satellite map for: ${contactAddress}`
             : "No property address found — add one in the Details tab first."}
         </p>
       )}
@@ -417,7 +504,7 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         </div>
       )}
 
-      {/* Manual Entry Form */}
+      {/* Manual Entry */}
       {showManual && (
         <Card className="border-dashed border-2 border-muted-foreground/20">
           <CardHeader className="pb-3">
@@ -469,211 +556,200 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         </Card>
       )}
 
-      {/* Inline AI Results */}
-      {result && display && (
+      {/* Interactive Map + Pins */}
+      {pins.length > 0 && (
         <div className="space-y-4">
-          {result.ai_roof_type_warning && (
-            <div className="rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-foreground flex items-start gap-3">
-              <BrainCircuit className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium">AI Roof Analysis</p>
-                <p className="text-muted-foreground mt-1">{result.ai_roof_type_warning}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Roof Type Override Toggle */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <Label className="text-sm font-medium">Roof Type:</Label>
-                <ToggleGroup type="single" value={roofType} onValueChange={(v) => { if (v) setRoofType(v as RoofTypeOverride); }}>
-                  <ToggleGroupItem value="flat" className="text-xs">Flat</ToggleGroupItem>
-                  <ToggleGroupItem value="low_slope" className="text-xs">Low Slope</ToggleGroupItem>
-                  <ToggleGroupItem value="pitched" className="text-xs">Pitched</ToggleGroupItem>
-                </ToggleGroup>
-                {roofType !== "pitched" && (
-                  <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-700">
-                    Override: {roofType === "flat" ? "×1.0 multiplier, 5% waste" : "×1.02 multiplier, 5% waste"}
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Satellite Image */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="h-5 w-5 text-primary" />Satellite Verification
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">Confirm the marker is on the correct roof. Use arrows to nudge.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="relative w-full">
-                {result.satellite_image ? (
-                  <img src={result.satellite_image} alt={`Satellite view of ${result.address}`} className="w-full rounded-lg border border-border" loading="eager" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                ) : (
-                  <div className="w-full h-48 rounded-lg border border-border bg-muted flex items-center justify-center text-sm text-muted-foreground">Satellite image unavailable</div>
-                )}
-                <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-0.5">
-                  <div />
-                  <Button size="icon" variant="secondary" className="h-7 w-7 opacity-80 hover:opacity-100" onClick={() => nudge(NUDGE_AMOUNT, 0)} disabled={loading}><ChevronUp className="h-4 w-4" /></Button>
-                  <div />
-                  <Button size="icon" variant="secondary" className="h-7 w-7 opacity-80 hover:opacity-100" onClick={() => nudge(0, -NUDGE_AMOUNT)} disabled={loading}><ChevronLeft className="h-4 w-4" /></Button>
-                  <div />
-                  <Button size="icon" variant="secondary" className="h-7 w-7 opacity-80 hover:opacity-100" onClick={() => nudge(0, NUDGE_AMOUNT)} disabled={loading}><ChevronRight className="h-4 w-4" /></Button>
-                  <div />
-                  <Button size="icon" variant="secondary" className="h-7 w-7 opacity-80 hover:opacity-100" onClick={() => nudge(-NUDGE_AMOUNT, 0)} disabled={loading}><ChevronDown className="h-4 w-4" /></Button>
-                  <div />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground">
-                <span>{result.address}</span>
-                <span>{result.center.latitude.toFixed(6)}, {result.center.longitude.toFixed(6)}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Summary Cards */}
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Flat Area</p>
-                <p className="text-xl font-bold">{result.total_flat_area_sqft.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">sq ft</span></p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">{roofType === "flat" ? "True Area" : "Pitched Area"}</p>
-                <p className="text-xl font-bold">{Math.round(display.pitched).toLocaleString()} <span className="text-sm font-normal text-muted-foreground">sq ft</span></p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">
-                  {additionalSections.length > 0 ? "Primary Squares" : "Total Squares"}
-                </p>
-                <p className="text-xl font-bold text-primary">{display.squares.toFixed(2)}</p>
-                <p className="text-[10px] text-muted-foreground">Incl. {display.waste}% waste</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <p className="text-xs text-muted-foreground">Avg Pitch</p>
-                  <Badge variant="outline" className="text-[10px]">{result.quality}</Badge>
-                </div>
-                <p className="text-xl font-bold">{result.average_pitch_degrees.toFixed(1)}°</p>
-                <p className="text-[10px] text-muted-foreground">{result.complexity} · {result.roof_segments_count} segments</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Flat Roof Info Banner */}
-          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-foreground flex items-start gap-3">
+          {/* Info banner */}
+          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-foreground flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium">Does this property have additional roof sections?</p>
-              <p className="text-muted-foreground mt-1">The AI may not detect flat or white roofs (e.g. flat porches, garages, additions). Use the sections below to include any missed areas.</p>
+              <p className="font-medium">Multi-Pin Measurement</p>
+              <p className="text-muted-foreground mt-0.5">
+                Drag each pin to the center of a roof section. Select Flat or Pitched for each.
+                Click <strong>Measure All Pins</strong> to get area data at each location.
+              </p>
             </div>
           </div>
 
-          {/* Additional Roof Sections */}
+          {/* Map */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Additional Roof Sections</CardTitle>
-                <Button variant="outline" size="sm" onClick={addSection}>
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />Add Section
-                </Button>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MapPin className="h-5 w-5 text-primary" />Satellite Map
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={addPin}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />Add Pin
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={measureAllPins}
+                    disabled={measuring || pins.length === 0}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    {measuring ? (
+                      <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Measuring...</>
+                    ) : (
+                      <><BrainCircuit className="mr-1.5 h-3.5 w-3.5" />Measure All Pins</>
+                    )}
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Add flat roofs, garages, or other structures not captured by AI measurement.
+                <span className="inline-block w-3 h-3 rounded-full mr-1 align-middle" style={{ backgroundColor: PIN_COLORS.pitched }} /> Pitched
+                <span className="inline-block w-3 h-3 rounded-full ml-3 mr-1 align-middle" style={{ backgroundColor: PIN_COLORS.flat }} /> Flat
               </p>
             </CardHeader>
-            {additionalSections.length > 0 && (
-              <CardContent className="space-y-3">
-                {additionalSections.map((section) => (
-                  <div key={section.id} className="flex items-end gap-3 p-3 rounded-md bg-muted/50">
-                    <div className="space-y-1 flex-1 min-w-[120px]">
-                      <Label className="text-xs">Label</Label>
-                      <Input
-                        value={section.label}
-                        onChange={(e) => updateSection(section.id, "label", e.target.value)}
-                        placeholder="e.g. Flat roof annex"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1 w-28">
-                      <Label className="text-xs">Sq Ft</Label>
-                      <Input
-                        type="number"
-                        value={section.sqft || ""}
-                        onChange={(e) => updateSection(section.id, "sqft", parseFloat(e.target.value) || 0)}
-                        placeholder="e.g. 800"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1 w-28">
-                      <Label className="text-xs">Type</Label>
-                      <Select value={section.roofType} onValueChange={(v) => updateSection(section.id, "roofType", v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="flat">Flat</SelectItem>
-                          <SelectItem value="low_slope">Low Slope</SelectItem>
-                          <SelectItem value="pitched">Pitched</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="text-sm font-medium w-20 text-right pb-0.5">
-                      {section.sqft > 0 ? `${calcSectionSquares(section).toFixed(2)} sq` : "—"}
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeSection(section.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-
-                {/* Combined Total */}
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <p className="text-sm font-medium">Combined Total</p>
-                  <p className="text-lg font-bold text-primary">{combinedSquares.toFixed(2)} squares</p>
-                </div>
-              </CardContent>
-            )}
+            <CardContent>
+              <div
+                ref={mapContainerRef}
+                className="w-full rounded-lg border border-border overflow-hidden"
+                style={{ height: "400px" }}
+              />
+            </CardContent>
           </Card>
 
-          {/* Save + Report + Estimate Buttons */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              onClick={saveMeasurement}
-              disabled={saving || saved}
-              className={saved ? "bg-green-600 hover:bg-green-600" : ""}
-            >
-              {saving ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-              ) : saved ? (
-                <><CheckCircle className="mr-2 h-4 w-4" /> Saved</>
-              ) : (
-                <><Save className="mr-2 h-4 w-4" /> Save Measurement to Contact</>
+          {/* Pin List */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Roof Pins ({pins.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pins.map((pin, idx) => {
+                const pc = calcPin(pin);
+                return (
+                  <div
+                    key={pin.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border"
+                  >
+                    {/* Pin indicator */}
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-white shrink-0 shadow-sm flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ backgroundColor: PIN_COLORS[pin.roofType] }}
+                    >
+                      {idx + 1}
+                    </div>
+
+                    {/* Label */}
+                    <div className="flex-1 min-w-0">
+                      <Input
+                        value={pin.label}
+                        onChange={(e) => updatePinField(pin.id, { label: e.target.value })}
+                        className="h-7 text-sm bg-background"
+                      />
+                    </div>
+
+                    {/* Roof type */}
+                    <Select
+                      value={pin.roofType}
+                      onValueChange={(v) => updatePinField(pin.id, { roofType: v as PinRoofType, label: v === "flat" ? `Flat Roof ${idx + 1}` : `Pitched Roof ${idx + 1}` })}
+                    >
+                      <SelectTrigger className="h-7 w-28 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flat">Flat Roof</SelectItem>
+                        <SelectItem value="pitched">Pitched Roof</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Result or loading */}
+                    <div className="w-24 text-right text-sm">
+                      {pin.loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin ml-auto text-muted-foreground" />
+                      ) : pin.error ? (
+                        <span className="text-xs text-destructive">Error</span>
+                      ) : pc ? (
+                        <span className="font-bold text-primary">{pc.squares.toFixed(2)} sq</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not measured</span>
+                      )}
+                    </div>
+
+                    {/* Remove */}
+                    {pins.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                        onClick={() => removePin(pin.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Per-pin detail cards when measured */}
+              {measuredPins.length > 0 && (
+                <div className="pt-3 border-t border-border space-y-2">
+                  {measuredPins.map(({ pin, calc }) => (
+                    <div key={pin.id} className="grid grid-cols-4 gap-2 text-xs">
+                      <div className="p-2 rounded bg-background border border-border">
+                        <p className="text-muted-foreground">Flat Area</p>
+                        <p className="font-semibold">{calc!.flatSqft.toLocaleString()} sqft</p>
+                      </div>
+                      <div className="p-2 rounded bg-background border border-border">
+                        <p className="text-muted-foreground">Multiplier</p>
+                        <p className="font-semibold">×{calc!.multiplier.toFixed(2)}</p>
+                      </div>
+                      <div className="p-2 rounded bg-background border border-border">
+                        <p className="text-muted-foreground">Waste</p>
+                        <p className="font-semibold">{calc!.waste}%</p>
+                      </div>
+                      <div className="p-2 rounded bg-background border border-border">
+                        <p className="text-muted-foreground">{pin.label}</p>
+                        <p className="font-bold text-primary">{calc!.squares.toFixed(2)} squares</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </Button>
-            <Button variant="outline" onClick={generateReport}>
-              <FileText className="mr-2 h-4 w-4" /> Generate Report
-            </Button>
-            {saved && savedMeasurementId && (
+
+              {/* Combined Total */}
+              {measuredPins.length > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <div>
+                    <p className="text-sm font-medium">Combined Total</p>
+                    <p className="text-xs text-muted-foreground">{Math.round(totalSqft).toLocaleString()} sq ft across {measuredPins.length} sections</p>
+                  </div>
+                  <p className="text-xl font-bold text-primary">{totalSquares.toFixed(2)} squares</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Save / Report / Estimate */}
+          {hasMeasurements && (
+            <div className="flex items-center gap-3 flex-wrap">
               <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contactId}&measurement_id=${savedMeasurementId}`)}
+                onClick={saveMeasurement}
+                disabled={saving || saved}
+                className={saved ? "bg-green-600 hover:bg-green-600" : ""}
               >
-                <DollarSign className="mr-2 h-4 w-4" /> Create Estimate
+                {saving ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                ) : saved ? (
+                  <><CheckCircle className="mr-2 h-4 w-4" /> Saved</>
+                ) : (
+                  <><Save className="mr-2 h-4 w-4" /> Save Measurement</>
+                )}
               </Button>
-            )}
-            {saved && !savedMeasurementId && (
-              <p className="text-sm text-green-600">Measurement linked to this contact and ready for estimates.</p>
-            )}
-          </div>
+              <Button variant="outline" onClick={generateReport}>
+                <FileText className="mr-2 h-4 w-4" /> Generate Report
+              </Button>
+              {saved && savedMeasurementId && (
+                <Button
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={() => navigate(`/member/crm/estimates/new?contact_id=${contactId}&measurement_id=${savedMeasurementId}`)}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" /> Create Estimate
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
