@@ -110,13 +110,25 @@ serve(async (req) => {
       .filter((segment: { area_m2: number }) => segment.area_m2 > 0)
       .sort((a: { area_m2: number }, b: { area_m2: number }) => b.area_m2 - a.area_m2);
 
+    // Filter segments for flat/low_slope overrides
+    let useSegments = segments;
+    if (roof_type_override === "flat") {
+      const flat = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5);
+      if (flat.length > 0) useSegments = flat;
+    } else if (roof_type_override === "low_slope") {
+      const low = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 10);
+      if (low.length > 0) useSegments = low;
+    }
+
     const segmentCount = segments.length;
-    const weightedPitchSum = segments.reduce(
+    const filteredSegmentsCount = useSegments.length;
+
+    const weightedPitchSum = useSegments.reduce(
       (acc: number, segment: { area_m2: number; pitch_degrees: number }) => acc + segment.area_m2 * segment.pitch_degrees,
       0,
     );
 
-    const segmentAreaM2 = segments.reduce(
+    const segmentAreaM2 = useSegments.reduce(
       (acc: number, segment: { area_m2: number }) => acc + segment.area_m2,
       0,
     );
@@ -260,6 +272,7 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       satellite_image,
       center: { latitude: centerLat, longitude: centerLng },
       segments,
+      filtered_segments_count: filteredSegmentsCount,
       ai_roof_type_suggestion,
       ai_roof_type_warning,
     };
