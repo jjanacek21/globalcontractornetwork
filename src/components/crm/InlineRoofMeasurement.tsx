@@ -10,9 +10,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, Ruler, AlertCircle, MapPin, BrainCircuit,
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Save, CheckCircle, PenLine, DollarSign
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Save, CheckCircle, PenLine, DollarSign,
+  Plus, Trash2, FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
 
 interface SolarMeasurementData {
   address: string;
@@ -34,6 +36,13 @@ interface SolarMeasurementData {
 }
 
 type RoofTypeOverride = "flat" | "low_slope" | "pitched";
+
+interface AdditionalSection {
+  id: string;
+  label: string;
+  sqft: number;
+  roofType: "flat" | "low_slope" | "pitched";
+}
 
 interface Props {
   contactId: string;
@@ -69,6 +78,12 @@ function recalcForRoofType(result: SolarMeasurementData, roofType: RoofTypeOverr
   return { pitched, waste, squares, multiplier, withWaste };
 }
 
+function calcSectionSquares(section: AdditionalSection): number {
+  const mult = section.roofType === "flat" ? 1.0 : section.roofType === "low_slope" ? 1.02 : 1.10;
+  const waste = section.roofType === "pitched" ? 10 : 5;
+  return (section.sqft * mult * (1 + waste / 100)) / 100;
+}
+
 export function InlineRoofMeasurement({ contactId, contactAddress, companyId, leadId, autoTrigger, onMeasurementSaved }: Props) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -81,10 +96,10 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
   const [showManual, setShowManual] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
   const [manualData, setManualData] = useState({ squares: "", sqft: "", pitch: "4/12", complexity: "moderate" });
+  const [additionalSections, setAdditionalSections] = useState<AdditionalSection[]>([]);
   const hasAutoTriggered = useRef(false);
   const { toast } = useToast();
 
-  // Auto-trigger AI measurement when requested from header button
   useEffect(() => {
     if (autoTrigger && contactAddress && !hasAutoTriggered.current && !loading && !result) {
       hasAutoTriggered.current = true;
@@ -92,7 +107,6 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     }
   }, [autoTrigger, contactAddress]);
 
-  // Auto-select roof type from AI suggestion
   useEffect(() => {
     if (result?.ai_roof_type_suggestion) {
       const suggestion = result.ai_roof_type_suggestion as RoofTypeOverride;
@@ -103,6 +117,27 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
   }, [result?.ai_roof_type_suggestion]);
 
   const display = result ? recalcForRoofType(result, roofType) : null;
+
+  const additionalSquares = additionalSections.reduce((sum, s) => sum + (s.sqft > 0 ? calcSectionSquares(s) : 0), 0);
+  const additionalSqft = additionalSections.reduce((sum, s) => sum + (s.sqft || 0), 0);
+  const combinedSquares = (display?.squares || 0) + additionalSquares;
+
+  const addSection = () => {
+    setAdditionalSections(prev => [...prev, {
+      id: crypto.randomUUID(),
+      label: `Section ${prev.length + 2}`,
+      sqft: 0,
+      roofType: "flat",
+    }]);
+  };
+
+  const removeSection = (id: string) => {
+    setAdditionalSections(prev => prev.filter(s => s.id !== id));
+  };
+
+  const updateSection = (id: string, field: keyof AdditionalSection, value: any) => {
+    setAdditionalSections(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
 
   const runMeasurement = async (latOverride?: number, lngOverride?: number) => {
     if (!contactAddress && latOverride == null) {
@@ -158,16 +193,38 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     runMeasurement(result.center.latitude + dLat, result.center.longitude + dLng);
   };
 
+  const resolveCompanyId = async (): Promise<string | null> => {
+    if (companyId) return companyId;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) return null;
+    const { data } = await supabase
+      .from("company_members")
+      .select("company_id")
+      .eq("user_id", session.user.id)
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+    return data?.company_id || null;
+  };
+
   const saveMeasurement = async () => {
     if (!result || !display) return;
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast({ title: "Authentication required", description: "Please log in to save measurements.", variant: "destructive" });
+        return;
+      }
+      const resolvedCompanyId = await resolveCompanyId();
+      const totalSqft = Math.round(display.pitched) + additionalSqft;
+      const totalSquares = combinedSquares;
+
       const { data: inserted, error: insertError } = await supabase.from("roof_measurements").insert({
         contact_id: contactId,
-        company_id: companyId,
+        company_id: resolvedCompanyId,
         lead_id: leadId || null,
-        created_by: session?.user?.id || null,
+        created_by: session.user.id,
         address: result.address,
         latitude: result.center.latitude,
         longitude: result.center.longitude,
@@ -178,15 +235,18 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
         pitch_degrees: result.average_pitch_degrees,
         pitch_multiplier: display.multiplier,
         waste_percent: display.waste,
-        total_area_sqft: display.pitched,
-        total_squares: display.squares,
+        total_area_sqft: totalSqft,
+        total_squares: totalSquares,
         roof_type: roofType,
-        solar_api_response: result as any,
+        solar_api_response: {
+          ...result,
+          additional_sections: additionalSections.filter(s => s.sqft > 0),
+        } as any,
       }).select("id").single();
       if (insertError) throw insertError;
       setSaved(true);
       setSavedMeasurementId(inserted.id);
-      toast({ title: "Measurement saved", description: `${display.squares.toFixed(2)} squares recorded for this contact.` });
+      toast({ title: "Measurement saved", description: `${totalSquares.toFixed(2)} squares recorded for this contact.` });
       onMeasurementSaved(inserted.id);
     } catch (err: any) {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
@@ -205,11 +265,16 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     setManualSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast({ title: "Authentication required", description: "Please log in to save measurements.", variant: "destructive" });
+        return;
+      }
+      const resolvedCompanyId = await resolveCompanyId();
       const { data: inserted, error: insertError } = await supabase.from("roof_measurements").insert({
         contact_id: contactId,
-        company_id: companyId,
+        company_id: resolvedCompanyId,
         lead_id: leadId || null,
-        created_by: session?.user?.id || null,
+        created_by: session.user.id,
         address: contactAddress || "Manual entry",
         source: "manual",
         complexity: manualData.complexity,
@@ -229,6 +294,80 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
     } finally {
       setManualSaving(false);
     }
+  };
+
+  const generateReport = () => {
+    if (!result || !display) return;
+    const doc = new jsPDF();
+    const margin = 20;
+    let y = margin;
+
+    doc.setFontSize(18);
+    doc.text("Roof Measurement Report", margin, y);
+    y += 12;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, y);
+    y += 14;
+
+    doc.setTextColor(0);
+    doc.setFontSize(12);
+    doc.text("Property Details", margin, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Address: ${result.address}`, margin, y); y += 6;
+    doc.text(`Coordinates: ${result.center.latitude.toFixed(6)}, ${result.center.longitude.toFixed(6)}`, margin, y); y += 6;
+    doc.text(`Data Quality: ${result.quality}`, margin, y); y += 6;
+    doc.text(`Roof Complexity: ${result.complexity}`, margin, y); y += 6;
+    doc.text(`Segments Detected: ${result.roof_segments_count}`, margin, y); y += 12;
+
+    doc.setFontSize(12);
+    doc.text("Primary Roof Section (AI Measured)", margin, y); y += 8;
+    doc.setFontSize(10);
+    doc.text(`Flat Area: ${result.total_flat_area_sqft.toLocaleString()} sq ft`, margin, y); y += 6;
+    doc.text(`Roof Type: ${roofType === "flat" ? "Flat" : roofType === "low_slope" ? "Low Slope" : "Pitched"}`, margin, y); y += 6;
+    doc.text(`Pitch: ${result.average_pitch_degrees.toFixed(1)}° (×${display.multiplier.toFixed(2)})`, margin, y); y += 6;
+    doc.text(`Pitched Area: ${Math.round(display.pitched).toLocaleString()} sq ft`, margin, y); y += 6;
+    doc.text(`Waste Factor: ${display.waste}%`, margin, y); y += 6;
+    doc.text(`Squares (this section): ${display.squares.toFixed(2)}`, margin, y); y += 12;
+
+    if (additionalSections.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Additional Roof Sections", margin, y); y += 8;
+      doc.setFontSize(10);
+      additionalSections.filter(s => s.sqft > 0).forEach((section) => {
+        const sq = calcSectionSquares(section);
+        doc.text(`${section.label}: ${section.sqft.toLocaleString()} sq ft (${section.roofType}) → ${sq.toFixed(2)} squares`, margin, y);
+        y += 6;
+      });
+      y += 6;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Combined Total: ${combinedSquares.toFixed(2)} squares`, margin, y); y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Total Area: ${(Math.round(display.pitched) + additionalSqft).toLocaleString()} sq ft`, margin, y); y += 12;
+
+    if (result.segments.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Segment Breakdown", margin, y); y += 8;
+      doc.setFontSize(9);
+      doc.text("Segment | Area (sq ft) | Pitch (°) | Azimuth (°)", margin, y); y += 5;
+      doc.setDrawColor(200);
+      doc.line(margin, y, 190, y); y += 3;
+      result.segments.forEach((seg, i) => {
+        if (y > 270) { doc.addPage(); y = margin; }
+        doc.text(`${i + 1}        | ${seg.area_sqft.toLocaleString().padStart(10)}    | ${seg.pitch_degrees.toFixed(1).padStart(8)}  | ${seg.azimuth_degrees.toFixed(1)}`, margin, y);
+        y += 5;
+      });
+    }
+
+    const filename = `roof-report-${(result.address || "property").replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
+    doc.save(filename);
+    toast({ title: "Report downloaded", description: filename });
   };
 
   return (
@@ -401,7 +540,9 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
             </Card>
             <Card>
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Total Squares</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {additionalSections.length > 0 ? "Primary Squares" : "Total Squares"}
+                </p>
                 <p className="text-xl font-bold text-primary">{display.squares.toFixed(2)}</p>
                 <p className="text-[10px] text-muted-foreground">Incl. {display.waste}% waste</p>
               </CardContent>
@@ -418,7 +559,72 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
             </Card>
           </div>
 
-          {/* Save + Create Estimate Buttons */}
+          {/* Additional Roof Sections */}
+          <Card className="border-dashed border-2 border-muted-foreground/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Additional Roof Sections</CardTitle>
+                <Button variant="outline" size="sm" onClick={addSection}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />Add Section
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add flat roofs, garages, or other structures not captured by AI measurement.
+              </p>
+            </CardHeader>
+            {additionalSections.length > 0 && (
+              <CardContent className="space-y-3">
+                {additionalSections.map((section) => (
+                  <div key={section.id} className="flex items-end gap-3 p-3 rounded-md bg-muted/50">
+                    <div className="space-y-1 flex-1 min-w-[120px]">
+                      <Label className="text-xs">Label</Label>
+                      <Input
+                        value={section.label}
+                        onChange={(e) => updateSection(section.id, "label", e.target.value)}
+                        placeholder="e.g. Flat roof annex"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1 w-28">
+                      <Label className="text-xs">Sq Ft</Label>
+                      <Input
+                        type="number"
+                        value={section.sqft || ""}
+                        onChange={(e) => updateSection(section.id, "sqft", parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 800"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1 w-28">
+                      <Label className="text-xs">Type</Label>
+                      <Select value={section.roofType} onValueChange={(v) => updateSection(section.id, "roofType", v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="flat">Flat</SelectItem>
+                          <SelectItem value="low_slope">Low Slope</SelectItem>
+                          <SelectItem value="pitched">Pitched</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-sm font-medium w-20 text-right pb-0.5">
+                      {section.sqft > 0 ? `${calcSectionSquares(section).toFixed(2)} sq` : "—"}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeSection(section.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Combined Total */}
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <p className="text-sm font-medium">Combined Total</p>
+                  <p className="text-lg font-bold text-primary">{combinedSquares.toFixed(2)} squares</p>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Save + Report + Estimate Buttons */}
           <div className="flex items-center gap-3 flex-wrap">
             <Button
               onClick={saveMeasurement}
@@ -432,6 +638,9 @@ export function InlineRoofMeasurement({ contactId, contactAddress, companyId, le
               ) : (
                 <><Save className="mr-2 h-4 w-4" /> Save Measurement to Contact</>
               )}
+            </Button>
+            <Button variant="outline" onClick={generateReport}>
+              <FileText className="mr-2 h-4 w-4" /> Generate Report
             </Button>
             {saved && savedMeasurementId && (
               <Button
