@@ -9,6 +9,7 @@ import {
   Plus, Edit, Phone, Mail,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { ReturnHomeButton } from "@/components/layout/ReturnHomeButton";
 
 const PIPELINE_STAGES = [
   { key: "new", label: "New Lead", color: "bg-blue-500" },
@@ -187,7 +188,10 @@ export default function CRMDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">{stats.companyName} Dashboard</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">{stats.companyName} Dashboard</h1>
+          <ReturnHomeButton />
+        </div>
         <p className="text-muted-foreground mt-1">Welcome back! Here's your roofing business overview.</p>
         <div className="flex items-center gap-4 mt-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
