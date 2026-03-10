@@ -63,7 +63,7 @@ export default function CRMInsuranceAdjusters() {
   };
 
   const remove = async (id: string) => {
-    await supabase.from("insurance_adjusters").delete().eq("id", id);
+    await (supabase as any).from("insurance_adjusters").delete().eq("id", id);
     load();
   };
 
