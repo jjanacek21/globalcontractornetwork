@@ -409,6 +409,14 @@ export default function CRMContactDetail() {
                       </div>
                     </div>
                   ))}
+                  {/* Satellite map for the primary property */}
+                  {primaryProperty?.lat && primaryProperty?.lng && (
+                    <ContactPropertyMap
+                      lat={primaryProperty.lat}
+                      lng={primaryProperty.lng}
+                      address={primaryAddress || undefined}
+                    />
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No properties added yet.</p>
