@@ -134,7 +134,7 @@ serve(async (req) => {
     );
 
     const wholeRoofAreaM2 = toNumber(solarPotential?.wholeRoofStats?.areaMeters2);
-    const totalFlatAreaM2 = segmentAreaM2 > 0 ? segmentAreaM2 : wholeRoofAreaM2;
+    const totalFlatAreaM2 = (segmentAreaM2 > 0 || roof_type_override) ? segmentAreaM2 : wholeRoofAreaM2;
     const averagePitchDegrees = totalFlatAreaM2 > 0 ? weightedPitchSum / totalFlatAreaM2 : 0;
 
     const pitchRadians = (averagePitchDegrees * Math.PI) / 180;
