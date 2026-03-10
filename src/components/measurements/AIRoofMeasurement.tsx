@@ -19,6 +19,7 @@ interface Segment {
   id: string;
   area_sqft: number;
   pitch_degrees: number;
+  pitch_over_12: number;
   azimuth_degrees: number;
 }
 
@@ -28,6 +29,7 @@ interface SolarMeasurementData {
   complexity: string;
   roof_segments_count: number;
   average_pitch_degrees: number;
+  average_pitch_over_12: number;
   pitch_multiplier: number;
   waste_percent: number;
   total_flat_area_sqft: number;
@@ -87,7 +89,7 @@ export function AIRoofMeasurement() {
         pitchedArea: result.total_pitched_area_sqft,
         totalWithWaste: result.total_with_waste_sqft,
         totalSquares: result.total_squares,
-        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}°`,
+        pitchDisplay: `${result.average_pitch_degrees.toFixed(1)}° (${result.average_pitch_over_12}/12)`,
         pitchMultiplier: result.pitch_multiplier,
       };
     }
@@ -370,7 +372,7 @@ export function AIRoofMeasurement() {
                   <TableRow>
                     <TableHead>Segment</TableHead>
                     <TableHead>Area (sq ft)</TableHead>
-                    <TableHead>Pitch (°)</TableHead>
+                    <TableHead>Pitch</TableHead>
                     <TableHead>Azimuth (°)</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -379,7 +381,7 @@ export function AIRoofMeasurement() {
                     <TableRow key={`${segment.id}-${index}`}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{segment.area_sqft.toLocaleString()}</TableCell>
-                      <TableCell>{segment.pitch_degrees.toFixed(1)}</TableCell>
+                      <TableCell>{segment.pitch_degrees.toFixed(1)}° ({segment.pitch_over_12}/12)</TableCell>
                       <TableCell>{segment.azimuth_degrees.toFixed(1)}</TableCell>
                     </TableRow>
                   ))}

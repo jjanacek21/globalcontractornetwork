@@ -14,6 +14,9 @@ interface MeasurementRequest {
 
 const M2_TO_SQFT = 10.7639;
 
+const toPitchOver12 = (deg: number): number =>
+  Math.round(Math.tan((deg * Math.PI) / 180) * 12);
+
 const toNumber = (value: unknown): number => {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -104,6 +107,7 @@ serve(async (req) => {
           area_m2: areaM2,
           area_sqft: +(areaM2 * M2_TO_SQFT).toFixed(2),
           pitch_degrees: +pitchDegrees.toFixed(2),
+          pitch_over_12: toPitchOver12(pitchDegrees),
           azimuth_degrees: +azimuthDegrees.toFixed(2),
         };
       })
@@ -261,6 +265,7 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       complexity,
       roof_segments_count: segmentCount,
       average_pitch_degrees: +averagePitchDegrees.toFixed(2),
+      average_pitch_over_12: toPitchOver12(averagePitchDegrees),
       pitch_multiplier: +pitchMultiplier.toFixed(4),
       waste_percent: wastePercent,
       total_flat_area_sqft: +totalFlatSqFt.toFixed(2),
