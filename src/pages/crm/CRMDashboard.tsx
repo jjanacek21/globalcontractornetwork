@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
   UserPlus, DollarSign, Wrench, TrendingUp, Users, FileText,
-  Briefcase, Eye, Calendar, Clock,
+  Briefcase, Eye, Calendar, Clock, MessageSquare, CheckCircle,
+  Plus, Edit, Phone, Mail,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 const PIPELINE_STAGES = [
   { key: "new", label: "New Lead", color: "bg-blue-500" },
@@ -21,94 +21,147 @@ const PIPELINE_STAGES = [
 ];
 
 interface DashboardStats {
-  totalLeads: number;
+  totalContacts: number;
+  openEstimates: number;
+  activeJobs: number;
+  totalRevenue: number;
   pipelineCounts: Record<string, number>;
   unassignedLeads: number;
-  jobsForApproval: number;
   jobsInProgress: number;
-  watchList: number;
-  totalRevenue: number;
-  activeProjects: number;
   completedThisMonth: number;
-  avgProfitMargin: number;
   companyName: string;
 }
+
+interface RecentActivity {
+  id: string;
+  action: string;
+  description: string | null;
+  entity_type: string;
+  created_at: string;
+  user_name: string | null;
+}
+
+const ACTION_ICONS: Record<string, React.ElementType> = {
+  created: Plus,
+  updated: Edit,
+  status_changed: CheckCircle,
+  note_added: MessageSquare,
+  call_made: Phone,
+  email_sent: Mail,
+  document_uploaded: FileText,
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  created: "bg-emerald-100 text-emerald-600",
+  updated: "bg-amber-100 text-amber-600",
+  status_changed: "bg-teal-100 text-teal-600",
+  note_added: "bg-blue-100 text-blue-600",
+  call_made: "bg-green-100 text-green-600",
+  email_sent: "bg-purple-100 text-purple-600",
+  document_uploaded: "bg-orange-100 text-orange-600",
+};
 
 export default function CRMDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
-    totalLeads: 0,
+    totalContacts: 0,
+    openEstimates: 0,
+    activeJobs: 0,
+    totalRevenue: 0,
     pipelineCounts: {},
     unassignedLeads: 0,
-    jobsForApproval: 0,
     jobsInProgress: 0,
-    watchList: 0,
-    totalRevenue: 0,
-    activeProjects: 0,
     completedThisMonth: 0,
-    avgProfitMargin: 0,
     companyName: "",
   });
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAll = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Get company name
-        const { data: contractor } = await supabase
-          .from("contractor_profiles")
-          .select("company_name")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        // Parallel queries
+        const [
+          contractorRes,
+          contactsRes,
+          estimatesRes,
+          jobsRes,
+          leadsRes,
+          activitiesRes,
+        ] = await Promise.all([
+          supabase.from("contractor_profiles").select("company_name").eq("user_id", session.user.id).maybeSingle(),
+          supabase.from("contacts").select("id", { count: "exact", head: true }),
+          supabase.from("estimates").select("total, status"),
+          supabase.from("crm_jobs").select("stage, collected_amount, completion_date"),
+          supabase.from("leads").select("status, assigned_rep_id"),
+          supabase.from("activities").select(`
+            id, action, description, entity_type, created_at,
+            user:profiles(first_name, last_name)
+          `).order("created_at", { ascending: false }).limit(10),
+        ]);
 
-        // Get leads with status counts
-        const { data: leads } = await supabase.from("leads").select("status, assigned_rep_id");
+        // Contacts count
+        const totalContacts = contactsRes.count || 0;
+
+        // Estimates
+        const estimates = estimatesRes.data || [];
+        const openEstimates = estimates.filter(e => e.status !== "accepted" && e.status !== "rejected").length;
+        const totalRevenue = estimates.reduce((s, e) => s + Number(e.total || 0), 0);
+
+        // Jobs
+        const jobs = jobsRes.data || [];
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        let activeJobs = 0, jobsInProgress = 0, completedThisMonth = 0;
+        let jobRevenue = 0;
+        jobs.forEach(j => {
+          if (j.stage !== "completed" && j.stage !== "invoiced") activeJobs++;
+          if (j.stage === "in_progress" || j.stage === "scheduled") jobsInProgress++;
+          jobRevenue += Number(j.collected_amount || 0);
+          if (j.completion_date && j.completion_date >= monthStart) completedThisMonth++;
+        });
+
+        // Leads pipeline
+        const leads = leadsRes.data || [];
         const pipelineCounts: Record<string, number> = {};
         let unassigned = 0;
-        leads?.forEach(l => {
+        leads.forEach(l => {
           pipelineCounts[l.status || "new"] = (pipelineCounts[l.status || "new"] || 0) + 1;
           if (!l.assigned_rep_id) unassigned++;
         });
 
-        // Get jobs
-        const { data: jobs } = await supabase.from("crm_jobs").select("stage, contract_amount, collected_amount, completion_date");
-        let inProgress = 0, totalRevenue = 0, activeProjects = 0, completedThisMonth = 0;
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        jobs?.forEach(j => {
-          if (j.stage === "in_progress" || j.stage === "scheduled") inProgress++;
-          if (j.stage !== "completed" && j.stage !== "invoiced") activeProjects++;
-          totalRevenue += Number(j.collected_amount || 0);
-          if (j.completion_date && j.completion_date >= monthStart) completedThisMonth++;
-        });
-
-        // Get accepted estimates revenue
-        const { data: estimates } = await supabase.from("estimates").select("total").eq("status", "accepted");
-        const estRevenue = estimates?.reduce((s, e) => s + Number(e.total || 0), 0) || 0;
+        // Activities
+        const recentActivities: RecentActivity[] = (activitiesRes.data || []).map((a: any) => ({
+          id: a.id,
+          action: a.action,
+          description: a.description,
+          entity_type: a.entity_type,
+          created_at: a.created_at,
+          user_name: a.user ? `${a.user.first_name || ""} ${a.user.last_name || ""}`.trim() : null,
+        }));
 
         setStats({
-          totalLeads: leads?.length || 0,
+          totalContacts,
+          openEstimates,
+          activeJobs,
+          totalRevenue: jobRevenue || totalRevenue,
           pipelineCounts,
           unassignedLeads: unassigned,
-          jobsForApproval: 0,
-          jobsInProgress: inProgress,
-          watchList: 0,
-          totalRevenue: totalRevenue || estRevenue,
-          activeProjects,
+          jobsInProgress,
           completedThisMonth,
-          avgProfitMargin: 0,
-          companyName: contractor?.company_name || "Your Company",
+          companyName: contractorRes.data?.company_name || "Your Company",
         });
+        setActivities(recentActivities);
       } catch (err) {
         console.error("Dashboard stats error:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchAll();
   }, []);
 
   const quickActions = [
@@ -117,18 +170,17 @@ export default function CRMDashboard() {
     { title: "Schedule Work", subtitle: "Manage project schedules", icon: Wrench, color: "bg-green-600 hover:bg-green-700", onClick: () => navigate("/member/crm/production") },
   ];
 
-  const progressCards = [
-    { label: "Unassigned Leads", value: stats.unassignedLeads, icon: Users },
-    { label: "Jobs for Approval", value: stats.jobsForApproval, icon: FileText },
-    { label: "Jobs in Progress", value: stats.jobsInProgress, icon: Wrench },
-    { label: "Watch List", value: stats.watchList, icon: Eye },
+  const kpiCards = [
+    { label: "Total Contacts", value: stats.totalContacts, icon: Users, color: "text-primary" },
+    { label: "Open Estimates", value: stats.openEstimates, icon: FileText, color: "text-amber-600" },
+    { label: "Active Jobs", value: stats.activeJobs, icon: Wrench, color: "text-blue-600" },
+    { label: "Revenue", value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: "text-green-600" },
   ];
 
-  const revenueCards = [
-    { label: "Total Revenue", value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, change: "0% from last month" },
-    { label: "Active Projects", value: stats.activeProjects.toString(), icon: Wrench, change: "+0 from last month" },
-    { label: "Completed This Month", value: stats.completedThisMonth.toString(), icon: Briefcase, change: "+0 from last month" },
-    { label: "Avg Profit Margin", value: `${stats.avgProfitMargin}%`, icon: TrendingUp, change: "0% from last month" },
+  const progressCards = [
+    { label: "Unassigned Leads", value: stats.unassignedLeads, icon: Users },
+    { label: "Jobs in Progress", value: stats.jobsInProgress, icon: Wrench },
+    { label: "Completed This Month", value: stats.completedThisMonth, icon: Briefcase },
   ];
 
   return (
@@ -140,11 +192,7 @@ export default function CRMDashboard() {
         <div className="flex items-center gap-4 mt-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
             <Calendar className="h-4 w-4" />
-            <span>{format(new Date(Date.now() - 90 * 86400000), "MMM dd, yyyy")} - {format(new Date(), "MMM dd, yyyy")}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>{format(new Date(), "h:mm:ss a")}</span>
+            <span>{format(new Date(), "MMM dd, yyyy")}</span>
           </div>
         </div>
       </div>
@@ -161,6 +209,23 @@ export default function CRMDashboard() {
             <h3 className="font-bold text-lg">{action.title}</h3>
             <p className="text-sm opacity-80">{action.subtitle}</p>
           </button>
+        ))}
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {kpiCards.map((card) => (
+          <Card key={card.label} className="shadow-sm">
+            <CardContent className="pt-4 pb-4 px-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? <Skeleton className="h-7 w-16" /> : card.value}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -186,10 +251,11 @@ export default function CRMDashboard() {
         </div>
       </div>
 
-      {/* Progress Section */}
-      <div>
-        <h2 className="text-xl font-bold text-foreground mb-4">Progress</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Progress + Recent Activity side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Progress */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-foreground">Progress</h2>
           {progressCards.map((card) => (
             <Card key={card.label} className="shadow-sm">
               <CardContent className="pt-4 pb-4 px-4">
@@ -206,24 +272,69 @@ export default function CRMDashboard() {
             </Card>
           ))}
         </div>
-      </div>
 
-      {/* Revenue Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {revenueCards.map((card) => (
-          <Card key={card.label} className="shadow-sm">
-            <CardContent className="pt-4 pb-4 px-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-muted-foreground">{card.label}</p>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+        {/* Recent Activity */}
+        <Card className="shadow-sm lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex gap-3">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {loading ? <Skeleton className="h-7 w-16" /> : card.value}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">↗ {card.change}</p>
-            </CardContent>
-          </Card>
-        ))}
+            ) : activities.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No recent activity recorded yet.</p>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                <div className="space-y-4">
+                  {activities.map((activity) => {
+                    const Icon = ACTION_ICONS[activity.action] || CheckCircle;
+                    const colorClass = ACTION_COLORS[activity.action] || "bg-muted text-muted-foreground";
+                    return (
+                      <div key={activity.id} className="relative flex gap-3 pl-1">
+                        <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${colorClass}`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {activity.action.replace(/_/g, " ")}
+                                <span className="text-muted-foreground font-normal"> · {activity.entity_type}</span>
+                              </p>
+                              {activity.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">{activity.description}</p>
+                              )}
+                              {activity.user_name && (
+                                <p className="text-xs text-muted-foreground">by {activity.user_name}</p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                              {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
