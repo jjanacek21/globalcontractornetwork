@@ -78,7 +78,7 @@ export default function CanvassMap() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
       center: [-80.13, 26.37],
       zoom: 16,
     });
