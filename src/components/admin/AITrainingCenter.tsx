@@ -125,6 +125,13 @@ const AITrainingCenter = () => {
             <Search className="h-4 w-4" />
             Firecrawl Intelligence
           </TabsTrigger>
+          <TabsTrigger 
+            value="property-iq" 
+            className="gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+          >
+            <Building2 className="h-4 w-4" />
+            PropertyIQ
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-4">
