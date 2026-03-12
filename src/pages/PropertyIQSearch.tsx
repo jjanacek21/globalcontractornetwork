@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
+import { PropertyIQMap } from "@/components/property-iq/PropertyIQMap";
 import { usePropertyIQSearch } from "@/hooks/usePropertyIQ";
-import { Search, Loader2, Database, Users, CloudRain, Building2 } from "lucide-react";
+import { Search, Loader2, Database, Users, CloudRain, Building2, List, MapIcon } from "lucide-react";
 
 const PropertyIQSearch = () => {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,8 @@ const PropertyIQSearch = () => {
   const [query, setQuery] = useState(initialQuery);
   const [simulating, setSimulating] = useState(false);
   const [showDemoResult, setShowDemoResult] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number } | null>(null);
   const navigate = useNavigate();
 
   const { data: results, isLoading } = usePropertyIQSearch(query);
@@ -47,14 +50,18 @@ const PropertyIQSearch = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <PropertyIQHeader />
 
-      <div className="container mx-auto max-w-4xl px-4 py-8 flex-1">
-        <form onSubmit={handleSearch} className="flex gap-2 mb-8">
+      <div className="container mx-auto max-w-5xl px-4 py-8 flex-1">
+        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
           <div className="flex-1">
             <AddressAutocomplete
               value={query}
               onChange={setQuery}
-              onSelect={(address) => {
+              onSelect={(address, coords) => {
                 setQuery(address);
+                if (coords) {
+                  setFlyToCoords({ lat: coords.lat, lng: coords.lng });
+                  setViewMode("map");
+                }
                 navigate(`/property-iq/search?q=${encodeURIComponent(address)}`);
               }}
               placeholder="Search by address, city, county, or owner..."
@@ -63,6 +70,33 @@ const PropertyIQSearch = () => {
           <Button type="submit">Search</Button>
         </form>
 
+        {/* View Mode Toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-muted-foreground">
+            {!isLoading && !hasNoMatch && `${filtered.length} ${filtered.length === 1 ? "property" : "properties"} found`}
+          </p>
+          <div className="flex gap-1 border border-border rounded-lg p-0.5">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="h-8 px-3 gap-1.5"
+            >
+              <List className="h-4 w-4" />
+              List
+            </Button>
+            <Button
+              variant={viewMode === "map" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("map")}
+              className="h-8 px-3 gap-1.5"
+            >
+              <MapIcon className="h-4 w-4" />
+              Map
+            </Button>
+          </div>
+        </div>
+
         {isLoading && (
           <div className="text-center py-16">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -70,17 +104,16 @@ const PropertyIQSearch = () => {
           </div>
         )}
 
-        {!isLoading && !hasNoMatch && (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">
-              {filtered.length} {filtered.length === 1 ? 'property' : 'properties'} found
-            </p>
-            <div className="space-y-4">
-              {filtered.map((property) => (
-                <PropertyCard key={property.id} property={property} />
-              ))}
-            </div>
-          </>
+        {!isLoading && !hasNoMatch && viewMode === "map" && (
+          <PropertyIQMap properties={filtered} flyTo={flyToCoords} />
+        )}
+
+        {!isLoading && !hasNoMatch && viewMode === "list" && (
+          <div className="space-y-4">
+            {filtered.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
         )}
 
         {/* Simulated API lookup for non-matching addresses */}
@@ -140,7 +173,7 @@ const PropertyIQSearch = () => {
           </div>
         )}
 
-        {!isLoading && !hasNoMatch && filtered.length === 0 && (
+        {!isLoading && !hasNoMatch && filtered.length === 0 && viewMode === "list" && (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium">No properties found</p>
             <p className="text-sm">Try a different search term or browse all properties</p>
