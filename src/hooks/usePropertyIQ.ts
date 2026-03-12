@@ -103,6 +103,8 @@ export interface PIQPropertySummary {
   assessed_value: number | null;
   zoning: string | null;
   flood_zone: string | null;
+  latitude: number | null;
+  longitude: number | null;
   piq_property_scores: PIQScore[] | null;
   piq_property_ownership: { owner_id: string; piq_owners: PIQOwner }[] | null;
 }
@@ -133,7 +135,7 @@ export function usePropertyIQSearch(query: string) {
         .from("piq_properties")
         .select(`
           id, address, city, state, zip, property_type, building_sqft, year_built, stories,
-          estimated_value, assessed_value, zoning, flood_zone,
+          estimated_value, assessed_value, zoning, flood_zone, latitude, longitude,
           piq_property_scores ( roof_replacement_score, renovation_score, investment_score, overall_contractor_score ),
           piq_property_ownership ( owner_id, piq_owners ( id, name, owner_type, phone, email, linkedin_url, facebook_url, mailing_address ) )
         `)
