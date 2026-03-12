@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { seedProperties } from "@/lib/propertyIQSeedData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePropertyIQReport } from "@/hooks/usePropertyIQ";
 import {
   MapPin, Download, Bookmark, ArrowLeft, Building2, CalendarDays,
-  CloudRain, Wrench, DollarSign, AlertTriangle, Shield,
+  CloudRain, Wrench, DollarSign, AlertTriangle, Shield, Loader2,
 } from "lucide-react";
 
 const conditionColor: Record<string, string> = {
@@ -24,9 +25,28 @@ const conditionColor: Record<string, string> = {
 
 const PropertyIQReport = () => {
   const { id } = useParams<{ id: string }>();
-  const property = seedProperties.find((p) => p.id === id);
+  const { data: property, isLoading, error } = usePropertyIQReport(id);
 
-  if (!property) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <PropertyIQHeader />
+        <div className="container mx-auto max-w-5xl px-4 py-6 flex-1 space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-12 w-full" />
+          <div className="grid md:grid-cols-3 gap-4">
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+          </div>
+          <Skeleton className="h-60 w-full" />
+          <Skeleton className="h-60 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!property || error) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <PropertyIQHeader />
@@ -40,8 +60,14 @@ const PropertyIQReport = () => {
     );
   }
 
-  const roofAge = new Date().getFullYear() - property.roof_installed;
-  const roofLifePercent = Math.min(100, Math.round((roofAge / property.roof_expected_life) * 100));
+  const scores = property.piq_property_scores?.[0];
+  const roofComponent = property.piq_building_components?.find(c => c.component_type === 'Roof');
+  const roofMaterial = roofComponent?.material || 'Unknown';
+  const roofInstalled = roofComponent?.install_year || property.year_built || 2000;
+  const roofExpectedLife = roofComponent?.estimated_life || 25;
+  const roofCondition = roofComponent?.condition || 'unknown';
+  const roofAge = new Date().getFullYear() - roofInstalled;
+  const roofLifePercent = Math.min(100, Math.round((roofAge / roofExpectedLife) * 100));
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -63,8 +89,8 @@ const PropertyIQReport = () => {
         <div className="mb-6">
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <Badge>{property.property_type}</Badge>
-            <Badge variant={property.roof_condition === 'critical' ? 'destructive' : 'secondary'}>
-              Roof: {property.roof_condition}
+            <Badge variant={roofCondition === 'critical' ? 'destructive' : 'secondary'}>
+              Roof: {roofCondition}
             </Badge>
             <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>
           </div>
@@ -72,7 +98,7 @@ const PropertyIQReport = () => {
             <MapPin className="h-6 w-6 text-primary shrink-0" />
             {property.address}
           </h1>
-          <p className="text-muted-foreground">{property.city}, {property.state} {property.zip} · {property.county} County · Folio: {property.folio_number}</p>
+          <p className="text-muted-foreground">{property.city}, {property.state} {property.zip} · {property.zoning}</p>
         </div>
 
         {/* AI Scores */}
@@ -80,9 +106,9 @@ const PropertyIQReport = () => {
           <CardHeader><CardTitle className="text-lg">AI Opportunity Scores</CardTitle></CardHeader>
           <CardContent>
             <div className="flex justify-around flex-wrap gap-6">
-              <ScoreGauge score={property.scores.roof_replacement} label="Roof Replacement" />
-              <ScoreGauge score={property.scores.renovation} label="Renovation" />
-              <ScoreGauge score={property.scores.investment} label="Investment" />
+              <ScoreGauge score={scores?.roof_replacement_score ?? 0} label="Roof Replacement" />
+              <ScoreGauge score={scores?.renovation_score ?? 0} label="Renovation" />
+              <ScoreGauge score={scores?.investment_score ?? 0} label="Investment" />
             </div>
           </CardContent>
         </Card>
@@ -95,13 +121,13 @@ const PropertyIQReport = () => {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
                   ['Type', property.property_type],
-                  ['Sqft', property.sqft.toLocaleString()],
-                  ['Lot', property.lot_size],
+                  ['Sqft', (property.building_sqft ?? 0).toLocaleString()],
+                  ['Lot', property.lot_sqft ? `${(property.lot_sqft / 43560).toFixed(1)} acres` : '—'],
                   ['Built', property.year_built],
                   ['Stories', property.stories],
                   ['Zoning', property.zoning],
-                  ['Assessed', `$${property.assessed_value.toLocaleString()}`],
-                  ['Market Value', `$${property.market_value.toLocaleString()}`],
+                  ['Assessed', property.assessed_value ? `$${Number(property.assessed_value).toLocaleString()}` : '—'],
+                  ['Market Value', property.estimated_value ? `$${Number(property.estimated_value).toLocaleString()}` : '—'],
                 ].map(([label, value]) => (
                   <div key={String(label)}>
                     <p className="text-muted-foreground text-xs">{label}</p>
@@ -117,10 +143,10 @@ const PropertyIQReport = () => {
             <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> Roof Intelligence</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-muted-foreground text-xs">Type</p><p className="font-medium">{property.roof_type}</p></div>
-                <div><p className="text-muted-foreground text-xs">Installed</p><p className="font-medium">{property.roof_installed}</p></div>
+                <div><p className="text-muted-foreground text-xs">Type</p><p className="font-medium">{roofMaterial}</p></div>
+                <div><p className="text-muted-foreground text-xs">Installed</p><p className="font-medium">{roofInstalled}</p></div>
                 <div><p className="text-muted-foreground text-xs">Age</p><p className="font-medium">{roofAge} years</p></div>
-                <div><p className="text-muted-foreground text-xs">Expected Life</p><p className="font-medium">{property.roof_expected_life} years</p></div>
+                <div><p className="text-muted-foreground text-xs">Expected Life</p><p className="font-medium">{roofExpectedLife} years</p></div>
               </div>
               <div>
                 <div className="flex justify-between text-xs mb-1">
@@ -130,143 +156,159 @@ const PropertyIQReport = () => {
                 <Progress value={roofLifePercent} className="h-3" />
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${conditionColor[property.roof_condition]}`} />
-                <span className="text-sm font-medium capitalize">{property.roof_condition} Condition</span>
+                <div className={`w-3 h-3 rounded-full ${conditionColor[roofCondition] || 'bg-gray-400'}`} />
+                <span className="text-sm font-medium capitalize">{roofCondition} Condition</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Owner Intelligence */}
-        <div className="mb-6">
-          <OwnerIntelligenceCard owners={property.owners} />
-        </div>
+        {property.piq_property_ownership && property.piq_property_ownership.length > 0 && (
+          <div className="mb-6">
+            <OwnerIntelligenceCard ownership={property.piq_property_ownership as any} />
+          </div>
+        )}
 
         {/* Building Components */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Wrench className="h-5 w-5" /> Building Components</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {property.building_components.map((comp) => {
-                const age = new Date().getFullYear() - comp.installed_year;
-                const pct = Math.min(100, Math.round((age / comp.expected_life_years) * 100));
-                return (
-                  <div key={comp.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="flex items-center gap-2">
-                        {comp.name}
-                        <div className={`w-2 h-2 rounded-full ${conditionColor[comp.condition]}`} />
-                      </span>
-                      <span className="text-muted-foreground">{age}y / {comp.expected_life_years}y ({pct}%)</span>
+        {property.piq_building_components && property.piq_building_components.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Wrench className="h-5 w-5" /> Building Components</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {property.piq_building_components.map((comp) => {
+                  const age = new Date().getFullYear() - (comp.install_year ?? 2000);
+                  const life = comp.estimated_life ?? 25;
+                  const pct = Math.min(100, Math.round((age / life) * 100));
+                  const label = comp.material
+                    ? `${comp.component_type} (${comp.material})`
+                    : comp.component_type || 'Unknown';
+                  return (
+                    <div key={comp.id}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="flex items-center gap-2">
+                          {label}
+                          <div className={`w-2 h-2 rounded-full ${conditionColor[comp.condition ?? ''] || 'bg-gray-400'}`} />
+                        </span>
+                        <span className="text-muted-foreground">{age}y / {life}y ({pct}%)</span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
                     </div>
-                    <Progress value={pct} className="h-2" />
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Permit History */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Permit History</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Permit #</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {property.permits.map((p) => (
-                  <TableRow key={p.permit_number}>
-                    <TableCell className="font-mono text-xs">{p.permit_number}</TableCell>
-                    <TableCell>{p.type}</TableCell>
-                    <TableCell>{new Date(p.date).toLocaleDateString()}</TableCell>
-                    <TableCell><Badge variant={p.status === 'Open' ? 'default' : 'secondary'} className="text-xs">{p.status}</Badge></TableCell>
-                    <TableCell className="text-right">{p.value ? `$${p.value.toLocaleString()}` : '—'}</TableCell>
+        {property.piq_permits && property.piq_permits.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Permit History</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Permit #</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {property.piq_permits.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-xs">{p.permit_number}</TableCell>
+                      <TableCell>{p.permit_type}</TableCell>
+                      <TableCell>{p.issue_date ? new Date(p.issue_date).toLocaleDateString() : '—'}</TableCell>
+                      <TableCell><Badge variant={p.status === 'Open' ? 'default' : 'secondary'} className="text-xs">{p.status}</Badge></TableCell>
+                      <TableCell className="text-right">{p.estimated_cost ? `$${Number(p.estimated_cost).toLocaleString()}` : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sales History */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><DollarSign className="h-5 w-5" /> Sales History</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Seller</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {property.sales_history.map((s, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{new Date(s.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-medium">${s.price.toLocaleString()}</TableCell>
-                    <TableCell>{s.buyer}</TableCell>
-                    <TableCell>{s.seller}</TableCell>
+        {property.piq_property_sales && property.piq_property_sales.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><DollarSign className="h-5 w-5" /> Sales History</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Buyer</TableHead>
+                    <TableHead>Seller</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {property.piq_property_sales.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{s.sale_date ? new Date(s.sale_date).toLocaleDateString() : '—'}</TableCell>
+                      <TableCell className="font-medium">{s.sale_price ? `$${Number(s.sale_price).toLocaleString()}` : '—'}</TableCell>
+                      <TableCell>{s.buyer}</TableCell>
+                      <TableCell>{s.seller}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Storm Exposure */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CloudRain className="h-5 w-5" /> Storm Exposure</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Storm</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Wind (mph)</TableHead>
-                  <TableHead>Damage</TableHead>
-                  <TableHead>Claims</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {property.storm_events.map((s, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>{new Date(s.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{s.category}</TableCell>
-                    <TableCell>{s.max_wind_speed}</TableCell>
-                    <TableCell>{s.damage_reported ? <AlertTriangle className="h-4 w-4 text-destructive" /> : '—'}</TableCell>
-                    <TableCell>{s.claims_filed}</TableCell>
+        {property.piq_storm_events && property.piq_storm_events.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CloudRain className="h-5 w-5" /> Storm Exposure</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Storm</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Wind (mph)</TableHead>
+                    <TableHead>Damage</TableHead>
+                    <TableHead>Claims</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {property.piq_storm_events.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">{s.event_name}</TableCell>
+                      <TableCell>{s.event_date ? new Date(s.event_date).toLocaleDateString() : '—'}</TableCell>
+                      <TableCell>{s.category}</TableCell>
+                      <TableCell>{s.wind_speed}</TableCell>
+                      <TableCell>{s.damage_reported ? <AlertTriangle className="h-4 w-4 text-destructive" /> : '—'}</TableCell>
+                      <TableCell>{s.insurance_claims}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Contractor Opportunities */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Wrench className="h-5 w-5" /> Contractor Opportunities</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {property.contractor_opportunities.map((opp) => (
-                <div key={opp} className="p-3 rounded-lg border bg-muted/30 text-sm font-medium text-center">
-                  {opp}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {property.piq_contractor_opportunities && property.piq_contractor_opportunities.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Wrench className="h-5 w-5" /> Contractor Opportunities</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {property.piq_contractor_opportunities.map((opp) => (
+                  <div key={opp.id} className="p-3 rounded-lg border bg-muted/30 text-sm font-medium text-center">
+                    {opp.description || opp.opportunity_type}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <PropertyIQFooter />

@@ -5,12 +5,13 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { seedProperties } from "@/lib/propertyIQSeedData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePropertyIQDashboard } from "@/hooks/usePropertyIQ";
 import {
   Search, FileText, Bookmark, Bell, BarChart3,
-  Building2, AlertTriangle, CloudRain, Wifi, WifiOff,
+  Building2, AlertTriangle, CloudRain, Wifi,
   ExternalLink, Clock, TrendingUp
 } from "lucide-react";
 
@@ -60,6 +61,7 @@ const PropertyIQDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
+  const { data: dashboardData, isLoading } = usePropertyIQDashboard();
 
   useEffect(() => {
     const getUser = async () => {
@@ -82,6 +84,8 @@ const PropertyIQDashboard = () => {
     await supabase.auth.signOut();
     navigate("/property-iq");
   };
+
+  const savedProperties = dashboardData?.savedProperties || [];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -127,25 +131,44 @@ const PropertyIQDashboard = () => {
           {/* Saved Properties */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2"><Bookmark className="h-5 w-5" /> Saved Properties</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {seedProperties.map((p) => (
-                <Card key={p.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
-                  <CardContent className="pt-4 space-y-2">
-                    <p className="font-medium text-sm leading-tight">{p.address}</p>
-                    <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{p.owners[0]?.name}</span>
-                      <Badge variant={p.roof_condition === 'critical' ? 'destructive' : p.roof_condition === 'poor' ? 'secondary' : 'default'} className="text-[10px]">
-                        Roof: {p.scores.roof_replacement}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3" /> Viewed 2 days ago
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+              </div>
+            ) : savedProperties.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {savedProperties.map((sp: any) => {
+                  const p = sp.piq_properties;
+                  if (!p) return null;
+                  const scores = p.piq_property_scores?.[0];
+                  const ownerName = p.piq_property_ownership?.[0]?.piq_owners?.name;
+                  const roofScore = scores?.roof_replacement_score ?? 0;
+                  return (
+                    <Card key={sp.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
+                      <CardContent className="pt-4 space-y-2">
+                        <p className="font-medium text-sm leading-tight">{p.address}</p>
+                        <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">{ownerName}</span>
+                          <Badge variant={roofScore >= 90 ? 'destructive' : roofScore <= 50 ? 'secondary' : 'default'} className="text-[10px]">
+                            Roof: {roofScore}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Clock className="h-3 w-3" /> Saved {new Date(sp.created_at).toLocaleDateString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="pt-6 text-center text-muted-foreground">
+                  <p className="text-sm">No saved properties yet. Search and save properties to see them here.</p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Recent Searches */}
             <h2 className="text-lg font-semibold flex items-center gap-2 mt-6"><Clock className="h-5 w-5" /> Recent Searches</h2>

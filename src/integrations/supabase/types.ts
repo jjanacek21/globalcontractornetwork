@@ -7509,6 +7509,536 @@ export type Database = {
         }
         Relationships: []
       }
+      piq_building_components: {
+        Row: {
+          component_type: string | null
+          condition: string | null
+          estimated_life: number | null
+          id: string
+          install_year: number | null
+          material: string | null
+          property_id: string | null
+        }
+        Insert: {
+          component_type?: string | null
+          condition?: string | null
+          estimated_life?: number | null
+          id?: string
+          install_year?: number | null
+          material?: string | null
+          property_id?: string | null
+        }
+        Update: {
+          component_type?: string | null
+          condition?: string | null
+          estimated_life?: number | null
+          id?: string
+          install_year?: number | null
+          material?: string | null
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_building_components_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_code_violations: {
+        Row: {
+          description: string | null
+          filed_date: string | null
+          id: string
+          property_id: string | null
+          status: string | null
+          violation_code: string | null
+        }
+        Insert: {
+          description?: string | null
+          filed_date?: string | null
+          id?: string
+          property_id?: string | null
+          status?: string | null
+          violation_code?: string | null
+        }
+        Update: {
+          description?: string | null
+          filed_date?: string | null
+          id?: string
+          property_id?: string | null
+          status?: string | null
+          violation_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_code_violations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_companies: {
+        Row: {
+          company_name: string | null
+          formation_date: string | null
+          id: string
+          owner_id: string | null
+          registered_agent: string | null
+          registration_number: string | null
+          state_registered: string | null
+          status: string | null
+          sunbiz_url: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          formation_date?: string | null
+          id?: string
+          owner_id?: string | null
+          registered_agent?: string | null
+          registration_number?: string | null
+          state_registered?: string | null
+          status?: string | null
+          sunbiz_url?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          formation_date?: string | null
+          id?: string
+          owner_id?: string | null
+          registered_agent?: string | null
+          registration_number?: string | null
+          state_registered?: string | null
+          status?: string | null
+          sunbiz_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_companies_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "piq_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_contractor_opportunities: {
+        Row: {
+          description: string | null
+          id: string
+          opportunity_type: string | null
+          priority: string | null
+          property_id: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          opportunity_type?: string | null
+          priority?: string | null
+          property_id?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          opportunity_type?: string | null
+          priority?: string | null
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_contractor_opportunities_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_owner_portfolios: {
+        Row: {
+          id: string
+          owner_id: string | null
+          states: string[] | null
+          total_properties: number | null
+          total_sqft: number | null
+          total_value: number | null
+        }
+        Insert: {
+          id?: string
+          owner_id?: string | null
+          states?: string[] | null
+          total_properties?: number | null
+          total_sqft?: number | null
+          total_value?: number | null
+        }
+        Update: {
+          id?: string
+          owner_id?: string | null
+          states?: string[] | null
+          total_properties?: number | null
+          total_sqft?: number | null
+          total_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_owner_portfolios_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
+            referencedRelation: "piq_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_owners: {
+        Row: {
+          email: string | null
+          facebook_url: string | null
+          id: string
+          linkedin_url: string | null
+          mailing_address: string | null
+          name: string
+          owner_type: string | null
+          phone: string | null
+          website: string | null
+        }
+        Insert: {
+          email?: string | null
+          facebook_url?: string | null
+          id?: string
+          linkedin_url?: string | null
+          mailing_address?: string | null
+          name: string
+          owner_type?: string | null
+          phone?: string | null
+          website?: string | null
+        }
+        Update: {
+          email?: string | null
+          facebook_url?: string | null
+          id?: string
+          linkedin_url?: string | null
+          mailing_address?: string | null
+          name?: string
+          owner_type?: string | null
+          phone?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      piq_permits: {
+        Row: {
+          contractor: string | null
+          description: string | null
+          estimated_cost: number | null
+          id: string
+          issue_date: string | null
+          permit_number: string | null
+          permit_type: string | null
+          property_id: string | null
+          status: string | null
+        }
+        Insert: {
+          contractor?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          id?: string
+          issue_date?: string | null
+          permit_number?: string | null
+          permit_type?: string | null
+          property_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          contractor?: string | null
+          description?: string | null
+          estimated_cost?: number | null
+          id?: string
+          issue_date?: string | null
+          permit_number?: string | null
+          permit_type?: string | null
+          property_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_permits_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_properties: {
+        Row: {
+          address: string
+          assessed_value: number | null
+          building_sqft: number | null
+          city: string
+          construction_type: string | null
+          created_at: string | null
+          estimated_value: number | null
+          flood_zone: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          lot_sqft: number | null
+          occupancy_status: string | null
+          parcel_id: string | null
+          property_manager: string | null
+          property_type: string | null
+          state: string
+          stories: number | null
+          updated_at: string | null
+          year_built: number | null
+          zip: string | null
+          zoning: string | null
+        }
+        Insert: {
+          address: string
+          assessed_value?: number | null
+          building_sqft?: number | null
+          city: string
+          construction_type?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          flood_zone?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lot_sqft?: number | null
+          occupancy_status?: string | null
+          parcel_id?: string | null
+          property_manager?: string | null
+          property_type?: string | null
+          state: string
+          stories?: number | null
+          updated_at?: string | null
+          year_built?: number | null
+          zip?: string | null
+          zoning?: string | null
+        }
+        Update: {
+          address?: string
+          assessed_value?: number | null
+          building_sqft?: number | null
+          city?: string
+          construction_type?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          flood_zone?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lot_sqft?: number | null
+          occupancy_status?: string | null
+          parcel_id?: string | null
+          property_manager?: string | null
+          property_type?: string | null
+          state?: string
+          stories?: number | null
+          updated_at?: string | null
+          year_built?: number | null
+          zip?: string | null
+          zoning?: string | null
+        }
+        Relationships: []
+      }
+      piq_property_ownership: {
+        Row: {
+          id: string
+          is_current: boolean | null
+          owner_id: string | null
+          ownership_percent: number | null
+          property_id: string | null
+        }
+        Insert: {
+          id?: string
+          is_current?: boolean | null
+          owner_id?: string | null
+          ownership_percent?: number | null
+          property_id?: string | null
+        }
+        Update: {
+          id?: string
+          is_current?: boolean | null
+          owner_id?: string | null
+          ownership_percent?: number | null
+          property_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_property_ownership_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "piq_owners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piq_property_ownership_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_property_sales: {
+        Row: {
+          buyer: string | null
+          id: string
+          lender: string | null
+          property_id: string | null
+          sale_date: string | null
+          sale_price: number | null
+          seller: string | null
+        }
+        Insert: {
+          buyer?: string | null
+          id?: string
+          lender?: string | null
+          property_id?: string | null
+          sale_date?: string | null
+          sale_price?: number | null
+          seller?: string | null
+        }
+        Update: {
+          buyer?: string | null
+          id?: string
+          lender?: string | null
+          property_id?: string | null
+          sale_date?: string | null
+          sale_price?: number | null
+          seller?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_property_sales_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_property_scores: {
+        Row: {
+          id: string
+          investment_score: number | null
+          last_calculated: string | null
+          overall_contractor_score: number | null
+          property_id: string | null
+          renovation_score: number | null
+          roof_replacement_score: number | null
+        }
+        Insert: {
+          id?: string
+          investment_score?: number | null
+          last_calculated?: string | null
+          overall_contractor_score?: number | null
+          property_id?: string | null
+          renovation_score?: number | null
+          roof_replacement_score?: number | null
+        }
+        Update: {
+          id?: string
+          investment_score?: number | null
+          last_calculated?: string | null
+          overall_contractor_score?: number | null
+          property_id?: string | null
+          renovation_score?: number | null
+          roof_replacement_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_property_scores_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_saved_properties: {
+        Row: {
+          created_at: string | null
+          id: string
+          list_name: string | null
+          property_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          list_name?: string | null
+          property_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          list_name?: string | null
+          property_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_saved_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piq_storm_events: {
+        Row: {
+          category: string | null
+          damage_reported: boolean | null
+          event_date: string | null
+          event_name: string | null
+          event_type: string | null
+          id: string
+          insurance_claims: number | null
+          property_id: string | null
+          wind_speed: number | null
+        }
+        Insert: {
+          category?: string | null
+          damage_reported?: boolean | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          insurance_claims?: number | null
+          property_id?: string | null
+          wind_speed?: number | null
+        }
+        Update: {
+          category?: string | null
+          damage_reported?: boolean | null
+          event_date?: string | null
+          event_name?: string | null
+          event_type?: string | null
+          id?: string
+          insurance_claims?: number | null
+          property_id?: string | null
+          wind_speed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piq_storm_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "piq_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       points_transactions: {
         Row: {
           created_at: string | null

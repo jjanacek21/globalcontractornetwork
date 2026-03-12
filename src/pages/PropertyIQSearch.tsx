@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
-import { seedProperties } from "@/lib/propertyIQSeedData";
+import { usePropertyIQSearch } from "@/hooks/usePropertyIQ";
 import { Search, Loader2, Database, Users, CloudRain, Building2 } from "lucide-react";
 
 const PropertyIQSearch = () => {
@@ -18,22 +18,13 @@ const PropertyIQSearch = () => {
   const [showDemoResult, setShowDemoResult] = useState(false);
   const navigate = useNavigate();
 
-  const filtered = query.trim()
-    ? seedProperties.filter((p) => {
-        const q = query.toLowerCase();
-        return (
-          p.address.toLowerCase().includes(q) ||
-          p.city.toLowerCase().includes(q) ||
-          p.county.toLowerCase().includes(q) ||
-          p.owners.some((o) => o.name.toLowerCase().includes(q))
-        );
-      })
-    : seedProperties;
+  const { data: results, isLoading } = usePropertyIQSearch(query);
+  const filtered = results || [];
 
-  const hasNoSeedMatch = query.trim() !== "" && filtered.length === 0;
+  const hasNoMatch = query.trim() !== "" && !isLoading && filtered.length === 0;
 
   useEffect(() => {
-    if (hasNoSeedMatch) {
+    if (hasNoMatch) {
       setSimulating(true);
       setShowDemoResult(false);
       const timer = setTimeout(() => {
@@ -45,7 +36,7 @@ const PropertyIQSearch = () => {
       setSimulating(false);
       setShowDemoResult(false);
     }
-  }, [hasNoSeedMatch, query]);
+  }, [hasNoMatch, query]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +61,14 @@ const PropertyIQSearch = () => {
           <Button type="submit">Search</Button>
         </form>
 
-        {!hasNoSeedMatch && (
+        {isLoading && (
+          <div className="text-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-sm text-muted-foreground mt-2">Searching...</p>
+          </div>
+        )}
+
+        {!isLoading && !hasNoMatch && (
           <>
             <p className="text-sm text-muted-foreground mb-4">
               {filtered.length} {filtered.length === 1 ? 'property' : 'properties'} found
@@ -83,7 +81,7 @@ const PropertyIQSearch = () => {
           </>
         )}
 
-        {/* Simulated API lookup for non-seed addresses */}
+        {/* Simulated API lookup for non-matching addresses */}
         {simulating && (
           <div className="text-center py-16 space-y-4">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
@@ -140,7 +138,7 @@ const PropertyIQSearch = () => {
           </div>
         )}
 
-        {!hasNoSeedMatch && filtered.length === 0 && (
+        {!isLoading && !hasNoMatch && filtered.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium">No properties found</p>
             <p className="text-sm">Try a different search term or browse all properties</p>
