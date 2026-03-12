@@ -37,6 +37,9 @@ const PropertyIQ = () => {
       {/* Hero */}
       <section className="py-20 px-4 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto max-w-3xl text-center space-y-6">
+          <div className="flex justify-start mb-4">
+            <ReturnHomeButton />
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
             Property Intelligence,{" "}
             <span className="text-primary">Delivered</span>
