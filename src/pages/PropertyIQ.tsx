@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
-import { ReturnHomeButton } from "@/components/layout/ReturnHomeButton";
 import { Search, FileText, Users, CloudRain, Building2, Check } from "lucide-react";
 
 const features = [
