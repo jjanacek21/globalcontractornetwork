@@ -125,6 +125,8 @@ import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const AdminFirecrawl = lazy(() => import("./pages/AdminFirecrawl"));
 const PropertyIQ = lazy(() => import("./pages/PropertyIQ"));
+const PropertyIQAuth = lazy(() => import("./pages/PropertyIQAuth"));
+const PropertyIQDashboard = lazy(() => import("./pages/PropertyIQDashboard"));
 const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
 const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 
@@ -444,6 +446,12 @@ const GCNRoutes = () => (
           
           {/* PropertyIQ Routes */}
           <Route path="/property-iq" element={<PropertyIQ />} />
+          <Route path="/property-iq/auth" element={<PropertyIQAuth />} />
+          <Route path="/property-iq/dashboard" element={
+            <ProtectedRoute redirectTo="/property-iq/auth">
+              <PropertyIQDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/property-iq/search" element={<PropertyIQSearch />} />
           <Route path="/property-iq/property/:id" element={<PropertyIQReport />} />
 

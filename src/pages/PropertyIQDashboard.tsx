@@ -1,0 +1,217 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
+import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { seedProperties } from "@/lib/propertyIQSeedData";
+import {
+  Search, FileText, Bookmark, Bell, BarChart3,
+  Building2, AlertTriangle, CloudRain, Wifi, WifiOff,
+  ExternalLink, Clock, TrendingUp
+} from "lucide-react";
+
+const demoStats = [
+  { label: "Total Searches", value: "47", icon: Search, color: "text-primary" },
+  { label: "Saved Properties", value: "12", icon: Bookmark, color: "text-cyan-600" },
+  { label: "Active Alerts", value: "3", icon: Bell, color: "text-amber-600" },
+  { label: "Reports Generated", value: "28", icon: FileText, color: "text-emerald-600" },
+];
+
+const recentSearches = [
+  { address: "1240 Industrial Blvd, Miami", date: "Mar 11, 2026", results: 1 },
+  { address: "8900 NW 33rd Street, Doral", date: "Mar 10, 2026", results: 1 },
+  { address: "4520 S Dixie Highway, WPB", date: "Mar 9, 2026", results: 1 },
+  { address: "2100 Coral Way, Miami", date: "Mar 8, 2026", results: 3 },
+  { address: "7600 Red Road, South Miami", date: "Mar 7, 2026", results: 2 },
+];
+
+const alerts = [
+  { title: "Roof Critical — 4520 S Dixie Hwy", description: "TPO roof installed 2005, 20+ years old. Replacement urgency: HIGH", severity: "critical" as const, icon: AlertTriangle },
+  { title: "New Storm Data Available", description: "NOAA updated storm exposure data for Miami-Dade & Palm Beach counties", severity: "info" as const, icon: CloudRain },
+  { title: "Owner Change Detected", description: "8900 NW 33rd Street — new entity filing detected on Sunbiz", severity: "warning" as const, icon: Building2 },
+];
+
+const apiConnections = [
+  { name: "Property Appraiser", status: "connected", detail: "Miami-Dade, Broward, Palm Beach" },
+  { name: "Skip Tracing", status: "connected", detail: "Phone, email, social lookup" },
+  { name: "Firecrawl", status: "connected", detail: "Web scraping & enrichment" },
+  { name: "Sunbiz / Corp Search", status: "limited", detail: "FL corporate entity search" },
+  { name: "NOAA Storm Data", status: "connected", detail: "Historical storm events" },
+  { name: "Google Maps", status: "connected", detail: "Geocoding & satellite imagery" },
+];
+
+const severityColors = {
+  critical: "bg-destructive/10 text-destructive border-destructive/20",
+  warning: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  info: "bg-primary/10 text-primary border-primary/20",
+};
+
+const statusBadge = (status: string) => {
+  if (status === "connected") return <Badge variant="default" className="bg-emerald-600 text-white">Connected</Badge>;
+  if (status === "limited") return <Badge variant="secondary" className="bg-amber-100 text-amber-800">Limited</Badge>;
+  return <Badge variant="destructive">Not Configured</Badge>;
+};
+
+const PropertyIQDashboard = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/property-iq/auth", { replace: true });
+        return;
+      }
+      setUserEmail(session.user.email || "");
+    };
+    getUser();
+  }, [navigate]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) navigate(`/property-iq/search?q=${encodeURIComponent(searchQuery)}`);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/property-iq");
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <PropertyIQHeader />
+
+      <div className="container mx-auto max-w-6xl px-4 py-8 flex-1 space-y-8">
+        {/* Top bar */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">{userEmail}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleLogout}>Log Out</Button>
+        </div>
+
+        {/* Quick search */}
+        <form onSubmit={handleSearch} className="flex gap-2 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Quick property search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+          </div>
+          <Button type="submit">Search</Button>
+        </form>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {demoStats.map((s) => (
+            <Card key={s.label}>
+              <CardContent className="pt-6 flex items-center gap-4">
+                <div className={`p-2 rounded-lg bg-muted ${s.color}`}>
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Saved Properties */}
+          <div className="lg:col-span-2 space-y-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2"><Bookmark className="h-5 w-5" /> Saved Properties</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {seedProperties.map((p) => (
+                <Card key={p.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
+                  <CardContent className="pt-4 space-y-2">
+                    <p className="font-medium text-sm leading-tight">{p.address}</p>
+                    <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">{p.owners[0]?.name}</span>
+                      <Badge variant={p.roof_condition === 'critical' ? 'destructive' : p.roof_condition === 'poor' ? 'secondary' : 'default'} className="text-[10px]">
+                        Roof: {p.scores.roof_replacement}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" /> Viewed 2 days ago
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Recent Searches */}
+            <h2 className="text-lg font-semibold flex items-center gap-2 mt-6"><Clock className="h-5 w-5" /> Recent Searches</h2>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="space-y-3">
+                  {recentSearches.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{s.address}</p>
+                        <p className="text-xs text-muted-foreground">{s.date}</p>
+                      </div>
+                      <Badge variant="outline">{s.results} result{s.results !== 1 ? 's' : ''}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right sidebar */}
+          <div className="space-y-6">
+            {/* Alerts */}
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Bell className="h-5 w-5" /> Alerts</h2>
+              <div className="space-y-3">
+                {alerts.map((a, i) => (
+                  <Card key={i} className={`border ${severityColors[a.severity]}`}>
+                    <CardContent className="pt-4 space-y-1">
+                      <div className="flex items-start gap-2">
+                        <a.icon className="h-4 w-4 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium">{a.title}</p>
+                          <p className="text-xs opacity-80">{a.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* API Status */}
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Wifi className="h-5 w-5" /> API Connections</h2>
+              <Card>
+                <CardContent className="pt-4 space-y-3">
+                  {apiConnections.map((api, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{api.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{api.detail}</p>
+                      </div>
+                      {statusBadge(api.status)}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <PropertyIQFooter />
+    </div>
+  );
+};
+
+export default PropertyIQDashboard;

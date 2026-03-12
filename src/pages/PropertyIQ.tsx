@@ -99,7 +99,7 @@ const PropertyIQ = () => {
                       {f}
                     </div>
                   ))}
-                  <Button className="w-full mt-4" variant={tier.highlight ? 'default' : 'outline'}>
+                  <Button className="w-full mt-4" variant={tier.highlight ? 'default' : 'outline'} onClick={() => navigate('/property-iq/auth')}>
                     Get Started
                   </Button>
                 </CardContent>
