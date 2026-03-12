@@ -243,6 +243,9 @@ const AITrainingCenter = () => {
             </Tabs>
           </div>
         </TabsContent>
+        <TabsContent value="property-iq" className="mt-4">
+          <PropertyIQAdmin />
+        </TabsContent>
       </Tabs>
     </div>
   );
