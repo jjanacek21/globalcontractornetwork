@@ -103,6 +103,8 @@ export interface PIQPropertySummary {
   assessed_value: number | null;
   zoning: string | null;
   flood_zone: string | null;
+  latitude: number | null;
+  longitude: number | null;
   piq_property_scores: PIQScore[] | null;
   piq_property_ownership: { owner_id: string; piq_owners: PIQOwner }[] | null;
 }
