@@ -444,6 +444,12 @@ const GCNRoutes = () => (
           
           {/* PropertyIQ Routes */}
           <Route path="/property-iq" element={<PropertyIQ />} />
+          <Route path="/property-iq/auth" element={<PropertyIQAuth />} />
+          <Route path="/property-iq/dashboard" element={
+            <ProtectedRoute redirectTo="/property-iq/auth">
+              <PropertyIQDashboard />
+            </ProtectedRoute>
+          } />
           <Route path="/property-iq/search" element={<PropertyIQSearch />} />
           <Route path="/property-iq/property/:id" element={<PropertyIQReport />} />
 
