@@ -124,6 +124,9 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const AdminFirecrawl = lazy(() => import("./pages/AdminFirecrawl"));
+const PropertyIQ = lazy(() => import("./pages/PropertyIQ"));
+const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
+const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 
 const queryClient = new QueryClient();
 
@@ -439,6 +442,11 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
+          {/* PropertyIQ Routes */}
+          <Route path="/property-iq" element={<PropertyIQ />} />
+          <Route path="/property-iq/search" element={<PropertyIQSearch />} />
+          <Route path="/property-iq/property/:id" element={<PropertyIQReport />} />
+
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing-services" element={<RoofingServices />} />
           <Route path="/roofing" element={<Roofing />} />
