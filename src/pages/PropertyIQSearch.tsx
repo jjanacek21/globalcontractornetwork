@@ -49,13 +49,15 @@ const PropertyIQSearch = () => {
 
       <div className="container mx-auto max-w-4xl px-4 py-8 flex-1">
         <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by address, city, county, or owner..."
+          <div className="flex-1">
+            <AddressAutocomplete
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="pl-9"
+              onChange={setQuery}
+              onSelect={(address) => {
+                setQuery(address);
+                navigate(`/property-iq/search?q=${encodeURIComponent(address)}`);
+              }}
+              placeholder="Search by address, city, county, or owner..."
             />
           </div>
           <Button type="submit">Search</Button>
