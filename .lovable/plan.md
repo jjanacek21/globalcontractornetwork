@@ -1,69 +1,60 @@
 
 
-# Fix Missing Documents in Packet Assembly
+# PropertyIQ — Auth, Dashboard & Full Demo Experience
 
-## Root Cause
+## What's Missing
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+Currently PropertyIQ has: landing page, search (3 seed properties), report page, and admin tab. But:
+- No login/signup page
+- No user dashboard
+- No "Login" or "Dashboard" buttons in the header
+- Search only matches 3 hardcoded addresses — entering a real address shows "No properties found"
+- No way to see how the full app would function with APIs connected
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+## Plan
 
-## Fix: Two-Part Solution
+### 1. Create `src/pages/PropertyIQAuth.tsx`
+Login/signup page following the PermitQueensAuth pattern:
+- Email + password sign in/sign up tabs
+- Redirects to `/property-iq/dashboard` on auth
+- "Back to PropertyIQ" link
+- Building2 icon branding
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+### 2. Create `src/pages/PropertyIQDashboard.tsx`
+Protected dashboard (redirects to auth if not logged in) with:
+- **Header stats**: Total Searches (47), Saved Properties (12), Active Alerts (3), Reports Generated (28) — demo numbers
+- **Quick search bar** at top — same as landing page search
+- **Saved Properties** section: shows the 3 seed properties as saved cards with owner name, roof score, last viewed date
+- **Recent Searches** table: mock search history with addresses, dates, result counts
+- **Alerts** section: cards showing mock alerts like "Roof Critical — 4520 S Dixie Hwy", "New Storm Data Available", "Owner Change Detected"
+- **API Status** panel: shows connection status for Property Appraiser, Skip Tracing, Firecrawl, Sunbiz APIs — green/yellow/red indicators with "Connected", "Limited", "Not Configured" badges
+- Logout button, user email display
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+### 3. Update `src/components/property-iq/PropertyIQHeader.tsx`
+- Add "Login" and "Get Started" buttons linking to `/property-iq/auth`
+- Show "Dashboard" and "Logout" links when user is authenticated (check session state)
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+### 4. Update `src/pages/PropertyIQ.tsx`
+- Wire "Get Started" pricing buttons to `/property-iq/auth`
 
-### 2. Fix incorrect source types in packet structures
+### 5. Update `src/pages/PropertyIQSearch.tsx`
+- When a search query doesn't match seed data, show a **demo result card** that simulates what an API-connected result would look like: "Searching property appraiser databases..." then display a mock result for the entered address with placeholder owner data, roof score, and a "Generate Full Report" button
+- This demonstrates the API workflow without real connections
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+### 6. Add routes to `src/App.tsx`
+- `/property-iq/auth` → PropertyIQAuth
+- `/property-iq/dashboard` → PropertyIQDashboard
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+## Files
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+| Action | File |
+|--------|------|
+| Create | `src/pages/PropertyIQAuth.tsx` |
+| Create | `src/pages/PropertyIQDashboard.tsx` |
+| Modify | `src/components/property-iq/PropertyIQHeader.tsx` |
+| Modify | `src/pages/PropertyIQ.tsx` |
+| Modify | `src/pages/PropertyIQSearch.tsx` |
+| Modify | `src/App.tsx` |
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+No database changes needed — uses existing Supabase auth.
 
