@@ -298,6 +298,14 @@ const MemberDashboard = () => {
       link: "/door-to-door",
       color: "bg-purple-600/10 text-purple-600",
       category: "business" as ServiceCategory
+    },
+    {
+      icon: Building2,
+      title: "PropertyIQ",
+      description: "Property intelligence reports, owner data & roof analysis",
+      link: "/property-iq",
+      color: "bg-cyan-600/10 text-cyan-600",
+      category: "business" as ServiceCategory
     }
   ];
 
