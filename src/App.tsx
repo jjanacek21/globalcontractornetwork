@@ -124,6 +124,9 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 const AdminFirecrawl = lazy(() => import("./pages/AdminFirecrawl"));
+const PropertyIQ = lazy(() => import("./pages/PropertyIQ"));
+const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
+const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 
 const queryClient = new QueryClient();
 
