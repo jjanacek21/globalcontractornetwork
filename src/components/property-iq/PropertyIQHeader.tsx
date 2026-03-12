@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, Search, LayoutDashboard, LogOut } from "lucide-react";
+import { Building2, Search, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const PropertyIQHeader = () => {
@@ -26,10 +26,19 @@ export const PropertyIQHeader = () => {
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/property-iq" className="flex items-center gap-2">
-          <Building2 className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">PropertyIQ</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/member/dashboard">
+            <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
+            </Button>
+          </Link>
+          <div className="h-6 w-px bg-border" />
+          <Link to="/property-iq" className="flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">PropertyIQ</span>
+          </Link>
+        </div>
         <nav className="flex items-center gap-2">
           <Link to="/property-iq/search">
             <Button variant="ghost" size="sm" className="gap-2">

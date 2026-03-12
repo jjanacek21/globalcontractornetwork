@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
-import { ReturnHomeButton } from "@/components/layout/ReturnHomeButton";
 import { Search, FileText, Users, CloudRain, Building2, Check } from "lucide-react";
 
 const features = [
@@ -37,9 +36,6 @@ const PropertyIQ = () => {
       {/* Hero */}
       <section className="py-20 px-4 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto max-w-3xl text-center space-y-6">
-          <div className="flex justify-start mb-4">
-            <ReturnHomeButton />
-          </div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
             Property Intelligence,{" "}
             <span className="text-primary">Delivered</span>
