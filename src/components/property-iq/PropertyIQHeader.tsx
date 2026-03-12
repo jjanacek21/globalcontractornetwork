@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, Search, LayoutDashboard, LogOut } from "lucide-react";
+import { Building2, Search, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const PropertyIQHeader = () => {
