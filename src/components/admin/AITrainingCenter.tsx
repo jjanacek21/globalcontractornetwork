@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload, Brain, Search } from "lucide-react";
+import { BarChart3, CheckCircle2, FileUp, Package, Download, FileText, XCircle, Sparkles, Building, FileStack, BookOpen, Upload, Brain, Search, Building2 } from "lucide-react";
 import AITrainingAnalytics from "./AITrainingAnalytics";
 import TrainingDataVerification from "./TrainingDataVerification";
 import ReportUploadCenter from "./ReportUploadCenter";
@@ -23,6 +23,7 @@ import PermitBatchUploader from "./PermitBatchUploader";
 import PermitTrainingUploader from "./PermitTrainingUploader";
 import TrainingSamplesTable from "./TrainingSamplesTable";
 import PermitBooksManager from "./PermitBooksManager";
+import PropertyIQAdmin from "./PropertyIQAdmin";
 
 const AITrainingCenter = () => {
   const [activeSubTab, setActiveSubTab] = useState("analytics");
