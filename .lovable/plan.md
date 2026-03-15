@@ -1,33 +1,69 @@
 
 
-## Bug Fix: Flat Pins Return 0 Squares
+# Fix Missing Documents in Packet Assembly
 
-### Root Cause
+## Root Cause
 
-In the backend function `solar-roof-measure`, when a pin has pitch "Flat", the request sends `roof_type_override: "flat"`. The function then filters roof segments to only those with `pitch_degrees <= 5`. If no segments meet that threshold (common on pitched roofs), `useSegments` becomes empty, `segmentAreaM2 = 0`, and because `roof_type_override` is truthy, the fallback to `wholeRoofAreaM2` is skipped (line 141). This produces `total_flat_area_sqft = 0`, which flows through `calcPin` to show 0 squares.
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-### Fix
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-Two changes:
+## Fix: Two-Part Solution
 
-1. **Edge function** (`supabase/functions/solar-roof-measure/index.ts`, line 141): When `roof_type_override` is set but filtered segments are empty, fall back to using all segments' area (or `wholeRoofAreaM2`) instead of returning 0. Change the condition:
-   ```
-   // Before:
-   const totalFlatAreaM2 = (segmentAreaM2 > 0 || roof_type_override) ? segmentAreaM2 : wholeRoofAreaM2;
-   
-   // After:
-   const totalFlatAreaM2 = segmentAreaM2 > 0 ? segmentAreaM2 : wholeRoofAreaM2;
-   ```
-   This ensures that if the override filter produces no matching segments, the function still returns the whole roof area — the pitch multiplier override (1.0 for flat) will still be applied correctly.
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-2. **Frontend** (`src/components/measurements/RoofMeasurementTool.tsx`, line 194): Stop sending `roof_type_override` entirely. The user-selected pitch and multiplier are already applied client-side in `calcPin`. The API should always return the full measured area, and the client applies the pitch correction. Change:
-   ```
-   // Before:
-   body: { latitude: pin.lat, longitude: pin.lng, address, roof_type_override: isFlat ? "flat" : undefined }
-   
-   // After:
-   body: { latitude: pin.lat, longitude: pin.lng, address }
-   ```
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
-Option 2 is the cleaner fix since pitch multipliers are already handled per-pin on the client. I'll implement both — remove the override from the frontend call and fix the fallback in the edge function as a safety net.
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
+```
+
+### 2. Fix incorrect source types in packet structures
+
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+
+Update these two records in `permit_packet_structures` to use the correct source type.
+
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
