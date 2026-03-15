@@ -8,11 +8,22 @@ import { PITCH_MULTIPLIERS, getPinColor } from "./types";
 export function calcPin(pin: RoofPin): PinCalculation | null {
   if (!pin.result) return null;
   const isFlat = pin.pitch === "Flat";
-  const sectionArea = isFlat
-    ? (pin.result.flat_section_area_sqft ?? 0)
-    : (pin.result.pitched_section_area_sqft ?? 0);
-  // Use section area if available and > 0, otherwise fall back to total
-  const flatSqft = sectionArea > 0 ? sectionArea : pin.result.total_flat_area_sqft;
+  // Check if the API returned section-specific fields (non-legacy response)
+  const hasSectionData =
+    pin.result.flat_section_area_sqft !== undefined &&
+    pin.result.flat_section_area_sqft !== null &&
+    pin.result.pitched_section_area_sqft !== undefined &&
+    pin.result.pitched_section_area_sqft !== null;
+  let flatSqft: number;
+  if (hasSectionData) {
+    // Use section-specific area — even if 0 — to avoid double-counting
+    flatSqft = isFlat
+      ? pin.result.flat_section_area_sqft!
+      : pin.result.pitched_section_area_sqft!;
+  } else {
+    // Legacy fallback for old responses missing section fields
+    flatSqft = pin.result.total_flat_area_sqft;
+  }
   const multiplier = PITCH_MULTIPLIERS[pin.pitch] ?? 1.0;
   const waste = pin.wastePercent;
   const pitchedSqft = flatSqft * multiplier;
