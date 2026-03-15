@@ -5305,6 +5305,50 @@ export type Database = {
           },
         ]
       }
+      measurement_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          measurement_id: string
+          report_data: Json | null
+          share_token: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          measurement_id: string
+          report_data?: Json | null
+          share_token?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          measurement_id?: string
+          report_data?: Json | null
+          share_token?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_reports_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "roof_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurements: {
         Row: {
           created_at: string | null
@@ -8948,29 +8992,42 @@ export type Database = {
       roof_measurements: {
         Row: {
           address: string
+          chimney_count: number | null
           company_id: string | null
           complexity: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
+          drip_edge_ft: number | null
           eave_ft: number | null
+          facets_count: number | null
+          flashing_ft: number | null
+          headwall_ft: number | null
           hip_ft: number | null
           id: string
           is_active: boolean
           latitude: number | null
           lead_id: string | null
           longitude: number | null
+          material_takeoff: Json | null
           notes: string | null
           perimeter_ft: number | null
+          pipe_boots_count: number | null
           pitch: string | null
           pitch_degrees: number | null
           pitch_multiplier: number | null
+          predominant_pitch: string | null
           quality: string | null
+          rake_ft: number | null
           ridge_ft: number | null
           roof_type: string | null
           segments_count: number | null
+          share_token: string | null
+          skylights_count: number | null
           solar_api_response: Json | null
           source: string
+          step_flashing_ft: number | null
+          stories: number | null
           total_area_sqft: number
           total_squares: number
           updated_at: string
@@ -8979,29 +9036,42 @@ export type Database = {
         }
         Insert: {
           address: string
+          chimney_count?: number | null
           company_id?: string | null
           complexity?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          drip_edge_ft?: number | null
           eave_ft?: number | null
+          facets_count?: number | null
+          flashing_ft?: number | null
+          headwall_ft?: number | null
           hip_ft?: number | null
           id?: string
           is_active?: boolean
           latitude?: number | null
           lead_id?: string | null
           longitude?: number | null
+          material_takeoff?: Json | null
           notes?: string | null
           perimeter_ft?: number | null
+          pipe_boots_count?: number | null
           pitch?: string | null
           pitch_degrees?: number | null
           pitch_multiplier?: number | null
+          predominant_pitch?: string | null
           quality?: string | null
+          rake_ft?: number | null
           ridge_ft?: number | null
           roof_type?: string | null
           segments_count?: number | null
+          share_token?: string | null
+          skylights_count?: number | null
           solar_api_response?: Json | null
           source?: string
+          step_flashing_ft?: number | null
+          stories?: number | null
           total_area_sqft?: number
           total_squares?: number
           updated_at?: string
@@ -9010,29 +9080,42 @@ export type Database = {
         }
         Update: {
           address?: string
+          chimney_count?: number | null
           company_id?: string | null
           complexity?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          drip_edge_ft?: number | null
           eave_ft?: number | null
+          facets_count?: number | null
+          flashing_ft?: number | null
+          headwall_ft?: number | null
           hip_ft?: number | null
           id?: string
           is_active?: boolean
           latitude?: number | null
           lead_id?: string | null
           longitude?: number | null
+          material_takeoff?: Json | null
           notes?: string | null
           perimeter_ft?: number | null
+          pipe_boots_count?: number | null
           pitch?: string | null
           pitch_degrees?: number | null
           pitch_multiplier?: number | null
+          predominant_pitch?: string | null
           quality?: string | null
+          rake_ft?: number | null
           ridge_ft?: number | null
           roof_type?: string | null
           segments_count?: number | null
+          share_token?: string | null
+          skylights_count?: number | null
           solar_api_response?: Json | null
           source?: string
+          step_flashing_ft?: number | null
+          stories?: number | null
           total_area_sqft?: number
           total_squares?: number
           updated_at?: string

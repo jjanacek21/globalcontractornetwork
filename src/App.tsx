@@ -43,6 +43,7 @@ const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence
 const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
 const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
+const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -152,6 +153,7 @@ const GCNRoutes = () => (
   <Routes>
     {/* Public Routes */}
     <Route path="/" element={<LandingPage />} />
+    <Route path="/report/:token" element={<Suspense fallback={<div />}><SharedMeasurementReport /></Suspense>} />
     <Route path="/services" element={<Index />} />
     <Route path="/join" element={<JoinNetwork />} />
     <Route path="/register-company" element={<CompanyRegistration />} />
