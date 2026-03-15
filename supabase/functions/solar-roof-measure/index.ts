@@ -127,6 +127,14 @@ serve(async (req) => {
     const segmentCount = segments.length;
     const filteredSegmentsCount = useSegments.length;
 
+    // Calculate flat vs pitched section areas from segments (pitch <= 5° = flat)
+    const flatSectionAreaM2 = segments
+      .filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5)
+      .reduce((acc: number, s: { area_m2: number }) => acc + s.area_m2, 0);
+    const pitchedSectionAreaM2 = segments
+      .filter((s: { pitch_degrees: number }) => s.pitch_degrees > 5)
+      .reduce((acc: number, s: { area_m2: number }) => acc + s.area_m2, 0);
+
     const weightedPitchSum = useSegments.reduce(
       (acc: number, segment: { area_m2: number; pitch_degrees: number }) => acc + segment.area_m2 * segment.pitch_degrees,
       0,
