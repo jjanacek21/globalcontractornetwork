@@ -1,69 +1,25 @@
 
 
-# Fix Missing Documents in Packet Assembly
+## Plan: Fix Flat Pin Facet Generation & Squares Calculation
 
-## Root Cause
+### Root Cause
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+When multiple pins are measured (e.g., a pitched pin + a flat pin), `generateSimulatedFacets` on line 231 of `RoofMeasurementTool.tsx` only uses `primaryResult.segments` (from the first measured pin). If the flat pin is a separate measurement point, its area data never becomes a facet. The facets table in the report then shows 0 for flat sections, and the report's `totalFlatArea` (summed from facets) doesn't include the flat pin's area.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+### Changes
 
-## Fix: Two-Part Solution
+**`src/components/measurements/RoofMeasurementTool.tsx`** (lines 214-238) — After generating simulated facets from the primary pin's segments, create additional synthetic facets for each measured pin that isn't represented in those segments. For each non-primary pin with a result:
+- Create a facet with `areaSqft = pin.result.total_flat_area_sqft`, `pitch = pin.pitch`, `type = pin.pitch === "Flat" ? "flat" : "pitched"`, and color from `getPinColor(pin.pitch)`.
+- Generate simple rectangular vertices around the pin's lat/lng coordinates.
+- Append these facets to the simulated facets array before setting state.
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+**`src/components/measurements/utils.ts`** — Add a new exported helper `createPinFacet(pin: RoofPin, index: number): RoofFacet` that generates a simple rectangular facet polygon centered on a pin's coordinates with the pin's measured area. This keeps the facet generation logic reusable.
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+**`src/components/measurements/MeasurementReportPanel.tsx`** — No changes needed; it already correctly calculates per-facet squares using `PITCH_MULTIPLIERS[f.pitch]` (line 160-161). Once facets are properly generated for flat pins, the report will show correct values.
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
-
-### 2. Fix incorrect source types in packet structures
-
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
-
-Update these two records in `permit_packet_structures` to use the correct source type.
-
-### 3. Add "Select Products" action for unmatched auto_source docs
-
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+### Summary of flow after fix
+1. AI measures all pins → each gets `result.total_flat_area_sqft`
+2. `generateSimulatedFacets` creates facets from primary pin's Solar API segments
+3. NEW: For each additional measured pin, a synthetic facet is created with that pin's area and pitch
+4. All facets (including flat) appear in the report table with correct squares
 
