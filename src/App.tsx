@@ -153,6 +153,7 @@ const GCNRoutes = () => (
   <Routes>
     {/* Public Routes */}
     <Route path="/" element={<LandingPage />} />
+    <Route path="/report/:token" element={<Suspense fallback={<div />}><SharedMeasurementReport /></Suspense>} />
     <Route path="/services" element={<Index />} />
     <Route path="/join" element={<JoinNetwork />} />
     <Route path="/register-company" element={<CompanyRegistration />} />
