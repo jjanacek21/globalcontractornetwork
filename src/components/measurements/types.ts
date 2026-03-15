@@ -61,6 +61,10 @@ export const PITCH_MULTIPLIERS: Record<string, number> = {
 
 export const ALL_PITCHES = Object.keys(PITCH_MULTIPLIERS);
 
+// ─── Waste Options ───────────────────────────────────────────────────────────
+
+export const WASTE_OPTIONS = [5, 10, 13, 15, 20] as const;
+
 // ─── Drawing Tools ───────────────────────────────────────────────────────────
 
 export type DrawingTool = "select" | "facet" | "edge" | "delete";
@@ -90,8 +94,9 @@ export interface RoofPin {
   id: string;
   lat: number;
   lng: number;
-  roofType: "flat" | "pitched";
+  pitch: string;           // e.g. "4/12", "Flat"
   label: string;
+  wastePercent: number;     // per-pin waste
   loading: boolean;
   result: SolarMeasurementData | null;
   error: string | null;
@@ -182,6 +187,16 @@ export interface DrawnPolygon {
 }
 
 export type MeasurementMode = "ai" | "manual";
+
+// Pin color based on pitch
+export function getPinColor(pitch: string): string {
+  if (pitch === "Flat") return "#3b82f6";       // blue
+  const num = parseInt(pitch.split("/")[0]);
+  if (num <= 3) return "#22c55e";                // green - low pitch
+  if (num <= 6) return "#f97316";                // orange - moderate
+  if (num <= 9) return "#ef4444";                // red - steep
+  return "#7c3aed";                              // purple - very steep
+}
 
 export const PIN_COLORS = { flat: "#3b82f6", pitched: "#ef4444" } as const;
 

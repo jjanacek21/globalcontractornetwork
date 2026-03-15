@@ -1,11 +1,12 @@
-import type { RoofPin, PinCalculation, RoofComponents, MaterialTakeoff, RoofFacet, RoofEdge, EdgeType, PITCH_MULTIPLIERS as PM } from "./types";
+import type { RoofPin, PinCalculation, RoofComponents, MaterialTakeoff, RoofFacet, RoofEdge, EdgeType } from "./types";
 import { PITCH_MULTIPLIERS } from "./types";
 
+// Calculate pin using the pin's own pitch and waste settings
 export function calcPin(pin: RoofPin): PinCalculation | null {
   if (!pin.result) return null;
   const flatSqft = pin.result.total_flat_area_sqft;
-  const multiplier = pin.roofType === "flat" ? 1.0 : pin.result.pitch_multiplier;
-  const waste = pin.roofType === "flat" ? 5 : pin.result.waste_percent;
+  const multiplier = PITCH_MULTIPLIERS[pin.pitch] ?? 1.0;
+  const waste = pin.wastePercent;
   const pitchedSqft = flatSqft * multiplier;
   const withWaste = pitchedSqft * (1 + waste / 100);
   const squares = withWaste / 100;
@@ -35,13 +36,43 @@ export function calculateMaterialTakeoff(components: RoofComponents): MaterialTa
   return { shingleBundles, feltRolls, iceWaterShieldRolls, ridgeCapBundles, dripEdgeFt: totalDripEdge, starterStripFt, stepFlashingPcs, pipeBoots, ventCount, nailBoxes, caulkTubes };
 }
 
+// Estimate components from Solar API data + generated facets/edges
 export function estimateComponentsFromSolar(
-  pins: RoofPin[], totalSqft: number, totalSquares: number
+  pins: RoofPin[], totalSqft: number, totalSquares: number,
+  generatedEdges?: RoofEdge[]
 ): Partial<RoofComponents> {
   const measuredPins = pins.filter(p => p.result);
   if (measuredPins.length === 0) return {};
   const primaryResult = measuredPins[0].result!;
   const segmentCount = primaryResult.roof_segments_count;
+
+  // Calculate edge lengths from actual generated edges if available
+  if (generatedEdges && generatedEdges.length > 0) {
+    const edgeTotals: Record<string, number> = {};
+    generatedEdges.forEach(e => {
+      edgeTotals[e.edgeType] = (edgeTotals[e.edgeType] || 0) + e.lengthFt;
+    });
+    const perimeterFt = (edgeTotals.eave || 0) + (edgeTotals.rake || 0);
+    
+    return {
+      totalAreaSqft: Math.round(totalSqft),
+      totalSquares: +totalSquares.toFixed(2),
+      ridgeFt: Math.round(edgeTotals.ridge || 0),
+      hipFt: Math.round(edgeTotals.hip || 0),
+      valleyFt: Math.round(edgeTotals.valley || 0),
+      eaveFt: Math.round(edgeTotals.eave || 0),
+      rakeFt: Math.round(edgeTotals.rake || 0),
+      dripEdgeFt: Math.round(perimeterFt),
+      perimeterFt: Math.round(perimeterFt + (edgeTotals.ridge || 0) + (edgeTotals.hip || 0) + (edgeTotals.valley || 0)),
+      facetsCount: segmentCount,
+      complexity: primaryResult.complexity,
+      wastePercent: primaryResult.waste_percent,
+      pitchMultiplier: primaryResult.pitch_multiplier,
+      predominantPitch: `${primaryResult.average_pitch_over_12}/12`,
+    };
+  }
+
+  // Fallback: estimate from area (legacy)
   const sideLength = Math.sqrt(totalSqft);
   const perimeterFt = sideLength * 4 * 0.85;
   const ridgeFt = Math.round(sideLength * 0.45);
@@ -123,7 +154,7 @@ export function findSnapVertex(
   return closest;
 }
 
-// ─── AI Simulation: Generate fake facets/edges from Solar API data ──────────
+// ─── AI Simulation: Generate facets/edges from Solar API data ──────────
 
 export function generateSimulatedFacets(
   center: { lat: number; lng: number },
@@ -135,30 +166,25 @@ export function generateSimulatedFacets(
 
   if (segments.length === 0) return { facets, edges };
 
-  // Generate realistic polygon outlines from segment data
   const totalSegArea = segments.reduce((s, seg) => s + seg.area_sqft, 0) || totalAreaSqft;
   const scaleFactor = totalAreaSqft / (totalSegArea || 1);
 
   // Use building footprint approximation
-  const buildingWidth = Math.sqrt(totalAreaSqft) * 0.012 / 111132.954; // rough degrees
-  const buildingLength = buildingWidth * 1.4; // rectangular
+  const buildingWidth = Math.sqrt(totalAreaSqft) * 0.012 / 111132.954;
   const baseLng = center.lng;
   const baseLat = center.lat;
 
-  // For each segment, create a polygon sector
   segments.forEach((seg, idx) => {
-    const areaRatio = (seg.area_sqft * scaleFactor) / totalAreaSqft;
     const azRad = (seg.azimuth_degrees * Math.PI) / 180;
     const pitchOver12 = Math.round(Math.tan((seg.pitch_degrees * Math.PI) / 180) * 12);
     const pitch = pitchOver12 <= 0 ? "Flat" : `${Math.min(pitchOver12, 24)}/12`;
 
-    // Create a trapezoidal facet around the center based on azimuth
     const offset = buildingWidth * 0.4;
     const anglePrev = azRad - Math.PI / segments.length;
     const angleNext = azRad + Math.PI / segments.length;
 
     const vertices: [number, number][] = [
-      [baseLng, baseLat], // center point (ridge)
+      [baseLng, baseLat],
       [baseLng + Math.sin(anglePrev) * offset, baseLat + Math.cos(anglePrev) * offset],
       [baseLng + Math.sin(azRad) * offset * 1.2, baseLat + Math.cos(azRad) * offset * 1.2],
       [baseLng + Math.sin(angleNext) * offset, baseLat + Math.cos(angleNext) * offset],
@@ -194,31 +220,54 @@ export function generateSimulatedFacets(
     }
   });
 
-  // Add eave edges around perimeter
+  // Add eave edges around perimeter using actual vertex positions
   if (facets.length > 0) {
-    const allVertices = facets.flatMap(f => f.vertices);
-    // Add eave along the outermost vertices
     for (let i = 0; i < Math.min(facets.length, 4); i++) {
       const f = facets[i];
       const v1 = f.vertices[1];
       const v2 = f.vertices[f.vertices.length - 1];
+      const len = distanceFt(v1, v2);
       edges.push({
         id: `eave-${i}`,
         edgeType: "eave",
         startVertex: v1,
         endVertex: v2,
-        lengthFt: Math.round(distanceFt(v1, v2)),
+        lengthFt: Math.round(len),
+      });
+    }
+
+    // Add rake edges from outermost vertices to ridge
+    if (facets.length >= 2) {
+      const firstFacet = facets[0];
+      const lastFacet = facets[facets.length - 1];
+      // Rake on first facet
+      edges.push({
+        id: "rake-left",
+        edgeType: "rake",
+        startVertex: firstFacet.vertices[0],
+        endVertex: firstFacet.vertices[1],
+        lengthFt: Math.round(distanceFt(firstFacet.vertices[0], firstFacet.vertices[1])),
+      });
+      // Rake on last facet
+      edges.push({
+        id: "rake-right",
+        edgeType: "rake",
+        startVertex: lastFacet.vertices[0],
+        endVertex: lastFacet.vertices[lastFacet.vertices.length - 1],
+        lengthFt: Math.round(distanceFt(lastFacet.vertices[0], lastFacet.vertices[lastFacet.vertices.length - 1])),
       });
     }
 
     // Add ridge line
     if (facets.length >= 2) {
+      const ridgeStart = facets[0].vertices[0];
+      const ridgeEnd = facets[Math.floor(facets.length / 2)].vertices[0];
       edges.push({
         id: "ridge-main",
         edgeType: "ridge",
-        startVertex: facets[0].vertices[0],
-        endVertex: facets[Math.floor(facets.length / 2)].vertices[0],
-        lengthFt: Math.round(distanceFt(facets[0].vertices[0], facets[Math.floor(facets.length / 2)].vertices[0])),
+        startVertex: ridgeStart,
+        endVertex: ridgeEnd,
+        lengthFt: Math.round(distanceFt(ridgeStart, ridgeEnd)),
       });
     }
   }
