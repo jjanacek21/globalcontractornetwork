@@ -92,6 +92,13 @@ export function estimateComponentsFromSolar(
 
 // ─── Geometry Helpers ─────────────────────────────────────────────────────────
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function polygonAreaSqft(coords: [number, number][]): number {
   if (coords.length < 3) return 0;
   const toRad = (d: number) => (d * Math.PI) / 180;
