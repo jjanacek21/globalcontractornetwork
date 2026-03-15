@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { RoofPin, RoofFacet, RoofEdge, DrawingTool, EdgeType } from "./types";
-import { PIN_COLORS, EDGE_COLORS, FACET_COLORS } from "./types";
+import { EDGE_COLORS, getPinColor } from "./types";
 import { polygonAreaSqft, polygonPerimeterFt, distanceFt, findSnapVertex, formatFeetInches } from "./utils";
 
 interface MeasurementMapProps {
