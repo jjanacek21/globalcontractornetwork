@@ -188,13 +188,6 @@ export function createPinFacet(pin: RoofPin, index: number): RoofFacet {
   };
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 // ─── AI Simulation: Generate facets/edges from Solar API data ──────────
 
 export function generateSimulatedFacets(
