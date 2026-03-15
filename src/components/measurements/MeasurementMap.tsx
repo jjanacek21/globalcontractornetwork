@@ -105,7 +105,7 @@ export function MeasurementMap({
         });
         markersRef.current.set(pin.id, marker);
       }
-      marker.getElement().style.backgroundColor = PIN_COLORS[pin.roofType];
+      marker.getElement().style.backgroundColor = getPinColor(pin.pitch);
       marker.getElement().title = pin.label;
       const pos = marker.getLngLat();
       if (Math.abs(pos.lat - pin.lat) > 0.000001 || Math.abs(pos.lng - pin.lng) > 0.000001) {
