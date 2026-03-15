@@ -183,7 +183,15 @@ export function findSnapVertex(
 // ─── Create synthetic facet from a measured pin ───────────────────────
 
 export function createPinFacet(pin: RoofPin, index: number): RoofFacet {
-  const area = pin.result?.total_flat_area_sqft ?? 0;
+  const isFlat = pin.pitch === "Flat";
+  const hasSectionData =
+    pin.result?.flat_section_area_sqft !== undefined &&
+    pin.result?.flat_section_area_sqft !== null &&
+    pin.result?.pitched_section_area_sqft !== undefined &&
+    pin.result?.pitched_section_area_sqft !== null;
+  const area = hasSectionData
+    ? (isFlat ? pin.result!.flat_section_area_sqft! : pin.result!.pitched_section_area_sqft!)
+    : (pin.result?.total_flat_area_sqft ?? 0);
   const sideLen = Math.sqrt(area) * 0.3048; // approx meters
   const offset = (sideLen / 2) / 111132.954; // degrees offset
   const lng = pin.lng;
