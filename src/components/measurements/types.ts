@@ -119,6 +119,8 @@ export interface SolarMeasurementData {
   satellite_image: string;
   center: { latitude: number; longitude: number };
   segments: RoofSegment[];
+  flat_section_area_sqft: number;
+  pitched_section_area_sqft: number;
   ai_roof_type_suggestion: string | null;
   ai_roof_type_warning: string | null;
 }

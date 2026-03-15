@@ -286,6 +286,8 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       center: { latitude: centerLat, longitude: centerLng },
       segments,
       filtered_segments_count: filteredSegmentsCount,
+      flat_section_area_sqft: +(flatSectionAreaM2 * M2_TO_SQFT).toFixed(2),
+      pitched_section_area_sqft: +(pitchedSectionAreaM2 * M2_TO_SQFT).toFixed(2),
       ai_roof_type_suggestion,
       ai_roof_type_warning,
     };
