@@ -161,6 +161,33 @@ export function findSnapVertex(
   return closest;
 }
 
+// ─── Create synthetic facet from a measured pin ───────────────────────
+
+export function createPinFacet(pin: RoofPin, index: number): RoofFacet {
+  const area = pin.result?.total_flat_area_sqft ?? 0;
+  const sideLen = Math.sqrt(area) * 0.3048; // approx meters
+  const offset = (sideLen / 2) / 111132.954; // degrees offset
+  const lng = pin.lng;
+  const lat = pin.lat;
+  const vertices: [number, number][] = [
+    [lng - offset, lat - offset],
+    [lng + offset, lat - offset],
+    [lng + offset, lat + offset],
+    [lng - offset, lat + offset],
+  ];
+  const pitch = pin.pitch;
+  return {
+    id: `pin-facet-${index}`,
+    name: `Pin ${index + 1} (${pitch})`,
+    type: pitch === "Flat" ? "flat" : "pitched",
+    pitch,
+    vertices,
+    areaSqft: Math.round(area),
+    perimeterFt: Math.round(polygonPerimeterFt(vertices)),
+    color: hexToRgba(getPinColor(pitch), 0.35),
+  };
+}
+
 // ─── AI Simulation: Generate facets/edges from Solar API data ──────────
 
 export function generateSimulatedFacets(

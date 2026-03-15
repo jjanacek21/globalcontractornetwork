@@ -17,7 +17,7 @@ import { MeasurementReportPanel } from "./MeasurementReportPanel";
 import { generateMeasurementPDF } from "./reportGenerator";
 import {
   calcPin, calculateMaterialTakeoff, estimateComponentsFromSolar,
-  generateSimulatedFacets, getPitchMultiplier,
+  generateSimulatedFacets, getPitchMultiplier, createPinFacet,
 } from "./utils";
 import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
@@ -227,9 +227,18 @@ export function RoofMeasurementTool() {
         }
       });
 
-      // Simulate facets/edges
+      // Simulate facets/edges from primary pin segments
       const simulated = generateSimulatedFacets(center, primaryResult.segments, totalSqft);
-      setFacets(simulated.facets);
+      const allFacets = [...simulated.facets];
+
+      // Add synthetic facets for non-primary measured pins
+      measured.slice(1).forEach((pin, i) => {
+        if (pin.result) {
+          allFacets.push(createPinFacet(pin, simulated.facets.length + i));
+        }
+      });
+
+      setFacets(allFacets);
       setEdges(simulated.edges);
       pushHistory(simulated.facets, simulated.edges);
 
