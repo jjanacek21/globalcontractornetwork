@@ -189,9 +189,8 @@ export function RoofMeasurementTool() {
 
     const results = await Promise.all(pins.map(async (pin) => {
       try {
-        const isFlat = pin.pitch === "Flat";
         const { data, error } = await supabase.functions.invoke("solar-roof-measure", {
-          body: { latitude: pin.lat, longitude: pin.lng, address, roof_type_override: isFlat ? "flat" : undefined },
+          body: { latitude: pin.lat, longitude: pin.lng, address },
         });
         if (error || !data?.success || !data?.data) return { ...pin, loading: false, error: data?.error || "Measurement failed", result: null };
         if (!satelliteImage && data.data.satellite_image) setSatelliteImage(data.data.satellite_image);
