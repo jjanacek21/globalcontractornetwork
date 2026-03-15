@@ -2,9 +2,17 @@ import type { RoofPin, PinCalculation, RoofComponents, MaterialTakeoff, RoofFace
 import { PITCH_MULTIPLIERS, getPinColor } from "./types";
 
 // Calculate pin using the pin's own pitch and waste settings
+// For Flat pins, use flat_section_area_sqft (only segments <= 5°)
+// For pitched pins, use pitched_section_area_sqft (only segments > 5°)
+// Falls back to total_flat_area_sqft if section areas aren't available
 export function calcPin(pin: RoofPin): PinCalculation | null {
   if (!pin.result) return null;
-  const flatSqft = pin.result.total_flat_area_sqft;
+  const isFlat = pin.pitch === "Flat";
+  const sectionArea = isFlat
+    ? (pin.result.flat_section_area_sqft ?? 0)
+    : (pin.result.pitched_section_area_sqft ?? 0);
+  // Use section area if available and > 0, otherwise fall back to total
+  const flatSqft = sectionArea > 0 ? sectionArea : pin.result.total_flat_area_sqft;
   const multiplier = PITCH_MULTIPLIERS[pin.pitch] ?? 1.0;
   const waste = pin.wastePercent;
   const pitchedSqft = flatSqft * multiplier;
