@@ -1,3 +1,91 @@
+// ─── Edge Component Types ─────────────────────────────────────────────────────
+
+export type EdgeType = "ridge" | "hip" | "valley" | "eave" | "rake" | "drip_edge" | "flashing" | "transition";
+
+export const EDGE_COLORS: Record<EdgeType, string> = {
+  ridge:     "#ef4444", // red
+  hip:       "#f97316", // orange
+  valley:    "#22c55e", // green
+  eave:      "#a855f7", // purple
+  rake:      "#3b82f6", // blue
+  drip_edge: "#14b8a6", // teal
+  flashing:  "#eab308", // yellow
+  transition:"#ec4899", // pink
+};
+
+export const EDGE_LABELS: Record<EdgeType, string> = {
+  ridge:     "Ridge",
+  hip:       "Hip",
+  valley:    "Valley",
+  eave:      "Eave",
+  rake:      "Rake",
+  drip_edge: "Drip Edge",
+  flashing:  "Flashing",
+  transition:"Transition",
+};
+
+export const EDGE_DESCRIPTIONS: Record<EdgeType, string> = {
+  ridge:     "Horizontal line at top where two slopes meet",
+  hip:       "External angle where two roof faces meet",
+  valley:    "Internal angle where two roof faces meet",
+  eave:      "Lower horizontal edge of the roof",
+  rake:      "Sloped edge of a gable roof",
+  drip_edge: "Metal edge along eave/rake",
+  flashing:  "Metal seal at wall-to-roof junction",
+  transition:"Where two different roof sections connect",
+};
+
+// ─── Pitch Multipliers ───────────────────────────────────────────────────────
+
+export const PITCH_MULTIPLIERS: Record<string, number> = {
+  "Flat":  1.000,
+  "1/12":  1.003,
+  "2/12":  1.014,
+  "3/12":  1.031,
+  "4/12":  1.054,
+  "5/12":  1.083,
+  "6/12":  1.118,
+  "7/12":  1.158,
+  "8/12":  1.202,
+  "9/12":  1.250,
+  "10/12": 1.302,
+  "11/12": 1.357,
+  "12/12": 1.414,
+  "14/12": 1.537,
+  "16/12": 1.667,
+  "18/12": 1.803,
+  "20/12": 1.944,
+  "22/12": 2.088,
+  "24/12": 2.236,
+};
+
+export const ALL_PITCHES = Object.keys(PITCH_MULTIPLIERS);
+
+// ─── Drawing Tools ───────────────────────────────────────────────────────────
+
+export type DrawingTool = "select" | "facet" | "edge" | "delete";
+
+// ─── Data Structures ─────────────────────────────────────────────────────────
+
+export interface RoofFacet {
+  id: string;
+  name: string;
+  type: "pitched" | "flat";
+  pitch: string;           // e.g. "4/12"
+  vertices: [number, number][]; // [lng, lat]
+  areaSqft: number;
+  perimeterFt: number;
+  color: string;           // fill color
+}
+
+export interface RoofEdge {
+  id: string;
+  edgeType: EdgeType;
+  startVertex: [number, number]; // [lng, lat]
+  endVertex: [number, number];
+  lengthFt: number;
+}
+
 export interface RoofPin {
   id: string;
   lat: number;
@@ -93,9 +181,21 @@ export interface DrawnPolygon {
   label: string;
 }
 
-export type MeasurementMode = "ai" | "draw";
+export type MeasurementMode = "ai" | "manual";
 
 export const PIN_COLORS = { flat: "#3b82f6", pitched: "#ef4444" } as const;
+
+// Facet colors - distinct, muted fills
+export const FACET_COLORS = [
+  "rgba(59,130,246,0.30)",  // blue
+  "rgba(239,68,68,0.30)",   // red
+  "rgba(34,197,94,0.30)",   // green
+  "rgba(168,85,247,0.30)",  // purple
+  "rgba(249,115,22,0.30)",  // orange
+  "rgba(236,72,153,0.30)",  // pink
+  "rgba(20,184,166,0.30)",  // teal
+  "rgba(234,179,8,0.30)",   // yellow
+];
 
 export const DEFAULT_COMPONENTS: RoofComponents = {
   totalAreaSqft: 0,
@@ -120,3 +220,18 @@ export const DEFAULT_COMPONENTS: RoofComponents = {
   wastePercent: 13,
   pitchMultiplier: 1.054,
 };
+
+// ─── Measurement Summary ─────────────────────────────────────────────────────
+
+export interface MeasurementSummary {
+  facets: RoofFacet[];
+  edges: RoofEdge[];
+  totalFlatArea: number;
+  totalPitchedArea: number;
+  totalSquares: number;
+  wastePercent: number;
+  pitchMultiplier: number;
+  materialSquares: number;
+  components: RoofComponents;
+  takeoff: MaterialTakeoff;
+}
