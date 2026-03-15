@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,58 +6,82 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Save, FileText, Link2, Loader2, ArrowLeft,
-  Satellite, Pencil, CheckCircle, Share2
+  Save, FileText, Loader2, ArrowLeft,
+  Satellite, Pencil, CheckCircle, Share2, DollarSign
 } from "lucide-react";
 import { MeasurementMap } from "./MeasurementMap";
 import { AddressBar } from "./AddressBar";
 import { PinListPanel } from "./PinListPanel";
-import { DrawingPanel } from "./DrawingPanel";
-import { RoofComponentsPanel } from "./RoofComponentsPanel";
-import { MaterialTakeoffPanel } from "./MaterialTakeoffPanel";
+import { DrawingToolbar } from "./DrawingToolbar";
+import { MeasurementReportPanel } from "./MeasurementReportPanel";
 import { generateMeasurementPDF } from "./reportGenerator";
 import {
-  calcPin,
-  calculateMaterialTakeoff,
-  estimateComponentsFromSolar,
+  calcPin, calculateMaterialTakeoff, estimateComponentsFromSolar,
+  generateSimulatedFacets, getPitchMultiplier,
 } from "./utils";
 import type {
-  RoofPin,
-  SolarMeasurementData,
-  DrawnPolygon,
-  RoofComponents,
-  MeasurementMode,
+  RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
+  RoofComponents, MeasurementMode, DrawingTool, EdgeType,
 } from "./types";
-import { DEFAULT_COMPONENTS } from "./types";
+import { DEFAULT_COMPONENTS, FACET_COLORS, PITCH_MULTIPLIERS } from "./types";
 
 export function RoofMeasurementTool() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
 
   // Core state
   const [address, setAddress] = useState("");
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<MeasurementMode>("ai");
-  const [satelliteImage, setSatelliteImage] = useState<string>("");
+  const [satelliteImage, setSatelliteImage] = useState("");
 
-  // AI mode state
+  // AI mode
   const [pins, setPins] = useState<RoofPin[]>([]);
   const [measuring, setMeasuring] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
-  // Draw mode state
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [polygons, setPolygons] = useState<DrawnPolygon[]>([]);
+  // Manual mode - drawing
+  const [activeTool, setActiveTool] = useState<DrawingTool>("select");
+  const [activeEdgeType, setActiveEdgeType] = useState<EdgeType>("ridge");
 
-  // Components & takeoff
+  // Shared data
+  const [facets, setFacets] = useState<RoofFacet[]>([]);
+  const [edges, setEdges] = useState<RoofEdge[]>([]);
   const [components, setComponents] = useState<RoofComponents>(DEFAULT_COMPONENTS);
-  const [showComponents, setShowComponents] = useState(false);
-  const [showTakeoff, setShowTakeoff] = useState(false);
+
+  // History for undo/redo
+  const [history, setHistory] = useState<{ facets: RoofFacet[]; edges: RoofEdge[] }[]>([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);
 
   // Save state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  const pushHistory = (f: RoofFacet[], e: RoofEdge[]) => {
+    const newHistory = history.slice(0, historyIdx + 1);
+    newHistory.push({ facets: f, edges: e });
+    setHistory(newHistory);
+    setHistoryIdx(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIdx <= 0) return;
+    const prev = history[historyIdx - 1];
+    setFacets(prev.facets);
+    setEdges(prev.edges);
+    setHistoryIdx(historyIdx - 1);
+  };
+
+  const redo = () => {
+    if (historyIdx >= history.length - 1) return;
+    const next = history[historyIdx + 1];
+    setFacets(next.facets);
+    setEdges(next.edges);
+    setHistoryIdx(historyIdx + 1);
+  };
 
   // Address selection
   const handleAddressSelect = useCallback((addr: string, coords: { lat: number; lng: number }) => {
@@ -66,16 +90,13 @@ export function RoofMeasurementTool() {
     setSaved(false);
     setSavedId(null);
     setShareUrl(null);
-    // Auto-add initial pin in AI mode
+    setFacets([]);
+    setEdges([]);
+    setHistory([]);
+    setHistoryIdx(-1);
     setPins([{
-      id: crypto.randomUUID(),
-      lat: coords.lat,
-      lng: coords.lng,
-      roofType: "pitched",
-      label: "Main Roof",
-      loading: false,
-      result: null,
-      error: null,
+      id: crypto.randomUUID(), lat: coords.lat, lng: coords.lng,
+      roofType: "pitched", label: "Main Roof", loading: false, result: null, error: null,
     }]);
   }, []);
 
@@ -84,371 +105,296 @@ export function RoofMeasurementTool() {
     if (pins.length === 0 || !center) return;
     const last = pins[pins.length - 1];
     setPins(prev => [...prev, {
-      id: crypto.randomUUID(),
-      lat: last.lat + 0.00015,
-      lng: last.lng + 0.00015,
-      roofType: "flat",
-      label: `Flat ${prev.filter(p => p.roofType === "flat").length + 1}`,
-      loading: false,
-      result: null,
-      error: null,
+      id: crypto.randomUUID(), lat: last.lat + 0.00015, lng: last.lng + 0.00015,
+      roofType: "flat", label: `Flat ${prev.filter(p => p.roofType === "flat").length + 1}`,
+      loading: false, result: null, error: null,
     }]);
   };
 
   const removePin = (id: string) => setPins(prev => prev.filter(p => p.id !== id));
-
   const updatePin = (id: string, field: Partial<RoofPin>) => {
-    setPins(prev => prev.map(p =>
-      p.id === id ? { ...p, ...field, result: field.roofType !== undefined ? null : p.result } : p
-    ));
+    setPins(prev => prev.map(p => p.id === id ? { ...p, ...field, result: field.roofType !== undefined ? null : p.result } : p));
   };
-
   const handlePinDrag = useCallback((id: string, lat: number, lng: number) => {
-    setPins(prev => prev.map(p =>
-      p.id === id ? { ...p, lat, lng, result: null, error: null } : p
-    ));
+    setPins(prev => prev.map(p => p.id === id ? { ...p, lat, lng, result: null, error: null } : p));
   }, []);
 
-  // Measure all pins
+  // AI Measure
   const measureAllPins = async () => {
     if (pins.length === 0) return;
     setMeasuring(true);
+    setAiAnalyzing(true);
     setSaved(false);
-
     setPins(prev => prev.map(p => ({ ...p, loading: true, error: null })));
 
     const results = await Promise.all(pins.map(async (pin) => {
       try {
         const { data, error } = await supabase.functions.invoke("solar-roof-measure", {
-          body: {
-            latitude: pin.lat,
-            longitude: pin.lng,
-            address,
-            roof_type_override: pin.roofType === "flat" ? "flat" : undefined,
-          },
+          body: { latitude: pin.lat, longitude: pin.lng, address, roof_type_override: pin.roofType === "flat" ? "flat" : undefined },
         });
-        if (error || !data?.success || !data?.data) {
-          return { ...pin, loading: false, error: data?.error || "Measurement failed", result: null };
-        }
-        // Capture satellite image from first result
-        if (!satelliteImage && data.data.satellite_image) {
-          setSatelliteImage(data.data.satellite_image);
-        }
+        if (error || !data?.success || !data?.data) return { ...pin, loading: false, error: data?.error || "Measurement failed", result: null };
+        if (!satelliteImage && data.data.satellite_image) setSatelliteImage(data.data.satellite_image);
         return { ...pin, loading: false, error: null, result: data.data as SolarMeasurementData };
-      } catch {
-        return { ...pin, loading: false, error: "Measurement failed", result: null };
-      }
+      } catch { return { ...pin, loading: false, error: "Measurement failed", result: null }; }
     }));
 
     setPins(results);
-    setMeasuring(false);
 
-    // Auto-populate components from results
-    const measuredPins = results.filter(p => p.result);
-    if (measuredPins.length > 0) {
-      const totalSqft = measuredPins.reduce((s, p) => s + (calcPin(p)?.pitchedSqft || 0), 0);
-      const totalSquares = measuredPins.reduce((s, p) => s + (calcPin(p)?.squares || 0), 0);
+    // Generate simulated facets/edges from API data
+    const measured = results.filter(p => p.result);
+    if (measured.length > 0 && center) {
+      const primaryResult = measured[0].result!;
+      const totalSqft = measured.reduce((s, p) => s + (calcPin(p)?.pitchedSqft || 0), 0);
+      const totalSquares = measured.reduce((s, p) => s + (calcPin(p)?.squares || 0), 0);
+
+      // Simulate facets/edges
+      const simulated = generateSimulatedFacets(center, primaryResult.segments, totalSqft);
+      setFacets(simulated.facets);
+      setEdges(simulated.edges);
+      pushHistory(simulated.facets, simulated.edges);
+
+      // Update components
       const estimated = estimateComponentsFromSolar(results, totalSqft, totalSquares);
       setComponents(prev => ({ ...prev, ...estimated }));
-      setShowComponents(true);
     }
+
+    // Brief delay for AI analyzing animation
+    await new Promise(r => setTimeout(r, 800));
+    setAiAnalyzing(false);
+    setMeasuring(false);
+
+    // Scroll to report
+    setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
   };
 
-  // Drawing mode
-  const handlePolygonComplete = useCallback((polygon: DrawnPolygon) => {
-    setPolygons(prev => [...prev, polygon]);
-    setIsDrawing(false);
+  // Facet complete (manual)
+  const handleFacetComplete = useCallback((facet: Omit<RoofFacet, "id" | "name" | "color">) => {
+    const idx = facets.length;
+    const newFacet: RoofFacet = {
+      ...facet,
+      id: crypto.randomUUID(),
+      name: `Facet ${idx + 1}`,
+      color: FACET_COLORS[idx % FACET_COLORS.length],
+    };
+    const newFacets = [...facets, newFacet];
+    setFacets(newFacets);
+    pushHistory(newFacets, edges);
 
-    // Update components with drawn data
-    setTimeout(() => {
-      setPolygons(current => {
-        const totalArea = current.reduce((s, p) => s + p.areaSqft, 0);
-        const totalPerimeter = current.reduce((s, p) => s + p.perimeterFt, 0);
-        const pitched = totalArea * components.pitchMultiplier;
-        const withWaste = pitched * (1 + components.wastePercent / 100);
-        setComponents(prev => ({
-          ...prev,
-          totalAreaSqft: Math.round(totalArea),
-          totalSquares: +(withWaste / 100).toFixed(2),
-          perimeterFt: Math.round(totalPerimeter),
-          eaveFt: Math.round(totalPerimeter * 0.5),
-          rakeFt: Math.round(totalPerimeter * 0.25),
-          ridgeFt: Math.round(Math.sqrt(totalArea) * 0.45),
-        }));
-        return current;
-      });
-      setShowComponents(true);
-    }, 0);
-  }, [components.pitchMultiplier, components.wastePercent]);
+    // Update components
+    const totalArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
+    const mult = getPitchMultiplier(components.predominantPitch);
+    const totalWithWaste = totalArea * mult * (1 + components.wastePercent / 100);
+    setComponents(prev => ({
+      ...prev,
+      totalAreaSqft: Math.round(totalArea),
+      totalSquares: +(totalWithWaste / 100).toFixed(2),
+      facetsCount: newFacets.length,
+    }));
+  }, [facets, edges, components.predominantPitch, components.wastePercent]);
 
-  // Computed values
+  // Edge complete (manual)
+  const handleEdgeComplete = useCallback((edge: Omit<RoofEdge, "id">) => {
+    const newEdge: RoofEdge = { ...edge, id: crypto.randomUUID() };
+    const newEdges = [...edges, newEdge];
+    setEdges(newEdges);
+    pushHistory(facets, newEdges);
+
+    // Update component line totals from edges
+    const totals: Record<string, number> = {};
+    newEdges.forEach(e => { totals[e.edgeType] = (totals[e.edgeType] || 0) + e.lengthFt; });
+    setComponents(prev => ({
+      ...prev,
+      ridgeFt: totals.ridge || prev.ridgeFt,
+      hipFt: totals.hip || prev.hipFt,
+      valleyFt: totals.valley || prev.valleyFt,
+      eaveFt: totals.eave || prev.eaveFt,
+      rakeFt: totals.rake || prev.rakeFt,
+      dripEdgeFt: totals.drip_edge || prev.dripEdgeFt,
+      flashingFt: totals.flashing || prev.flashingFt,
+      stepFlashingFt: totals.flashing || prev.stepFlashingFt,
+    }));
+  }, [facets, edges]);
+
+  // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
-  const aiTotalSquares = measuredPins.reduce((s, pc) => s + pc.calc.squares, 0);
-  const drawTotalArea = polygons.reduce((s, p) => s + p.areaSqft, 0);
-  const drawTotalSquares = (drawTotalArea * components.pitchMultiplier * (1 + components.wastePercent / 100)) / 100;
-
-  const activeSquares = mode === "ai" ? aiTotalSquares : drawTotalSquares;
-  const hasMeasurements = mode === "ai" ? measuredPins.length > 0 : polygons.length > 0;
-
+  const hasMeasurements = facets.length > 0 || measuredPins.length > 0;
   const takeoff = calculateMaterialTakeoff(components);
 
-  // Save measurement
+  // Save
   const saveMeasurement = async () => {
     if (!hasMeasurements) return;
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        toast({ title: "Authentication required", description: "Please log in to save.", variant: "destructive" });
-        return;
-      }
-
-      // Get company_id
-      const { data: memberData } = await supabase
-        .from("company_members")
-        .select("company_id")
-        .eq("user_id", session.user.id)
-        .eq("is_active", true)
-        .limit(1)
-        .single();
+      if (!session?.user?.id) { toast({ title: "Authentication required", variant: "destructive" }); return; }
+      const { data: memberData } = await supabase.from("company_members").select("company_id").eq("user_id", session.user.id).eq("is_active", true).limit(1).single();
 
       const { data: inserted, error: insertError } = await supabase.from("roof_measurements").insert({
-        created_by: session.user.id,
-        company_id: memberData?.company_id || null,
-        address: address || "Unknown",
-        latitude: center?.lat || null,
-        longitude: center?.lng || null,
+        created_by: session.user.id, company_id: memberData?.company_id || null,
+        address: address || "Unknown", latitude: center?.lat || null, longitude: center?.lng || null,
         source: mode === "ai" ? "ai_solar" : "manual",
         quality: mode === "ai" ? measuredPins[0]?.pin.result?.quality || null : null,
-        complexity: components.complexity,
-        segments_count: components.facetsCount,
-        pitch: components.predominantPitch,
-        pitch_degrees: mode === "ai" ? measuredPins[0]?.pin.result?.average_pitch_degrees || null : null,
-        pitch_multiplier: components.pitchMultiplier,
-        waste_percent: components.wastePercent,
-        total_area_sqft: Math.round(components.totalAreaSqft),
+        complexity: components.complexity, segments_count: components.facetsCount,
+        pitch: components.predominantPitch, pitch_multiplier: components.pitchMultiplier,
+        waste_percent: components.wastePercent, total_area_sqft: Math.round(components.totalAreaSqft),
         total_squares: +components.totalSquares.toFixed(2),
-        roof_type: pins.some(p => p.roofType === "flat") ? "flat" : "pitched",
-        ridge_ft: components.ridgeFt || null,
-        hip_ft: components.hipFt || null,
-        valley_ft: components.valleyFt || null,
-        eave_ft: components.eaveFt || null,
-        perimeter_ft: components.perimeterFt || null,
-        rake_ft: components.rakeFt || null,
-        step_flashing_ft: components.stepFlashingFt || null,
-        headwall_ft: components.headwallFt || null,
-        drip_edge_ft: components.dripEdgeFt || null,
-        flashing_ft: components.flashingFt || null,
-        pipe_boots_count: components.pipeBootsCount,
-        skylights_count: components.skylightsCount,
-        chimney_count: components.chimneyCount,
-        facets_count: components.facetsCount,
-        stories: components.stories,
-        predominant_pitch: components.predominantPitch,
+        roof_type: facets.some(f => f.type === "flat") ? "flat" : "pitched",
+        ridge_ft: components.ridgeFt || null, hip_ft: components.hipFt || null,
+        valley_ft: components.valleyFt || null, eave_ft: components.eaveFt || null,
+        perimeter_ft: components.perimeterFt || null, rake_ft: components.rakeFt || null,
+        step_flashing_ft: components.stepFlashingFt || null, headwall_ft: components.headwallFt || null,
+        drip_edge_ft: components.dripEdgeFt || null, flashing_ft: components.flashingFt || null,
+        pipe_boots_count: components.pipeBootsCount, skylights_count: components.skylightsCount,
+        chimney_count: components.chimneyCount, facets_count: components.facetsCount,
+        stories: components.stories, predominant_pitch: components.predominantPitch,
         material_takeoff: takeoff as any,
-        solar_api_response: mode === "ai" ? {
-          pins: pins.map(p => ({
-            id: p.id, label: p.label, roofType: p.roofType,
-            lat: p.lat, lng: p.lng, calc: calcPin(p),
-          })),
-        } as any : null,
+        solar_api_response: {
+          facets: facets.map(f => ({ name: f.name, type: f.type, pitch: f.pitch, area_sqft: f.areaSqft, vertices: f.vertices })),
+          edges: edges.map(e => ({ type: e.edgeType, length_ft: e.lengthFt, start_vertex: e.startVertex, end_vertex: e.endVertex })),
+        } as any,
       }).select("id").single();
 
       if (insertError) throw insertError;
-
       setSaved(true);
       setSavedId(inserted.id);
       toast({ title: "Measurement saved", description: `${components.totalSquares.toFixed(2)} squares recorded.` });
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  // Generate shareable link
   const generateShareLink = async () => {
     if (!savedId) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.from("measurement_reports").insert({
-        measurement_id: savedId,
-        created_by: session?.user?.id || null,
-        report_data: {
-          address,
-          components,
-          takeoff,
-        } as any,
+        measurement_id: savedId, created_by: session?.user?.id || null,
+        report_data: { address, components, takeoff } as any,
       }).select("share_token").single();
-
       if (error) throw error;
-
       const url = `${window.location.origin}/report/${data.share_token}`;
       setShareUrl(url);
       await navigator.clipboard.writeText(url);
-      toast({ title: "Share link copied!", description: "Link copied to clipboard." });
-    } catch (err: any) {
-      toast({ title: "Failed to generate link", description: err.message, variant: "destructive" });
-    }
+      toast({ title: "Share link copied!" });
+    } catch (err: any) { toast({ title: "Failed", description: err.message, variant: "destructive" }); }
   };
 
-  // Download PDF
   const downloadPDF = () => {
     const doc = generateMeasurementPDF(address, components, takeoff, satelliteImage);
-    const filename = `roof-report-${(address || "property").replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
-    doc.save(filename);
-    toast({ title: "Report downloaded", description: filename });
+    doc.save(`roof-report-${(address || "property").replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`);
+    toast({ title: "Report downloaded" });
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col relative">
-      {/* Top Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-10 w-10 shadow-lg bg-background/95 backdrop-blur-sm shrink-0"
-          onClick={() => navigate("/member/crm")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="flex flex-col">
+      {/* Map Section - 65vh */}
+      <div className="relative" style={{ height: "65vh" }}>
+        {/* Top Bar */}
+        <div className="absolute top-3 left-3 right-3 z-10 flex items-center gap-2">
+          <Button variant="secondary" size="icon" className="h-9 w-9 shadow-lg bg-background/95 backdrop-blur-sm shrink-0" onClick={() => navigate("/member/crm")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <AddressBar onSelect={handleAddressSelect} />
+          {center && (
+            <Tabs value={mode} onValueChange={(v) => { setMode(v as MeasurementMode); setActiveTool("select"); }}>
+              <TabsList className="shadow-lg bg-background/95 backdrop-blur-sm">
+                <TabsTrigger value="ai" className="gap-1.5 text-xs"><Satellite className="h-3.5 w-3.5" />AI Fast Measure</TabsTrigger>
+                <TabsTrigger value="manual" className="gap-1.5 text-xs"><Pencil className="h-3.5 w-3.5" />Manual Measure</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {hasMeasurements && (
+            <Badge variant="secondary" className="ml-auto text-sm font-bold shadow-lg bg-background/95 backdrop-blur-sm px-3 py-1.5">
+              {components.totalSquares.toFixed(2)} sq
+            </Badge>
+          )}
+        </div>
 
-        <AddressBar onSelect={handleAddressSelect} />
-
-        {center && (
-          <Tabs value={mode} onValueChange={(v) => {
-            setMode(v as MeasurementMode);
-            setIsDrawing(false);
-          }}>
-            <TabsList className="shadow-lg bg-background/95 backdrop-blur-sm">
-              <TabsTrigger value="ai" className="gap-1.5 text-xs">
-                <Satellite className="h-3.5 w-3.5" />AI Solar
-              </TabsTrigger>
-              <TabsTrigger value="draw" className="gap-1.5 text-xs">
-                <Pencil className="h-3.5 w-3.5" />Manual Draw
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Left toolbar (manual mode) */}
+        {center && mode === "manual" && (
+          <div className="absolute top-16 left-3 z-10">
+            <DrawingToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              activeEdgeType={activeEdgeType}
+              onEdgeTypeChange={setActiveEdgeType}
+              onUndo={undo}
+              onRedo={redo}
+              onDelete={() => {}}
+              canUndo={historyIdx > 0}
+              canRedo={historyIdx < history.length - 1}
+              hasSelection={false}
+            />
+          </div>
         )}
 
-        {hasMeasurements && (
-          <Badge variant="secondary" className="ml-auto text-sm font-bold shadow-lg bg-background/95 backdrop-blur-sm px-3 py-1.5">
-            {activeSquares.toFixed(2)} squares
-          </Badge>
+        {/* Left panel (AI mode) */}
+        {center && mode === "ai" && (
+          <div className="absolute top-16 left-3 z-10">
+            <PinListPanel
+              pins={pins} onAddPin={addPin} onRemovePin={removePin}
+              onUpdatePin={updatePin} onMeasureAll={measureAllPins} measuring={measuring}
+            />
+          </div>
         )}
-      </div>
 
-      {/* Full-screen map */}
-      <div className="flex-1">
+        {/* Map */}
         <MeasurementMap
           center={center}
           pins={mode === "ai" ? pins : []}
           onPinDrag={handlePinDrag}
-          drawingMode={mode === "draw" && isDrawing}
-          polygons={mode === "draw" ? polygons : []}
-          onPolygonComplete={handlePolygonComplete}
+          facets={facets}
+          edges={edges}
+          activeTool={mode === "manual" ? activeTool : "select"}
+          activeEdgeType={activeEdgeType}
+          onFacetComplete={handleFacetComplete}
+          onEdgeComplete={handleEdgeComplete}
+          showAIOverlay={aiAnalyzing}
         />
+
+        {/* Bottom action bar */}
+        {hasMeasurements && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+            <Button size="sm" className="shadow-lg text-xs" onClick={saveMeasurement} disabled={saving || saved}>
+              {saving ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Saving...</>
+                : saved ? <><CheckCircle className="mr-1.5 h-3.5 w-3.5" />Saved</>
+                : <><Save className="mr-1.5 h-3.5 w-3.5" />Save Measurement</>}
+            </Button>
+            <Button variant="outline" size="sm" className="shadow-lg bg-background/95 backdrop-blur-sm text-xs" onClick={downloadPDF}>
+              <FileText className="mr-1.5 h-3.5 w-3.5" />Generate Report
+            </Button>
+            {saved && savedId && (
+              <>
+                <Button variant="outline" size="sm" className="shadow-lg bg-background/95 backdrop-blur-sm text-xs" onClick={generateShareLink}>
+                  <Share2 className="mr-1.5 h-3.5 w-3.5" />{shareUrl ? "Copied!" : "Share Link"}
+                </Button>
+                <Button size="sm" className="shadow-lg bg-orange-500 hover:bg-orange-600 text-white text-xs" onClick={() => navigate(`/member/crm/estimates/new?measurement_id=${savedId}`)}>
+                  <DollarSign className="mr-1.5 h-3.5 w-3.5" />Create Estimate
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Left floating panels */}
-      {center && (
-        <div className="absolute top-20 left-4 z-10 space-y-3">
-          {mode === "ai" && (
-            <PinListPanel
-              pins={pins}
-              onAddPin={addPin}
-              onRemovePin={removePin}
-              onUpdatePin={updatePin}
-              onMeasureAll={measureAllPins}
-              measuring={measuring}
-            />
-          )}
-          {mode === "draw" && (
-            <DrawingPanel
-              polygons={polygons}
-              isDrawing={isDrawing}
-              onStartDrawing={() => setIsDrawing(true)}
-              onStopDrawing={() => setIsDrawing(false)}
-              onRemovePolygon={(id) => setPolygons(prev => prev.filter(p => p.id !== id))}
-              onClearAll={() => setPolygons([])}
-              pitchMultiplier={components.pitchMultiplier}
-              wastePercent={components.wastePercent}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Right floating panels */}
-      {showComponents && (
-        <div className="absolute top-20 right-4 z-10 space-y-3">
-          <RoofComponentsPanel components={components} onChange={setComponents} />
-        </div>
-      )}
-
-      {showTakeoff && (
-        <div className="absolute top-20 right-[22rem] z-10">
-          <MaterialTakeoffPanel takeoff={takeoff} totalSquares={components.totalSquares} />
-        </div>
-      )}
-
-      {/* Bottom action bar */}
-      {center && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-          {hasMeasurements && (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shadow-lg bg-background/95 backdrop-blur-sm text-xs"
-                onClick={() => setShowComponents(!showComponents)}
-              >
-                {showComponents ? "Hide" : "Show"} Components
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="shadow-lg bg-background/95 backdrop-blur-sm text-xs"
-                onClick={() => setShowTakeoff(!showTakeoff)}
-              >
-                {showTakeoff ? "Hide" : "Show"} Materials
-              </Button>
-              <Button
-                size="sm"
-                className="shadow-lg text-xs"
-                onClick={saveMeasurement}
-                disabled={saving || saved}
-              >
-                {saving ? (
-                  <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Saving...</>
-                ) : saved ? (
-                  <><CheckCircle className="mr-1.5 h-3.5 w-3.5" />Saved</>
-                ) : (
-                  <><Save className="mr-1.5 h-3.5 w-3.5" />Save</>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shadow-lg bg-background/95 backdrop-blur-sm text-xs"
-                onClick={downloadPDF}
-              >
-                <FileText className="mr-1.5 h-3.5 w-3.5" />PDF Report
-              </Button>
-              {saved && savedId && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shadow-lg bg-background/95 backdrop-blur-sm text-xs"
-                  onClick={generateShareLink}
-                >
-                  <Share2 className="mr-1.5 h-3.5 w-3.5" />
-                  {shareUrl ? "Link Copied!" : "Share Link"}
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      {/* Report Section Below Map */}
+      <div ref={reportRef} className="bg-background border-t border-border">
+        {hasMeasurements ? (
+          <MeasurementReportPanel
+            address={address}
+            facets={facets}
+            edges={edges}
+            components={components}
+            takeoff={takeoff}
+            onComponentsChange={setComponents}
+          />
+        ) : (
+          <div className="text-center py-16 text-muted-foreground">
+            <Satellite className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">Measurement report will appear here after measuring</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
