@@ -100,17 +100,26 @@ export function CRMSidebar() {
   return (
     <Sidebar collapsible="icon" className="crm-glass-sidebar">
       <SidebarHeader className="border-b border-sidebar-border/30 p-4">
-        <NavLink to="/member/crm" className="flex items-center gap-2 group">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary shadow-lg shadow-sidebar-primary/30 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-            <LayoutDashboard className="w-4 h-4 text-sidebar-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-sidebar-foreground tracking-tight">GCN-CRM</span>
-              <span className="text-[10px] text-sidebar-foreground/50">Contractor Suite</span>
+        <div className="flex items-center gap-2">
+          <NavLink to="/member/crm" className="flex items-center gap-2 group flex-1 min-w-0">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sidebar-primary shadow-lg shadow-sidebar-primary/30 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+              <LayoutDashboard className="w-4 h-4 text-sidebar-primary-foreground" />
             </div>
-          )}
-        </NavLink>
+            {!collapsed && (
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-sidebar-foreground tracking-tight">GCN-CRM</span>
+                <span className="text-[10px] text-sidebar-foreground/50">Contractor Suite</span>
+              </div>
+            )}
+          </NavLink>
+          <NavLink
+            to="/member/dashboard"
+            title="Back to Main Dashboard"
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground transition-colors duration-200 shrink-0"
+          >
+            <Home className="w-4 h-4" />
+          </NavLink>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto">
