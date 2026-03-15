@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { RoofPin, RoofFacet, RoofEdge, DrawingTool, EdgeType } from "./types";
-import { PIN_COLORS, EDGE_COLORS, FACET_COLORS } from "./types";
+import { EDGE_COLORS, getPinColor } from "./types";
 import { polygonAreaSqft, polygonPerimeterFt, distanceFt, findSnapVertex, formatFeetInches } from "./utils";
 
 interface MeasurementMapProps {
@@ -105,7 +105,7 @@ export function MeasurementMap({
         });
         markersRef.current.set(pin.id, marker);
       }
-      marker.getElement().style.backgroundColor = PIN_COLORS[pin.roofType];
+      marker.getElement().style.backgroundColor = getPinColor(pin.pitch);
       marker.getElement().title = pin.label;
       const pos = marker.getLngLat();
       if (Math.abs(pos.lat - pin.lat) > 0.000001 || Math.abs(pos.lng - pin.lng) > 0.000001) {

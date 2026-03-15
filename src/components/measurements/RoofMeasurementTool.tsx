@@ -23,7 +23,7 @@ import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
   RoofComponents, MeasurementMode, DrawingTool, EdgeType,
 } from "./types";
-import { DEFAULT_COMPONENTS, FACET_COLORS, PITCH_MULTIPLIERS } from "./types";
+import { DEFAULT_COMPONENTS, FACET_COLORS, PITCH_MULTIPLIERS, getPinColor } from "./types";
 
 export function RoofMeasurementTool() {
   const navigate = useNavigate();
@@ -96,7 +96,8 @@ export function RoofMeasurementTool() {
     setHistoryIdx(-1);
     setPins([{
       id: crypto.randomUUID(), lat: coords.lat, lng: coords.lng,
-      roofType: "pitched", label: "Main Roof", loading: false, result: null, error: null,
+      pitch: "4/12", label: "Main Roof", wastePercent: 13,
+      loading: false, result: null, error: null,
     }]);
   }, []);
 
@@ -106,18 +107,77 @@ export function RoofMeasurementTool() {
     const last = pins[pins.length - 1];
     setPins(prev => [...prev, {
       id: crypto.randomUUID(), lat: last.lat + 0.00015, lng: last.lng + 0.00015,
-      roofType: "flat", label: `Flat ${prev.filter(p => p.roofType === "flat").length + 1}`,
+      pitch: "Flat", label: `Flat ${prev.filter(p => p.pitch === "Flat").length + 1}`,
+      wastePercent: 5,
       loading: false, result: null, error: null,
     }]);
   };
 
   const removePin = (id: string) => setPins(prev => prev.filter(p => p.id !== id));
   const updatePin = (id: string, field: Partial<RoofPin>) => {
-    setPins(prev => prev.map(p => p.id === id ? { ...p, ...field, result: field.roofType !== undefined ? null : p.result } : p));
+    setPins(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const updated = { ...p, ...field };
+      // Don't clear result when changing pitch/waste - just recalculate
+      if (field.pitch !== undefined || field.wastePercent !== undefined) {
+        return updated;
+      }
+      return updated;
+    }));
   };
   const handlePinDrag = useCallback((id: string, lat: number, lng: number) => {
     setPins(prev => prev.map(p => p.id === id ? { ...p, lat, lng, result: null, error: null } : p));
   }, []);
+
+  // Recalculate totals whenever pins change
+  const recalcTotals = (currentPins: RoofPin[], currentEdges: RoofEdge[]) => {
+    const measured = currentPins.filter(p => p.result);
+    if (measured.length === 0) return;
+
+    // Each pin uses its own multiplier and waste
+    let totalSqft = 0;
+    let totalSquares = 0;
+    measured.forEach(p => {
+      const pc = calcPin(p);
+      if (pc) {
+        totalSqft += pc.flatSqft;
+        totalSquares += pc.squares;
+      }
+    });
+
+    // Weighted average pitch multiplier for display
+    const avgMult = measured.reduce((s, p) => {
+      const pc = calcPin(p);
+      return s + (pc ? pc.multiplier * pc.flatSqft : 0);
+    }, 0) / (totalSqft || 1);
+
+    // Edge totals from actual edges
+    const edgeTotals: Record<string, number> = {};
+    currentEdges.forEach(e => {
+      edgeTotals[e.edgeType] = (edgeTotals[e.edgeType] || 0) + e.lengthFt;
+    });
+
+    // Weighted waste
+    const avgWaste = measured.reduce((s, p) => {
+      const pc = calcPin(p);
+      return s + (pc ? p.wastePercent * pc.flatSqft : 0);
+    }, 0) / (totalSqft || 1);
+
+    setComponents(prev => ({
+      ...prev,
+      totalAreaSqft: Math.round(totalSqft),
+      totalSquares: +totalSquares.toFixed(2),
+      pitchMultiplier: +avgMult.toFixed(3),
+      wastePercent: Math.round(avgWaste),
+      ridgeFt: Math.round(edgeTotals.ridge || prev.ridgeFt),
+      hipFt: Math.round(edgeTotals.hip || prev.hipFt),
+      valleyFt: Math.round(edgeTotals.valley || prev.valleyFt),
+      eaveFt: Math.round(edgeTotals.eave || prev.eaveFt),
+      rakeFt: Math.round(edgeTotals.rake || prev.rakeFt),
+      dripEdgeFt: Math.round((edgeTotals.drip_edge || 0) + (edgeTotals.eave || prev.eaveFt) + (edgeTotals.rake || prev.rakeFt)),
+      flashingFt: Math.round(edgeTotals.flashing || prev.flashingFt),
+    }));
+  };
 
   // AI Measure
   const measureAllPins = async () => {
@@ -129,12 +189,24 @@ export function RoofMeasurementTool() {
 
     const results = await Promise.all(pins.map(async (pin) => {
       try {
+        const isFlat = pin.pitch === "Flat";
         const { data, error } = await supabase.functions.invoke("solar-roof-measure", {
-          body: { latitude: pin.lat, longitude: pin.lng, address, roof_type_override: pin.roofType === "flat" ? "flat" : undefined },
+          body: { latitude: pin.lat, longitude: pin.lng, address, roof_type_override: isFlat ? "flat" : undefined },
         });
         if (error || !data?.success || !data?.data) return { ...pin, loading: false, error: data?.error || "Measurement failed", result: null };
         if (!satelliteImage && data.data.satellite_image) setSatelliteImage(data.data.satellite_image);
-        return { ...pin, loading: false, error: null, result: data.data as SolarMeasurementData };
+        
+        // Auto-detect pitch from API if not Flat
+        const apiResult = data.data as SolarMeasurementData;
+        let updatedPitch = pin.pitch;
+        if (!isFlat && apiResult.average_pitch_over_12 > 0) {
+          const detectedPitch = `${apiResult.average_pitch_over_12}/12`;
+          if (PITCH_MULTIPLIERS[detectedPitch]) {
+            updatedPitch = detectedPitch;
+          }
+        }
+        
+        return { ...pin, pitch: updatedPitch, loading: false, error: null, result: apiResult };
       } catch { return { ...pin, loading: false, error: "Measurement failed", result: null }; }
     }));
 
@@ -144,8 +216,17 @@ export function RoofMeasurementTool() {
     const measured = results.filter(p => p.result);
     if (measured.length > 0 && center) {
       const primaryResult = measured[0].result!;
-      const totalSqft = measured.reduce((s, p) => s + (calcPin(p)?.pitchedSqft || 0), 0);
-      const totalSquares = measured.reduce((s, p) => s + (calcPin(p)?.squares || 0), 0);
+      
+      // Calculate totals using individual pin multipliers
+      let totalSqft = 0;
+      let totalSquares = 0;
+      measured.forEach(p => {
+        const pc = calcPin(p);
+        if (pc) {
+          totalSqft += pc.flatSqft;
+          totalSquares += pc.squares;
+        }
+      });
 
       // Simulate facets/edges
       const simulated = generateSimulatedFacets(center, primaryResult.segments, totalSqft);
@@ -153,17 +234,15 @@ export function RoofMeasurementTool() {
       setEdges(simulated.edges);
       pushHistory(simulated.facets, simulated.edges);
 
-      // Update components
-      const estimated = estimateComponentsFromSolar(results, totalSqft, totalSquares);
-      setComponents(prev => ({ ...prev, ...estimated }));
+      // Update components using real edge lengths from generated facets
+      const estimated = estimateComponentsFromSolar(results, totalSqft, totalSquares, simulated.edges);
+      setComponents(prev => ({ ...prev, ...estimated, totalSquares: +totalSquares.toFixed(2) }));
     }
 
-    // Brief delay for AI analyzing animation
     await new Promise(r => setTimeout(r, 800));
     setAiAnalyzing(false);
     setMeasuring(false);
 
-    // Scroll to report
     setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
   };
 
@@ -180,7 +259,6 @@ export function RoofMeasurementTool() {
     setFacets(newFacets);
     pushHistory(newFacets, edges);
 
-    // Update components
     const totalArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
     const mult = getPitchMultiplier(components.predominantPitch);
     const totalWithWaste = totalArea * mult * (1 + components.wastePercent / 100);
@@ -199,25 +277,25 @@ export function RoofMeasurementTool() {
     setEdges(newEdges);
     pushHistory(facets, newEdges);
 
-    // Update component line totals from edges
     const totals: Record<string, number> = {};
     newEdges.forEach(e => { totals[e.edgeType] = (totals[e.edgeType] || 0) + e.lengthFt; });
     setComponents(prev => ({
       ...prev,
-      ridgeFt: totals.ridge || prev.ridgeFt,
-      hipFt: totals.hip || prev.hipFt,
-      valleyFt: totals.valley || prev.valleyFt,
-      eaveFt: totals.eave || prev.eaveFt,
-      rakeFt: totals.rake || prev.rakeFt,
-      dripEdgeFt: totals.drip_edge || prev.dripEdgeFt,
-      flashingFt: totals.flashing || prev.flashingFt,
-      stepFlashingFt: totals.flashing || prev.stepFlashingFt,
+      ridgeFt: Math.round(totals.ridge || 0),
+      hipFt: Math.round(totals.hip || 0),
+      valleyFt: Math.round(totals.valley || 0),
+      eaveFt: Math.round(totals.eave || 0),
+      rakeFt: Math.round(totals.rake || 0),
+      dripEdgeFt: Math.round((totals.drip_edge || 0) + (totals.eave || 0) + (totals.rake || 0)),
+      flashingFt: Math.round(totals.flashing || 0),
+      stepFlashingFt: Math.round(totals.flashing || 0),
     }));
   }, [facets, edges]);
 
   // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
   const hasMeasurements = facets.length > 0 || measuredPins.length > 0;
+  const totalSquares = measuredPins.reduce((s, pc) => s + pc.calc.squares, 0);
   const takeoff = calculateMaterialTakeoff(components);
 
   // Save
@@ -238,7 +316,7 @@ export function RoofMeasurementTool() {
         pitch: components.predominantPitch, pitch_multiplier: components.pitchMultiplier,
         waste_percent: components.wastePercent, total_area_sqft: Math.round(components.totalAreaSqft),
         total_squares: +components.totalSquares.toFixed(2),
-        roof_type: facets.some(f => f.type === "flat") ? "flat" : "pitched",
+        roof_type: pins.some(p => p.pitch === "Flat") ? "flat" : "pitched",
         ridge_ft: components.ridgeFt || null, hip_ft: components.hipFt || null,
         valley_ft: components.valleyFt || null, eave_ft: components.eaveFt || null,
         perimeter_ft: components.perimeterFt || null, rake_ft: components.rakeFt || null,
@@ -249,6 +327,10 @@ export function RoofMeasurementTool() {
         stories: components.stories, predominant_pitch: components.predominantPitch,
         material_takeoff: takeoff as any,
         solar_api_response: {
+          pins: pins.filter(p => p.result).map(p => ({
+            label: p.label, pitch: p.pitch, waste: p.wastePercent,
+            area_sqft: calcPin(p)?.flatSqft, squares: calcPin(p)?.squares,
+          })),
           facets: facets.map(f => ({ name: f.name, type: f.type, pitch: f.pitch, area_sqft: f.areaSqft, vertices: f.vertices })),
           edges: edges.map(e => ({ type: e.edgeType, length_ft: e.lengthFt, start_vertex: e.startVertex, end_vertex: e.endVertex })),
         } as any,
@@ -305,7 +387,7 @@ export function RoofMeasurementTool() {
           )}
           {hasMeasurements && (
             <Badge variant="secondary" className="ml-auto text-sm font-bold shadow-lg bg-background/95 backdrop-blur-sm px-3 py-1.5">
-              {components.totalSquares.toFixed(2)} sq
+              {(mode === "ai" ? totalSquares : components.totalSquares).toFixed(2)} sq
             </Badge>
           )}
         </div>
