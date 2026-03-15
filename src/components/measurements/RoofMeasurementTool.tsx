@@ -17,7 +17,7 @@ import { MeasurementReportPanel } from "./MeasurementReportPanel";
 import { generateMeasurementPDF } from "./reportGenerator";
 import {
   calcPin, calculateMaterialTakeoff, estimateComponentsFromSolar,
-  generateSimulatedFacets, getPitchMultiplier,
+  generateSimulatedFacets, getPitchMultiplier, createPinFacet,
 } from "./utils";
 import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
