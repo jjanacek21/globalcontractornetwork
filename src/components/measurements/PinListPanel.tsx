@@ -23,7 +23,7 @@ export function PinListPanel({ pins, onAddPin, onRemovePin, onUpdatePin, onMeasu
   const totalSqft = measuredPins.reduce((s, pc) => s + pc.calc.flatSqft, 0);
 
   return (
-    <Card className="shadow-xl border-border/50 bg-background/95 backdrop-blur-sm w-[420px]">
+    <Card className="shadow-xl border-border/50 bg-background/95 backdrop-blur-sm w-[520px]">
       <CardHeader className="pb-2 px-4 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -49,12 +49,13 @@ export function PinListPanel({ pins, onAddPin, onRemovePin, onUpdatePin, onMeasu
           </div>
         </div>
         {/* Column headers */}
-        <div className="grid grid-cols-[20px_1fr_80px_52px_48px_54px_20px] gap-1 text-[9px] text-muted-foreground mt-2 px-1 uppercase tracking-wider font-medium">
+        <div className="grid grid-cols-[20px_1fr_80px_52px_48px_56px_54px_20px] gap-1 text-[9px] text-muted-foreground mt-2 px-1 uppercase tracking-wider font-medium">
           <span></span>
           <span>Name</span>
           <span>Pitch</span>
           <span className="text-right">Area</span>
           <span className="text-right">×Mult</span>
+          <span className="text-right">Waste</span>
           <span className="text-right">Sqrs</span>
           <span></span>
         </div>
@@ -67,7 +68,7 @@ export function PinListPanel({ pins, onAddPin, onRemovePin, onUpdatePin, onMeasu
           return (
             <div
               key={pin.id}
-              className="grid grid-cols-[20px_1fr_80px_52px_48px_54px_20px] gap-1 items-center p-1.5 rounded-md bg-muted/50 border border-border"
+              className="grid grid-cols-[20px_1fr_80px_52px_48px_56px_54px_20px] gap-1 items-center p-1.5 rounded-md bg-muted/50 border border-border"
             >
               {/* Color dot */}
               <div
@@ -122,6 +123,21 @@ export function PinListPanel({ pins, onAddPin, onRemovePin, onUpdatePin, onMeasu
                 ×{multiplier.toFixed(2)}
               </div>
 
+              {/* Waste % inline */}
+              <Select
+                value={String(pin.wastePercent)}
+                onValueChange={(v) => onUpdatePin(pin.id, { wastePercent: Number(v) })}
+              >
+                <SelectTrigger className="h-6 text-[10px] px-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WASTE_OPTIONS.map(w => (
+                    <SelectItem key={w} value={String(w)} className="text-xs">{w}%</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               {/* Squares */}
               <div className="text-right text-[11px]">
                 {pc ? (
@@ -140,32 +156,6 @@ export function PinListPanel({ pins, onAddPin, onRemovePin, onUpdatePin, onMeasu
             </div>
           );
         })}
-
-        {/* Per-pin waste row */}
-        {pins.some(p => p.result) && (
-          <div className="pt-1 space-y-1">
-            <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium px-1">Waste % Per Section</p>
-            {pins.filter(p => p.result).map((pin) => (
-              <div key={`waste-${pin.id}`} className="flex items-center gap-2 px-1">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: getPinColor(pin.pitch) }} />
-                <span className="text-[10px] text-muted-foreground flex-1 truncate">{pin.label}</span>
-                <Select
-                  value={String(pin.wastePercent)}
-                  onValueChange={(v) => onUpdatePin(pin.id, { wastePercent: Number(v) })}
-                >
-                  <SelectTrigger className="h-5 w-16 text-[10px] px-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WASTE_OPTIONS.map(w => (
-                      <SelectItem key={w} value={String(w)} className="text-xs">{w}%</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Totals */}
         {measuredPins.length > 0 && (

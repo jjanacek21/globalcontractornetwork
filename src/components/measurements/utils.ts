@@ -1,5 +1,5 @@
 import type { RoofPin, PinCalculation, RoofComponents, MaterialTakeoff, RoofFacet, RoofEdge, EdgeType } from "./types";
-import { PITCH_MULTIPLIERS } from "./types";
+import { PITCH_MULTIPLIERS, getPinColor } from "./types";
 
 // Calculate pin using the pin's own pitch and waste settings
 export function calcPin(pin: RoofPin): PinCalculation | null {
@@ -91,6 +91,13 @@ export function estimateComponentsFromSolar(
 }
 
 // ─── Geometry Helpers ─────────────────────────────────────────────────────────
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function polygonAreaSqft(coords: [number, number][]): number {
   if (coords.length < 3) return 0;
@@ -201,7 +208,7 @@ export function generateSimulatedFacets(
       vertices,
       areaSqft: Math.round(area),
       perimeterFt: Math.round(perim),
-      color: `rgba(${50 + idx * 30}, ${100 + idx * 20}, ${200 - idx * 15}, 0.3)`,
+      color: hexToRgba(getPinColor(pitch), 0.35),
     });
 
     // Generate edges between adjacent facets

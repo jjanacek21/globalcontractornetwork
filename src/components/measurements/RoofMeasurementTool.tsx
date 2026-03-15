@@ -169,13 +169,13 @@ export function RoofMeasurementTool() {
       totalSquares: +totalSquares.toFixed(2),
       pitchMultiplier: +avgMult.toFixed(3),
       wastePercent: Math.round(avgWaste),
-      ridgeFt: Math.round(edgeTotals.ridge || prev.ridgeFt),
-      hipFt: Math.round(edgeTotals.hip || prev.hipFt),
-      valleyFt: Math.round(edgeTotals.valley || prev.valleyFt),
-      eaveFt: Math.round(edgeTotals.eave || prev.eaveFt),
-      rakeFt: Math.round(edgeTotals.rake || prev.rakeFt),
-      dripEdgeFt: Math.round((edgeTotals.drip_edge || 0) + (edgeTotals.eave || prev.eaveFt) + (edgeTotals.rake || prev.rakeFt)),
-      flashingFt: Math.round(edgeTotals.flashing || prev.flashingFt),
+      ridgeFt: Math.round(edgeTotals.ridge || 0),
+      hipFt: Math.round(edgeTotals.hip || 0),
+      valleyFt: Math.round(edgeTotals.valley || 0),
+      eaveFt: Math.round(edgeTotals.eave || 0),
+      rakeFt: Math.round(edgeTotals.rake || 0),
+      dripEdgeFt: Math.round((edgeTotals.drip_edge || 0) + (edgeTotals.eave || 0) + (edgeTotals.rake || 0)),
+      flashingFt: Math.round(edgeTotals.flashing || 0),
     }));
   };
 

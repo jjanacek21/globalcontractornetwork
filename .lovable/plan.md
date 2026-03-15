@@ -1,26 +1,69 @@
 
 
-## Plan: Fix Measurement Tool Bugs
+# Fix Missing Documents in Packet Assembly
 
-### Issues Identified
+## Root Cause
 
-1. **Waste % not inline** — Currently waste selectors are in a separate section below the pin rows. User wants `[Color] [Name] [Pitch] [Area] [×Mult] [Waste%] [Squares] [Delete]` all in one row.
+The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
 
-2. **Facet colors not pitch-based** — AI-generated facets use generic FACET_COLORS array instead of coloring by pitch. Should use `getPinColor(pitch)` with alpha for fill.
+The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
 
-3. **Edge fallback values** — In `recalcTotals()`, edge values fall back to `prev.ridgeFt` etc., which preserves stale/placeholder values. Should default to 0 when no edges of that type exist.
+## Fix: Two-Part Solution
 
-4. **Report panel uses global multiplier** — `MeasurementReportPanel` calculates `totalPitchedArea` using a single `components.pitchMultiplier` instead of summing per-facet pitched areas.
+### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
 
-### Changes
+In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
 
-**`PinListPanel.tsx`** — Restructure pin row grid to 8 columns: add inline waste % dropdown, remove the separate "Waste % Per Section" block. New grid: `[20px_1fr_80px_52px_48px_56px_54px_20px]` (Color, Name, Pitch, Area, ×Mult, Waste, Sqrs, Del).
+```
+- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
+- Filter by is_active = true
+- Check file_url presence to determine ready vs needs_sourcing
+- Use these as fallback product matches for auto_source documents
+```
 
-**`RoofMeasurementTool.tsx`** — Fix `recalcTotals`: change edge fallbacks from `prev.ridgeFt` to `0`. Fix `generateSimulatedFacets` call to pass per-pin pitch data so facets get pitch-based colors.
+### 2. Fix incorrect source types in packet structures
 
-**`MeasurementMap.tsx`** — Update facet rendering to use pitch-based fill colors via `getPinColor`.
+Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
+- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
+- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
 
-**`utils.ts`** — Update `generateSimulatedFacets` to assign facet colors based on pitch using `getPinColor()` with alpha.
+Update these two records in `permit_packet_structures` to use the correct source type.
 
-**`MeasurementReportPanel.tsx`** — Calculate `totalPitchedArea` by summing each facet's `areaSqft * PITCH_MULTIPLIERS[facet.pitch]` instead of using a global multiplier.
+### 3. Add "Select Products" action for unmatched auto_source docs
+
+When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
+
+## Files to Change
+
+- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
+- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
+- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
+- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
+
+## Key Logic Change (PermitPacketAssembly.tsx)
+
+```typescript
+// After fetching selectedProducts from project...
+let productMatches = selectedProducts;
+
+if (productMatches.length === 0) {
+  // Auto-match from product_approvals table
+  const { data: approvals } = await supabase
+    .from('product_approvals')
+    .select('id, manufacturer, product_name, noa_number, file_url, category')
+    .eq('is_active', true)
+    .not('file_url', 'is', null);
+  
+  productMatches = (approvals || []).map(a => ({
+    id: a.id,
+    manufacturer: a.manufacturer,
+    product_name: a.product_name,
+    noa_number: a.noa_number,
+    file_url: a.file_url,
+    category: a.category,
+  }));
+}
+```
+
+Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
 
