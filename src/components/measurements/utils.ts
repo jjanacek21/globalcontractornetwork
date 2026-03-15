@@ -201,7 +201,7 @@ export function generateSimulatedFacets(
       vertices,
       areaSqft: Math.round(area),
       perimeterFt: Math.round(perim),
-      color: getPinColor(pitch).replace(")", ", 0.35)").replace("rgb(", "rgba("),
+      color: hexToRgba(getPinColor(pitch), 0.35),
     });
 
     // Generate edges between adjacent facets
