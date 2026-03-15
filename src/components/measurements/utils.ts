@@ -1,5 +1,5 @@
 import type { RoofPin, PinCalculation, RoofComponents, MaterialTakeoff, RoofFacet, RoofEdge, EdgeType } from "./types";
-import { PITCH_MULTIPLIERS } from "./types";
+import { PITCH_MULTIPLIERS, getPinColor } from "./types";
 
 // Calculate pin using the pin's own pitch and waste settings
 export function calcPin(pin: RoofPin): PinCalculation | null {

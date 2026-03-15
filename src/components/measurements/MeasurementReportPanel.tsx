@@ -32,7 +32,10 @@ export function MeasurementReportPanel({
   }, {} as Record<EdgeType, number>);
 
   const totalFlatArea = facets.reduce((s, f) => s + f.areaSqft, 0);
-  const totalPitchedArea = Math.round(totalFlatArea * components.pitchMultiplier);
+  const totalPitchedArea = Math.round(facets.reduce((s, f) => {
+    const mult = PITCH_MULTIPLIERS[f.pitch] ?? components.pitchMultiplier;
+    return s + f.areaSqft * mult;
+  }, 0));
   const totalSquares = components.totalSquares;
   const wasteSquares = +(totalSquares * (components.wastePercent / 100)).toFixed(2);
   const materialSquares = +(totalSquares + wasteSquares).toFixed(2);
