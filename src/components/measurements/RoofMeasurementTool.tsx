@@ -198,7 +198,7 @@ export function RoofMeasurementTool() {
         // Auto-detect pitch from API if not Flat
         const apiResult = data.data as SolarMeasurementData;
         let updatedPitch = pin.pitch;
-        if (!isFlat && apiResult.average_pitch_over_12 > 0) {
+        if (pin.pitch !== "Flat" && apiResult.average_pitch_over_12 > 0) {
           const detectedPitch = `${apiResult.average_pitch_over_12}/12`;
           if (PITCH_MULTIPLIERS[detectedPitch]) {
             updatedPitch = detectedPitch;
