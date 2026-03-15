@@ -1,69 +1,39 @@
 
 
-# Fix Missing Documents in Packet Assembly
+## Plan: Fix Double-Counting — Pins Must Use Section-Specific Areas
 
-## Root Cause
+### Problem
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+Both Pin 1 (Pitched) and Pin 2 (Flat) show 2,020 sqft because `calcPin` falls back to `total_flat_area_sqft` (the **entire building**) whenever the section-specific area is 0. Since both pins hit the same building, this double-counts the full roof for each pin, producing ~44 squares instead of the correct ~30.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+The API returns `flat_section_area_sqft` and `pitched_section_area_sqft`, but if Google Solar classifies all segments as pitched (pitch > 5°), `flat_section_area_sqft = 0` and the fallback kicks in, giving the flat pin the whole building area.
 
-## Fix: Two-Part Solution
+### Fix
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+**`src/components/measurements/utils.ts`** — Two changes:
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+1. **`calcPin`** (lines 8-21): Remove the fallback to `total_flat_area_sqft` when section data exists. If `flat_section_area_sqft` and `pitched_section_area_sqft` fields are present in the API response, always use them — even if 0. Only fall back to `total_flat_area_sqft` for legacy responses missing these fields entirely.
 
 ```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+// Before:
+const flatSqft = sectionArea > 0 ? sectionArea : pin.result.total_flat_area_sqft;
 
-### 2. Fix incorrect source types in packet structures
-
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
-
-Update these two records in `permit_packet_structures` to use the correct source type.
-
-### 3. Add "Select Products" action for unmatched auto_source docs
-
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
+// After: only fall back if section fields don't exist at all
+if (hasSectionData) {
+  flatSqft = isFlat ? flat_section : pitched_section;
+} else {
+  flatSqft = total_flat_area_sqft; // legacy
 }
 ```
 
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+2. **`createPinFacet`** (line 175): Use the same section-based area logic instead of `total_flat_area_sqft`, so synthetic facets on the map/report also show correct per-section areas.
+
+### Result
+
+For 2847 NE 2nd Ave:
+- Pitched pin uses `pitched_section_area_sqft` (~2221 if Google agrees, or whatever Google returns)
+- Flat pin uses `flat_section_area_sqft` (~852 if Google has flat segments, or 0 if none detected)
+- No more double-counting of the full building area
+
+If Google Solar finds no flat segments for a building the user marked as flat, the pin will show 0 sqft — which is accurate per the API data. The user can then adjust pin placement or use manual measurement mode.
 
