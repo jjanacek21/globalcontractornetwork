@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import {
   Ruler, Layers, Package, Calculator
 } from "lucide-react";
-import type { RoofFacet, RoofEdge, RoofComponents, MaterialTakeoff, EdgeType } from "./types";
+import type { RoofFacet, RoofEdge, RoofComponents, MaterialTakeoff, EdgeType, RoofSection } from "./types";
 import { EDGE_COLORS, EDGE_LABELS, PITCH_MULTIPLIERS } from "./types";
 import { formatFeetInches } from "./utils";
 
@@ -13,6 +13,7 @@ interface MeasurementReportPanelProps {
   address: string;
   facets: RoofFacet[];
   edges: RoofEdge[];
+  roofs?: RoofSection[];
   components: RoofComponents;
   takeoff: MaterialTakeoff;
   onComponentsChange: (c: RoofComponents) => void;
