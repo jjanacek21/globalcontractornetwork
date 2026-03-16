@@ -307,3 +307,25 @@ export function useEnrichProperty() {
     },
   });
 }
+
+// ---- Fetch Miami-Dade Permits Mutation ----
+
+export function useFetchMiamiDadePermits() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (propertyId: string) => {
+      const { data, error } = await supabase.functions.invoke('fetch-miami-dade-permits', {
+        body: { property_id: propertyId },
+      });
+
+      if (error) throw new Error(error.message || 'Permit lookup failed');
+      if (!data?.success) throw new Error(data?.error || 'Permit lookup failed');
+      return data as { success: boolean; inserted: number; total_found?: number; message?: string };
+    },
+    onSuccess: (_data, propertyId) => {
+      qc.invalidateQueries({ queryKey: ["piq-report", propertyId] });
+    },
+  });
+}

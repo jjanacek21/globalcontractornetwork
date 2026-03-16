@@ -217,14 +217,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 3d. Permits check ───────────────────────────────────────────
+    // ── 3d. Permits — auto-fetch for Miami-Dade ────────────────────
     const { count: permitCount } = await supabase
       .from("piq_permits")
       .select("id", { count: "exact", head: true })
       .eq("property_id", property_id);
 
     if ((permitCount ?? 0) === 0) {
-      enrichmentLog.push("Permits: not yet available");
+      const county = cityToCounty(property.city || "");
+      if (county === "miami-dade") {
+        try {
+          const permitRes = await fetch(`${supabaseUrl}/functions/v1/fetch-miami-dade-permits`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({ property_id }),
+          });
+          const permitData = await permitRes.json();
+          if (permitData?.success) {
+            enrichmentLog.push(`Permits: fetched ${permitData.inserted} from Miami-Dade Open Data`);
+          } else {
+            enrichmentLog.push(`Permits: Miami-Dade lookup returned no results`);
+          }
+        } catch (e) {
+          enrichmentLog.push(`Permits: Miami-Dade lookup failed`);
+        }
+      } else {
+        enrichmentLog.push("Permits: not yet available (non Miami-Dade)");
+      }
     }
 
     // ── 4. Calculate scores ─────────────────────────────────────────

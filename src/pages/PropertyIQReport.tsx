@@ -4,17 +4,18 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { ScoreGauge } from "@/components/property-iq/ScoreGauge";
 import { OwnerIntelligenceCard } from "@/components/property-iq/OwnerIntelligenceCard";
+import { exportPropertyPDF } from "@/components/property-iq/ExportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePropertyIQReport, useEnrichProperty } from "@/hooks/usePropertyIQ";
+import { usePropertyIQReport, useEnrichProperty, useFetchMiamiDadePermits } from "@/hooks/usePropertyIQ";
 import { useToast } from "@/hooks/use-toast";
 import {
   MapPin, Download, Bookmark, ArrowLeft, Building2, CalendarDays,
-  CloudRain, Wrench, DollarSign, AlertTriangle, Shield, Loader2,
+  CloudRain, Wrench, DollarSign, AlertTriangle, Shield, Loader2, RefreshCw,
 } from "lucide-react";
 
 const conditionColor: Record<string, string> = {
@@ -29,6 +30,7 @@ const PropertyIQReport = () => {
   const { id } = useParams<{ id: string }>();
   const { data: property, isLoading, error } = usePropertyIQReport(id);
   const enrichMutation = useEnrichProperty();
+  const permitMutation = useFetchMiamiDadePermits();
   const enrichTriggered = useRef(false);
   const { toast } = useToast();
 
@@ -56,11 +58,8 @@ const PropertyIQReport = () => {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-12 w-full" />
           <div className="grid md:grid-cols-3 gap-4">
-            <Skeleton className="h-40" />
-            <Skeleton className="h-40" />
-            <Skeleton className="h-40" />
+            <Skeleton className="h-40" /><Skeleton className="h-40" /><Skeleton className="h-40" />
           </div>
-          <Skeleton className="h-60 w-full" />
           <Skeleton className="h-60 w-full" />
         </div>
       </div>
@@ -90,6 +89,23 @@ const PropertyIQReport = () => {
   const roofAge = new Date().getFullYear() - roofInstalled;
   const roofLifePercent = Math.min(100, Math.round((roofAge / roofExpectedLife) * 100));
 
+  const handleExportPDF = () => {
+    exportPropertyPDF(property);
+    toast({ title: "PDF exported", description: "Report downloaded successfully." });
+  };
+
+  const handleRefreshPermits = () => {
+    if (!id) return;
+    permitMutation.mutate(id, {
+      onSuccess: (data) => {
+        toast({ title: "Permits refreshed", description: `Found ${data.inserted} new permits.` });
+      },
+      onError: (err) => {
+        toast({ title: "Permit lookup failed", description: err.message, variant: "destructive" });
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <PropertyIQHeader />
@@ -102,7 +118,9 @@ const PropertyIQReport = () => {
           </Link>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1"><Bookmark className="h-4 w-4" /> Save</Button>
-            <Button variant="outline" size="sm" className="gap-1"><Download className="h-4 w-4" /> Export PDF</Button>
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleExportPDF}>
+              <Download className="h-4 w-4" /> Export PDF
+            </Button>
           </div>
         </div>
 
@@ -110,9 +128,7 @@ const PropertyIQReport = () => {
         <div className="mb-6">
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <Badge>{property.property_type}</Badge>
-            <Badge variant={roofCondition === 'critical' ? 'destructive' : 'secondary'}>
-              Roof: {roofCondition}
-            </Badge>
+            <Badge variant={roofCondition === 'critical' ? 'destructive' : 'secondary'}>Roof: {roofCondition}</Badge>
             <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
@@ -201,9 +217,7 @@ const PropertyIQReport = () => {
                   const age = new Date().getFullYear() - (comp.install_year ?? 2000);
                   const life = comp.estimated_life ?? 25;
                   const pct = Math.min(100, Math.round((age / life) * 100));
-                  const label = comp.material
-                    ? `${comp.component_type} (${comp.material})`
-                    : comp.component_type || 'Unknown';
+                  const label = comp.material ? `${comp.component_type} (${comp.material})` : comp.component_type || 'Unknown';
                   return (
                     <div key={comp.id}>
                       <div className="flex justify-between text-sm mb-1">
@@ -223,10 +237,18 @@ const PropertyIQReport = () => {
         )}
 
         {/* Permit History */}
-        {property.piq_permits && property.piq_permits.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Permit History</CardTitle></CardHeader>
-            <CardContent>
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="h-5 w-5" /> Permit History</CardTitle>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleRefreshPermits} disabled={permitMutation.isPending}>
+                {permitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Refresh Permits
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {property.piq_permits && property.piq_permits.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -249,9 +271,11 @@ const PropertyIQReport = () => {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No permits found. Click "Refresh Permits" to fetch from Miami-Dade.</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Sales History */}
         {property.piq_property_sales && property.piq_property_sales.length > 0 && (
