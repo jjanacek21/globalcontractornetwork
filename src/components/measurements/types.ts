@@ -71,6 +71,11 @@ export type DrawingTool = "select" | "facet" | "edge" | "delete";
 
 // ─── Data Structures ─────────────────────────────────────────────────────────
 
+export interface RoofSection {
+  id: string;
+  name: string;            // e.g. "Main House", "Garage"
+}
+
 export interface RoofFacet {
   id: string;
   name: string;
@@ -81,6 +86,7 @@ export interface RoofFacet {
   perimeterFt: number;
   color: string;           // fill color
   wastePercent: number;     // per-facet waste factor
+  roofId?: string;         // which roof section this belongs to
 }
 
 export interface RoofEdge {
