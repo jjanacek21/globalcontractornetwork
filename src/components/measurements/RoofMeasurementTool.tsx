@@ -654,6 +654,7 @@ export function RoofMeasurementTool() {
             address={address}
             facets={facets}
             edges={edges}
+            roofs={roofs}
             components={components}
             takeoff={takeoff}
             onComponentsChange={setComponents}
