@@ -171,38 +171,7 @@ const PropertyIQAdmin = () => {
 
         {/* API Config */}
         <TabsContent value="api-config" className="space-y-4 mt-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            {[
-              { key: 'property_appraiser', label: 'Property Appraiser API', desc: 'County property appraiser data access' },
-              { key: 'skip_tracing', label: 'Skip Tracing API', desc: 'Owner contact lookup (BatchSkipTracing, REISkip, etc.)' },
-              { key: 'sunbiz', label: 'Sunbiz / Corp Search API', desc: 'Florida corporate entity search' },
-              { key: 'zillow', label: 'Zillow / Property Data API', desc: 'Property valuation and market data' },
-            ].map((api) => (
-              <Card key={api.key}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Key className="h-4 w-4" /> {api.label}
-                  </CardTitle>
-                  <CardDescription className="text-xs">{api.desc}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label htmlFor={api.key} className="text-xs">API Key</Label>
-                    <Input
-                      id={api.key}
-                      type="password"
-                      placeholder="Enter API key..."
-                      value={apiKeys[api.key]}
-                      onChange={(e) => setApiKeys({ ...apiKeys, [api.key]: e.target.value })}
-                    />
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => handleSaveApiKey(api.key)}>
-                    Save Key
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <PropertyIQApiConfig />
         </TabsContent>
 
         {/* History */}
