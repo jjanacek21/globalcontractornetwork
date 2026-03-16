@@ -212,6 +212,7 @@ export function createPinFacet(pin: RoofPin, index: number): RoofFacet {
     areaSqft: Math.round(area),
     perimeterFt: Math.round(polygonPerimeterFt(vertices)),
     color: hexToRgba(getPinColor(pitch), 0.35),
+    wastePercent: pin.wastePercent,
   };
 }
 
