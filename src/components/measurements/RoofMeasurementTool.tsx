@@ -451,6 +451,8 @@ export function RoofMeasurementTool() {
           activeEdgeType={activeEdgeType}
           onFacetComplete={handleFacetComplete}
           onEdgeComplete={handleEdgeComplete}
+          onFacetSelect={setSelectedFacetId}
+          selectedFacetId={selectedFacetId}
           showAIOverlay={aiAnalyzing}
         />
 
