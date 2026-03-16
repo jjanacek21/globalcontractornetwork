@@ -511,7 +511,7 @@ export function RoofMeasurementTool() {
           )}
           {hasMeasurements && (
             <Badge variant="secondary" className="ml-auto text-sm font-bold shadow-lg bg-background/95 backdrop-blur-sm px-3 py-1.5">
-              {(mode === "ai" ? totalSquares : components.totalSquares).toFixed(2)} sq
+              {(mode === "ai" ? aiTotalSquares : manualTotalSquares).toFixed(2)} sq
             </Badge>
           )}
         </div>
