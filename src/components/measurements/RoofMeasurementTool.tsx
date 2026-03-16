@@ -102,6 +102,9 @@ export function RoofMeasurementTool() {
     setEdges([]);
     setHistory([]);
     setHistoryIdx(-1);
+    const newRoofId = crypto.randomUUID() as string;
+    setRoofs([{ id: newRoofId, name: "Main Roof" }]);
+    setActiveRoofId(newRoofId);
     setPins([{
       id: crypto.randomUUID(), lat: coords.lat, lng: coords.lng,
       pitch: "4/12", label: "Main Roof", wastePercent: 13,
