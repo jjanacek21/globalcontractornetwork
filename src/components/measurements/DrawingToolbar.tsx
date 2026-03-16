@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   MousePointer2, Pentagon, Minus, Trash2, Undo2, Redo2
 } from "lucide-react";
@@ -70,30 +69,35 @@ export function DrawingToolbar({
           </Tooltip>
         ))}
 
-        <div className="h-px bg-border my-0.5" />
-
-        {/* Edge type selector (when edge tool active) */}
+        {/* Edge type quick-switch circles (when edge tool active) */}
         {activeTool === "edge" && (
-          <div className="px-0.5">
-            <Select value={activeEdgeType} onValueChange={(v) => onEdgeTypeChange(v as EdgeType)}>
-              <SelectTrigger className="h-8 w-full text-[10px] px-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: EDGE_COLORS[activeEdgeType] }} />
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {EDGE_TYPES.map(et => (
-                  <SelectItem key={et} value={et}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-1 rounded-full" style={{ backgroundColor: EDGE_COLORS[et] }} />
-                      <span>{EDGE_LABELS[et]}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <>
+            <div className="h-px bg-border my-0.5" />
+            <div className="grid grid-cols-2 gap-1 px-0.5">
+              {EDGE_TYPES.map(et => (
+                <Tooltip key={et}>
+                  <TooltipTrigger asChild>
+                    <button
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                        activeEdgeType === et
+                          ? "border-foreground scale-110 shadow-md"
+                          : "border-transparent opacity-70 hover:opacity-100 hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: EDGE_COLORS[et] }}
+                      onClick={() => onEdgeTypeChange(et)}
+                    >
+                      {activeEdgeType === et && (
+                        <span className="w-2 h-2 rounded-full bg-white" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">
+                    {EDGE_LABELS[et]}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </>
         )}
 
         <div className="h-px bg-border my-0.5" />
