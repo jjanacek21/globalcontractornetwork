@@ -23,7 +23,7 @@ import {
 } from "./utils";
 import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
-  RoofComponents, MeasurementMode, DrawingTool, EdgeType,
+  RoofComponents, MeasurementMode, DrawingTool, EdgeType, RoofSection,
 } from "./types";
 import { DEFAULT_COMPONENTS, FACET_COLORS, PITCH_MULTIPLIERS, getPinColor } from "./types";
 
@@ -47,6 +47,11 @@ export function RoofMeasurementTool() {
   const [activeTool, setActiveTool] = useState<DrawingTool>("select");
   const [activeEdgeType, setActiveEdgeType] = useState<EdgeType>("ridge");
   const [selectedFacetId, setSelectedFacetId] = useState<string | null>(null);
+
+  // Multi-roof sections
+  const defaultRoofId = useRef(crypto.randomUUID() as string).current;
+  const [roofs, setRoofs] = useState<RoofSection[]>([{ id: defaultRoofId, name: "Main Roof" }]);
+  const [activeRoofId, setActiveRoofId] = useState<string>(defaultRoofId);
 
   // Shared data
   const [facets, setFacets] = useState<RoofFacet[]>([]);
@@ -97,6 +102,9 @@ export function RoofMeasurementTool() {
     setEdges([]);
     setHistory([]);
     setHistoryIdx(-1);
+    const newRoofId = crypto.randomUUID() as string;
+    setRoofs([{ id: newRoofId, name: "Main Roof" }]);
+    setActiveRoofId(newRoofId);
     setPins([{
       id: crypto.randomUUID(), lat: coords.lat, lng: coords.lng,
       pitch: "4/12", label: "Main Roof", wastePercent: 13,
@@ -361,6 +369,7 @@ export function RoofMeasurementTool() {
       id: crypto.randomUUID(),
       name: `Facet ${idx + 1}`,
       color: FACET_COLORS[idx % FACET_COLORS.length],
+      roofId: activeRoofId,
     };
     const newFacets = [...facets, newFacet];
 
@@ -411,6 +420,42 @@ export function RoofMeasurementTool() {
     pushHistory(newFacets, newEdges);
     recalcFromFacets(newFacets, newEdges);
   }, [facets, edges, recalcFromFacets]);
+
+  // Roof section handlers
+  const handleAddRoof = useCallback(() => {
+    const newRoof: RoofSection = {
+      id: crypto.randomUUID(),
+      name: `Roof ${roofs.length + 1}`,
+    };
+    setRoofs(prev => [...prev, newRoof]);
+    setActiveRoofId(newRoof.id);
+  }, [roofs.length]);
+
+  const handleUpdateRoof = useCallback((id: string, name: string) => {
+    setRoofs(prev => prev.map(r => r.id === id ? { ...r, name } : r));
+  }, []);
+
+  const handleDeleteRoof = useCallback((id: string) => {
+    if (roofs.length <= 1) return;
+    // Remove facets belonging to this roof and their edges
+    const roofFacets = facets.filter(f => f.roofId === id);
+    let newFacets = facets.filter(f => f.roofId !== id);
+    let newEdges = edges;
+    roofFacets.forEach(delFacet => {
+      newEdges = newEdges.filter(e => {
+        const startOn = delFacet.vertices.some(v => distanceFt(v, e.startVertex) < 3);
+        const endOn = delFacet.vertices.some(v => distanceFt(v, e.endVertex) < 3);
+        return !(startOn && endOn);
+      });
+    });
+    setFacets(newFacets);
+    setEdges(newEdges);
+    setRoofs(prev => prev.filter(r => r.id !== id));
+    if (activeRoofId === id) {
+      setActiveRoofId(roofs.find(r => r.id !== id)!.id);
+    }
+    recalcFromFacets(newFacets, newEdges);
+  }, [roofs, facets, edges, activeRoofId, recalcFromFacets]);
 
   // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
@@ -540,10 +585,16 @@ export function RoofMeasurementTool() {
             <FacetListPanel
               facets={facets}
               edges={edges}
+              roofs={roofs}
+              activeRoofId={activeRoofId}
               selectedFacetId={selectedFacetId}
               onSelectFacet={setSelectedFacetId}
               onUpdateFacet={handleUpdateFacet}
               onDeleteFacet={handleDeleteFacet}
+              onAddRoof={handleAddRoof}
+              onUpdateRoof={handleUpdateRoof}
+              onDeleteRoof={handleDeleteRoof}
+              onSetActiveRoof={setActiveRoofId}
             />
           </div>
         )}
@@ -606,6 +657,7 @@ export function RoofMeasurementTool() {
             address={address}
             facets={facets}
             edges={edges}
+            roofs={roofs}
             components={components}
             takeoff={takeoff}
             onComponentsChange={setComponents}

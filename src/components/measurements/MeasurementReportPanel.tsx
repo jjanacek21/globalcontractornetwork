@@ -1,11 +1,12 @@
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Ruler, Layers, Package, Calculator
+  Ruler, Layers, Package, Calculator, Home
 } from "lucide-react";
-import type { RoofFacet, RoofEdge, RoofComponents, MaterialTakeoff, EdgeType } from "./types";
+import type { RoofFacet, RoofEdge, RoofComponents, MaterialTakeoff, EdgeType, RoofSection } from "./types";
 import { EDGE_COLORS, EDGE_LABELS, PITCH_MULTIPLIERS } from "./types";
 import { formatFeetInches } from "./utils";
 
@@ -13,6 +14,7 @@ interface MeasurementReportPanelProps {
   address: string;
   facets: RoofFacet[];
   edges: RoofEdge[];
+  roofs?: RoofSection[];
   components: RoofComponents;
   takeoff: MaterialTakeoff;
   onComponentsChange: (c: RoofComponents) => void;
@@ -30,7 +32,7 @@ function facetSquares(f: RoofFacet): number {
 }
 
 export function MeasurementReportPanel({
-  address, facets, edges, components, takeoff, onComponentsChange,
+  address, facets, edges, roofs, components, takeoff, onComponentsChange,
 }: MeasurementReportPanelProps) {
   // Edge totals by type
   const edgeTotals = edges.reduce<Partial<Record<EdgeType, number>>>((acc, e) => {
@@ -86,30 +88,64 @@ export function MeasurementReportPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {facets.map(f => {
-                  const pitched = facetPitchedArea(f);
-                  const sq = facetSquares(f);
+                {(roofs && roofs.length > 1 ? roofs : [null]).map((roof) => {
+                  const groupFacets = roof
+                    ? facets.filter(f => f.roofId === roof.id)
+                    : facets;
+                  if (groupFacets.length === 0) return null;
                   return (
-                    <TableRow key={f.id}>
-                      <TableCell className="text-xs font-medium">
-                        <span className="flex items-center gap-1.5">
-                          <span
-                            className="w-2.5 h-2.5 rounded-sm shrink-0"
-                            style={{ backgroundColor: f.color.replace("0.30", "0.8").replace("0.35", "0.8") }}
-                          />
-                          {f.name}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-center">
-                        <Badge variant={f.type === "flat" ? "secondary" : "outline"} className="text-[10px]">
-                          {f.pitch}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-center">{f.wastePercent}%</TableCell>
-                      <TableCell className="text-xs text-right">{Math.round(f.areaSqft).toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right">{Math.round(pitched).toLocaleString()}</TableCell>
-                      <TableCell className="text-xs text-right font-bold text-primary">{sq.toFixed(2)}</TableCell>
-                    </TableRow>
+                    <React.Fragment key={roof?.id || "all"}>
+                      {roof && (
+                        <TableRow className="bg-muted/40">
+                          <TableCell colSpan={6} className="text-xs font-semibold py-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <Home className="h-3 w-3 text-muted-foreground" />
+                              {roof.name}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {groupFacets.map(f => {
+                        const pitched = facetPitchedArea(f);
+                        const sq = facetSquares(f);
+                        return (
+                          <TableRow key={f.id}>
+                            <TableCell className="text-xs font-medium">
+                              <span className="flex items-center gap-1.5">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-sm shrink-0"
+                                  style={{ backgroundColor: f.color.replace("0.30", "0.8").replace("0.35", "0.8") }}
+                                />
+                                {f.name}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-center">
+                              <Badge variant={f.type === "flat" ? "secondary" : "outline"} className="text-[10px]">
+                                {f.pitch}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-center">{f.wastePercent}%</TableCell>
+                            <TableCell className="text-xs text-right">{Math.round(f.areaSqft).toLocaleString()}</TableCell>
+                            <TableCell className="text-xs text-right">{Math.round(pitched).toLocaleString()}</TableCell>
+                            <TableCell className="text-xs text-right font-bold text-primary">{sq.toFixed(2)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {roof && roofs && roofs.length > 1 && (
+                        <TableRow className="bg-muted/20">
+                          <TableCell colSpan={3} className="text-[10px] text-muted-foreground italic">Subtotal</TableCell>
+                          <TableCell className="text-[10px] text-right font-medium">
+                            {Math.round(groupFacets.reduce((s, f) => s + f.areaSqft, 0)).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-[10px] text-right font-medium">
+                            {Math.round(groupFacets.reduce((s, f) => s + facetPitchedArea(f), 0)).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-[10px] text-right font-medium text-primary">
+                            {groupFacets.reduce((s, f) => s + facetSquares(f), 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
