@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +33,22 @@ export function DrawingToolbar({
   activeTool, onToolChange, activeEdgeType, onEdgeTypeChange,
   onUndo, onRedo, onDelete, canUndo, canRedo, hasSelection,
 }: DrawingToolbarProps) {
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      const key = e.key.toLowerCase();
+      if (key === "v") onToolChange("select");
+      else if (key === "f") onToolChange("facet");
+      else if (key === "e") onToolChange("edge");
+      else if ((e.metaKey || e.ctrlKey) && key === "z" && !e.shiftKey) { e.preventDefault(); onUndo(); }
+      else if ((e.metaKey || e.ctrlKey) && key === "z" && e.shiftKey) { e.preventDefault(); onRedo(); }
+      else if (key === "delete" || key === "backspace") { if (hasSelection) onDelete(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onToolChange, onUndo, onRedo, onDelete, hasSelection]);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-1.5 bg-background/95 backdrop-blur-sm rounded-lg shadow-xl border border-border/50 p-1.5">
@@ -108,7 +125,7 @@ export function DrawingToolbar({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">Delete Selected</TooltipContent>
+              <TooltipContent side="right">Delete Selected <kbd className="text-[10px] bg-muted px-1 rounded">Del</kbd></TooltipContent>
             </Tooltip>
           </>
         )}
