@@ -418,6 +418,42 @@ export function RoofMeasurementTool() {
     recalcFromFacets(newFacets, newEdges);
   }, [facets, edges, recalcFromFacets]);
 
+  // Roof section handlers
+  const handleAddRoof = useCallback(() => {
+    const newRoof: RoofSection = {
+      id: crypto.randomUUID(),
+      name: `Roof ${roofs.length + 1}`,
+    };
+    setRoofs(prev => [...prev, newRoof]);
+    setActiveRoofId(newRoof.id);
+  }, [roofs.length]);
+
+  const handleUpdateRoof = useCallback((id: string, name: string) => {
+    setRoofs(prev => prev.map(r => r.id === id ? { ...r, name } : r));
+  }, []);
+
+  const handleDeleteRoof = useCallback((id: string) => {
+    if (roofs.length <= 1) return;
+    // Remove facets belonging to this roof and their edges
+    const roofFacets = facets.filter(f => f.roofId === id);
+    let newFacets = facets.filter(f => f.roofId !== id);
+    let newEdges = edges;
+    roofFacets.forEach(delFacet => {
+      newEdges = newEdges.filter(e => {
+        const startOn = delFacet.vertices.some(v => distanceFt(v, e.startVertex) < 3);
+        const endOn = delFacet.vertices.some(v => distanceFt(v, e.endVertex) < 3);
+        return !(startOn && endOn);
+      });
+    });
+    setFacets(newFacets);
+    setEdges(newEdges);
+    setRoofs(prev => prev.filter(r => r.id !== id));
+    if (activeRoofId === id) {
+      setActiveRoofId(roofs.find(r => r.id !== id)!.id);
+    }
+    recalcFromFacets(newFacets, newEdges);
+  }, [roofs, facets, edges, activeRoofId, recalcFromFacets]);
+
   // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
   const hasMeasurements = facets.length > 0 || measuredPins.length > 0;
