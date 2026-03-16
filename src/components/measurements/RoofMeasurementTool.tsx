@@ -415,7 +415,11 @@ export function RoofMeasurementTool() {
   // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
   const hasMeasurements = facets.length > 0 || measuredPins.length > 0;
-  const totalSquares = measuredPins.reduce((s, pc) => s + pc.calc.squares, 0);
+  const aiTotalSquares = measuredPins.reduce((s, pc) => s + pc.calc.squares, 0);
+  const manualTotalSquares = facets.reduce((s, f) => {
+    const pitched = f.areaSqft * (PITCH_MULTIPLIERS[f.pitch] ?? 1);
+    return s + pitched * (1 + f.wastePercent / 100) / 100;
+  }, 0);
   const takeoff = calculateMaterialTakeoff(components);
 
   // Save
