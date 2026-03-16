@@ -48,6 +48,11 @@ export function RoofMeasurementTool() {
   const [activeEdgeType, setActiveEdgeType] = useState<EdgeType>("ridge");
   const [selectedFacetId, setSelectedFacetId] = useState<string | null>(null);
 
+  // Multi-roof sections
+  const defaultRoofId = useRef(crypto.randomUUID()).current;
+  const [roofs, setRoofs] = useState<RoofSection[]>([{ id: defaultRoofId, name: "Main Roof" }]);
+  const [activeRoofId, setActiveRoofId] = useState(defaultRoofId);
+
   // Shared data
   const [facets, setFacets] = useState<RoofFacet[]>([]);
   const [edges, setEdges] = useState<RoofEdge[]>([]);
