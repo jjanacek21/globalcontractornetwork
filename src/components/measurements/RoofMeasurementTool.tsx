@@ -49,9 +49,9 @@ export function RoofMeasurementTool() {
   const [selectedFacetId, setSelectedFacetId] = useState<string | null>(null);
 
   // Multi-roof sections
-  const defaultRoofId = useRef(crypto.randomUUID()).current;
+  const defaultRoofId = useRef(crypto.randomUUID() as string).current;
   const [roofs, setRoofs] = useState<RoofSection[]>([{ id: defaultRoofId, name: "Main Roof" }]);
-  const [activeRoofId, setActiveRoofId] = useState(defaultRoofId);
+  const [activeRoofId, setActiveRoofId] = useState<string>(defaultRoofId);
 
   // Shared data
   const [facets, setFacets] = useState<RoofFacet[]>([]);
