@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Upload, Key, Clock, Globe, FileSpreadsheet, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import PropertyIQApiConfig from "./PropertyIQApiConfig";
 
 const PropertyIQAdmin = () => {
   const { toast } = useToast();
