@@ -257,7 +257,103 @@ export function RoofMeasurementTool() {
     setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
   };
 
-  // Facet complete (manual)
+  // ─── Per-facet recalc helper ─────────────────────────────────────────
+  const recalcFromFacets = useCallback((newFacets: RoofFacet[], newEdges: RoofEdge[]) => {
+    const totalFlatArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
+    const totalPitchedArea = newFacets.reduce((s, f) => s + f.areaSqft * (PITCH_MULTIPLIERS[f.pitch] ?? 1), 0);
+    const totalSquares = newFacets.reduce((s, f) => {
+      const pitched = f.areaSqft * (PITCH_MULTIPLIERS[f.pitch] ?? 1);
+      return s + pitched * (1 + f.wastePercent / 100) / 100;
+    }, 0);
+
+    // Weighted pitch multiplier
+    const avgMult = totalFlatArea > 0
+      ? newFacets.reduce((s, f) => s + (PITCH_MULTIPLIERS[f.pitch] ?? 1) * f.areaSqft, 0) / totalFlatArea
+      : 1.054;
+
+    // Weighted waste
+    const avgWaste = totalFlatArea > 0
+      ? newFacets.reduce((s, f) => s + f.wastePercent * f.areaSqft, 0) / totalFlatArea
+      : 13;
+
+    // Most common pitch
+    const pitchCounts: Record<string, number> = {};
+    newFacets.forEach(f => { pitchCounts[f.pitch] = (pitchCounts[f.pitch] || 0) + f.areaSqft; });
+    const predominantPitch = Object.entries(pitchCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "4/12";
+
+    // Edge totals
+    const edgeTotals: Record<string, number> = {};
+    newEdges.forEach(e => { edgeTotals[e.edgeType] = (edgeTotals[e.edgeType] || 0) + e.lengthFt; });
+
+    setComponents(prev => ({
+      ...prev,
+      totalAreaSqft: Math.round(totalFlatArea),
+      totalSquares: +totalSquares.toFixed(2),
+      pitchMultiplier: +avgMult.toFixed(3),
+      wastePercent: Math.round(avgWaste),
+      predominantPitch,
+      facetsCount: newFacets.length,
+      ridgeFt: Math.round(edgeTotals.ridge || 0),
+      hipFt: Math.round(edgeTotals.hip || 0),
+      valleyFt: Math.round(edgeTotals.valley || 0),
+      eaveFt: Math.round(edgeTotals.eave || 0),
+      rakeFt: Math.round(edgeTotals.rake || 0),
+      dripEdgeFt: Math.round((edgeTotals.drip_edge || 0) + (edgeTotals.eave || 0) + (edgeTotals.rake || 0)),
+      flashingFt: Math.round(edgeTotals.flashing || 0),
+      stepFlashingFt: Math.round(edgeTotals.flashing || 0),
+      perimeterFt: Math.round((edgeTotals.eave || 0) + (edgeTotals.rake || 0)),
+    }));
+  }, []);
+
+  // ─── Auto-generate perimeter edges for a new facet ─────────────────
+  const generatePerimeterEdges = useCallback((facet: RoofFacet, existingFacets: RoofFacet[]): RoofEdge[] => {
+    const newEdges: RoofEdge[] = [];
+    const verts = facet.vertices;
+    if (verts.length < 3) return newEdges;
+
+    for (let i = 0; i < verts.length; i++) {
+      const start = verts[i];
+      const end = verts[(i + 1) % verts.length];
+      const len = distanceFt(start, end);
+
+      // Check if this edge is shared with an existing facet (transition)
+      let isShared = false;
+      for (const other of existingFacets) {
+        if (other.id === facet.id) continue;
+        for (let j = 0; j < other.vertices.length; j++) {
+          const oStart = other.vertices[j];
+          const oEnd = other.vertices[(j + 1) % other.vertices.length];
+          // Shared if both endpoints match (in either direction) within ~2ft
+          const matchFwd = distanceFt(start, oStart) < 3 && distanceFt(end, oEnd) < 3;
+          const matchRev = distanceFt(start, oEnd) < 3 && distanceFt(end, oStart) < 3;
+          if (matchFwd || matchRev) { isShared = true; break; }
+        }
+        if (isShared) break;
+      }
+
+      // Classify: shared = transition, bottom = eave, sides = rake
+      let edgeType: EdgeType;
+      if (isShared) {
+        edgeType = "transition";
+      } else {
+        // Simple heuristic: more horizontal edges → eave, more vertical → rake
+        const dx = Math.abs(end[0] - start[0]);
+        const dy = Math.abs(end[1] - start[1]);
+        edgeType = dx > dy * 1.5 ? "eave" : dy > dx * 1.5 ? "rake" : "eave";
+      }
+
+      newEdges.push({
+        id: crypto.randomUUID(),
+        edgeType,
+        startVertex: start,
+        endVertex: end,
+        lengthFt: Math.round(len),
+      });
+    }
+    return newEdges;
+  }, []);
+
+  // Facet complete (manual) — with auto perimeter edges
   const handleFacetComplete = useCallback((facet: Omit<RoofFacet, "id" | "name" | "color">) => {
     const idx = facets.length;
     const newFacet: RoofFacet = {
@@ -267,41 +363,54 @@ export function RoofMeasurementTool() {
       color: FACET_COLORS[idx % FACET_COLORS.length],
     };
     const newFacets = [...facets, newFacet];
+
+    // Auto-generate perimeter edges
+    const perimeterEdges = generatePerimeterEdges(newFacet, facets);
+    const newEdges = [...edges, ...perimeterEdges];
+
     setFacets(newFacets);
-    pushHistory(newFacets, edges);
+    setEdges(newEdges);
+    pushHistory(newFacets, newEdges);
+    recalcFromFacets(newFacets, newEdges);
+  }, [facets, edges, generatePerimeterEdges, recalcFromFacets]);
 
-    const totalArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
-    const mult = getPitchMultiplier(components.predominantPitch);
-    const totalWithWaste = totalArea * mult * (1 + components.wastePercent / 100);
-    setComponents(prev => ({
-      ...prev,
-      totalAreaSqft: Math.round(totalArea),
-      totalSquares: +(totalWithWaste / 100).toFixed(2),
-      facetsCount: newFacets.length,
-    }));
-  }, [facets, edges, components.predominantPitch, components.wastePercent]);
-
-  // Edge complete (manual)
+  // Edge complete (manual) — still allow manual edge drawing
   const handleEdgeComplete = useCallback((edge: Omit<RoofEdge, "id">) => {
     const newEdge: RoofEdge = { ...edge, id: crypto.randomUUID() };
     const newEdges = [...edges, newEdge];
     setEdges(newEdges);
     pushHistory(facets, newEdges);
+    recalcFromFacets(facets, newEdges);
+  }, [facets, edges, recalcFromFacets]);
 
-    const totals: Record<string, number> = {};
-    newEdges.forEach(e => { totals[e.edgeType] = (totals[e.edgeType] || 0) + e.lengthFt; });
-    setComponents(prev => ({
-      ...prev,
-      ridgeFt: Math.round(totals.ridge || 0),
-      hipFt: Math.round(totals.hip || 0),
-      valleyFt: Math.round(totals.valley || 0),
-      eaveFt: Math.round(totals.eave || 0),
-      rakeFt: Math.round(totals.rake || 0),
-      dripEdgeFt: Math.round((totals.drip_edge || 0) + (totals.eave || 0) + (totals.rake || 0)),
-      flashingFt: Math.round(totals.flashing || 0),
-      stepFlashingFt: Math.round(totals.flashing || 0),
-    }));
-  }, [facets, edges]);
+  // Facet update from panel
+  const handleUpdateFacet = useCallback((id: string, updates: Partial<RoofFacet>) => {
+    const newFacets = facets.map(f => f.id === id ? { ...f, ...updates } : f);
+    setFacets(newFacets);
+    recalcFromFacets(newFacets, edges);
+  }, [facets, edges, recalcFromFacets]);
+
+  // Facet delete from panel
+  const handleDeleteFacet = useCallback((id: string) => {
+    // Remove facet and its associated auto-generated edges
+    const newFacets = facets.filter(f => f.id !== id);
+    // Remove edges that reference only deleted facet vertices (keep manually drawn)
+    const deletedFacet = facets.find(f => f.id === id);
+    let newEdges = edges;
+    if (deletedFacet) {
+      // Remove edges whose both endpoints belong to the deleted facet
+      newEdges = edges.filter(e => {
+        const startOnDeleted = deletedFacet.vertices.some(v => distanceFt(v, e.startVertex) < 3);
+        const endOnDeleted = deletedFacet.vertices.some(v => distanceFt(v, e.endVertex) < 3);
+        return !(startOnDeleted && endOnDeleted);
+      });
+    }
+    setFacets(newFacets);
+    setEdges(newEdges);
+    setSelectedFacetId(null);
+    pushHistory(newFacets, newEdges);
+    recalcFromFacets(newFacets, newEdges);
+  }, [facets, edges, recalcFromFacets]);
 
   // Computed
   const measuredPins = pins.filter(p => p.result).map(p => ({ pin: p, calc: calcPin(p)! }));
