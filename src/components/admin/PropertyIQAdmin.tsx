@@ -62,9 +62,6 @@ const PropertyIQAdmin = () => {
     }, 2000);
   };
 
-  const handleSaveApiKey = (key: string) => {
-    toast({ title: "API Key Saved", description: `${key.replace('_', ' ')} key has been saved.` });
-  };
 
   return (
     <div className="space-y-4">
