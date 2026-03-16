@@ -40,33 +40,33 @@ export const DigitalMarketingHeader = () => {
           <nav className="hidden md:flex items-center gap-6">
             <button
               onClick={() => scrollToSection("packages")}
-              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-            >
+              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">
+              
               Packages
             </button>
             <button
               onClick={() => scrollToSection("pricing-calculator")}
-              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-            >
+              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">
+              
               Pricing
             </button>
             <button
               onClick={() => scrollToSection("services")}
-              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-            >
+              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">
+              
               Services
             </button>
             <button
               onClick={() => scrollToSection("faq")}
-              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-            >
+              className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">
+              
               FAQ
             </button>
           </nav>
 
           {/* Right: Phone + CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <a href="tel:+15618150008" className="flex items-center gap-1 text-sm font-medium text-gray-700">
+            <a href="tel:+15618150008" className="flex items-center gap-1 text-sm font-medium text-gray-700">214-998-2879
               <Phone className="h-4 w-4" />
               (561) 815-0008
             </a>
@@ -78,38 +78,38 @@ export const DigitalMarketingHeader = () => {
           {/* Mobile Menu Button */}
           <button
             className="md:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
+        {mobileMenuOpen &&
+        <div className="md:hidden py-4 border-t border-gray-200">
             <nav className="flex flex-col gap-4">
               <button
-                onClick={() => scrollToSection("packages")}
-                className="text-left text-sm font-medium text-gray-600 hover:text-primary"
-              >
+              onClick={() => scrollToSection("packages")}
+              className="text-left text-sm font-medium text-gray-600 hover:text-primary">
+              
                 Packages
               </button>
               <button
-                onClick={() => scrollToSection("pricing-calculator")}
-                className="text-left text-sm font-medium text-gray-600 hover:text-primary"
-              >
+              onClick={() => scrollToSection("pricing-calculator")}
+              className="text-left text-sm font-medium text-gray-600 hover:text-primary">
+              
                 Pricing
               </button>
               <button
-                onClick={() => scrollToSection("services")}
-                className="text-left text-sm font-medium text-gray-600 hover:text-primary"
-              >
+              onClick={() => scrollToSection("services")}
+              className="text-left text-sm font-medium text-gray-600 hover:text-primary">
+              
                 Services
               </button>
               <button
-                onClick={() => scrollToSection("faq")}
-                className="text-left text-sm font-medium text-gray-600 hover:text-primary"
-              >
+              onClick={() => scrollToSection("faq")}
+              className="text-left text-sm font-medium text-gray-600 hover:text-primary">
+              
                 FAQ
               </button>
               <a href="tel:+15618150008" className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -121,8 +121,8 @@ export const DigitalMarketingHeader = () => {
               </Button>
             </nav>
           </div>
-        )}
+        }
       </div>
-    </header>
-  );
+    </header>);
+
 };
