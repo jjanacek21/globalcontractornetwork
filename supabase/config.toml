@@ -182,3 +182,6 @@ verify_jwt = false
 
 [functions.attom-property-lookup]
 verify_jwt = false
+
+[functions.enrich-property]
+verify_jwt = false
