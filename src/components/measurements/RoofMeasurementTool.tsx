@@ -366,6 +366,7 @@ export function RoofMeasurementTool() {
       id: crypto.randomUUID(),
       name: `Facet ${idx + 1}`,
       color: FACET_COLORS[idx % FACET_COLORS.length],
+      roofId: activeRoofId,
     };
     const newFacets = [...facets, newFacet];
 
