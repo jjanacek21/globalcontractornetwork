@@ -239,7 +239,7 @@ export function MeasurementMap({
       if (pts.length >= 3) {
         const area = polygonAreaSqft(pts);
         const perimeter = polygonPerimeterFt(pts);
-        onFacetComplete({ type: "pitched", pitch: "4/12", vertices: pts, areaSqft: Math.round(area), perimeterFt: Math.round(perimeter) });
+        onFacetComplete({ type: "pitched", pitch: "4/12", vertices: pts, areaSqft: Math.round(area), perimeterFt: Math.round(perimeter), wastePercent: 13 });
       }
       drawPointsRef.current = [];
       vertexMarkersRef.current.forEach(m => m.remove());

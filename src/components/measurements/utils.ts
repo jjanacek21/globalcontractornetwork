@@ -212,6 +212,7 @@ export function createPinFacet(pin: RoofPin, index: number): RoofFacet {
     areaSqft: Math.round(area),
     perimeterFt: Math.round(polygonPerimeterFt(vertices)),
     color: hexToRgba(getPinColor(pitch), 0.35),
+    wastePercent: pin.wastePercent,
   };
 }
 
@@ -263,6 +264,7 @@ export function generateSimulatedFacets(
       areaSqft: Math.round(area),
       perimeterFt: Math.round(perim),
       color: hexToRgba(getPinColor(pitch), 0.35),
+      wastePercent: 13,
     });
 
     // Generate edges between adjacent facets
