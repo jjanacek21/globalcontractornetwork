@@ -31,7 +31,7 @@ function facetSquares(f: RoofFacet): number {
 }
 
 export function MeasurementReportPanel({
-  address, facets, edges, components, takeoff, onComponentsChange,
+  address, facets, edges, roofs, components, takeoff, onComponentsChange,
 }: MeasurementReportPanelProps) {
   // Edge totals by type
   const edgeTotals = edges.reduce<Partial<Record<EdgeType, number>>>((acc, e) => {
