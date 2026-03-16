@@ -1,9 +1,10 @@
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Ruler, Layers, Package, Calculator
+  Ruler, Layers, Package, Calculator, Home
 } from "lucide-react";
 import type { RoofFacet, RoofEdge, RoofComponents, MaterialTakeoff, EdgeType, RoofSection } from "./types";
 import { EDGE_COLORS, EDGE_LABELS, PITCH_MULTIPLIERS } from "./types";
