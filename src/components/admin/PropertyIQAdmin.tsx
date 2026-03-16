@@ -24,13 +24,6 @@ const PropertyIQAdmin = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvUploading, setCsvUploading] = useState(false);
 
-  // API Config state
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({
-    property_appraiser: "",
-    skip_tracing: "",
-    sunbiz: "",
-    zillow: "",
-  });
 
   // Search History (mock)
   const [searchHistory] = useState([
