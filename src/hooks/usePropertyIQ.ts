@@ -286,3 +286,24 @@ export function useAttomLookup() {
     },
   });
 }
+
+// ---- Enrich Property Mutation ----
+
+export function useEnrichProperty() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (propertyId: string) => {
+      const { data, error } = await supabase.functions.invoke('enrich-property', {
+        body: { property_id: propertyId },
+      });
+
+      if (error) throw new Error(error.message || 'Enrichment failed');
+      if (!data?.success) throw new Error(data?.error || 'Enrichment failed');
+      return data as { success: boolean; enriched: string[] };
+    },
+    onSuccess: (_data, propertyId) => {
+      qc.invalidateQueries({ queryKey: ["piq-report", propertyId] });
+    },
+  });
+}

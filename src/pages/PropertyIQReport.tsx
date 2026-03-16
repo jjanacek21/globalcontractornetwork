@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { ScoreGauge } from "@/components/property-iq/ScoreGauge";
@@ -9,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePropertyIQReport } from "@/hooks/usePropertyIQ";
+import { usePropertyIQReport, useEnrichProperty } from "@/hooks/usePropertyIQ";
+import { useToast } from "@/hooks/use-toast";
 import {
   MapPin, Download, Bookmark, ArrowLeft, Building2, CalendarDays,
   CloudRain, Wrench, DollarSign, AlertTriangle, Shield, Loader2,
@@ -26,6 +28,25 @@ const conditionColor: Record<string, string> = {
 const PropertyIQReport = () => {
   const { id } = useParams<{ id: string }>();
   const { data: property, isLoading, error } = usePropertyIQReport(id);
+  const enrichMutation = useEnrichProperty();
+  const enrichTriggered = useRef(false);
+  const { toast } = useToast();
+
+  // Auto-enrich when property loads
+  useEffect(() => {
+    if (property && id && !enrichTriggered.current && !enrichMutation.isPending) {
+      enrichTriggered.current = true;
+      toast({ title: "Enriching data...", description: "Fetching storm history and recalculating scores." });
+      enrichMutation.mutate(id, {
+        onSuccess: (data) => {
+          toast({ title: "Data enriched", description: data.enriched.join("; ") });
+        },
+        onError: () => {
+          toast({ title: "Enrichment skipped", description: "Could not enrich data at this time.", variant: "destructive" });
+        },
+      });
+    }
+  }, [property, id]);
 
   if (isLoading) {
     return (
