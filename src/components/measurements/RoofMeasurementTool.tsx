@@ -44,6 +44,7 @@ export function RoofMeasurementTool() {
   // Manual mode - drawing
   const [activeTool, setActiveTool] = useState<DrawingTool>("select");
   const [activeEdgeType, setActiveEdgeType] = useState<EdgeType>("ridge");
+  const [selectedFacetId, setSelectedFacetId] = useState<string | null>(null);
 
   // Shared data
   const [facets, setFacets] = useState<RoofFacet[]>([]);
