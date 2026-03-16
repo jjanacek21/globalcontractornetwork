@@ -7553,6 +7553,39 @@ export type Database = {
         }
         Relationships: []
       }
+      piq_api_configs: {
+        Row: {
+          api_description: string | null
+          api_key: string
+          api_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_description?: string | null
+          api_key: string
+          api_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_description?: string | null
+          api_key?: string
+          api_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       piq_building_components: {
         Row: {
           component_type: string | null
