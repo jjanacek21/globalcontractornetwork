@@ -411,10 +411,21 @@ export function RoofMeasurementTool() {
               onEdgeTypeChange={setActiveEdgeType}
               onUndo={undo}
               onRedo={redo}
-              onDelete={() => {}}
+              onDelete={() => {
+                if (selectedFacetId) {
+                  const newFacets = facets.filter(f => f.id !== selectedFacetId);
+                  setFacets(newFacets);
+                  setSelectedFacetId(null);
+                  pushHistory(newFacets, edges);
+                  const totalArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
+                  const mult = getPitchMultiplier(components.predominantPitch);
+                  const totalWithWaste = totalArea * mult * (1 + components.wastePercent / 100);
+                  setComponents(prev => ({ ...prev, totalAreaSqft: Math.round(totalArea), totalSquares: +(totalWithWaste / 100).toFixed(2), facetsCount: newFacets.length }));
+                }
+              }}
               canUndo={historyIdx > 0}
               canRedo={historyIdx < history.length - 1}
-              hasSelection={false}
+              hasSelection={!!selectedFacetId}
             />
           </div>
         )}
