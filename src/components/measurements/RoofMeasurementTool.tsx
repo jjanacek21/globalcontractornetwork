@@ -23,7 +23,7 @@ import {
 } from "./utils";
 import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
-  RoofComponents, MeasurementMode, DrawingTool, EdgeType,
+  RoofComponents, MeasurementMode, DrawingTool, EdgeType, RoofSection,
 } from "./types";
 import { DEFAULT_COMPONENTS, FACET_COLORS, PITCH_MULTIPLIERS, getPinColor } from "./types";
 
