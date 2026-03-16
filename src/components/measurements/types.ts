@@ -80,6 +80,7 @@ export interface RoofFacet {
   areaSqft: number;
   perimeterFt: number;
   color: string;           // fill color
+  wastePercent: number;     // per-facet waste factor
 }
 
 export interface RoofEdge {
