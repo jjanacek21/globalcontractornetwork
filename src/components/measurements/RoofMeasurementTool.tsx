@@ -13,11 +13,13 @@ import { MeasurementMap } from "./MeasurementMap";
 import { AddressBar } from "./AddressBar";
 import { PinListPanel } from "./PinListPanel";
 import { DrawingToolbar } from "./DrawingToolbar";
+import { FacetListPanel } from "./FacetListPanel";
 import { MeasurementReportPanel } from "./MeasurementReportPanel";
 import { generateMeasurementPDF } from "./reportGenerator";
 import {
   calcPin, calculateMaterialTakeoff, estimateComponentsFromSolar,
   generateSimulatedFacets, getPitchMultiplier, createPinFacet,
+  distanceFt, findSnapVertex,
 } from "./utils";
 import type {
   RoofPin, SolarMeasurementData, RoofFacet, RoofEdge,
