@@ -582,10 +582,16 @@ export function RoofMeasurementTool() {
             <FacetListPanel
               facets={facets}
               edges={edges}
+              roofs={roofs}
+              activeRoofId={activeRoofId}
               selectedFacetId={selectedFacetId}
               onSelectFacet={setSelectedFacetId}
               onUpdateFacet={handleUpdateFacet}
               onDeleteFacet={handleDeleteFacet}
+              onAddRoof={handleAddRoof}
+              onUpdateRoof={handleUpdateRoof}
+              onDeleteRoof={handleDeleteRoof}
+              onSetActiveRoof={setActiveRoofId}
             />
           </div>
         )}
