@@ -3,16 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
+import { MapExplorer } from "@/components/property-iq/MapExplorer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePropertyIQDashboard } from "@/hooks/usePropertyIQ";
+import { exportSavedPropertiesCSV } from "@/components/property-iq/ExportUtils";
 import {
   Search, FileText, Bookmark, Bell, BarChart3,
   Building2, AlertTriangle, CloudRain, Wifi,
-  ExternalLink, Clock, TrendingUp
+  ExternalLink, Clock, TrendingUp, MapIcon, Download,
 } from "lucide-react";
 
 const demoStats = [
@@ -57,9 +59,12 @@ const statusBadge = (status: string) => {
   return <Badge variant="destructive">Not Configured</Badge>;
 };
 
+type DashboardTab = "overview" | "map";
+
 const PropertyIQDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const navigate = useNavigate();
   const { data: dashboardData, isLoading } = usePropertyIQDashboard();
 
@@ -98,138 +103,161 @@ const PropertyIQDashboard = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-sm text-muted-foreground">{userEmail}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>Log Out</Button>
-        </div>
-
-        {/* Quick search */}
-        <form onSubmit={handleSearch} className="flex gap-2 max-w-xl">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Quick property search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+          <div className="flex gap-2">
+            <div className="flex gap-1 border border-border rounded-lg p-0.5">
+              <Button variant={activeTab === "overview" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("overview")} className="h-8 px-3 gap-1.5">
+                <BarChart3 className="h-4 w-4" /> Overview
+              </Button>
+              <Button variant={activeTab === "map" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("map")} className="h-8 px-3 gap-1.5">
+                <MapIcon className="h-4 w-4" /> Map Explorer
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleLogout}>Log Out</Button>
           </div>
-          <Button type="submit">Search</Button>
-        </form>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {demoStats.map((s) => (
-            <Card key={s.label}>
-              <CardContent className="pt-6 flex items-center gap-4">
-                <div className={`p-2 rounded-lg bg-muted ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Saved Properties */}
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2"><Bookmark className="h-5 w-5" /> Saved Properties</h2>
-            {isLoading ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+        {activeTab === "map" ? (
+          <MapExplorer />
+        ) : (
+          <>
+            {/* Quick search */}
+            <form onSubmit={handleSearch} className="flex gap-2 max-w-xl">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Quick property search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
               </div>
-            ) : savedProperties.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savedProperties.map((sp: any) => {
-                  const p = sp.piq_properties;
-                  if (!p) return null;
-                  const scores = p.piq_property_scores?.[0];
-                  const ownerName = p.piq_property_ownership?.[0]?.piq_owners?.name;
-                  const roofScore = scores?.roof_replacement_score ?? 0;
-                  return (
-                    <Card key={sp.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
-                      <CardContent className="pt-4 space-y-2">
-                        <p className="font-medium text-sm leading-tight">{p.address}</p>
-                        <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">{ownerName}</span>
-                          <Badge variant={roofScore >= 90 ? 'destructive' : roofScore <= 50 ? 'secondary' : 'default'} className="text-[10px]">
-                            Roof: {roofScore}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Clock className="h-3 w-3" /> Saved {new Date(sp.created_at).toLocaleDateString()}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="pt-6 text-center text-muted-foreground">
-                  <p className="text-sm">No saved properties yet. Search and save properties to see them here.</p>
-                </CardContent>
-              </Card>
-            )}
+              <Button type="submit">Search</Button>
+            </form>
 
-            {/* Recent Searches */}
-            <h2 className="text-lg font-semibold flex items-center gap-2 mt-6"><Clock className="h-5 w-5" /> Recent Searches</h2>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  {recentSearches.map((s, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{s.address}</p>
-                        <p className="text-xs text-muted-foreground">{s.date}</p>
-                      </div>
-                      <Badge variant="outline">{s.results} result{s.results !== 1 ? 's' : ''}</Badge>
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {demoStats.map((s) => (
+                <Card key={s.label}>
+                  <CardContent className="pt-6 flex items-center gap-4">
+                    <div className={`p-2 rounded-lg bg-muted ${s.color}`}>
+                      <s.icon className="h-5 w-5" />
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    <div>
+                      <p className="text-2xl font-bold">{s.value}</p>
+                      <p className="text-xs text-muted-foreground">{s.label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-          {/* Right sidebar */}
-          <div className="space-y-6">
-            {/* Alerts */}
-            <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Bell className="h-5 w-5" /> Alerts</h2>
-              <div className="space-y-3">
-                {alerts.map((a, i) => (
-                  <Card key={i} className={`border ${severityColors[a.severity]}`}>
-                    <CardContent className="pt-4 space-y-1">
-                      <div className="flex items-start gap-2">
-                        <a.icon className="h-4 w-4 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">{a.title}</p>
-                          <p className="text-xs opacity-80">{a.description}</p>
-                        </div>
-                      </div>
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Saved Properties */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center gap-2"><Bookmark className="h-5 w-5" /> Saved Properties</h2>
+                  {savedProperties.length > 0 && (
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportSavedPropertiesCSV(savedProperties)}>
+                      <Download className="h-4 w-4" /> Export All
+                    </Button>
+                  )}
+                </div>
+                {isLoading ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+                  </div>
+                ) : savedProperties.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {savedProperties.map((sp: any) => {
+                      const p = sp.piq_properties;
+                      if (!p) return null;
+                      const scores = p.piq_property_scores?.[0];
+                      const ownerName = p.piq_property_ownership?.[0]?.piq_owners?.name;
+                      const roofScore = scores?.roof_replacement_score ?? 0;
+                      return (
+                        <Card key={sp.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
+                          <CardContent className="pt-4 space-y-2">
+                            <p className="font-medium text-sm leading-tight">{p.address}</p>
+                            <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{ownerName}</span>
+                              <Badge variant={roofScore >= 90 ? 'destructive' : roofScore <= 50 ? 'secondary' : 'default'} className="text-[10px]">
+                                Roof: {roofScore}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Clock className="h-3 w-3" /> Saved {new Date(sp.created_at).toLocaleDateString()}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6 text-center text-muted-foreground">
+                      <p className="text-sm">No saved properties yet. Search and save properties to see them here.</p>
                     </CardContent>
                   </Card>
-                ))}
+                )}
+
+                {/* Recent Searches */}
+                <h2 className="text-lg font-semibold flex items-center gap-2 mt-6"><Clock className="h-5 w-5" /> Recent Searches</h2>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      {recentSearches.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div>
+                            <p className="text-sm font-medium">{s.address}</p>
+                            <p className="text-xs text-muted-foreground">{s.date}</p>
+                          </div>
+                          <Badge variant="outline">{s.results} result{s.results !== 1 ? 's' : ''}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right sidebar */}
+              <div className="space-y-6">
+                {/* Alerts */}
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Bell className="h-5 w-5" /> Alerts</h2>
+                  <div className="space-y-3">
+                    {alerts.map((a, i) => (
+                      <Card key={i} className={`border ${severityColors[a.severity]}`}>
+                        <CardContent className="pt-4 space-y-1">
+                          <div className="flex items-start gap-2">
+                            <a.icon className="h-4 w-4 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">{a.title}</p>
+                              <p className="text-xs opacity-80">{a.description}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* API Status */}
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Wifi className="h-5 w-5" /> API Connections</h2>
+                  <Card>
+                    <CardContent className="pt-4 space-y-3">
+                      {apiConnections.map((api, i) => (
+                        <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div>
+                            <p className="text-sm font-medium">{api.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{api.detail}</p>
+                          </div>
+                          {statusBadge(api.status)}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
-
-            {/* API Status */}
-            <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4"><Wifi className="h-5 w-5" /> API Connections</h2>
-              <Card>
-                <CardContent className="pt-4 space-y-3">
-                  {apiConnections.map((api, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{api.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{api.detail}</p>
-                      </div>
-                      {statusBadge(api.status)}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       <PropertyIQFooter />

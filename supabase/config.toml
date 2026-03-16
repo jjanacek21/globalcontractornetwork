@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.enrich-property]
 verify_jwt = false
+
+[functions.fetch-miami-dade-permits]
+verify_jwt = false
