@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 // ---- Types matching Supabase piq_ tables ----
@@ -247,6 +248,41 @@ export function usePropertyIQDashboard() {
 
       if (error) throw error;
       return { savedProperties: saved || [] };
+    },
+  });
+}
+
+// ---- ATTOM Lookup Mutation ----
+
+export function useAttomLookup() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (address: string) => {
+      const { data, error } = await supabase.functions.invoke('attom-property-lookup', {
+        body: { address },
+      });
+
+      if (error) throw new Error(error.message || 'ATTOM lookup failed');
+      if (!data?.success) throw new Error(data?.error || 'No property found');
+      return data as { success: boolean; propertyId: string; source: string };
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["piq-search"] });
+      toast({
+        title: data.source === 'existing' ? "Property Found" : "Property Retrieved",
+        description: data.source === 'attom'
+          ? "Live property data fetched from ATTOM and saved."
+          : "Property already exists in database.",
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "ATTOM Lookup Failed",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 }
