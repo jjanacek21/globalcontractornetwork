@@ -526,21 +526,24 @@ export function RoofMeasurementTool() {
               onEdgeTypeChange={setActiveEdgeType}
               onUndo={undo}
               onRedo={redo}
-              onDelete={() => {
-                if (selectedFacetId) {
-                  const newFacets = facets.filter(f => f.id !== selectedFacetId);
-                  setFacets(newFacets);
-                  setSelectedFacetId(null);
-                  pushHistory(newFacets, edges);
-                  const totalArea = newFacets.reduce((s, f) => s + f.areaSqft, 0);
-                  const mult = getPitchMultiplier(components.predominantPitch);
-                  const totalWithWaste = totalArea * mult * (1 + components.wastePercent / 100);
-                  setComponents(prev => ({ ...prev, totalAreaSqft: Math.round(totalArea), totalSquares: +(totalWithWaste / 100).toFixed(2), facetsCount: newFacets.length }));
-                }
-              }}
+               onDelete={() => { if (selectedFacetId) handleDeleteFacet(selectedFacetId); }}
               canUndo={historyIdx > 0}
               canRedo={historyIdx < history.length - 1}
               hasSelection={!!selectedFacetId}
+            />
+          </div>
+        )}
+
+        {/* Right panel (manual mode) — Facet List */}
+        {center && mode === "manual" && (
+          <div className="absolute top-16 right-3 z-10">
+            <FacetListPanel
+              facets={facets}
+              edges={edges}
+              selectedFacetId={selectedFacetId}
+              onSelectFacet={setSelectedFacetId}
+              onUpdateFacet={handleUpdateFacet}
+              onDeleteFacet={handleDeleteFacet}
             />
           </div>
         )}
