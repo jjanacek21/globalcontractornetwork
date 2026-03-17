@@ -28,7 +28,13 @@ const PropertyIQSearch = () => {
   useEffect(() => {
     if (hasNoMatch && !attomTriggered && !attomLookup.isPending) {
       setAttomTriggered(true);
-      attomLookup.mutate(query);
+      attomLookup.mutate(query, {
+        onSuccess: (data) => {
+          if (data?.propertyId) {
+            navigate(`/property-iq/property/${data.propertyId}`);
+          }
+        },
+      });
     }
   }, [hasNoMatch, attomTriggered, query]);
 
