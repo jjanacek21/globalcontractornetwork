@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
       await supabase.from('piq_building_components').insert({
         property_id: propertyId,
         component_type: 'Roof',
-        material: buildingConstruction.roofCover || buildingConstruction.roofType || null,
+        material: buildingConstruction.roofcover || buildingConstruction.rooftype || null,
         install_year: yearBuilt,
         estimated_life: 25,
         condition: roofScore >= 70 ? 'Poor' : roofScore >= 40 ? 'Fair' : 'Good',
