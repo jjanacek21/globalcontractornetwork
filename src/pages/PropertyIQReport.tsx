@@ -26,6 +26,30 @@ const conditionColor: Record<string, string> = {
   critical: 'bg-red-500',
 };
 
+// Map ATTOM property type codes to readable labels
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  SFR: 'Single Family',
+  RSFR: 'Single Family',
+  CONDO: 'Condominium',
+  TOWNHOUSE: 'Townhouse',
+  DUPLEX: 'Duplex',
+  TRIPLEX: 'Triplex',
+  QUADRUPLEX: 'Quadruplex',
+  APARTMENT: 'Apartment',
+  COMMERCIAL: 'Commercial',
+  INDUSTRIAL: 'Industrial',
+  VACANT: 'Vacant Land',
+  MOBILE: 'Mobile Home',
+  COOP: 'Co-op',
+  RESIDENTIAL: 'Residential',
+};
+
+function formatPropertyType(raw: string | null | undefined): string {
+  if (!raw) return 'Residential';
+  const upper = raw.toUpperCase().trim();
+  return PROPERTY_TYPE_LABELS[upper] || raw;
+}
+
 const PropertyIQReport = () => {
   const { id } = useParams<{ id: string }>();
   const { data: property, isLoading, error } = usePropertyIQReport(id);
@@ -127,9 +151,9 @@ const PropertyIQReport = () => {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <Badge>{property.property_type}</Badge>
+            <Badge>{formatPropertyType(property.property_type)}</Badge>
             <Badge variant={roofCondition === 'critical' ? 'destructive' : 'secondary'}>Roof: {roofCondition}</Badge>
-            <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>
+            {property.flood_zone && <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>}
           </div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <MapPin className="h-6 w-6 text-primary shrink-0" />
@@ -157,14 +181,15 @@ const PropertyIQReport = () => {
             <CardContent>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
-                  ['Type', property.property_type],
-                  ['Sqft', (property.building_sqft ?? 0).toLocaleString()],
-                  ['Lot', property.lot_sqft ? `${(property.lot_sqft / 43560).toFixed(1)} acres` : '—'],
-                  ['Built', property.year_built],
-                  ['Stories', property.stories],
-                  ['Zoning', property.zoning],
+                  ['Type', formatPropertyType(property.property_type)],
+                  ['Sqft', property.building_sqft ? property.building_sqft.toLocaleString() : '—'],
+                  ['Lot', property.lot_sqft ? `${(property.lot_sqft / 43560).toFixed(2)} acres` : '—'],
+                  ['Built', property.year_built ?? '—'],
+                  ['Stories', property.stories ?? '—'],
+                  ['Zoning', property.zoning ?? '—'],
                   ['Assessed', property.assessed_value ? `$${Number(property.assessed_value).toLocaleString()}` : '—'],
                   ['Market Value', property.estimated_value ? `$${Number(property.estimated_value).toLocaleString()}` : '—'],
+                  ['Construction', property.construction_type ?? '—'],
                 ].map(([label, value]) => (
                   <div key={String(label)}>
                     <p className="text-muted-foreground text-xs">{label}</p>

@@ -6,8 +6,8 @@ const corsHeaders = {
 const ATTOM_BASE = 'https://api.gateway.attomdata.com/propertyapi/v1.0.0';
 
 interface AttomRequest {
-  address1: string; // street address e.g. "123 Main St"
-  address2: string; // city, state zip e.g. "Hollywood, FL 33021"
+  address1: string;
+  address2: string;
 }
 
 async function attomFetch(endpoint: string, params: AttomRequest, apiKey: string) {
@@ -28,9 +28,6 @@ async function attomFetch(endpoint: string, params: AttomRequest, apiKey: string
 }
 
 function parseAddress(fullAddress: string): AttomRequest | null {
-  // Expected formats:
-  // "123 Main St, Hollywood, FL 33021"
-  // "123 Main St, Hollywood, Florida 33021, United States"
   const cleaned = fullAddress.replace(/, United States$/i, '').trim();
   const firstComma = cleaned.indexOf(',');
   if (firstComma < 0) return null;
@@ -40,12 +37,42 @@ function parseAddress(fullAddress: string): AttomRequest | null {
   return { address1, address2 };
 }
 
+// Map ATTOM property type codes to readable labels
+const PROPERTY_TYPE_MAP: Record<string, string> = {
+  SFR: 'Single Family',
+  CONDO: 'Condominium',
+  TOWNHOUSE: 'Townhouse',
+  DUPLEX: 'Duplex',
+  TRIPLEX: 'Triplex',
+  QUADRUPLEX: 'Quadruplex',
+  APARTMENT: 'Apartment',
+  COMMERCIAL: 'Commercial',
+  INDUSTRIAL: 'Industrial',
+  VACANT: 'Vacant Land',
+  MOBILE: 'Mobile Home',
+  COOP: 'Co-op',
+  RESIDENTIAL: 'Residential',
+  RSFR: 'Single Family',
+};
+
+function mapPropertyType(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const upper = code.toUpperCase().trim();
+  return PROPERTY_TYPE_MAP[upper] || code;
+}
+
+function safeNum(val: unknown): number | null {
+  if (val === null || val === undefined || val === '' || val === 0) return null;
+  const n = Number(val);
+  return isNaN(n) ? null : n;
+}
+
 function calculateRoofScore(yearBuilt: number | null, buildingSqft: number | null): number {
   if (!yearBuilt) return 50;
   const age = new Date().getFullYear() - yearBuilt;
-  let score = Math.min(100, Math.max(0, age * 4)); // older = higher need
+  let score = Math.min(100, Math.max(0, age * 4));
   if (buildingSqft && buildingSqft > 3000) score = Math.min(100, score + 10);
-  return score;
+  return Math.round(score);
 }
 
 function calculateRenovationScore(yearBuilt: number | null, assessedValue: number | null, estimatedValue: number | null): number {
@@ -112,34 +139,61 @@ Deno.serve(async (req) => {
     }
 
     const prop = propertyData.property[0];
-    const assessment = assessmentData?.property?.[0]?.assessment || {};
+    const assessmentProp = assessmentData?.property?.[0] || {};
+    const assessment = assessmentProp.assessment || {};
     const saleHistory = saleData?.property || [];
 
-    // Extract data from ATTOM response
-    const lot = prop.lot || {};
+    // Log full ATTOM response structure for debugging
+    console.log('ATTOM property keys:', JSON.stringify(Object.keys(prop)));
+    console.log('ATTOM prop.summary:', JSON.stringify(prop.summary || null));
+    console.log('ATTOM prop.building:', JSON.stringify(prop.building || null));
+    console.log('ATTOM prop.lot:', JSON.stringify(prop.lot || null));
+    console.log('ATTOM prop.address:', JSON.stringify(prop.address || null));
+    console.log('ATTOM prop.location:', JSON.stringify(prop.location || null));
+    console.log('ATTOM assessment:', JSON.stringify(assessment));
+
+    // Extract data — ATTOM has summary at ROOT level of property, not under building
+    const summary = prop.summary || {};
     const building = prop.building || {};
-    const summary = building.summary || {};
-    const rooms = building.rooms || {};
+    const buildingSize = building.size || {};
+    const buildingRooms = building.rooms || {};
+    const buildingConstruction = building.construction || {};
+    const lot = prop.lot || {};
     const location = prop.location || {};
     const addr = prop.address || {};
+
+    // Owner: can be at prop.assessment.owner OR assessmentProp.assessment.owner
     const owner = prop.assessment?.owner || assessment?.owner || {};
 
-    const yearBuilt = summary.yearBuilt ? parseInt(summary.yearBuilt) : null;
-    const buildingSqft = summary.livingSize ? parseInt(summary.livingSize) : (summary.grossSize ? parseInt(summary.grossSize) : null);
-    const lotSqft = lot.lotSize1 ? parseInt(lot.lotSize1) : null;
-    const stories = summary.storyCount ? parseFloat(summary.storyCount) : null;
-    const assessedVal = assessment?.assessed?.assdTtlValue ? parseFloat(assessment.assessed.assdTtlValue) : null;
-    const marketVal = assessment?.market?.mktTtlValue ? parseFloat(assessment.market.mktTtlValue) : null;
-    const latitude = location.latitude ? parseFloat(location.latitude) : null;
-    const longitude = location.longitude ? parseFloat(location.longitude) : null;
+    // Parse numeric fields robustly
+    const yearBuilt = safeNum(summary.yearBuilt);
+    const buildingSqft = safeNum(buildingSize.livingSize) || safeNum(buildingSize.bldgSize) || safeNum(buildingSize.grossSize) || safeNum(summary.livingSize);
+    const lotSqft = safeNum(lot.lotSize1) || safeNum(lot.lotSize2);
+    const stories = safeNum(buildingRooms.stories) || safeNum(summary.stories) || safeNum(building.summary?.storyCount);
+    const assessedVal = safeNum(assessment.assessed?.assdTtlValue);
+    const marketVal = safeNum(assessment.market?.mktTtlValue);
+    const latitude = safeNum(location.latitude) || safeNum(prop.location?.latitude);
+    const longitude = safeNum(location.longitude) || safeNum(prop.location?.longitude);
 
-    // Determine city/state/zip from ATTOM
+    // City/state/zip
     const city = addr.locality || addr.city || location.locality || '';
     const state = addr.countrySubd || location.countrySubd || '';
     const zip = addr.postal1 || '';
     const streetAddress = addr.line1 || addr.oneLine || parsed.address1;
-    const propertyType = prop.summary?.propType || prop.summary?.propSubType || null;
+
+    // Property type with readable mapping
+    const rawPropType = summary.propType || summary.propSubType || prop.summary?.propType || null;
+    const propertyType = mapPropertyType(rawPropType);
+
     const parcelId = prop.identifier?.apn || null;
+    const constructionType = buildingConstruction.constructionType || building.construction?.constructionType || null;
+    const zoning = lot.siteZoningIdent || lot.zoningType || null;
+    const floodZone = summary.floodZone || lot.floodZoneIdent || null;
+
+    console.log('Parsed values:', JSON.stringify({
+      yearBuilt, buildingSqft, lotSqft, stories, assessedVal, marketVal,
+      propertyType, constructionType, zoning, floodZone, city, state, zip,
+    }));
 
     // Check if property already exists
     const { data: existing } = await supabase
@@ -150,6 +204,24 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
+      // Update existing property with any missing data
+      const updates: Record<string, unknown> = {};
+      if (!existing.building_sqft && buildingSqft) updates.building_sqft = buildingSqft;
+      if (!existing.lot_sqft && lotSqft) updates.lot_sqft = lotSqft;
+      if (!existing.year_built && yearBuilt) updates.year_built = yearBuilt;
+      if (!existing.property_type && propertyType) updates.property_type = propertyType;
+      if (!existing.assessed_value && assessedVal) updates.assessed_value = assessedVal;
+      if (!existing.estimated_value && marketVal) updates.estimated_value = marketVal;
+      if (!existing.construction_type && constructionType) updates.construction_type = constructionType;
+      if (!existing.stories && stories) updates.stories = Math.round(stories);
+      if (!existing.zoning && zoning) updates.zoning = zoning;
+      if (!existing.flood_zone && floodZone) updates.flood_zone = floodZone;
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('piq_properties').update(updates).eq('id', existing.id);
+        console.log('Updated existing property with missing fields:', Object.keys(updates));
+      }
+
       return new Response(JSON.stringify({ success: true, propertyId: existing.id, source: 'existing' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -170,11 +242,11 @@ Deno.serve(async (req) => {
         lot_sqft: lotSqft,
         year_built: yearBuilt,
         stories: stories ? Math.round(stories) : null,
-        construction_type: building.construction?.constructionType || null,
+        construction_type: constructionType,
         estimated_value: marketVal,
         assessed_value: assessedVal,
-        zoning: prop.lot?.siteZoningIdent || null,
-        flood_zone: prop.lot?.floodZoneIdent || null,
+        zoning,
+        flood_zone: floodZone,
       })
       .select('id')
       .single();
@@ -246,14 +318,14 @@ Deno.serve(async (req) => {
       await supabase.from('piq_building_components').insert({
         property_id: propertyId,
         component_type: 'Roof',
-        material: building.construction?.roofCover || building.construction?.roofType || null,
+        material: buildingConstruction.roofCover || buildingConstruction.roofType || null,
         install_year: yearBuilt,
         estimated_life: 25,
         condition: roofScore >= 70 ? 'Poor' : roofScore >= 40 ? 'Fair' : 'Good',
       });
     }
 
-    console.log('ATTOM property saved:', propertyId);
+    console.log('ATTOM property saved:', propertyId, { yearBuilt, buildingSqft, lotSqft, assessedVal, marketVal, propertyType });
 
     return new Response(JSON.stringify({ success: true, propertyId, source: 'attom' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
