@@ -199,10 +199,102 @@ Deno.serve(async (req) => {
       enrichmentLog.push(`Storms: already has ${stormCount} events`);
     }
 
-    // ── 3b. Owner contacts placeholder ──────────────────────────────
+    // ── 3b. Owner contacts via Apollo.io ────────────────────────────
+    const APOLLO_API_KEY = Deno.env.get("APOLLO_API_KEY");
     const ownersMissingEmail = owners.filter((o: any) => !o.email);
-    if (ownersMissingEmail.length > 0) {
-      enrichmentLog.push(`Owner contacts: ${ownersMissingEmail.length} owner(s) missing email — enrich-owner-contacts not yet implemented`);
+
+    if (ownersMissingEmail.length > 0 && APOLLO_API_KEY) {
+      let enrichedCount = 0;
+
+      for (const owner of ownersMissingEmail) {
+        try {
+          const ownerObj = owner as any;
+          const fullName = (ownerObj.name || "").trim();
+          if (!fullName) continue;
+
+          // Parse name into first/last
+          const nameParts = fullName.split(/\s+/);
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+          if (!firstName) continue;
+
+          const apolloBody: Record<string, string> = {
+            first_name: firstName,
+            last_name: lastName,
+          };
+
+          // If we have company data for this owner, include it
+          const { data: ownerCompanies } = await supabase
+            .from("piq_companies")
+            .select("name")
+            .eq("owner_id", ownerObj.id)
+            .limit(1);
+
+          if (ownerCompanies?.[0]?.name) {
+            apolloBody.organization_name = ownerCompanies[0].name;
+          }
+
+          console.log(`Apollo: enriching owner "${fullName}"`, apolloBody);
+
+          const apolloRes = await fetch("https://api.apollo.io/v1/people/match", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": APOLLO_API_KEY,
+            },
+            body: JSON.stringify(apolloBody),
+          });
+
+          if (!apolloRes.ok) {
+            console.error(`Apollo: HTTP ${apolloRes.status} for "${fullName}"`);
+            continue;
+          }
+
+          const apolloData = await apolloRes.json();
+          const person = apolloData?.person;
+
+          if (!person) {
+            console.log(`Apollo: no match for "${fullName}"`);
+            continue;
+          }
+
+          const updateFields: Record<string, any> = {};
+          if (person.email) updateFields.email = person.email;
+          if (person.phone_numbers?.[0]?.sanitized_number) {
+            updateFields.phone = person.phone_numbers[0].sanitized_number;
+          }
+          if (person.linkedin_url) updateFields.linkedin_url = person.linkedin_url;
+          if (person.organization?.website_url) {
+            updateFields.website = person.organization.website_url;
+          }
+
+          if (Object.keys(updateFields).length > 0) {
+            const { error: updateErr } = await supabase
+              .from("piq_owners")
+              .update(updateFields)
+              .eq("id", ownerObj.id);
+
+            if (!updateErr) {
+              enrichedCount++;
+              console.log(`Apollo: enriched "${fullName}" with`, Object.keys(updateFields));
+            } else {
+              console.error(`Apollo: update failed for "${fullName}"`, updateErr.message);
+            }
+          }
+
+          // Rate limit: 200ms delay between calls
+          if (ownersMissingEmail.indexOf(owner) < ownersMissingEmail.length - 1) {
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        } catch (apolloErr) {
+          console.error("Apollo enrichment error:", apolloErr);
+        }
+      }
+
+      enrichmentLog.push(`Owner contacts: enriched ${enrichedCount}/${ownersMissingEmail.length} owners via Apollo`);
+    } else if (ownersMissingEmail.length > 0) {
+      enrichmentLog.push(`Owner contacts: ${ownersMissingEmail.length} owner(s) missing email — APOLLO_API_KEY not configured`);
     }
 
     // ── 3c. Company data placeholder ────────────────────────────────
