@@ -166,12 +166,12 @@ Deno.serve(async (req) => {
     const owner = prop.assessment?.owner || assessment?.owner || {};
 
     // Parse numeric fields robustly
-    const yearBuilt = safeNum(summary.yearBuilt);
-    const buildingSqft = safeNum(buildingSize.livingSize) || safeNum(buildingSize.bldgSize) || safeNum(buildingSize.grossSize) || safeNum(summary.livingSize);
-    const lotSqft = safeNum(lot.lotSize1) || safeNum(lot.lotSize2);
-    const stories = safeNum(buildingRooms.stories) || safeNum(summary.stories) || safeNum(building.summary?.storyCount);
-    const assessedVal = safeNum(assessment.assessed?.assdTtlValue);
-    const marketVal = safeNum(assessment.market?.mktTtlValue);
+    const yearBuilt = safeNum(summary.yearbuilt);
+    const buildingSqft = safeNum(buildingSize.livingsize) || safeNum(buildingSize.bldgsize) || safeNum(buildingSize.grosssize) || safeNum(summary.livingsize);
+    const lotSqft = safeNum(lot.lotsize1) || safeNum(lot.lotsize2);
+    const stories = safeNum(buildingRooms.stories) || safeNum(summary.stories) || safeNum(building.summary?.levels);
+    const assessedVal = safeNum(assessment.assessed?.assdttlvalue);
+    const marketVal = safeNum(assessment.market?.mktttlvalue);
     const latitude = safeNum(location.latitude) || safeNum(prop.location?.latitude);
     const longitude = safeNum(location.longitude) || safeNum(prop.location?.longitude);
 
