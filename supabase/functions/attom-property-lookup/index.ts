@@ -301,13 +301,15 @@ Deno.serve(async (req) => {
     for (const saleProp of saleHistory) {
       const sale = saleProp.sale || {};
       const amount = sale.amount || {};
-      if (amount.saleAmt || sale.saleTransDate) {
+      const saleAmt = amount.saleamt || amount.saleAmt;
+      const saleDate = sale.saletransdate || sale.saleTransDate;
+      if (saleAmt || saleDate) {
         await supabase.from('piq_property_sales').insert({
           property_id: propertyId,
-          sale_date: sale.saleTransDate || null,
-          sale_price: amount.saleAmt ? parseFloat(amount.saleAmt) : null,
-          buyer: sale.buyer1?.last ? `${sale.buyer1.first || ''} ${sale.buyer1.last}`.trim() : null,
-          seller: sale.seller1?.last ? `${sale.seller1.first || ''} ${sale.seller1.last}`.trim() : null,
+          sale_date: saleDate || null,
+          sale_price: saleAmt ? parseFloat(saleAmt) : null,
+          buyer: (sale.buyer1?.last || sale.buyer1?.lastname) ? `${sale.buyer1.first || sale.buyer1.firstname || ''} ${sale.buyer1.last || sale.buyer1.lastname}`.trim() : null,
+          seller: (sale.seller1?.last || sale.seller1?.lastname) ? `${sale.seller1.first || sale.seller1.firstname || ''} ${sale.seller1.last || sale.seller1.lastname}`.trim() : null,
           lender: sale.mortgage?.lender || null,
         });
       }
