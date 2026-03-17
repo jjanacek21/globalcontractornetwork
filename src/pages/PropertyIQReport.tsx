@@ -181,14 +181,15 @@ const PropertyIQReport = () => {
             <CardContent>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
-                  ['Type', property.property_type],
-                  ['Sqft', (property.building_sqft ?? 0).toLocaleString()],
-                  ['Lot', property.lot_sqft ? `${(property.lot_sqft / 43560).toFixed(1)} acres` : '—'],
-                  ['Built', property.year_built],
-                  ['Stories', property.stories],
-                  ['Zoning', property.zoning],
+                  ['Type', formatPropertyType(property.property_type)],
+                  ['Sqft', property.building_sqft ? property.building_sqft.toLocaleString() : '—'],
+                  ['Lot', property.lot_sqft ? `${(property.lot_sqft / 43560).toFixed(2)} acres` : '—'],
+                  ['Built', property.year_built ?? '—'],
+                  ['Stories', property.stories ?? '—'],
+                  ['Zoning', property.zoning ?? '—'],
                   ['Assessed', property.assessed_value ? `$${Number(property.assessed_value).toLocaleString()}` : '—'],
                   ['Market Value', property.estimated_value ? `$${Number(property.estimated_value).toLocaleString()}` : '—'],
+                  ['Construction', property.construction_type ?? '—'],
                 ].map(([label, value]) => (
                   <div key={String(label)}>
                     <p className="text-muted-foreground text-xs">{label}</p>
