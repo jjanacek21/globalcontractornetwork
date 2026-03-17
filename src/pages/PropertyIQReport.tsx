@@ -26,6 +26,30 @@ const conditionColor: Record<string, string> = {
   critical: 'bg-red-500',
 };
 
+// Map ATTOM property type codes to readable labels
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  SFR: 'Single Family',
+  RSFR: 'Single Family',
+  CONDO: 'Condominium',
+  TOWNHOUSE: 'Townhouse',
+  DUPLEX: 'Duplex',
+  TRIPLEX: 'Triplex',
+  QUADRUPLEX: 'Quadruplex',
+  APARTMENT: 'Apartment',
+  COMMERCIAL: 'Commercial',
+  INDUSTRIAL: 'Industrial',
+  VACANT: 'Vacant Land',
+  MOBILE: 'Mobile Home',
+  COOP: 'Co-op',
+  RESIDENTIAL: 'Residential',
+};
+
+function formatPropertyType(raw: string | null | undefined): string {
+  if (!raw) return 'Residential';
+  const upper = raw.toUpperCase().trim();
+  return PROPERTY_TYPE_LABELS[upper] || raw;
+}
+
 const PropertyIQReport = () => {
   const { id } = useParams<{ id: string }>();
   const { data: property, isLoading, error } = usePropertyIQReport(id);
