@@ -109,7 +109,7 @@ const PropertyIQDashboard = () => {
                 <BarChart3 className="h-4 w-4" /> Overview
               </Button>
               <Button variant={activeTab === "map" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("map")} className="h-8 px-3 gap-1.5">
-                <MapIcon className="h-4 w-4" /> Map Explorer
+                <Map className="h-4 w-4" /> Map Explorer
               </Button>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>Log Out</Button>

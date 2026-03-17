@@ -89,7 +89,7 @@ const PropertyIQSearch = () => {
               onClick={() => setViewMode("map")}
               className="h-8 px-3 gap-1.5"
             >
-              <MapIcon className="h-4 w-4" />
+              <Map className="h-4 w-4" />
               Map
             </Button>
           </div>
