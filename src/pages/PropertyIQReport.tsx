@@ -151,9 +151,9 @@ const PropertyIQReport = () => {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <Badge>{property.property_type}</Badge>
+            <Badge>{formatPropertyType(property.property_type)}</Badge>
             <Badge variant={roofCondition === 'critical' ? 'destructive' : 'secondary'}>Roof: {roofCondition}</Badge>
-            <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>
+            {property.flood_zone && <Badge variant="outline">{property.flood_zone} Flood Zone</Badge>}
           </div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <MapPin className="h-6 w-6 text-primary shrink-0" />
