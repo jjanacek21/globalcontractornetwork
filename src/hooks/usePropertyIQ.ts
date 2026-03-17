@@ -128,6 +128,22 @@ export interface PIQPropertyFull extends PIQPropertySummary {
 
 // ---- Search Hook ----
 
+// Normalize street abbreviations to match ATTOM-formatted addresses
+function normalizeStreetAddress(street: string): string {
+  const abbreviations: Record<string, string> = {
+    'northwest': 'NW', 'northeast': 'NE', 'southwest': 'SW', 'southeast': 'SE',
+    'north': 'N', 'south': 'S', 'east': 'E', 'west': 'W',
+    'avenue': 'AVE', 'street': 'ST', 'drive': 'DR', 'boulevard': 'BLVD',
+    'road': 'RD', 'lane': 'LN', 'court': 'CT', 'place': 'PL',
+    'circle': 'CIR', 'terrace': 'TER', 'way': 'WAY', 'trail': 'TRL',
+  };
+  let normalized = street;
+  for (const [full, abbr] of Object.entries(abbreviations)) {
+    normalized = normalized.replace(new RegExp(`\\b${full}\\b`, 'gi'), abbr);
+  }
+  return normalized.toUpperCase().replace(/\b(\d+)(ST|ND|RD|TH)\b/gi, '$1$2').trim();
+}
+
 export function usePropertyIQSearch(query: string) {
   return useQuery({
     queryKey: ["piq-search", query],
@@ -143,8 +159,29 @@ export function usePropertyIQSearch(query: string) {
         .order("address");
 
       if (query.trim()) {
-        const term = `%${query.trim()}%`;
-        q = q.or(`address.ilike.${term},city.ilike.${term},state.ilike.${term}`);
+        // Strip ", United States" and parse segments
+        const cleaned = query.trim().replace(/,\s*United States$/i, '');
+        const segments = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+
+        const street = segments[0] || '';
+        const city = segments[1] || '';
+        const normalizedStreet = normalizeStreetAddress(street);
+
+        // Build flexible OR filter matching both original and normalized address
+        const filters: string[] = [];
+        if (street) {
+          filters.push(`address.ilike.%${street}%`);
+          if (normalizedStreet !== street.toUpperCase()) {
+            filters.push(`address.ilike.%${normalizedStreet}%`);
+          }
+        }
+        if (city) {
+          filters.push(`city.ilike.%${city}%`);
+        }
+
+        if (filters.length > 0) {
+          q = q.or(filters.join(','));
+        }
       }
 
       const { data, error } = await q;
