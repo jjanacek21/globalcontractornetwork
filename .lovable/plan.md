@@ -1,27 +1,27 @@
 
-## ATTOM API Integration — Already Complete
 
-### Verification Summary
+## Fix PropertyIQ Search → ATTOM Flow
 
-The entire flow you described is already implemented and confirmed working:
+### Problem
+ATTOM saves addresses like `"2847 NE 2ND AVE"` in city `"BOCA RATON"`, but the search query is `"2847 Northeast 2nd Avenue, Boca Raton, Florida 33431, United States"`. The ILIKE match fails. After ATTOM succeeds and returns a `propertyId`, the page just invalidates the cache and re-runs the same failing search.
 
-1. **Edge Function exists**: `supabase/functions/attom-property-lookup/index.ts` calls ATTOM's `/property/detail`, `/assessment/detail`, and `/sale/detail` endpoints using the `ATTOM_API_KEY` secret with the `apikey` header.
+### Changes
 
-2. **Address parsing**: The `parseAddress()` function splits full addresses into `address1` (street) and `address2` (city, state zip), stripping ", United States" suffix.
+**1. `src/pages/PropertyIQSearch.tsx` — Navigate on ATTOM success**
+- Pass `navigate` into the ATTOM mutation's `onSuccess` callback
+- When `attomLookup.mutate(query)` succeeds with a `propertyId`, call `navigate(/property-iq/property/${propertyId})`
+- Use `attomLookup.mutate(query, { onSuccess: (data) => navigate(...) })` inline to avoid modifying the shared hook
+- The existing loading spinner already shows during ATTOM lookup — keep it as-is
 
-3. **Data flow** (all 6 steps):
-   - Fetches property/assessment/sale from ATTOM in parallel
-   - Inserts into `piq_properties` (address, building sqft, year built, values, lat/lng, parcel ID, etc.)
-   - Inserts owner into `piq_owners` and links via `piq_property_ownership`
-   - Inserts sale history into `piq_property_sales`
-   - Calculates and inserts roof/renovation/investment scores into `piq_property_scores`
-   - Inserts roof building component into `piq_building_components`
-   - Returns `{ success: true, propertyId, source: 'attom' }`
+**2. `src/hooks/usePropertyIQ.ts` — Smarter search parsing**
+- In `usePropertyIQSearch`, before building the query:
+  - Strip `, United States` from the search string
+  - Split by comma into segments (street, city, state/zip)
+  - Normalize abbreviations in the street segment: Northwest→NW, Northeast→NE, Southwest→SW, Southeast→SE, Avenue→AVE, Street→ST, Drive→DR, Boulevard→BLVD, Road→RD, Lane→LN, Court→CT, Place→PL
+  - Build the `.or()` filter using both the original first segment AND the normalized version against `address`, plus city segment against `city`
+  - This ensures `"2847 Northeast 2nd Avenue"` matches `"2847 NE 2ND AVE"`
 
-4. **Search auto-trigger**: `PropertyIQSearch.tsx` uses `useAttomLookup()` which auto-fires when the database search returns 0 results, with a loading state showing "Fetching live property data from ATTOM..."
+### Files
+- `src/pages/PropertyIQSearch.tsx` — Add `onSuccess` navigation to ATTOM mutate call
+- `src/hooks/usePropertyIQ.ts` — Rewrite search query normalization in `usePropertyIQSearch`
 
-5. **Edge function logs confirm success**: The Boca Raton address lookup completed successfully, saving property ID `087c8703-40f2-40a3-9ab9-95a9a5c522ba`.
-
-### No changes required
-
-Everything is wired up and operational. No new edge function or code modifications are needed.
