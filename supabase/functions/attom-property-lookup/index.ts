@@ -62,7 +62,7 @@ function mapPropertyType(code: string | null | undefined): string | null {
 }
 
 function safeNum(val: unknown): number | null {
-  if (val === null || val === undefined || val === '' || val === 0) return null;
+  if (val === null || val === undefined || val === '') return null;
   const n = Number(val);
   return isNaN(n) ? null : n;
 }
@@ -166,12 +166,12 @@ Deno.serve(async (req) => {
     const owner = prop.assessment?.owner || assessment?.owner || {};
 
     // Parse numeric fields robustly
-    const yearBuilt = safeNum(summary.yearBuilt);
-    const buildingSqft = safeNum(buildingSize.livingSize) || safeNum(buildingSize.bldgSize) || safeNum(buildingSize.grossSize) || safeNum(summary.livingSize);
-    const lotSqft = safeNum(lot.lotSize1) || safeNum(lot.lotSize2);
-    const stories = safeNum(buildingRooms.stories) || safeNum(summary.stories) || safeNum(building.summary?.storyCount);
-    const assessedVal = safeNum(assessment.assessed?.assdTtlValue);
-    const marketVal = safeNum(assessment.market?.mktTtlValue);
+    const yearBuilt = safeNum(summary.yearbuilt);
+    const buildingSqft = safeNum(buildingSize.livingsize) || safeNum(buildingSize.bldgsize) || safeNum(buildingSize.grosssize) || safeNum(summary.livingsize);
+    const lotSqft = safeNum(lot.lotsize1) || safeNum(lot.lotsize2);
+    const stories = safeNum(buildingRooms.stories) || safeNum(summary.stories) || safeNum(building.summary?.levels);
+    const assessedVal = safeNum(assessment.assessed?.assdttlvalue);
+    const marketVal = safeNum(assessment.market?.mktttlvalue);
     const latitude = safeNum(location.latitude) || safeNum(prop.location?.latitude);
     const longitude = safeNum(location.longitude) || safeNum(prop.location?.longitude);
 
@@ -182,13 +182,13 @@ Deno.serve(async (req) => {
     const streetAddress = addr.line1 || addr.oneLine || parsed.address1;
 
     // Property type with readable mapping
-    const rawPropType = summary.propType || summary.propSubType || prop.summary?.propType || null;
+    const rawPropType = summary.proptype || summary.propsubtype || prop.summary?.proptype || null;
     const propertyType = mapPropertyType(rawPropType);
 
     const parcelId = prop.identifier?.apn || null;
-    const constructionType = buildingConstruction.constructionType || building.construction?.constructionType || null;
-    const zoning = lot.siteZoningIdent || lot.zoningType || null;
-    const floodZone = summary.floodZone || lot.floodZoneIdent || null;
+    const constructionType = buildingConstruction.constructiontype || building.construction?.constructiontype || null;
+    const zoning = lot.sitezoningident || lot.zoningtype || null;
+    const floodZone = summary.floodzone || lot.floodzoneident || null;
 
     console.log('Parsed values:', JSON.stringify({
       yearBuilt, buildingSqft, lotSqft, stories, assessedVal, marketVal,
@@ -260,17 +260,17 @@ Deno.serve(async (req) => {
     const propertyId = newProp.id;
 
     // Insert owner if available
-    const ownerName = owner.owner1?.last
-      ? `${owner.owner1.first || ''} ${owner.owner1.last}`.trim()
-      : (owner.corporateIndicator === 'Y' ? owner.absenteeOwnerStatus || 'Owner' : null);
+    const ownerName = (owner.owner1?.last || owner.owner1?.lastname)
+      ? `${owner.owner1.first || owner.owner1.firstname || ''} ${owner.owner1.last || owner.owner1.lastname}`.trim()
+      : (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y' ? owner.absenteeownerstatus || owner.absenteeOwnerStatus || 'Owner' : null);
 
     if (ownerName) {
       const { data: newOwner } = await supabase
         .from('piq_owners')
         .insert({
           name: ownerName,
-          owner_type: owner.corporateIndicator === 'Y' ? 'Corporate' : 'Individual',
-          mailing_address: addr.line2 ? `${addr.line1}, ${addr.line2}` : null,
+          owner_type: (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y') ? 'Corporate' : 'Individual',
+          mailing_address: (addr.line2 || addr.line2) ? `${addr.line1 || addr.oneline || ''}, ${addr.line2 || ''}` : null,
         })
         .select('id')
         .single();
@@ -301,13 +301,15 @@ Deno.serve(async (req) => {
     for (const saleProp of saleHistory) {
       const sale = saleProp.sale || {};
       const amount = sale.amount || {};
-      if (amount.saleAmt || sale.saleTransDate) {
+      const saleAmt = amount.saleamt || amount.saleAmt;
+      const saleDate = sale.saletransdate || sale.saleTransDate;
+      if (saleAmt || saleDate) {
         await supabase.from('piq_property_sales').insert({
           property_id: propertyId,
-          sale_date: sale.saleTransDate || null,
-          sale_price: amount.saleAmt ? parseFloat(amount.saleAmt) : null,
-          buyer: sale.buyer1?.last ? `${sale.buyer1.first || ''} ${sale.buyer1.last}`.trim() : null,
-          seller: sale.seller1?.last ? `${sale.seller1.first || ''} ${sale.seller1.last}`.trim() : null,
+          sale_date: saleDate || null,
+          sale_price: saleAmt ? parseFloat(saleAmt) : null,
+          buyer: (sale.buyer1?.last || sale.buyer1?.lastname) ? `${sale.buyer1.first || sale.buyer1.firstname || ''} ${sale.buyer1.last || sale.buyer1.lastname}`.trim() : null,
+          seller: (sale.seller1?.last || sale.seller1?.lastname) ? `${sale.seller1.first || sale.seller1.firstname || ''} ${sale.seller1.last || sale.seller1.lastname}`.trim() : null,
           lender: sale.mortgage?.lender || null,
         });
       }
@@ -318,7 +320,7 @@ Deno.serve(async (req) => {
       await supabase.from('piq_building_components').insert({
         property_id: propertyId,
         component_type: 'Roof',
-        material: buildingConstruction.roofCover || buildingConstruction.roofType || null,
+        material: buildingConstruction.roofcover || buildingConstruction.rooftype || null,
         install_year: yearBuilt,
         estimated_life: 25,
         condition: roofScore >= 70 ? 'Poor' : roofScore >= 40 ? 'Fair' : 'Good',
