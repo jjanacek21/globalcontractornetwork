@@ -14,7 +14,7 @@ import { exportSavedPropertiesCSV } from "@/components/property-iq/ExportUtils";
 import {
   Search, FileText, Bookmark, Bell, BarChart3,
   Building2, AlertTriangle, CloudRain, Wifi,
-  ExternalLink, Clock, TrendingUp, MapIcon, Download,
+  ExternalLink, Clock, TrendingUp, Map, Download,
 } from "lucide-react";
 
 const demoStats = [

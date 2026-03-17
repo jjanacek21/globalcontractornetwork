@@ -7,7 +7,7 @@ import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
 import { PropertyIQMap } from "@/components/property-iq/PropertyIQMap";
 import { usePropertyIQSearch, useAttomLookup } from "@/hooks/usePropertyIQ";
-import { Search, Loader2, Database, Users, CloudRain, Building2, List, MapIcon } from "lucide-react";
+import { Search, Loader2, Database, Users, CloudRain, Building2, List, Map } from "lucide-react";
 
 const PropertyIQSearch = () => {
   const [searchParams] = useSearchParams();
