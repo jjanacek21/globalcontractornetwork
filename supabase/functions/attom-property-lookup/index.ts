@@ -269,8 +269,8 @@ Deno.serve(async (req) => {
         .from('piq_owners')
         .insert({
           name: ownerName,
-          owner_type: owner.corporateIndicator === 'Y' ? 'Corporate' : 'Individual',
-          mailing_address: addr.line2 ? `${addr.line1}, ${addr.line2}` : null,
+          owner_type: (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y') ? 'Corporate' : 'Individual',
+          mailing_address: (addr.line2 || addr.line2) ? `${addr.line1 || addr.oneline || ''}, ${addr.line2 || ''}` : null,
         })
         .select('id')
         .single();
