@@ -62,7 +62,7 @@ function mapPropertyType(code: string | null | undefined): string | null {
 }
 
 function safeNum(val: unknown): number | null {
-  if (val === null || val === undefined || val === '' || val === 0) return null;
+  if (val === null || val === undefined || val === '') return null;
   const n = Number(val);
   return isNaN(n) ? null : n;
 }
