@@ -182,13 +182,13 @@ Deno.serve(async (req) => {
     const streetAddress = addr.line1 || addr.oneLine || parsed.address1;
 
     // Property type with readable mapping
-    const rawPropType = summary.propType || summary.propSubType || prop.summary?.propType || null;
+    const rawPropType = summary.proptype || summary.propsubtype || prop.summary?.proptype || null;
     const propertyType = mapPropertyType(rawPropType);
 
     const parcelId = prop.identifier?.apn || null;
-    const constructionType = buildingConstruction.constructionType || building.construction?.constructionType || null;
-    const zoning = lot.siteZoningIdent || lot.zoningType || null;
-    const floodZone = summary.floodZone || lot.floodZoneIdent || null;
+    const constructionType = buildingConstruction.constructiontype || building.construction?.constructiontype || null;
+    const zoning = lot.sitezoningident || lot.zoningtype || null;
+    const floodZone = summary.floodzone || lot.floodzoneident || null;
 
     console.log('Parsed values:', JSON.stringify({
       yearBuilt, buildingSqft, lotSqft, stories, assessedVal, marketVal,
