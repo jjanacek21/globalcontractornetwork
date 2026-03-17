@@ -7,7 +7,7 @@ import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
 import { PropertyIQMap } from "@/components/property-iq/PropertyIQMap";
 import { usePropertyIQSearch, useAttomLookup } from "@/hooks/usePropertyIQ";
-import { Search, Loader2, Database, Users, CloudRain, Building2, List, MapIcon } from "lucide-react";
+import { Search, Loader2, Database, Users, CloudRain, Building2, List, Map } from "lucide-react";
 
 const PropertyIQSearch = () => {
   const [searchParams] = useSearchParams();
@@ -89,7 +89,7 @@ const PropertyIQSearch = () => {
               onClick={() => setViewMode("map")}
               className="h-8 px-3 gap-1.5"
             >
-              <MapIcon className="h-4 w-4" />
+              <Map className="h-4 w-4" />
               Map
             </Button>
           </div>
