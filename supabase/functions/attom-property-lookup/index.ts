@@ -222,6 +222,33 @@ Deno.serve(async (req) => {
         console.log('Updated existing property with missing fields:', Object.keys(updates));
       }
 
+      // Backfill owner if none exists
+      const { count: ownerCount } = await supabase
+        .from('piq_property_ownership')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_id', existing.id);
+
+      if ((ownerCount ?? 0) === 0 && ownerName) {
+        const { data: newOwner } = await supabase
+          .from('piq_owners')
+          .insert({
+            name: ownerName,
+            owner_type: (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y') ? 'Corporate' : 'Individual',
+            mailing_address: (addr.line2 || addr.line2) ? `${addr.line1 || addr.oneline || ''}, ${addr.line2 || ''}` : null,
+          })
+          .select('id')
+          .single();
+
+        if (newOwner) {
+          await supabase.from('piq_property_ownership').insert({
+            property_id: existing.id,
+            owner_id: newOwner.id,
+            is_current: true,
+          });
+          console.log('Backfilled owner for existing property:', ownerName);
+        }
+      }
+
       return new Response(JSON.stringify({ success: true, propertyId: existing.id, source: 'existing' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
