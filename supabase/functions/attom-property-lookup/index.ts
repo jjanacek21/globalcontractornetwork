@@ -291,10 +291,7 @@ Deno.serve(async (req) => {
 
     const propertyId = newProp.id;
 
-    // Insert owner if available
-    const ownerName = (owner.owner1?.last || owner.owner1?.lastname)
-      ? `${owner.owner1.first || owner.owner1.firstname || ''} ${owner.owner1.last || owner.owner1.lastname}`.trim()
-      : (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y' ? owner.absenteeownerstatus || owner.absenteeOwnerStatus || 'Owner' : null);
+    // Insert owner if available (ownerName computed earlier)
 
     if (ownerName) {
       const { data: newOwner } = await supabase
