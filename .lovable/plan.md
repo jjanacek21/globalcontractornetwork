@@ -1,69 +1,40 @@
 
 
-# Fix Missing Documents in Packet Assembly
+## Fix: Property Owner Data Not Populating from ATTOM + Apollo
 
-## Root Cause
+### Root Cause — Two bugs
 
-The assembly page determines document status by checking the project's `selected_products` JSONB column (line 123 of `PermitPacketAssembly.tsx`). If no materials were selected during the permit wizard, **every `auto_source` document shows "Missing"** — even when matching products exist in the `product_approvals` table.
+**Bug 1: ATTOM lookup skips owner creation for existing properties**
+When searching for a property that already exists in the database (line 206), the function returns early at line 225 with `source: 'existing'` **without ever inserting owner data**. Owner creation only runs for brand-new properties (line 262+). Your Boca Raton property (`aa872861`) was found as "existing," so no owner was ever created.
 
-The Boca Raton metal structure has 6 `auto_source` documents: underlayment_fpa, underlayment_pe_evaluation, compliance_statement, roofing_material_fpa, fastening_patterns, and impact_test_report. All require product matches that don't exist in `selected_products`.
+**Bug 2: Apollo enrichment has nothing to enrich**
+Since no `piq_owners` records exist for this property, the `enrich-property` function finds zero owners → the Apollo code is never reached. The enrichment logs confirm this — only "booted" messages, no Apollo calls.
 
-## Fix: Two-Part Solution
+Additionally, the `piq_companies` table uses a `company_name` column, but the Apollo code queries it with `.select("name")` (line 230) — this would always return null, preventing organization-based matching even if owners existed.
 
-### 1. Auto-match products from `product_approvals` table when `selected_products` is empty
+### Fix Plan
 
-In `PermitPacketAssembly.tsx`, after fetching the project, if `selected_products` is empty or missing, query `product_approvals` for active products matching the project's material type. This populates the document status automatically.
+**File: `supabase/functions/attom-property-lookup/index.ts`**
 
-```
-- Query product_approvals WHERE category matches (e.g., 'Underlayment', 'Metal Roofing')
-- Filter by is_active = true
-- Check file_url presence to determine ready vs needs_sourcing
-- Use these as fallback product matches for auto_source documents
-```
+In the "existing property" branch (lines 206-227), after updating missing fields:
+1. Check if the property has any owners in `piq_property_ownership`
+2. If no owners exist, run the same owner insertion logic (lines 262-285) for the existing property
+3. This ensures owner data is backfilled for properties that were previously saved without it
 
-### 2. Fix incorrect source types in packet structures
+**File: `supabase/functions/enrich-property/index.ts`**
 
-Some documents in the Boca Raton structure are tagged `auto_source` but aren't product PDFs:
-- `compliance_statement` → should be `auto_fill` (it's a form the system generates)
-- `fastening_patterns` → should be `auto_fill` (generated from `fastener_patterns` table data)
+Fix the Apollo company lookup (line 230): change `.select("name")` to `.select("company_name")` and update the check at line 234 to use `ownerCompanies[0]?.company_name`.
 
-Update these two records in `permit_packet_structures` to use the correct source type.
+### Changes Summary
 
-### 3. Add "Select Products" action for unmatched auto_source docs
+| File | Change |
+|------|--------|
+| `supabase/functions/attom-property-lookup/index.ts` | Add owner creation to the "existing property" branch so owners are inserted even for already-saved properties |
+| `supabase/functions/enrich-property/index.ts` | Fix company name column reference from `name` to `company_name` in Apollo enrichment |
 
-When an `auto_source` document has no matched product, show a "Select Product" button (in addition to Upload) that opens a product picker querying `product_approvals` by the document's `product_category`. Once selected, save it to the project's `selected_products` array and refresh.
-
-## Files to Change
-
-- **`src/pages/PermitPacketAssembly.tsx`** — Add fallback product matching from `product_approvals` table; add product selection handler
-- **`src/components/permit-queens/PacketDocumentRow.tsx`** — Add "Select Product" action button for missing auto_source docs
-- **`src/components/permit-queens/PacketAssemblyChecklist.tsx`** — Wire product selection callback
-- **Database migration** — Update `compliance_statement` and `fastening_patterns` source types to `auto_fill` in the Boca Raton packet structure
-
-## Key Logic Change (PermitPacketAssembly.tsx)
-
-```typescript
-// After fetching selectedProducts from project...
-let productMatches = selectedProducts;
-
-if (productMatches.length === 0) {
-  // Auto-match from product_approvals table
-  const { data: approvals } = await supabase
-    .from('product_approvals')
-    .select('id, manufacturer, product_name, noa_number, file_url, category')
-    .eq('is_active', true)
-    .not('file_url', 'is', null);
-  
-  productMatches = (approvals || []).map(a => ({
-    id: a.id,
-    manufacturer: a.manufacturer,
-    product_name: a.product_name,
-    noa_number: a.noa_number,
-    file_url: a.file_url,
-    category: a.category,
-  }));
-}
-```
-
-Then in the auto_source status check, match against `productMatches` instead of just `selectedProducts`.
+### Expected Result
+After these fixes:
+1. Searching any property (new or existing) will create owner records from ATTOM data
+2. Apollo enrichment will then find those owners and populate email, phone, LinkedIn, website
+3. The Owner Intelligence card on the report page will show real contact data
 
