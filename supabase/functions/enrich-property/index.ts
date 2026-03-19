@@ -227,12 +227,12 @@ Deno.serve(async (req) => {
           // If we have company data for this owner, include it
           const { data: ownerCompanies } = await supabase
             .from("piq_companies")
-            .select("name")
+            .select("company_name")
             .eq("owner_id", ownerObj.id)
             .limit(1);
 
-          if (ownerCompanies?.[0]?.name) {
-            apolloBody.organization_name = ownerCompanies[0].name;
+          if (ownerCompanies?.[0]?.company_name) {
+            apolloBody.organization_name = ownerCompanies[0].company_name;
           }
 
           console.log(`Apollo: enriching owner "${fullName}"`, apolloBody);

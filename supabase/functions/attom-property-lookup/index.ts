@@ -195,6 +195,11 @@ Deno.serve(async (req) => {
       propertyType, constructionType, zoning, floodZone, city, state, zip,
     }));
 
+    // Extract owner name early so it's available for both existing and new property paths
+    const ownerName = (owner.owner1?.last || owner.owner1?.lastname)
+      ? `${owner.owner1.first || owner.owner1.firstname || ''} ${owner.owner1.last || owner.owner1.lastname}`.trim()
+      : (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y' ? owner.absenteeownerstatus || owner.absenteeOwnerStatus || 'Owner' : null);
+
     // Check if property already exists
     const { data: existing } = await supabase
       .from('piq_properties')
