@@ -195,6 +195,11 @@ Deno.serve(async (req) => {
       propertyType, constructionType, zoning, floodZone, city, state, zip,
     }));
 
+    // Extract owner name early so it's available for both existing and new property paths
+    const ownerName = (owner.owner1?.last || owner.owner1?.lastname)
+      ? `${owner.owner1.first || owner.owner1.firstname || ''} ${owner.owner1.last || owner.owner1.lastname}`.trim()
+      : (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y' ? owner.absenteeownerstatus || owner.absenteeOwnerStatus || 'Owner' : null);
+
     // Check if property already exists
     const { data: existing } = await supabase
       .from('piq_properties')
@@ -220,6 +225,33 @@ Deno.serve(async (req) => {
       if (Object.keys(updates).length > 0) {
         await supabase.from('piq_properties').update(updates).eq('id', existing.id);
         console.log('Updated existing property with missing fields:', Object.keys(updates));
+      }
+
+      // Backfill owner if none exists
+      const { count: ownerCount } = await supabase
+        .from('piq_property_ownership')
+        .select('id', { count: 'exact', head: true })
+        .eq('property_id', existing.id);
+
+      if ((ownerCount ?? 0) === 0 && ownerName) {
+        const { data: newOwner } = await supabase
+          .from('piq_owners')
+          .insert({
+            name: ownerName,
+            owner_type: (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y') ? 'Corporate' : 'Individual',
+            mailing_address: (addr.line2 || addr.line2) ? `${addr.line1 || addr.oneline || ''}, ${addr.line2 || ''}` : null,
+          })
+          .select('id')
+          .single();
+
+        if (newOwner) {
+          await supabase.from('piq_property_ownership').insert({
+            property_id: existing.id,
+            owner_id: newOwner.id,
+            is_current: true,
+          });
+          console.log('Backfilled owner for existing property:', ownerName);
+        }
       }
 
       return new Response(JSON.stringify({ success: true, propertyId: existing.id, source: 'existing' }),
@@ -259,10 +291,7 @@ Deno.serve(async (req) => {
 
     const propertyId = newProp.id;
 
-    // Insert owner if available
-    const ownerName = (owner.owner1?.last || owner.owner1?.lastname)
-      ? `${owner.owner1.first || owner.owner1.firstname || ''} ${owner.owner1.last || owner.owner1.lastname}`.trim()
-      : (owner.corporateindicator === 'Y' || owner.corporateIndicator === 'Y' ? owner.absenteeownerstatus || owner.absenteeOwnerStatus || 'Owner' : null);
+    // Insert owner if available (ownerName computed earlier)
 
     if (ownerName) {
       const { data: newOwner } = await supabase
