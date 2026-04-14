@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Save, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddressBar } from "@/components/measurements/AddressBar";
+import { RoofScopeMeasurementStep } from "@/components/roofscope/RoofScopeMeasurementStep";
 
 const STEPS = [
   "Customer & Property",
@@ -126,6 +128,7 @@ export default function RoofScopeEstimateWizard() {
   const [step, setStep] = useState(0);
   const [state, setState] = useState<EstimateState>(INITIAL);
   const [saving, setSaving] = useState(false);
+  const [propertyCoords, setPropertyCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const u = (field: keyof EstimateState, value: any) => setState(prev => ({ ...prev, [field]: value }));
 
@@ -317,7 +320,21 @@ export default function RoofScopeEstimateWizard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Property Address</Label><Input value={state.property_address} onChange={e => u("property_address", e.target.value)} placeholder="123 Main St" /></div>
+              <div>
+                <Label>Property Address</Label>
+                <AddressBar onSelect={(address, coords) => {
+                  u("property_address", address);
+                  setPropertyCoords(coords);
+                  // Parse city/state/zip from place_name
+                  const parts = address.split(",").map(s => s.trim());
+                  if (parts.length >= 3) {
+                    u("property_city", parts[1] || "");
+                    const stateZip = (parts[2] || "").split(" ");
+                    u("property_state", stateZip[0] || "");
+                    u("property_zip", stateZip[1] || "");
+                  }
+                }} />
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div><Label>City</Label><Input value={state.property_city} onChange={e => u("property_city", e.target.value)} /></div>
                 <div><Label>State</Label><Input value={state.property_state} onChange={e => u("property_state", e.target.value)} /></div>
@@ -442,52 +459,27 @@ export default function RoofScopeEstimateWizard() {
 
           {/* STEP 3: Measurements */}
           {step === 3 && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Total Squares</Label><Input type="number" value={state.total_squares} onChange={e => { u("total_squares", e.target.value); u("total_sf", String(parseFloat(e.target.value) * 100 || "")); }} placeholder="e.g. 25" /></div>
-                <div><Label>Total SF</Label><Input type="number" value={state.total_sf} onChange={e => { u("total_sf", e.target.value); u("total_squares", String(parseFloat(e.target.value) / 100 || "")); }} /></div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Roof Pitch</Label>
-                  <Select value={state.roof_pitch} onValueChange={v => u("roof_pitch", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{PITCHES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Waste Factor %</Label><Input type="number" value={state.waste_factor} onChange={e => u("waste_factor", e.target.value)} /></div>
-                <div>
-                  <Label>Facets/Planes</Label>
-                  <Select value={state.num_facets} onValueChange={v => u("num_facets", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="simple">Simple (2-4)</SelectItem>
-                      <SelectItem value="moderate">Moderate (5-8)</SelectItem>
-                      <SelectItem value="complex">Complex (9+)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Linear Measurements (LF) — optional</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label className="text-xs">Ridges</Label><Input type="number" value={state.ridges} onChange={e => u("ridges", e.target.value)} placeholder="0" /></div>
-                  <div><Label className="text-xs">Hips</Label><Input type="number" value={state.hips} onChange={e => u("hips", e.target.value)} placeholder="0" /></div>
-                  <div><Label className="text-xs">Valleys</Label><Input type="number" value={state.valleys} onChange={e => u("valleys", e.target.value)} placeholder="0" /></div>
-                  <div><Label className="text-xs">Eaves</Label><Input type="number" value={state.eaves} onChange={e => u("eaves", e.target.value)} placeholder="0" /></div>
-                  <div><Label className="text-xs">Rakes</Label><Input type="number" value={state.rakes} onChange={e => u("rakes", e.target.value)} placeholder="0" /></div>
-                  <div><Label className="text-xs">Wall Flash.</Label><Input type="number" value={state.wall_flashings} onChange={e => u("wall_flashings", e.target.value)} placeholder="0" /></div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Penetrations Count</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label className="text-xs">Pipe Boots</Label><Input type="number" value={state.pipe_boots} onChange={e => u("pipe_boots", e.target.value)} /></div>
-                  <div><Label className="text-xs">Roof Vents</Label><Input type="number" value={state.roof_vents} onChange={e => u("roof_vents", e.target.value)} /></div>
-                  <div><Label className="text-xs">Skylights</Label><Input type="number" value={state.skylights} onChange={e => u("skylights", e.target.value)} /></div>
-                </div>
-              </div>
-            </>
+            <RoofScopeMeasurementStep
+              center={propertyCoords}
+              onMeasurementsChange={(data) => {
+                setState(prev => ({
+                  ...prev,
+                  total_squares: data.total_squares,
+                  total_sf: data.total_sf,
+                  waste_factor: data.waste_factor,
+                  ridges: data.ridges,
+                  hips: data.hips,
+                  valleys: data.valleys,
+                  eaves: data.eaves,
+                  rakes: data.rakes,
+                  pipe_boots: data.pipe_boots,
+                  roof_vents: data.roof_vents,
+                  skylights: data.skylights,
+                  num_facets: data.num_facets,
+                  roof_pitch: data.roof_pitch,
+                }));
+              }}
+            />
           )}
 
           {/* STEP 4: Accessories */}
