@@ -50,7 +50,7 @@ export function InstantQuoteWizard() {
   const [serviceType, setServiceType] = useState<ServiceType | null>(null);
   const [tradeAnswers, setTradeAnswers] = useState<TradeAnswers>({});
   const [photoResults, setPhotoResults] = useState<PhotoAnalysisResult[]>([]);
-  const [quoteResults, setQuoteResults] = useState<QuoteResults | null>(null);
+  
 
   const handlePropertyTypeSelect = (type: PropertyType) => {
     setPropertyType(type);
