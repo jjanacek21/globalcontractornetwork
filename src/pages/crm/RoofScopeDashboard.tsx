@@ -51,7 +51,7 @@ export default function RoofScopeDashboard() {
           <p className="text-sm text-muted-foreground">RoofScope AI Estimator — Estimate Smarter. Close Faster.</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => navigate("/member/crm/roofscope/estimate/new")} className="gap-2">
+          <Button onClick={() => navigate("/roofscope/estimate/new")} className="gap-2">
             <Plus className="w-4 h-4" /> New Estimate
           </Button>
         </div>
@@ -74,15 +74,15 @@ export default function RoofScopeDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/member/crm/roofscope/estimate/new")}>
+        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/roofscope/estimate/new")}>
           <Plus className="w-5 h-5" />
           <span className="text-sm">New Estimate</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/member/crm/roofscope/customers")}>
+        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/roofscope/customers")}>
           <Users className="w-5 h-5" />
           <span className="text-sm">Add Customer</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/member/crm/roofscope/analyzer")}>
+        <Button variant="outline" className="h-20 flex-col gap-1" onClick={() => navigate("/roofscope/analyzer")}>
           <Brain className="w-5 h-5" />
           <span className="text-sm">AI Photo Analyzer</span>
         </Button>
@@ -91,7 +91,7 @@ export default function RoofScopeDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">Recent Estimates</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/member/crm/roofscope/estimates")} className="gap-1 text-xs">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/roofscope/estimates")} className="gap-1 text-xs">
             View All <ArrowRight className="w-3 h-3" />
           </Button>
         </CardHeader>
@@ -104,7 +104,7 @@ export default function RoofScopeDashboard() {
             <div className="space-y-2">
               {estimates.slice(0, 10).map(est => (
                 <div key={est.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/member/crm/roofscope/estimate/${est.id}`)}>
+                  onClick={() => navigate(`/roofscope/estimate/${est.id}`)}>
                   <div className="flex items-center gap-3 min-w-0">
                     <div>
                       <p className="text-sm font-medium truncate">{est.estimate_number}</p>

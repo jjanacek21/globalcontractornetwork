@@ -13,6 +13,7 @@ const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 
 // CRM Pages
 import { CRMLayout } from "./components/crm/CRMLayout";
+import { RoofScopeLayout } from "./components/roofscope/RoofScopeLayout";
 const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
 const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
 const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
