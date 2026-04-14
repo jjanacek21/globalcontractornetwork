@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
-  ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
-  AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
-  HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned, Zap
+  ArrowRight, CheckCircle2, Crown, DollarSign, 
+  AlertTriangle, Shield, Search, ClipboardCheck, 
+  GraduationCap, X, Megaphone,
+  Settings, Users, Sparkles, Lightbulb, ClipboardList, Briefcase, MapPinned, Zap
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -209,7 +209,7 @@ const MemberDashboard = () => {
     },
     {
       icon: Search,
-      title: "Contractor Directory",
+      title: "Directory",
       description: "Browse 500+ verified local contractors",
       link: "/directory",
       color: "bg-primary/10 text-primary",
@@ -221,6 +221,22 @@ const MemberDashboard = () => {
       description: "Preventative maintenance & property care plans",
       link: "/prep-property",
       color: "bg-teal-500/10 text-teal-600",
+      category: "home" as ServiceCategory
+    },
+    {
+      icon: User,
+      title: "My Profile",
+      description: "View & edit your property owner profile",
+      link: "/homeowner-profile",
+      color: "bg-[hsl(45,100%,51%)]/10 text-[hsl(45,100%,51%)]",
+      category: "home" as ServiceCategory
+    },
+    {
+      icon: ClipboardList,
+      title: "My Projects",
+      description: "Track your project requests & status",
+      link: "/homeowner-dashboard",
+      color: "bg-green-500/10 text-green-600",
       category: "home" as ServiceCategory
     },
     {
@@ -686,71 +702,6 @@ const MemberDashboard = () => {
             </div>
           )}
 
-          {/* Property Owner Tools Section - Show for non-contractors */}
-          {!isContractor && networkMember && (
-            <div className="stagger-item stagger-delay-8">
-              <div className="rounded-2xl p-6 md:p-8 dark-section">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
-                    <Home className="h-5 w-5 text-[hsl(45,100%,51%)]" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Property Owner Tools</h2>
-                    <p className="text-sm text-white/60">Manage your projects & profile</p>
-                  </div>
-                </div>
-                
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <Link 
-                    to="/homeowner-profile" 
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <User className="h-6 w-6 text-[hsl(45,100%,51%)]" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">My Profile</p>
-                      <p className="text-sm text-white/60">View & edit profile</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
-                  </Link>
-
-                  <Link 
-                    to="/homeowner-messages" 
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all relative"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform relative">
-                      <MessageCircle className="h-6 w-6 text-blue-400" />
-                      {totalUnread > 0 && (
-                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                          {totalUnread}
-                        </Badge>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">My Messages</p>
-                      <p className="text-sm text-white/60">Chat with contractors</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
-                  </Link>
-
-                  <Link 
-                    to="/homeowner-dashboard" 
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[hsl(45,100%,51%)]/30 hover:bg-white/10 transition-all"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <ClipboardList className="h-6 w-6 text-green-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">My Projects</p>
-                      <p className="text-sm text-white/60">Track your requests</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-white/40 ml-auto group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-        )}
       </main>
 
       {/* Bottom Navigation - Mobile */}
