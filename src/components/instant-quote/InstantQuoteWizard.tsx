@@ -28,21 +28,8 @@ export interface PhotoAnalysisResult {
   recommendations: string[];
 }
 
-export interface QuoteResults {
-  summary: string;
-  estimatedCostLow: number;
-  estimatedCostHigh: number;
-  diy: {
-    steps: string[];
-    materialsCost: number;
-    timeEstimate: string;
-    toolsNeeded: string[];
-  };
-  professional: {
-    scopeOfWork: string;
-    timeline: string;
-  };
-}
+
+
 
 export function InstantQuoteWizard() {
   const [step, setStep] = useState<WizardStep>("property-type");
