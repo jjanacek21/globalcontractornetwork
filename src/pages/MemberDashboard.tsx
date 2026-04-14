@@ -184,10 +184,21 @@ const MemberDashboard = () => {
     "Permit Expediting",
     "Digital Marketing, Management & Design",
     "Job Marketplace",
-    "RoofScope AI Estimator"
+    "RoofScope AI Estimator",
+    "Roofing CRM",
+    "Door to Door World",
+    "PropertyIQ"
   ];
 
   const services = [
+    {
+      icon: Sparkles,
+      title: "Instant Quote",
+      description: "AI-powered estimates for roofing, windows, emergency, landscaping & cleaning",
+      link: "/instant-quote",
+      color: "bg-primary/10 text-primary",
+      category: "home" as ServiceCategory
+    },
     {
       icon: ClipboardList,
       title: "Roofing CRM",
@@ -203,14 +214,6 @@ const MemberDashboard = () => {
       link: "/directory",
       color: "bg-primary/10 text-primary",
       category: "business" as ServiceCategory
-    },
-    {
-      icon: HardHat,
-      title: "Roofing Services",
-      description: "Full roof replacements, repairs & coatings",
-      link: "/roofing-services",
-      color: "bg-slate-600/10 text-slate-600",
-      category: "home" as ServiceCategory
     },
     {
       icon: ClipboardCheck,
@@ -235,30 +238,6 @@ const MemberDashboard = () => {
       link: "/supplement-kings",
       color: "bg-blue-600/10 text-blue-600",
       category: "business" as ServiceCategory
-    },
-    {
-      icon: DoorOpen,
-      title: "Windows & Doors",
-      description: "Impact-rated windows & doors installation",
-      link: "/green-home-solutions",
-      color: "bg-green-600/10 text-green-600",
-      category: "home" as ServiceCategory
-    },
-    {
-      icon: AlertTriangle,
-      title: "24/7 Emergency Services",
-      description: "Water, fire & storm damage response",
-      link: "/emergency-mitigation",
-      color: "bg-red-600/10 text-red-600",
-      category: "emergency" as ServiceCategory
-    },
-    {
-      icon: Trees,
-      title: "Tree Removal & Landscaping",
-      description: "Professional tree removal, trimming & landscaping",
-      link: "/northern-landscaping",
-      color: "bg-green-700/10 text-green-700",
-      category: "home" as ServiceCategory
     },
     {
       icon: GraduationCap,
