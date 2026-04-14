@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MeasurementMap } from "@/components/measurements/MeasurementMap";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { RoofPin, RoofFacet, RoofEdge, DrawingTool, EdgeType, MeasurementMode } from "@/components/measurements/types";
 import { EDGE_COLORS, EDGE_LABELS, FACET_COLORS } from "@/components/measurements/types";
-import { calcPin, generateSimulatedFacets, createPinFacet, estimateComponentsFromSolar, polygonAreaSqft, polygonPerimeterFt } from "@/components/measurements/utils";
+import { calcPin, generateSimulatedFacets, estimateComponentsFromSolar } from "@/components/measurements/utils";
 import { BrainCircuit, Pencil, MousePointer, Trash2 } from "lucide-react";
 
 interface MeasurementData {
