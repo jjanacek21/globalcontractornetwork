@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Save, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddressBar } from "@/components/measurements/AddressBar";
+import { RoofScopeMeasurementStep } from "@/components/roofscope/RoofScopeMeasurementStep";
 
 const STEPS = [
   "Customer & Property",
