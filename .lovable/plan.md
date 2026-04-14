@@ -1,47 +1,35 @@
 
 
-## Move RoofScope AI from CRM to Standalone Dashboard Page
+## Integrate Interactive Satellite Measurement into RoofScope Wizard
 
-RoofScope is currently nested inside the CRM layout (`/member/crm/roofscope/*`). You want it as a standalone page accessible directly from the main Member Dashboard, similar to how PropertyIQ, Permit Queens, etc. work.
+### What You'll Get
+- **Step 0 (Customer & Property)**: Address field becomes an autocomplete that searches as you type, with city/state/zip auto-populated from the selected result
+- **Step 3 (Measurements)**: Completely rebuilt as an interactive satellite map where you can:
+  - See the property from satellite view
+  - Drop multiple pins on different buildings/roof sections
+  - Set pitch factor and waste factor per pin
+  - Click "Measure All" for instant AI measurements
+  - OR switch to manual polygon drawing mode to measure yourself
+  - Totals (squares, SF, edge lengths) auto-populate from the map measurements
 
-### Changes
+### Technical Approach
 
-**1. Add RoofScope service card to MemberDashboard.tsx**
-- Add a new entry to the `services` array with a `Zap` icon, title "RoofScope AI Estimator", link to `/roofscope`, category "business"
-- Add it to `contractorOnlyServices` since it's a contractor tool
-
-**2. Update all routes in App.tsx**
-- Change `/member/crm/roofscope` → `/roofscope`
-- Change `/member/crm/roofscope/estimates` → `/roofscope/estimates`
-- Change `/member/crm/roofscope/estimate/new` → `/roofscope/estimate/new`
-- Change `/member/crm/roofscope/estimate/:id` → `/roofscope/estimate/:id`
-- Change `/member/crm/roofscope/customers` → `/roofscope/customers`
-- Change `/member/crm/roofscope/analyzer` → `/roofscope/analyzer`
-- Remove `CRMLayout` wrapper — use a standalone layout with a "Return to Dashboard" header (matching the pattern used by PropertyIQ, Permit Queens, etc.)
-
-**3. Create a lightweight RoofScope layout component**
-- `src/components/roofscope/RoofScopeLayout.tsx` — header with RoofScope branding, "Return to Dashboard" button, and sidebar navigation for the sub-pages (Dashboard, Estimates, Customers, Analyzer)
-
-**4. Update all internal navigation references**
-- `RoofScopeDashboard.tsx` — update 6 `navigate()` calls from `/member/crm/roofscope/...` → `/roofscope/...`
-- `RoofScopeEstimateWizard.tsx` — update 4 `navigate()` calls
-- `RoofScopeEstimates.tsx` — update any navigation references
-- `RoofScopeCustomers.tsx` — update any navigation references
-- `RoofScopeAnalyzer.tsx` — update any navigation references
-
-**5. Remove RoofScope from CRM sidebar**
-- Remove the "RoofScope AI" entry from `CRMSidebar.tsx`
+This reuses the existing `MeasurementMap`, `PinListPanel`, `DrawingToolbar`, and related components already built in `src/components/measurements/` — no need to rebuild the map or drawing engine.
 
 ### Files Modified
+
 | File | Change |
 |------|--------|
-| `src/pages/MemberDashboard.tsx` | Add RoofScope service card + Zap import |
-| `src/App.tsx` | Move routes from `/member/crm/roofscope/*` to `/roofscope/*`, remove CRMLayout wrapper |
-| `src/components/roofscope/RoofScopeLayout.tsx` | New standalone layout with header + sidebar nav |
-| `src/pages/crm/RoofScopeDashboard.tsx` | Update all internal navigate paths |
-| `src/pages/crm/RoofScopeEstimateWizard.tsx` | Update all internal navigate paths |
-| `src/pages/crm/RoofScopeEstimates.tsx` | Update navigate paths |
-| `src/pages/crm/RoofScopeCustomers.tsx` | Update navigate paths |
-| `src/pages/crm/RoofScopeAnalyzer.tsx` | Update navigate paths |
-| `src/components/crm/CRMSidebar.tsx` | Remove RoofScope AI entry |
+| `src/pages/crm/RoofScopeEstimateWizard.tsx` | **Step 0**: Replace plain address `Input` with `AddressBar` component from measurements module; auto-fill city/state/zip from geocode result. **Step 3**: Replace manual number inputs with full interactive panel — embed `MeasurementMap` with satellite view, pin list with pitch/waste selectors, AI measure button, and polygon drawing toggle. Wire measured totals back into estimate state (total_squares, total_sf, ridges, hips, valleys, eaves, rakes, penetration counts). |
+| `src/components/roofscope/RoofScopeMeasurementStep.tsx` | **New file** — Self-contained component wrapping `MeasurementMap` + `PinListPanel` + `DrawingToolbar` for the wizard context. Manages pins, facets, edges, and exposes an `onMeasurementsChange` callback that pushes totals up to the wizard state. Includes mode toggle (AI Fast Measure vs Manual Polygon). |
+
+### Key Details
+
+- The `AddressBar` already calls the `geocode-address` edge function and returns coordinates — we parse the `place_name` to extract city/state/zip
+- `MeasurementMap` renders Mapbox satellite at zoom 19 with draggable pin markers
+- Pin pitch multipliers use the exact values from `PITCH_MULTIPLIERS` in `types.ts` (1/12 through 24/12)
+- AI measurement calls the existing `roof-vision-ai` edge function per pin
+- Manual polygon mode uses the existing facet/edge drawing engine with vertex snapping
+- The measurement step will be taller (min 600px) to give the map enough space
+- All measured values flow into the estimate's line item calculations in Steps 7-9
 
