@@ -44,6 +44,11 @@ const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
 const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
+const RoofScopeDashboard = lazy(() => import("./pages/crm/RoofScopeDashboard"));
+const RoofScopeEstimates = lazy(() => import("./pages/crm/RoofScopeEstimates"));
+const RoofScopeEstimateWizard = lazy(() => import("./pages/crm/RoofScopeEstimateWizard"));
+const RoofScopeCustomers = lazy(() => import("./pages/crm/RoofScopeCustomers"));
+const RoofScopeAnalyzer = lazy(() => import("./pages/crm/RoofScopeAnalyzer"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -336,6 +341,37 @@ const GCNRoutes = () => (
     <Route path="/member/crm/settings" element={
       <ProtectedRoute redirectTo="/network-login">
         <CRMLayout><Suspense fallback={<div />}><CRMSettings /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    {/* RoofScope Routes */}
+    <Route path="/member/crm/roofscope" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeDashboard /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/roofscope/estimates" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeEstimates /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/roofscope/estimate/new" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeEstimateWizard /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/roofscope/estimate/:id" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeEstimateWizard /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/roofscope/customers" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeCustomers /></Suspense></CRMLayout>
+      </ProtectedRoute>
+    } />
+    <Route path="/member/crm/roofscope/analyzer" element={
+      <ProtectedRoute redirectTo="/network-login">
+        <CRMLayout><Suspense fallback={<div />}><RoofScopeAnalyzer /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
     <Route path="/my-profile" element={
