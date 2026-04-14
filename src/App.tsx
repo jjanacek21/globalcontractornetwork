@@ -136,6 +136,7 @@ const PropertyIQAuth = lazy(() => import("./pages/PropertyIQAuth"));
 const PropertyIQDashboard = lazy(() => import("./pages/PropertyIQDashboard"));
 const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
 const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
+const InstantQuote = lazy(() => import("./pages/InstantQuote"));
 
 const queryClient = new QueryClient();
 
@@ -494,6 +495,7 @@ const GCNRoutes = () => (
           <Route path="/property-iq/search" element={<Suspense fallback={<div />}><PropertyIQSearch /></Suspense>} />
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
+          <Route path="/instant-quote" element={<Suspense fallback={<div />}><InstantQuote /></Suspense>} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing-services" element={<RoofingServices />} />
           <Route path="/roofing" element={<Roofing />} />
