@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned
+  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned, Zap
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
@@ -183,7 +183,8 @@ const MemberDashboard = () => {
     "Estimating/Supplementing",
     "Permit Expediting",
     "Digital Marketing, Management & Design",
-    "Job Marketplace"
+    "Job Marketplace",
+    "RoofScope AI Estimator"
   ];
 
   const services = [
@@ -305,6 +306,14 @@ const MemberDashboard = () => {
       description: "Property intelligence reports, owner data & roof analysis",
       link: "/property-iq",
       color: "bg-cyan-600/10 text-cyan-600",
+      category: "business" as ServiceCategory
+    },
+    {
+      icon: Zap,
+      title: "RoofScope AI Estimator",
+      description: "AI-powered roofing estimates with photo analysis",
+      link: "/roofscope",
+      color: "bg-orange-500/10 text-orange-500",
       category: "business" as ServiceCategory
     }
   ];

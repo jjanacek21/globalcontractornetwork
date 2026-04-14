@@ -277,7 +277,7 @@ export default function RoofScopeEstimateWizard() {
       })) as any);
 
       toast({ title: "Estimate saved!", description: estNumber });
-      navigate("/member/crm/roofscope/estimates");
+      navigate("/roofscope/estimates");
     } catch (err: any) {
       toast({ title: "Error saving estimate", description: err.message, variant: "destructive" });
     } finally {
@@ -290,7 +290,7 @@ export default function RoofScopeEstimateWizard() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/member/crm/roofscope/estimates")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/roofscope/estimates")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -632,7 +632,7 @@ export default function RoofScopeEstimateWizard() {
           {step === 7 && (
             <div className="text-center py-8 space-y-3">
               <p className="text-muted-foreground">Photo analysis is available from the standalone AI Photo Analyzer page.</p>
-              <Button variant="outline" onClick={() => navigate("/member/crm/roofscope/analyzer")}>Open AI Analyzer</Button>
+              <Button variant="outline" onClick={() => navigate("/roofscope/analyzer")}>Open AI Analyzer</Button>
               <p className="text-xs text-muted-foreground">You can skip this step and proceed to review.</p>
             </div>
           )}

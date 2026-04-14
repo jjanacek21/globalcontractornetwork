@@ -39,7 +39,7 @@ export default function RoofScopeEstimates() {
           <h1 className="text-2xl font-bold">My Estimates</h1>
           <p className="text-sm text-muted-foreground">{estimates.length} total estimates</p>
         </div>
-        <Button onClick={() => navigate("/member/crm/roofscope/estimate/new")} className="gap-2">
+        <Button onClick={() => navigate("/roofscope/estimate/new")} className="gap-2">
           <Plus className="w-4 h-4" /> New Estimate
         </Button>
       </div>
@@ -59,7 +59,7 @@ export default function RoofScopeEstimates() {
             <div className="divide-y divide-border">
               {filtered.map(est => (
                 <div key={est.id} className="flex items-center justify-between p-4 hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/member/crm/roofscope/estimate/${est.id}`)}>
+                  onClick={() => navigate(`/roofscope/estimate/${est.id}`)}>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{est.estimate_number}</span>

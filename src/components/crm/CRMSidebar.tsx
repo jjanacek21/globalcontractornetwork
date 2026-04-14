@@ -3,7 +3,7 @@ import {
   LayoutDashboard, TrendingUp, Users, Briefcase, FileText,
   Factory, CalendarDays, Map, FileStack, Presentation, Crown,
   Shield, Settings, HelpCircle, ChevronRight, Inbox, Brain,
-  Phone, Bot, Eye, Home, HardHat, Ruler, Zap,
+  Phone, Bot, Eye, Home, HardHat, Ruler,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -29,7 +29,6 @@ const mainNav = [
   { title: "Smart Docs", url: "/member/crm/smart-docs", icon: FileStack },
   { title: "Presentations", url: "/member/crm/presentations", icon: Presentation },
   { title: "Permit Expediter", url: "/member/crm/permit-expediter", icon: Crown },
-  { title: "RoofScope AI", url: "/member/crm/roofscope", icon: Zap },
 ];
 
 const followUpItems = [
