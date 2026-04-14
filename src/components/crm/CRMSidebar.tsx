@@ -29,7 +29,6 @@ const mainNav = [
   { title: "Smart Docs", url: "/member/crm/smart-docs", icon: FileStack },
   { title: "Presentations", url: "/member/crm/presentations", icon: Presentation },
   { title: "Permit Expediter", url: "/member/crm/permit-expediter", icon: Crown },
-  { title: "RoofScope AI", url: "/member/crm/roofscope", icon: Zap },
 ];
 
 const followUpItems = [
