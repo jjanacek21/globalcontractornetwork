@@ -1,46 +1,47 @@
 
 
-## Clean Up PropertyIQ — Restore Demo-Ready Seed Data
+## Move RoofScope AI from CRM to Standalone Dashboard Page
 
-### Current State
-- **3 seed properties** with full data (owners, scores, components, permits, etc.) — but prop-001 has wrong scores
-- **11 broken ATTOM-fetched properties** with null sqft, null year_built, null values, and default 50/50/50 scores — these clutter search results
+RoofScope is currently nested inside the CRM layout (`/member/crm/roofscope/*`). You want it as a standalone page accessible directly from the main Member Dashboard, similar to how PropertyIQ, Permit Queens, etc. work.
 
-### Plan
+### Changes
 
-**Step 1: Delete broken ATTOM-fetched properties**
+**1. Add RoofScope service card to MemberDashboard.tsx**
+- Add a new entry to the `services` array with a `Zap` icon, title "RoofScope AI Estimator", link to `/roofscope`, category "business"
+- Add it to `contractorOnlyServices` since it's a contractor tool
 
-Remove the 11 non-seed properties and all their related records (scores, ownership, components, permits, sales, storms, opportunities, violations). These are the records with IDs not matching the `a0000001-*` seed pattern.
+**2. Update all routes in App.tsx**
+- Change `/member/crm/roofscope` → `/roofscope`
+- Change `/member/crm/roofscope/estimates` → `/roofscope/estimates`
+- Change `/member/crm/roofscope/estimate/new` → `/roofscope/estimate/new`
+- Change `/member/crm/roofscope/estimate/:id` → `/roofscope/estimate/:id`
+- Change `/member/crm/roofscope/customers` → `/roofscope/customers`
+- Change `/member/crm/roofscope/analyzer` → `/roofscope/analyzer`
+- Remove `CRMLayout` wrapper — use a standalone layout with a "Return to Dashboard" header (matching the pattern used by PropertyIQ, Permit Queens, etc.)
 
-Tables to clean (in dependency order):
-- `piq_property_scores`
-- `piq_property_ownership` 
-- `piq_building_components`
-- `piq_permits`
-- `piq_property_sales`
-- `piq_storm_events`
-- `piq_contractor_opportunities`
-- `piq_code_violations`
-- `piq_saved_properties`
-- `piq_properties` (last)
+**3. Create a lightweight RoofScope layout component**
+- `src/components/roofscope/RoofScopeLayout.tsx` — header with RoofScope branding, "Return to Dashboard" button, and sidebar navigation for the sub-pages (Dashboard, Estimates, Customers, Analyzer)
 
-**Step 2: Fix prop-001 scores**
+**4. Update all internal navigation references**
+- `RoofScopeDashboard.tsx` — update 6 `navigate()` calls from `/member/crm/roofscope/...` → `/roofscope/...`
+- `RoofScopeEstimateWizard.tsx` — update 4 `navigate()` calls
+- `RoofScopeEstimates.tsx` — update any navigation references
+- `RoofScopeCustomers.tsx` — update any navigation references
+- `RoofScopeAnalyzer.tsx` — update any navigation references
 
-Update `piq_property_scores` for property `a0000001-0000-0000-0000-000000000001`:
-- `roof_replacement_score`: 42 → **92**
-- `renovation_score`: 38 → **65**  
-- `investment_score`: 31 → **78**
-- `overall_contractor_score`: 40 → **78**
-
-**Step 3: Add 2 more seed properties for variety**
-
-Insert 2 additional demo properties with realistic South Florida data, complete with scores, owners, building components, permits, and storm history — giving users 5 total properties to browse and demonstrating the full range of the app (high/low scores, different property types, multiple owners).
-
-### Result
-- Search page shows 5 properties with real data, scores, and owners
-- Property reports display fully populated sections
-- No empty/broken cards with "Sqft: 0" or "Value: $0.0M"
+**5. Remove RoofScope from CRM sidebar**
+- Remove the "RoofScope AI" entry from `CRMSidebar.tsx`
 
 ### Files Modified
-- No code changes — data-only operations via database insert tool
+| File | Change |
+|------|--------|
+| `src/pages/MemberDashboard.tsx` | Add RoofScope service card + Zap import |
+| `src/App.tsx` | Move routes from `/member/crm/roofscope/*` to `/roofscope/*`, remove CRMLayout wrapper |
+| `src/components/roofscope/RoofScopeLayout.tsx` | New standalone layout with header + sidebar nav |
+| `src/pages/crm/RoofScopeDashboard.tsx` | Update all internal navigate paths |
+| `src/pages/crm/RoofScopeEstimateWizard.tsx` | Update all internal navigate paths |
+| `src/pages/crm/RoofScopeEstimates.tsx` | Update navigate paths |
+| `src/pages/crm/RoofScopeCustomers.tsx` | Update navigate paths |
+| `src/pages/crm/RoofScopeAnalyzer.tsx` | Update navigate paths |
+| `src/components/crm/CRMSidebar.tsx` | Remove RoofScope AI entry |
 
