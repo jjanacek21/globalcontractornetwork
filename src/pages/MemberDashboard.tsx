@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Home, Building2, ShoppingBag, BookOpen, LogOut, User, 
-  ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
-  AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
-  HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned, Zap
+  ArrowRight, CheckCircle2, Crown, DollarSign, 
+  AlertTriangle, Shield, Search, ClipboardCheck, 
+  GraduationCap, X, Megaphone,
+  Settings, Users, Sparkles, Lightbulb, ClipboardList, Briefcase, MapPinned, Zap
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";
