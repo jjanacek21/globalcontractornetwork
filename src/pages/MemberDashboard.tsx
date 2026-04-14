@@ -11,7 +11,7 @@ import {
   ArrowRight, CheckCircle2, Loader2, Crown, DollarSign, 
   AlertTriangle, Trees, Shield, Search, ClipboardCheck, 
   HardHat, DoorOpen, GraduationCap, X, Megaphone,
-  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned
+  Settings, Users, Sparkles, Lightbulb, ChevronRight, MessageCircle, ClipboardList, Briefcase, MapPinned, Zap
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import gcnLogo from "@/assets/gcn-logo.jpg";

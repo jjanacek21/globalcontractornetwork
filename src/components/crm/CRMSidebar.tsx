@@ -3,7 +3,7 @@ import {
   LayoutDashboard, TrendingUp, Users, Briefcase, FileText,
   Factory, CalendarDays, Map, FileStack, Presentation, Crown,
   Shield, Settings, HelpCircle, ChevronRight, Inbox, Brain,
-  Phone, Bot, Eye, Home, HardHat, Ruler, Zap,
+  Phone, Bot, Eye, Home, HardHat, Ruler,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
