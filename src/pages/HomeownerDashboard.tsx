@@ -12,7 +12,7 @@ import { useHomeownerProjects, useProjectMessages, HomeownerProject } from "@/ho
 import { 
   Home, ArrowRight, LogOut, Plus, MessageSquare, Calendar,
   ClipboardList, Send, Loader2, MapPin, DollarSign, Clock,
-  CheckCircle, AlertCircle, FileText
+  CheckCircle, AlertCircle, FileText, User
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
