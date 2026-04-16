@@ -12,7 +12,7 @@ import { useHomeownerProjects, useProjectMessages, HomeownerProject } from "@/ho
 import { 
   Home, ArrowRight, LogOut, Plus, MessageSquare, Calendar,
   ClipboardList, Send, Loader2, MapPin, DollarSign, Clock,
-  CheckCircle, AlertCircle, FileText, User, GraduationCap, Sparkles
+  CheckCircle, AlertCircle, FileText
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -207,7 +207,7 @@ const HomeownerDashboard = () => {
               </div>
             </div>
             
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               {/* My Projects Card */}
               <div 
                 className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all cursor-pointer"
@@ -225,24 +225,6 @@ const HomeownerDashboard = () => {
                 </div>
               </div>
 
-              {/* My Profile Card */}
-              <Link to="/homeowner-profile" className="group">
-                <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all h-full">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[hsl(45,100%,51%)]/20 flex items-center justify-center">
-                      <User className="h-6 w-6 text-[hsl(45,100%,51%)]" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-white group-hover:text-[hsl(45,100%,51%)] transition-colors">
-                        My Profile
-                      </h3>
-                      <p className="text-sm text-white/60">View all your data & activity</p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
-                  </div>
-                </div>
-              </Link>
-
               {/* My Messages Card */}
               <Link to="/homeowner-messages" className="group">
                 <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[hsl(45,100%,51%)]/30 transition-all h-full">
@@ -257,40 +239,6 @@ const HomeownerDashboard = () => {
                       <p className="text-sm text-white/60">Chat with contractors</p>
                     </div>
                     <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-[hsl(45,100%,51%)] group-hover:translate-x-1 transition-all" />
-                  </div>
-                </div>
-              </Link>
-
-              {/* AI Project Advisor Card */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 hover:border-purple-400/50 transition-all cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/30 flex items-center justify-center">
-                    <Sparkles className="h-6 w-6 text-purple-300" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
-                      AI Project Advisor
-                    </h3>
-                    <p className="text-sm text-white/60">Instant estimates & photo analysis</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-purple-300 group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-
-              {/* Training Academy Card */}
-              <Link to="/academy" className="group">
-                <div className="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-emerald-500/30 transition-all h-full">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                      <GraduationCap className="h-6 w-6 text-emerald-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-white group-hover:text-emerald-400 transition-colors">
-                        Training Academy
-                      </h3>
-                      <p className="text-sm text-white/60">Free resources & guides</p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               </Link>
