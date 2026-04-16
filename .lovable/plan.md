@@ -1,27 +1,25 @@
 
 
-## Update Member Dashboard: Remove Property Owner Tools & Reorganize Cards
+## Simplify Homeowner Dashboard
 
-### Changes
+Remove "My Profile", "AI Project Advisor", and "Training Academy" cards from the Homeowner Tools section, keeping only "My Projects" and "My Messages".
 
-**1. Remove "Property Owner Tools" section** (`src/pages/MemberDashboard.tsx`, lines 689-753)
-Delete the entire "Property Owner Tools" dark section that contains My Profile, My Messages, and My Projects links.
+### Changes to `src/pages/HomeownerDashboard.tsx`
 
-**2. Add "My Profile" and "My Projects" as service cards** (`src/pages/MemberDashboard.tsx`)
-Add two new entries to the `services` array (visible to non-contractors):
-- **My Profile** — links to `/homeowner-profile`, User icon, category "home"
-- **My Projects** — links to `/homeowner-dashboard`, ClipboardList icon, category "home"
+1. **Remove 3 cards from the Homeowner Tools grid** (lines 228-297):
+   - Delete "My Profile" card (lines 228-244)
+   - Delete "AI Project Advisor" card (lines 264-278)
+   - Delete "Training Academy" card (lines 280-296)
 
-These will appear alongside Instant Quote, Directory, and Maintenance Membership in the same services grid.
+2. **Keep only**:
+   - "My Projects" card (lines 211-226)
+   - "My Messages" card (lines 246-262)
 
-**3. Rename "Contractor Directory" to "Directory"** (`src/pages/MemberDashboard.tsx`, line 212)
-Change `title: "Contractor Directory"` → `title: "Directory"`
+3. **Update grid layout**: Change `lg:grid-cols-4` to `sm:grid-cols-2` only (2 cards don't need 4 columns)
 
-**4. Remove My Messages link**
-No Messages card added — it's already removed by deleting the Property Owner Tools section. The messages button in the HomeownerProfile header still exists for access there.
+4. **Clean up unused imports**: Remove `User`, `GraduationCap`, `Sparkles` from lucide imports since they're no longer used in the tools section (verify they aren't used elsewhere in the file first)
 
-### Files Modified
 | File | Change |
 |------|--------|
-| `src/pages/MemberDashboard.tsx` | Remove Property Owner Tools section (lines 689-753), add My Profile + My Projects service cards, rename "Contractor Directory" → "Directory" |
+| `src/pages/HomeownerDashboard.tsx` | Remove 3 tool cards, keep Projects + Messages, adjust grid |
 
