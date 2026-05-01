@@ -1025,24 +1025,28 @@ serve(async (req) => {
         
         // Process each selected product for the 'product_approvals' type
         for (const sp of selectedProducts) {
+          const approval = productApprovals.find(a => a.id === sp.id);
+          // Enrich with DB values so fasteners / sparse client payloads don't render as blank/Unknown.
+          const manufacturer = sp.manufacturer || approval?.manufacturer || 'Unknown Manufacturer';
+          const productName = sp.product_name || approval?.product_name || approval?.product_description || 'Product';
+          const noaNumber = sp.noa_number || approval?.noa_number || '';
+
           // Check if this product was already added to avoid duplicates
-          const alreadyAdded = documentIndex.some(d => 
-            d.type === 'product_approval' && 
-            d.name.includes(sp.product_name) &&
-            d.name.includes(sp.manufacturer)
+          const alreadyAdded = documentIndex.some(d =>
+            d.type === 'product_approval' &&
+            d.name.includes(productName) &&
+            d.name.includes(manufacturer)
           );
           if (alreadyAdded) continue;
-          
-          const approval = productApprovals.find(a => a.id === sp.id);
+
           let fileUrl = approval?.file_url || approval?.noa_pdf_url || approval?.fl_approval_pdf_url || sp.file_url;
-          
+
           // If no file URL, attempt inline sourcing
-          if (!fileUrl && (approval?.noa_number || sp.noa_number)) {
-            console.log(`Attempting inline sourcing for ${sp.product_name}`);
-            const noaNum = approval?.noa_number || sp.noa_number || '';
-            const cleaned = noaNum.replace(/^NOA\s*/i, '').replace(/\./g, '');
+          if (!fileUrl && noaNumber) {
+            console.log(`Attempting inline sourcing for ${productName} (${noaNumber})`);
+            const cleaned = noaNumber.replace(/^NOA\s*/i, '').replace(/\./g, '');
             const tryUrl = `https://www.miamidade.gov/building/library/noa/${cleaned}.pdf`;
-            
+
             try {
               const testResponse = await fetchWithTimeout(tryUrl, { method: 'HEAD' }, 6000);
               if (testResponse.ok) {
@@ -1051,8 +1055,8 @@ serve(async (req) => {
                 // Update product approval record in background
                 supabase
                   .from('product_approvals')
-                  .update({ 
-                    noa_pdf_url: tryUrl, 
+                  .update({
+                    noa_pdf_url: tryUrl,
                     file_url: tryUrl,
                     source_status: 'found',
                     source_updated_at: new Date().toISOString(),
@@ -1063,14 +1067,14 @@ serve(async (req) => {
                   });
               }
             } catch (e) {
-              console.log(`Inline sourcing failed for ${sp.product_name}: ${e}`);
+              console.log(`Inline sourcing failed for ${productName}: ${e}`);
             }
           }
-          
+
           if (fileUrl) {
             documentIndex.push({
               type: 'product_approval',
-              name: `${sp.manufacturer} ${sp.product_name}${sp.noa_number ? ` - NOA ${sp.noa_number}` : ''}`,
+              name: `${manufacturer} ${productName}${noaNumber ? ` - NOA ${noaNumber}` : ''}`,
               pages: 2,
               url: fileUrl,
               status: 'auto_sourced',
@@ -1078,21 +1082,21 @@ serve(async (req) => {
             });
             totalPages += 2;
             pdfUrls.push(fileUrl);
-          } else if (sp.noa_number || approval?.noa_number) {
+          } else if (noaNumber) {
             // Mark as needs_sourcing with the NOA number for manual lookup
             documentIndex.push({
               type: 'product_approval',
-              name: `${sp.manufacturer} ${sp.product_name} - NOA ${sp.noa_number || approval?.noa_number}`,
+              name: `${manufacturer} ${productName} - NOA ${noaNumber}`,
               pages: 0,
               status: 'needs_sourcing',
               source: 'auto_source',
-              noaNumber: sp.noa_number || approval?.noa_number,
+              noaNumber,
             });
           } else {
             // No NOA number - mark as missing
             documentIndex.push({
               type: 'product_approval',
-              name: `${sp.manufacturer} ${sp.product_name}`,
+              name: `${manufacturer} ${productName}`,
               pages: 0,
               status: 'missing',
               source: 'auto_source',
