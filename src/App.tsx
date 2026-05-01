@@ -102,6 +102,7 @@ import SupplementKingsAdminAuth from "./pages/SupplementKingsAdminAuth";
 import SupplementKingsAdminDashboard from "./pages/SupplementKingsAdminDashboard";
 import PermitQueensAdminAuth from "./pages/PermitQueensAdminAuth";
 import PermitQueensAdminDashboard from "./pages/PermitQueensAdminDashboard";
+import PermitQueensAdminTemplates from "./pages/PermitQueensAdminTemplates";
 import RoofingAdminAuth from "./pages/RoofingAdminAuth";
 import RoofingAdminDashboard from "./pages/RoofingAdminDashboard";
 import SuperAdminAuth from "./pages/SuperAdminAuth";
@@ -466,6 +467,11 @@ const GCNRoutes = () => (
           <Route path="/permit-queens/admin/ai-intelligence" element={
             <ProtectedRoute redirectTo="/permit-queens/admin/auth">
               <PermitQueensAIIntelligence />
+            </ProtectedRoute>
+          } />
+          <Route path="/permit-queens/admin/templates" element={
+            <ProtectedRoute redirectTo="/permit-queens/admin/auth">
+              <PermitQueensAdminTemplates />
             </ProtectedRoute>
           } />
           

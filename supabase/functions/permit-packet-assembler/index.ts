@@ -539,15 +539,20 @@ async function uploadFilledTemplate(
   permitRequestId: string,
   templateId: string,
 ): Promise<string | null> {
-  const path = `packets/${permitRequestId}/filled/${templateId}-${Date.now()}.pdf`;
-  const { error } = await supabase.storage
-    .from('permit-documents')
-    .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
-  if (error) {
-    console.warn('Failed to upload filled template:', error);
+  try {
+    const path = `packets/${permitRequestId}/filled/${templateId}-${Date.now()}.pdf`;
+    const { error } = await supabase.storage
+      .from('permit-documents')
+      .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
+    if (error) {
+      console.warn('Failed to upload filled template:', error);
+      return null;
+    }
+    return path; // mergePdfDocuments handles signed-URL conversion for storage paths
+  } catch (e) {
+    console.warn('uploadFilledTemplate threw:', e instanceof Error ? e.message : e);
     return null;
   }
-  return path; // mergePdfDocuments handles signed-URL conversion for storage paths
 }
 
 serve(async (req) => {
@@ -869,36 +874,58 @@ serve(async (req) => {
           }
         }
 
-        // Look up the best matching template for this jurisdiction + form type
-        const formTypeCandidates = [item.type, item.type.replace(/_/g, ''), item.type.split('_')[0]];
-        const { data: templates } = await supabase
-          .from('permit_form_templates')
-          .select('*')
-          .or(`jurisdiction_name.ilike.%${county}%,jurisdiction_name.eq.Florida,county.ilike.%${county}%`)
-          .in('form_type', formTypeCandidates)
-          .limit(5);
-
-        // Prefer county-specific, then any
-        const template = (templates || []).sort((a: any, b: any) => {
-          const aMatch = (a.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
-          const bMatch = (b.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
-          return aMatch - bMatch;
-        })[0];
-
         let filledStatus: DocumentInfo['status'] = item.needs_signature ? 'needs_signature' : 'generated';
         let filledUrl: string | undefined;
 
-        if (template) {
-          const filledBytes = await fillTemplatePdf(supabase, template, projectData, LOVABLE_API_KEY);
-          if (filledBytes) {
-            const uploadedPath = await uploadFilledTemplate(supabase, filledBytes, permitRequestId, template.id);
-            if (uploadedPath) {
-              filledUrl = uploadedPath;
-              pdfUrls.push(uploadedPath);
-            }
+        // CRITICAL: Wrap template lookup + fill + upload in try/catch.
+        // If anything fails, log and continue — cover sheet, NOC, and merge MUST complete.
+        try {
+          const formTypeCandidates = [item.type, item.type.replace(/_/g, ''), item.type.split('_')[0]];
+          const { data: templates, error: tplErr } = await supabase
+            .from('permit_form_templates')
+            .select('*')
+            .or(`jurisdiction_name.ilike.%${county}%,jurisdiction_name.eq.Florida,county.ilike.%${county}%`)
+            .in('form_type', formTypeCandidates)
+            .limit(5);
+
+          if (tplErr) {
+            console.warn(`[auto_fill] template query error for ${item.type}:`, tplErr.message);
           }
-        } else {
-          console.warn(`No template found for auto_fill type=${item.type} county=${county}`);
+
+          const template = (templates || []).sort((a: any, b: any) => {
+            const aMatch = (a.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
+            const bMatch = (b.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
+            return aMatch - bMatch;
+          })[0];
+
+          if (template) {
+            try {
+              const filledBytes = await fillTemplatePdf(supabase, template, projectData, LOVABLE_API_KEY);
+              if (filledBytes) {
+                try {
+                  const uploadedPath = await uploadFilledTemplate(supabase, filledBytes, permitRequestId, template.id);
+                  if (uploadedPath) {
+                    filledUrl = uploadedPath;
+                    pdfUrls.push(uploadedPath);
+                  } else {
+                    console.warn(`[auto_fill] upload returned no path for template ${template.id}`);
+                  }
+                } catch (upErr) {
+                  console.warn(`[auto_fill] uploadFilledTemplate failed for template ${template.id}:`, upErr instanceof Error ? upErr.message : upErr);
+                }
+              } else {
+                console.warn(`[auto_fill] fillTemplatePdf returned null for template ${template.id}`);
+              }
+            } catch (fillErr) {
+              console.warn(`[auto_fill] fillTemplatePdf threw for template ${template.id}:`, fillErr instanceof Error ? fillErr.message : fillErr);
+            }
+          } else {
+            console.warn(`No template found for auto_fill type=${item.type} county=${county}`);
+            filledStatus = 'missing';
+          }
+        } catch (outerErr) {
+          // Last-resort safety net — never let template-fill crash the assembler
+          console.error(`[auto_fill] unexpected error for type=${item.type}:`, outerErr instanceof Error ? outerErr.message : outerErr);
           filledStatus = 'missing';
         }
 

@@ -222,6 +222,10 @@ export default function PermitQueensAdminDashboard() {
                 <Brain className="h-4 w-4 mr-2" />
                 AI Intelligence
               </Button>
+              <Button variant="outline" onClick={() => navigate("/permit-queens/admin/templates")} className="border-border text-foreground">
+                <FileText className="h-4 w-4 mr-2" />
+                Form Templates
+              </Button>
               <Button variant="outline" onClick={() => navigate("/permit-queens/admin/building-departments")} className="border-border text-foreground">
                 <Building2 className="h-4 w-4 mr-2" />
                 Building Depts
