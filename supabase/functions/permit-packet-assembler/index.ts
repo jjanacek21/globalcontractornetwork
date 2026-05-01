@@ -323,6 +323,233 @@ async function mergePdfDocuments(
   return await mergedPdf.save();
 }
 
+// =====================================================================
+// AUTO-FILL: load a template PDF, fill its AcroForm using mappings,
+// fall back to top-of-page text overlay if no fillable fields exist.
+// Returns filled PDF bytes (or null if template can't be loaded).
+// =====================================================================
+function transformValue(value: any, transform?: string | null): string {
+  if (value === null || value === undefined || value === '') return '';
+  switch (transform) {
+    case 'uppercase': return String(value).toUpperCase();
+    case 'lowercase': return String(value).toLowerCase();
+    case 'currency':
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value) || 0);
+    case 'date':
+      try { return new Date(value).toLocaleDateString('en-US'); } catch { return String(value); }
+    case 'phone': {
+      const d = String(value).replace(/\D/g, '');
+      return d.length === 10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : String(value);
+    }
+    default: return String(value);
+  }
+}
+
+async function ensureTemplateMappings(
+  supabase: any,
+  template: any,
+  LOVABLE_API_KEY: string | undefined,
+): Promise<Array<{ our_field: string; pdf_field: string; field_type?: string; transform_function?: string | null; default_value?: string | null }>> {
+  // 1. Try existing linked mappings
+  const { data: existing } = await supabase
+    .from('permit_field_mappings')
+    .select('our_field,pdf_field,field_type,transform_function,default_value')
+    .eq('template_id', template.id);
+
+  if (existing && existing.length > 0) return existing;
+
+  // 2. Self-heal: download the PDF, extract field names, AI-map them
+  if (!template.file_path) return [];
+
+  try {
+    const { data: fileData, error: dlErr } = await supabase.storage
+      .from('permit-form-templates')
+      .download(template.file_path);
+    if (dlErr || !fileData) return [];
+
+    const buf = new Uint8Array(await fileData.arrayBuffer());
+
+    // Parse via pdf-lib to get real AcroForm field names
+    let pdfFieldNames: string[] = [];
+    try {
+      const pdfDoc = await PDFDocument.load(buf, { ignoreEncryption: true });
+      const form = pdfDoc.getForm();
+      pdfFieldNames = form.getFields().map((f: any) => f.getName()).filter(Boolean);
+    } catch (e) {
+      console.warn(`Could not parse AcroForm for template ${template.id}:`, e);
+    }
+
+    if (pdfFieldNames.length === 0) return [];
+
+    // 3. AI-map PDF field names -> our_field keys
+    if (!LOVABLE_API_KEY) return [];
+
+    const ourFieldVocabulary = [
+      'property_address','city','state','zip_code','county','folio_number','legal_description',
+      'owner_name','owner_phone','owner_email','owner_address',
+      'contractor_name','contractor_license','contractor_phone','contractor_email','contractor_address',
+      'qualifier_name','qualifier_license',
+      'permit_type','scope_of_work','valuation','square_footage',
+      'insurance_company','insurance_policy',
+      'date_today','signature','notary_signature',
+    ];
+
+    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: 'You map PDF AcroForm field names to canonical permit data keys. Reply with a JSON object only.' },
+          { role: 'user', content: `PDF fields:\n${JSON.stringify(pdfFieldNames)}\n\nCanonical keys:\n${JSON.stringify(ourFieldVocabulary)}\n\nReturn JSON: { "mappings": [{ "pdf_field": "...", "our_field": "...", "field_type": "text|date|signature|checkbox" }] }. Skip fields that don't match.` },
+        ],
+        temperature: 0.1,
+        max_tokens: 2500,
+      }),
+    });
+
+    if (!aiResp.ok) return [];
+    const aiData = await aiResp.json();
+    const content = aiData.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/) || [null, content];
+    let parsed: any;
+    try { parsed = JSON.parse(jsonMatch[1] || content); } catch { return []; }
+
+    const mappings = (parsed?.mappings || []).filter((m: any) => m?.pdf_field && m?.our_field);
+    if (mappings.length === 0) return [];
+
+    // Cache for next time
+    const rows = mappings.map((m: any) => ({
+      template_id: template.id,
+      pdf_field: m.pdf_field,
+      our_field: m.our_field,
+      field_type: m.field_type || 'text',
+    }));
+    await supabase.from('permit_field_mappings').upsert(rows, { onConflict: 'template_id,pdf_field' });
+    console.log(`Self-healed ${rows.length} mappings for template ${template.form_name}`);
+    return rows;
+  } catch (e) {
+    console.warn(`Self-heal failed for template ${template.id}:`, e);
+    return [];
+  }
+}
+
+async function fillTemplatePdf(
+  supabase: any,
+  template: any,
+  projectData: Record<string, any>,
+  LOVABLE_API_KEY: string | undefined,
+): Promise<Uint8Array | null> {
+  if (!template?.file_path) return null;
+
+  try {
+    const { data: fileData, error: dlErr } = await supabase.storage
+      .from('permit-form-templates')
+      .download(template.file_path);
+    if (dlErr || !fileData) {
+      console.warn(`Could not download template ${template.id}:`, dlErr);
+      return null;
+    }
+
+    const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
+    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+    const mappings = await ensureTemplateMappings(supabase, template, LOVABLE_API_KEY);
+
+    // Build pdf_field -> value lookup
+    const filledData: Record<string, string> = {
+      date_today: new Date().toLocaleDateString('en-US'),
+    };
+    for (const m of mappings) {
+      const v = projectData[m.our_field];
+      if (v !== undefined && v !== null && v !== '') {
+        filledData[m.pdf_field] = transformValue(v, m.transform_function);
+      } else if (m.default_value) {
+        filledData[m.pdf_field] = m.default_value;
+      }
+    }
+
+    // Try AcroForm fill
+    let filledCount = 0;
+    let hasForm = false;
+    try {
+      const form = pdfDoc.getForm();
+      const fields = form.getFields();
+      hasForm = fields.length > 0;
+      for (const field of fields) {
+        const name = field.getName();
+        const value = filledData[name];
+        if (value === undefined) continue;
+        try {
+          const ctor = (field.constructor as any).name;
+          if (ctor === 'PDFTextField') {
+            (field as any).setText(String(value));
+            filledCount++;
+          } else if (ctor === 'PDFCheckBox') {
+            const truthy = ['true','yes','y','1','x','checked'].includes(String(value).toLowerCase());
+            if (truthy) (field as any).check();
+            filledCount++;
+          } else if (ctor === 'PDFDropdown' || ctor === 'PDFOptionList') {
+            try { (field as any).select(String(value)); filledCount++; } catch {}
+          }
+        } catch (fe) {
+          // skip unfillable individual field
+        }
+      }
+      // Flatten so values render in all viewers
+      try { form.flatten(); } catch (flatErr) { console.warn('Form flatten failed (non-fatal):', flatErr); }
+    } catch (formErr) {
+      console.warn(`No AcroForm on template ${template.id}:`, formErr);
+    }
+
+    // Fallback overlay: if no form fields were filled, stamp key info on page 1
+    if (filledCount === 0 && !hasForm) {
+      try {
+        const page = pdfDoc.getPage(0);
+        const { height } = page.getSize();
+        const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const lines = [
+          `Property: ${projectData.property_address || ''}`,
+          `Owner: ${projectData.owner_name || ''}`,
+          `Contractor: ${projectData.contractor_name || ''}  Lic: ${projectData.contractor_license || ''}`,
+          `Scope: ${(projectData.scope_of_work || '').slice(0, 90)}`,
+          `Valuation: $${projectData.valuation || projectData.estimated_value || 'TBD'}`,
+        ];
+        let y = height - 40;
+        for (const line of lines) {
+          page.drawText(line, { x: 40, y, size: 9, font: helv, color: rgb(0.1, 0.1, 0.1) });
+          y -= 12;
+        }
+      } catch (overlayErr) {
+        console.warn('Overlay fallback failed:', overlayErr);
+      }
+    }
+
+    console.log(`Filled ${filledCount}/${mappings.length} fields on ${template.form_name}`);
+    return await pdfDoc.save();
+  } catch (e) {
+    console.warn(`fillTemplatePdf error for template ${template?.id}:`, e);
+    return null;
+  }
+}
+
+async function uploadFilledTemplate(
+  supabase: any,
+  bytes: Uint8Array,
+  permitRequestId: string,
+  templateId: string,
+): Promise<string | null> {
+  const path = `packets/${permitRequestId}/filled/${templateId}-${Date.now()}.pdf`;
+  const { error } = await supabase.storage
+    .from('permit-documents')
+    .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
+  if (error) {
+    console.warn('Failed to upload filled template:', error);
+    return null;
+  }
+  return path; // mergePdfDocuments handles signed-URL conversion for storage paths
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
