@@ -578,9 +578,15 @@ export default function PermitQueensAdminTemplates() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Found {extractedFields.length} fillable fields. Map each PDF field to your data.
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Found {extractedFields.length} fillable fields • {fieldMappings.length} mapped
+                </p>
+                <Button variant="outline" size="sm" onClick={reRunAiMapping} disabled={extracting}>
+                  {extracting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Settings className="h-4 w-4 mr-1" />}
+                  Re-run AI Auto-Map
+                </Button>
+              </div>
               <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
                 {extractedFields.map((pdfField, idx) => {
                   const existingMapping = fieldMappings.find(m => m.pdf_field === pdfField);
@@ -621,12 +627,6 @@ export default function PermitQueensAdminTemplates() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowMappingDialog(false)}>
                   Close
-                </Button>
-                <Button onClick={() => {
-                  toast.success('Mappings saved successfully');
-                  setShowMappingDialog(false);
-                }}>
-                  Save All Mappings
                 </Button>
               </div>
             </div>
