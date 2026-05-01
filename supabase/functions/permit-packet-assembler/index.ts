@@ -622,11 +622,12 @@ serve(async (req) => {
     let productApprovals: any[] = [];
     
     if (productIds.length > 0) {
+      // NOTE: Do NOT filter by is_active — fasteners and some category products
+      // may be marked inactive but still need their NOAs sourced into the packet.
       const { data } = await supabase
         .from('product_approvals')
         .select('*')
-        .in('id', productIds)
-        .eq('is_active', true);
+        .in('id', productIds);
       productApprovals = data || [];
     }
     
