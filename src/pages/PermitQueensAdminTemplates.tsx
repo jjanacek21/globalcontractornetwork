@@ -244,26 +244,31 @@ export default function PermitQueensAdminTemplates() {
     }
   };
 
-  const extractPdfFields = async (template: FormTemplate) => {
+  const extractPdfFields = async (template: FormTemplate, autoMap = true) => {
     setSelectedTemplate(template);
     setExtracting(true);
     setShowMappingDialog(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('permit-form-extractor', {
-        body: { templateId: template.id, filePath: template.file_path },
+        body: { templateId: template.id, filePath: template.file_path, autoMap },
       });
-      
+
       if (error) throw error;
       setExtractedFields(data?.fields || []);
-      
-      // Fetch existing mappings
+
       const { data: mappings } = await supabase
         .from('permit_field_mappings')
         .select('*')
         .eq('template_id', template.id);
-      
+
       setFieldMappings(mappings || []);
+
+      if (autoMap && data?.saved_mappings > 0) {
+        toast.success(`AI auto-mapped ${data.saved_mappings} of ${data.count} fields`);
+      } else if (data?.count === 0) {
+        toast.warning('No fillable AcroForm fields detected in this PDF');
+      }
     } catch (error) {
       console.error('Extraction error:', error);
       toast.error('Failed to extract PDF fields');
@@ -271,6 +276,11 @@ export default function PermitQueensAdminTemplates() {
     } finally {
       setExtracting(false);
     }
+  };
+
+  const reRunAiMapping = async () => {
+    if (!selectedTemplate) return;
+    await extractPdfFields(selectedTemplate, true);
   };
 
   const saveFieldMapping = async (pdfField: string, ourField: string) => {
