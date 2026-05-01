@@ -184,6 +184,7 @@ export function PacketContentsPreview({
         <CardDescription>
           {readyCount} of {expectedDocs.length} documents ready
           {missingCount > 0 && ` • ${missingCount} required items missing`}
+          {unmappedCount > 0 && ` • ${unmappedCount} form${unmappedCount === 1 ? '' : 's'} will print blank (no field mapping)`}
           {firecrawlTemplates.length > 0 && ` • ${firecrawlTemplates.length} auto-discovered`}
         </CardDescription>
       </CardHeader>
