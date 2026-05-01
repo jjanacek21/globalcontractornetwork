@@ -132,16 +132,21 @@ export function PDFViewerDialog({
 
     // Get the response as a blob directly
     const pdfBlob = await response.blob();
-    
-    // Verify it's actually a PDF
-    if (pdfBlob.type !== 'application/pdf' && pdfBlob.size > 0) {
-      // Check if it's an error response
+
+    // If the proxy returned a JSON error (now status 200 for upstream 404s), surface it
+    if (pdfBlob.type.includes('json') || (pdfBlob.type !== 'application/pdf' && pdfBlob.size < 4096)) {
       const text = await pdfBlob.text();
       try {
         const json = JSON.parse(text);
-        if (json.error) throw new Error(json.error);
-      } catch {
-        // Not JSON, might still be a valid PDF with wrong content-type
+        if (json.error) {
+          if (json.notFound || json.upstreamStatus === 404) {
+            throw new Error(`Document not found at source (${domain}). The link may have moved or expired.`);
+          }
+          throw new Error(json.error);
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message) throw e;
+        // Not JSON — fall through and try to render as PDF
       }
     }
 
