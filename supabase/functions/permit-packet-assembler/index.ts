@@ -8,6 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Bulletproof fetch: never hang forever. Defaults to 15s timeout.
+async function fetchWithTimeout(url: string, opts: RequestInit = {}, timeoutMs = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface PacketRequest {
   permitRequestId: string;
   includeDocuments?: string[];
@@ -249,12 +260,12 @@ async function mergePdfDocuments(
       // Try fetching with custom headers for government sites
       const isGovSite = fetchUrl.includes('miamidade.gov') || fetchUrl.includes('floridabuilding.org');
       
-      const response = await fetch(fetchUrl, {
+      const response = await fetchWithTimeout(fetchUrl, {
         headers: isGovSite ? {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/pdf,*/*',
         } : {},
-      });
+      }, isGovSite ? 12000 : 20000);
       
       if (!response.ok) {
         console.warn(`Failed to fetch ${fetchUrl}: ${response.status} ${response.statusText}`);
@@ -394,7 +405,7 @@ async function ensureTemplateMappings(
       'date_today','signature','notary_signature',
     ];
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResp = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -406,7 +417,7 @@ async function ensureTemplateMappings(
         temperature: 0.1,
         max_tokens: 2500,
       }),
-    });
+    }, 25000);
 
     if (!aiResp.ok) return [];
     const aiData = await aiResp.json();
@@ -1004,7 +1015,7 @@ serve(async (req) => {
             const tryUrl = `https://www.miamidade.gov/building/library/noa/${cleaned}.pdf`;
             
             try {
-              const testResponse = await fetch(tryUrl, { method: 'HEAD' });
+              const testResponse = await fetchWithTimeout(tryUrl, { method: 'HEAD' }, 6000);
               if (testResponse.ok) {
                 fileUrl = tryUrl;
                 console.log(`Found PDF at ${tryUrl}`);
@@ -1214,7 +1225,7 @@ Respond with JSON:
 }`;
 
       try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const response = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -1229,7 +1240,7 @@ Respond with JSON:
             temperature: 0.3,
             max_tokens: 3000,
           }),
-        });
+        }, 25000);
 
         if (response.ok) {
           const data = await response.json();
