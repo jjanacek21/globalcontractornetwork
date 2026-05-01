@@ -33,6 +33,7 @@ export function PacketContentsPreview({
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
+  const [mappingCounts, setMappingCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,6 +79,20 @@ export function PacketContentsPreview({
             return true;
           });
           setFirecrawlTemplates(fcFiltered);
+        }
+
+        // Count field mappings per template so we can flag "Will print blank"
+        const allIds = [...filtered.map(t => t.id), ...(fcData || []).map(t => t.id)];
+        if (allIds.length > 0) {
+          const { data: mappings } = await supabase
+            .from('permit_field_mappings')
+            .select('template_id')
+            .in('template_id', allIds);
+          const counts: Record<string, number> = {};
+          (mappings || []).forEach((m: any) => {
+            counts[m.template_id] = (counts[m.template_id] || 0) + 1;
+          });
+          setMappingCounts(counts);
         }
       } catch (err) {
         console.error('Failed to fetch templates:', err);
