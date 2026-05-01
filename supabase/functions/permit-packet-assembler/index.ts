@@ -1082,6 +1082,7 @@ serve(async (req) => {
             });
             totalPages += 2;
             pdfUrls.push(fileUrl);
+            console.log(`[auto_source] queued NOA for merge: ${manufacturer} ${productName} -> ${fileUrl.substring(0, 100)}`);
           } else if (noaNumber) {
             // Mark as needs_sourcing with the NOA number for manual lookup
             documentIndex.push({
