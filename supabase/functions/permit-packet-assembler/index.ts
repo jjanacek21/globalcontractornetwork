@@ -1305,13 +1305,15 @@ Respond with JSON:
       console.warn('PDF generation failed:', pdfError);
     }
     
-    // Get user ID from auth header
-    const authHeader = req.headers.get('Authorization');
-    let userId = null;
-    
+    // Get user ID from auth header (authHeader already declared above)
+    let userId: string | null = null;
     if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-      userId = user?.id;
+      try {
+        const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+        userId = user?.id ?? null;
+      } catch (e) {
+        console.warn('Could not resolve user from auth header:', e);
+      }
     }
     
     // Save packet to database
