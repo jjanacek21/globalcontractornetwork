@@ -777,7 +777,57 @@ serve(async (req) => {
     const documentIndex: DocumentInfo[] = [];
     let totalPages = 0;
     const pdfUrls: string[] = [];
-    
+
+    // ---- Build unified projectData used to fill all auto_fill templates ----
+    let contractorData: any = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+        if (user) {
+          const { data: cd } = await supabase
+            .from('contractor_form_data')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          contractorData = cd;
+        }
+      } catch (e) { console.warn('Could not load contractor_form_data:', e); }
+    }
+
+    const projectData: Record<string, any> = {
+      // Property
+      property_address: permit.property_address,
+      city: permit.city,
+      state: permit.state || 'FL',
+      zip_code: permit.zip_code,
+      county: permit.county || permit.jurisdiction_county,
+      folio_number: permit.folio_number || permit.parcel_id,
+      legal_description: permit.legal_description,
+      // Owner
+      owner_name: permit.owner_name || permit.customer_name,
+      owner_phone: permit.owner_phone || permit.customer_phone,
+      owner_email: permit.owner_email || permit.customer_email,
+      owner_address: permit.owner_address || permit.property_address,
+      // Scope
+      permit_type: permit.permit_type || permit.service_type,
+      scope_of_work: permit.scope_of_work || permit.scope_description,
+      valuation: permit.estimated_value || permit.valuation,
+      square_footage: permit.square_footage || permit.total_sqft,
+      // Contractor (from contractor_form_data overrides permit fields)
+      contractor_name: contractorData?.company_name || permit.contractor_name,
+      contractor_license: contractorData?.license_number || permit.contractor_license,
+      contractor_phone: contractorData?.phone || permit.contractor_phone,
+      contractor_email: contractorData?.email || permit.contractor_email,
+      contractor_address: contractorData
+        ? [contractorData.address, contractorData.city, contractorData.state, contractorData.zip].filter(Boolean).join(', ')
+        : permit.contractor_address,
+      qualifier_name: contractorData?.qualifier_name || permit.qualifier_name,
+      qualifier_license: contractorData?.qualifier_license || permit.qualifier_license,
+      insurance_company: contractorData?.insurance_company,
+      insurance_policy: contractorData?.insurance_policy_number,
+    };
+
     for (const item of PACKET_STRUCTURE) {
       const docName = DOC_TYPE_NAMES[item.type] || item.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       
