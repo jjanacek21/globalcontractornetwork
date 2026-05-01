@@ -112,12 +112,26 @@ export function PacketContentsPreview({
 
   // 2. Templates from DB
   templates.forEach(t => {
-    expectedDocs.push({ name: t.form_name, source: 'template', status: 'ready', required: true });
+    const mapped = mappingCounts[t.id] || 0;
+    expectedDocs.push({
+      name: t.form_name,
+      source: 'template',
+      status: 'ready',
+      required: true,
+      unmapped: mapped === 0,
+    });
   });
 
   // 3. Firecrawl auto-discovered templates
   firecrawlTemplates.forEach(t => {
-    expectedDocs.push({ name: t.form_name, source: 'firecrawl', status: 'ready', required: false });
+    const mapped = mappingCounts[t.id] || 0;
+    expectedDocs.push({
+      name: t.form_name,
+      source: 'firecrawl',
+      status: 'ready',
+      required: false,
+      unmapped: mapped === 0,
+    });
   });
 
   // 4. NOC
