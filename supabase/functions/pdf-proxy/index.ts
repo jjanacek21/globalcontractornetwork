@@ -83,12 +83,18 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       console.error(`[pdf-proxy] Fetch failed: ${response.status} ${response.statusText}`);
+      // Return 200 with structured error so the client SDK doesn't throw on non-2xx
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: `Failed to fetch document: ${response.status} ${response.statusText}`,
-          status: response.status 
+          status: response.status,
+          upstreamStatus: response.status,
+          upstreamUrl: url,
+          domain,
+          fallback: response.status >= 500,
+          notFound: response.status === 404,
         }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
