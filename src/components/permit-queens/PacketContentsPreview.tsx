@@ -161,6 +161,7 @@ export function PacketContentsPreview({
 
   const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
   const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
+  const unmappedCount = expectedDocs.filter(d => d.unmapped).length;
 
   if (loading) {
     return (
