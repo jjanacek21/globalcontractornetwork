@@ -226,6 +226,12 @@ export function PacketContentsPreview({
                     Auto-Discovered
                   </Badge>
                 )}
+                {doc.unmapped && (
+                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-700 border-amber-300">
+                    <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                    Will print blank
+                  </Badge>
+                )}
               </div>
             </div>
           ))}
