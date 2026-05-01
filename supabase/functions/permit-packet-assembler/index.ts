@@ -539,15 +539,20 @@ async function uploadFilledTemplate(
   permitRequestId: string,
   templateId: string,
 ): Promise<string | null> {
-  const path = `packets/${permitRequestId}/filled/${templateId}-${Date.now()}.pdf`;
-  const { error } = await supabase.storage
-    .from('permit-documents')
-    .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
-  if (error) {
-    console.warn('Failed to upload filled template:', error);
+  try {
+    const path = `packets/${permitRequestId}/filled/${templateId}-${Date.now()}.pdf`;
+    const { error } = await supabase.storage
+      .from('permit-documents')
+      .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
+    if (error) {
+      console.warn('Failed to upload filled template:', error);
+      return null;
+    }
+    return path; // mergePdfDocuments handles signed-URL conversion for storage paths
+  } catch (e) {
+    console.warn('uploadFilledTemplate threw:', e instanceof Error ? e.message : e);
     return null;
   }
-  return path; // mergePdfDocuments handles signed-URL conversion for storage paths
 }
 
 serve(async (req) => {
