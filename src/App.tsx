@@ -469,6 +469,11 @@ const GCNRoutes = () => (
               <PermitQueensAIIntelligence />
             </ProtectedRoute>
           } />
+          <Route path="/permit-queens/admin/templates" element={
+            <ProtectedRoute redirectTo="/permit-queens/admin/auth">
+              <PermitQueensAdminTemplates />
+            </ProtectedRoute>
+          } />
           
           {/* Supplement Kings Routes */}
           <Route path="/supplement-kings" element={<SupplementKings />} />
