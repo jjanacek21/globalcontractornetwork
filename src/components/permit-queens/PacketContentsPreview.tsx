@@ -20,6 +20,7 @@ interface ExpectedDocument {
   source: 'template' | 'upload' | 'generated' | 'product' | 'firecrawl';
   status: 'ready' | 'pending' | 'missing';
   required: boolean;
+  unmapped?: boolean; // template exists but has 0 field mappings → will print blank
 }
 
 export function PacketContentsPreview({
@@ -33,6 +34,7 @@ export function PacketContentsPreview({
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
+  const [mappingCounts, setMappingCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +81,20 @@ export function PacketContentsPreview({
           });
           setFirecrawlTemplates(fcFiltered);
         }
+
+        // Count field mappings per template so we can flag "Will print blank"
+        const allIds = [...filtered.map(t => t.id), ...(fcData || []).map(t => t.id)];
+        if (allIds.length > 0) {
+          const { data: mappings } = await supabase
+            .from('permit_field_mappings')
+            .select('template_id')
+            .in('template_id', allIds);
+          const counts: Record<string, number> = {};
+          (mappings || []).forEach((m: any) => {
+            counts[m.template_id] = (counts[m.template_id] || 0) + 1;
+          });
+          setMappingCounts(counts);
+        }
       } catch (err) {
         console.error('Failed to fetch templates:', err);
       } finally {
@@ -96,12 +112,26 @@ export function PacketContentsPreview({
 
   // 2. Templates from DB
   templates.forEach(t => {
-    expectedDocs.push({ name: t.form_name, source: 'template', status: 'ready', required: true });
+    const mapped = mappingCounts[t.id] || 0;
+    expectedDocs.push({
+      name: t.form_name,
+      source: 'template',
+      status: 'ready',
+      required: true,
+      unmapped: mapped === 0,
+    });
   });
 
   // 3. Firecrawl auto-discovered templates
   firecrawlTemplates.forEach(t => {
-    expectedDocs.push({ name: t.form_name, source: 'firecrawl', status: 'ready', required: false });
+    const mapped = mappingCounts[t.id] || 0;
+    expectedDocs.push({
+      name: t.form_name,
+      source: 'firecrawl',
+      status: 'ready',
+      required: false,
+      unmapped: mapped === 0,
+    });
   });
 
   // 4. NOC
@@ -131,6 +161,7 @@ export function PacketContentsPreview({
 
   const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
   const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
+  const unmappedCount = expectedDocs.filter(d => d.unmapped).length;
 
   if (loading) {
     return (
@@ -153,6 +184,7 @@ export function PacketContentsPreview({
         <CardDescription>
           {readyCount} of {expectedDocs.length} documents ready
           {missingCount > 0 && ` • ${missingCount} required items missing`}
+          {unmappedCount > 0 && ` • ${unmappedCount} form${unmappedCount === 1 ? '' : 's'} will print blank (no field mapping)`}
           {firecrawlTemplates.length > 0 && ` • ${firecrawlTemplates.length} auto-discovered`}
         </CardDescription>
       </CardHeader>
@@ -192,6 +224,12 @@ export function PacketContentsPreview({
                   <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 border-purple-200">
                     <Search className="h-2.5 w-2.5 mr-0.5" />
                     Auto-Discovered
+                  </Badge>
+                )}
+                {doc.unmapped && (
+                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-700 border-amber-300">
+                    <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                    Will print blank
                   </Badge>
                 )}
               </div>

@@ -244,26 +244,31 @@ export default function PermitQueensAdminTemplates() {
     }
   };
 
-  const extractPdfFields = async (template: FormTemplate) => {
+  const extractPdfFields = async (template: FormTemplate, autoMap = true) => {
     setSelectedTemplate(template);
     setExtracting(true);
     setShowMappingDialog(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('permit-form-extractor', {
-        body: { templateId: template.id, filePath: template.file_path },
+        body: { templateId: template.id, filePath: template.file_path, autoMap },
       });
-      
+
       if (error) throw error;
       setExtractedFields(data?.fields || []);
-      
-      // Fetch existing mappings
+
       const { data: mappings } = await supabase
         .from('permit_field_mappings')
         .select('*')
         .eq('template_id', template.id);
-      
+
       setFieldMappings(mappings || []);
+
+      if (autoMap && data?.saved_mappings > 0) {
+        toast.success(`AI auto-mapped ${data.saved_mappings} of ${data.count} fields`);
+      } else if (data?.count === 0) {
+        toast.warning('No fillable AcroForm fields detected in this PDF');
+      }
     } catch (error) {
       console.error('Extraction error:', error);
       toast.error('Failed to extract PDF fields');
@@ -271,6 +276,11 @@ export default function PermitQueensAdminTemplates() {
     } finally {
       setExtracting(false);
     }
+  };
+
+  const reRunAiMapping = async () => {
+    if (!selectedTemplate) return;
+    await extractPdfFields(selectedTemplate, true);
   };
 
   const saveFieldMapping = async (pdfField: string, ourField: string) => {
@@ -568,9 +578,15 @@ export default function PermitQueensAdminTemplates() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Found {extractedFields.length} fillable fields. Map each PDF field to your data.
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Found {extractedFields.length} fillable fields • {fieldMappings.length} mapped
+                </p>
+                <Button variant="outline" size="sm" onClick={reRunAiMapping} disabled={extracting}>
+                  {extracting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Settings className="h-4 w-4 mr-1" />}
+                  Re-run AI Auto-Map
+                </Button>
+              </div>
               <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
                 {extractedFields.map((pdfField, idx) => {
                   const existingMapping = fieldMappings.find(m => m.pdf_field === pdfField);
@@ -611,12 +627,6 @@ export default function PermitQueensAdminTemplates() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowMappingDialog(false)}>
                   Close
-                </Button>
-                <Button onClick={() => {
-                  toast.success('Mappings saved successfully');
-                  setShowMappingDialog(false);
-                }}>
-                  Save All Mappings
                 </Button>
               </div>
             </div>
