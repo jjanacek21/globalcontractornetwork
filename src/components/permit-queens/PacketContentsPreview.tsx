@@ -20,6 +20,7 @@ interface ExpectedDocument {
   source: 'template' | 'upload' | 'generated' | 'product' | 'firecrawl';
   status: 'ready' | 'pending' | 'missing';
   required: boolean;
+  unmapped?: boolean; // template exists but has 0 field mappings → will print blank
 }
 
 export function PacketContentsPreview({
