@@ -1,25 +1,69 @@
+## Problem
 
+Two issues are stacking on the New Permit Request screen:
 
-## Simplify Homeowner Dashboard
+1. **"Failed to generate packet"** — the `permit-packet-assembler` edge function is crash-looping on boot:
+   ```
+   Uncaught SyntaxError: Identifier 'authHeader' has already been declared
+   at index.ts:1247:11
+   ```
+   `const authHeader` is declared twice in the same function scope (line 783 and line 1309 — actual line 1247 after compilation). Until this is fixed, **every** packet generation attempt returns an error.
 
-Remove "My Profile", "AI Project Advisor", and "Training Academy" cards from the Homeowner Tools section, keeping only "My Projects" and "My Messages".
+2. **Signed NOC shows as not uploaded** — the "Notice of Commencement (NOC)" row in `PacketContentsPreview` only flips to ready when `hasOwnerInfo` is true. It never checks whether the user already uploaded a signed NOC via SmartDocumentUploader (which tags it `document_type = 'signed_noc'` or `'noc'` in `permit_project_documents`). So even after upload, the row stays amber and the cover sheet under-reports readiness.
 
-### Changes to `src/pages/HomeownerDashboard.tsx`
+## Fix
 
-1. **Remove 3 cards from the Homeowner Tools grid** (lines 228-297):
-   - Delete "My Profile" card (lines 228-244)
-   - Delete "AI Project Advisor" card (lines 264-278)
-   - Delete "Training Academy" card (lines 280-296)
+### 1. `supabase/functions/permit-packet-assembler/index.ts` — remove duplicate declaration
 
-2. **Keep only**:
-   - "My Projects" card (lines 211-226)
-   - "My Messages" card (lines 246-262)
+Around line 1309, the second occurrence of:
+```ts
+const authHeader = req.headers.get('Authorization');
+let userId = null;
+if (authHeader) {
+  const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+  userId = user?.id;
+}
+```
 
-3. **Update grid layout**: Change `lg:grid-cols-4` to `sm:grid-cols-2` only (2 cards don't need 4 columns)
+`authHeader` is already in scope from line 783. Replace the second `const authHeader = ...` with a reuse (or a fresh `const userAuthHeader = ...`) and derive `userId` from the existing variable. No re-declaration.
 
-4. **Clean up unused imports**: Remove `User`, `GraduationCap`, `Sparkles` from lucide imports since they're no longer used in the tools section (verify they aren't used elsewhere in the file first)
+### 2. `src/components/permit-queens/PacketContentsPreview.tsx` — detect uploaded NOC
+
+- Accept a new prop `hasUploadedNOC: boolean` (or pass the `uploadedDocs` array directly so the component can scan for `document_type` in `['noc', 'signed_noc', 'notice_of_commencement']`).
+- Update the NOC row logic:
+  ```
+  status: hasUploadedNOC ? 'ready'
+        : hasOwnerInfo   ? 'ready'   // will auto-generate
+        : 'pending'
+  ```
+  When `hasUploadedNOC` is true, also change the source label to `upload` and badge to "Uploaded" instead of "Auto-generated" so the user sees their file was recognized.
+
+### 3. `src/pages/PermitPacketAssembly.tsx` — wire the new flag
+
+Where `uploadedDocumentCount` is computed from the `permit_project_documents` query (around line 118), also derive:
+```ts
+const hasUploadedNOC = (uploadedDocs || []).some(d =>
+  ['noc', 'signed_noc', 'notice_of_commencement'].includes(d.document_type)
+);
+```
+Pass it into `<PacketContentsPreview hasUploadedNOC={hasUploadedNOC} ... />`.
+
+### 4. Assembler: prefer uploaded signed NOC over auto-generated
+
+In the assembler's NOC document handling (around line 739, the `'noc'` structure entry), check `uploadedDocs` first for a `signed_noc`/`noc` row and, if present, mark that document `status: 'included'`, `source: 'user_upload'`, and use its `file_path` instead of triggering the NOC auto-generation path. This keeps the user's notarized version in the final merged PDF.
+
+## Verification
+
+After deploy:
+1. Reload `/permit-queens/new-request` — Packet Contents Preview should show NOC as green/Uploaded (not amber).
+2. Click **Generate Packet Now** — should succeed with no "Failed to generate packet" toast.
+3. Confirm `permit-packet-assembler` logs show `booted` (not `BootFailure`) and a successful invocation.
+4. Open the generated packet — the NOC pages inside should be the user's uploaded signed PDF.
+
+## Files touched
 
 | File | Change |
 |------|--------|
-| `src/pages/HomeownerDashboard.tsx` | Remove 3 tool cards, keep Projects + Messages, adjust grid |
-
+| `supabase/functions/permit-packet-assembler/index.ts` | Remove duplicate `const authHeader`; prefer uploaded NOC over auto-gen |
+| `src/components/permit-queens/PacketContentsPreview.tsx` | New `hasUploadedNOC` prop + ready/Uploaded badge |
+| `src/pages/PermitPacketAssembly.tsx` | Compute and pass `hasUploadedNOC` |
