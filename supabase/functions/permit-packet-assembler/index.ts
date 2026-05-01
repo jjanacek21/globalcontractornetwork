@@ -861,6 +861,34 @@ serve(async (req) => {
         });
         totalPages += item.pages || 1;
       } else if (item.source === 'auto_fill') {
+        // Prefer a user-uploaded signed permit application over auto-generation.
+        // Match any document_type containing 'signed' AND ('permit' or 'application').
+        if (item.type === 'permit_application') {
+          const matchesSignedApp = (t: string) => {
+            const s = (t || '').toLowerCase();
+            return s === 'signed_permit_application'
+              || s === 'permit_application_signed'
+              || (s.includes('signed') && (s.includes('permit') || s.includes('application')))
+              || s === 'permit_application'; // also accept user-uploaded plain permit_application
+          };
+          const uploadedApp = (dbDocuments || []).find((d: any) => matchesSignedApp(d.document_type))
+            || uploadedDocuments.find((d: any) => matchesSignedApp(d.type));
+          if (uploadedApp) {
+            const url = (uploadedApp as any).file_path || (uploadedApp as any).file_url || (uploadedApp as any).url;
+            documentIndex.push({
+              type: 'permit_application',
+              name: docName,
+              pages: 2,
+              url,
+              status: 'included',
+              source: 'user_upload',
+            });
+            totalPages += 2;
+            if (url) pdfUrls.push(url);
+            continue;
+          }
+        }
+
         // Prefer a user-uploaded signed NOC over auto-generation
         if (item.type === 'noc') {
           const uploadedNoc = (dbDocuments || []).find((d: any) =>
