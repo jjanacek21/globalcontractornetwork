@@ -13,6 +13,7 @@ interface PacketContentsPreviewProps {
   selectedMaterialCount: number;
   hasOwnerInfo: boolean;
   hasContractorInfo: boolean;
+  hasUploadedNOC?: boolean;
 }
 
 interface ExpectedDocument {
@@ -31,6 +32,7 @@ export function PacketContentsPreview({
   selectedMaterialCount,
   hasOwnerInfo,
   hasContractorInfo,
+  hasUploadedNOC = false,
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
@@ -136,7 +138,12 @@ export function PacketContentsPreview({
 
   // 4. NOC
   if (['roofing', 'general_construction', 'windows_doors'].includes(permitType)) {
-    expectedDocs.push({ name: 'Notice of Commencement (NOC)', source: 'generated', status: hasOwnerInfo ? 'ready' : 'pending', required: true });
+    expectedDocs.push({
+      name: hasUploadedNOC ? 'Notice of Commencement (Uploaded)' : 'Notice of Commencement (NOC)',
+      source: hasUploadedNOC ? 'upload' : 'generated',
+      status: hasUploadedNOC ? 'ready' : (hasOwnerInfo ? 'ready' : 'pending'),
+      required: true,
+    });
   }
 
   // 5. Roofing Compliance

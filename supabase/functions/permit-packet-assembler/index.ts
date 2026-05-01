@@ -844,6 +844,31 @@ serve(async (req) => {
         });
         totalPages += item.pages || 1;
       } else if (item.source === 'auto_fill') {
+        // Prefer a user-uploaded signed NOC over auto-generation
+        if (item.type === 'noc') {
+          const uploadedNoc = (dbDocuments || []).find((d: any) =>
+            ['noc', 'signed_noc', 'notice_of_commencement'].includes((d.document_type || '').toLowerCase())
+          ) || uploadedDocuments.find((d: any) =>
+            ['noc', 'signed_noc', 'notice_of_commencement'].includes((d.type || '').toLowerCase())
+          );
+          if (uploadedNoc) {
+            const url = (uploadedNoc as any).file_path || (uploadedNoc as any).file_url || (uploadedNoc as any).url;
+            documentIndex.push({
+              type: 'noc',
+              name: docName,
+              pages: 1,
+              url,
+              status: 'included',
+              source: 'user_upload',
+              requiresNotary: false, // already signed/notarized
+              requiresRecording: item.requires_recording,
+            });
+            totalPages += 1;
+            if (url) pdfUrls.push(url);
+            continue;
+          }
+        }
+
         // Look up the best matching template for this jurisdiction + form type
         const formTypeCandidates = [item.type, item.type.replace(/_/g, ''), item.type.split('_')[0]];
         const { data: templates } = await supabase
@@ -1305,13 +1330,15 @@ Respond with JSON:
       console.warn('PDF generation failed:', pdfError);
     }
     
-    // Get user ID from auth header
-    const authHeader = req.headers.get('Authorization');
-    let userId = null;
-    
+    // Get user ID from auth header (authHeader already declared above)
+    let userId: string | null = null;
     if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-      userId = user?.id;
+      try {
+        const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+        userId = user?.id ?? null;
+      } catch (e) {
+        console.warn('Could not resolve user from auth header:', e);
+      }
     }
     
     // Save packet to database
