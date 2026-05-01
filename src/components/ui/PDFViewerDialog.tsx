@@ -113,7 +113,21 @@ export function PDFViewerDialog({
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[PDFViewerDialog] Proxy error:', errorText);
-      throw new Error(errorText || 'Failed to fetch document');
+      // Parse JSON error and surface a friendly message
+      let friendly = 'Failed to load document';
+      try {
+        const parsed = JSON.parse(errorText);
+        if (response.status === 404 || parsed.status === 404) {
+          friendly = `Document not found at source (${domain}). The link may have moved or expired. Try opening the source page directly.`;
+        } else if (response.status === 403 || parsed.status === 403) {
+          friendly = `Access denied by source (${domain}).`;
+        } else if (parsed.error) {
+          friendly = parsed.error;
+        }
+      } catch {
+        friendly = errorText || friendly;
+      }
+      throw new Error(friendly);
     }
 
     // Get the response as a blob directly
