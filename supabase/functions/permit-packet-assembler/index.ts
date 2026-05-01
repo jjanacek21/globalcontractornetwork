@@ -844,12 +844,45 @@ serve(async (req) => {
         });
         totalPages += item.pages || 1;
       } else if (item.source === 'auto_fill') {
-        // Forms that will be auto-filled
+        // Look up the best matching template for this jurisdiction + form type
+        const formTypeCandidates = [item.type, item.type.replace(/_/g, ''), item.type.split('_')[0]];
+        const { data: templates } = await supabase
+          .from('permit_form_templates')
+          .select('*')
+          .or(`jurisdiction_name.ilike.%${county}%,jurisdiction_name.eq.Florida,county.ilike.%${county}%`)
+          .in('form_type', formTypeCandidates)
+          .limit(5);
+
+        // Prefer county-specific, then any
+        const template = (templates || []).sort((a: any, b: any) => {
+          const aMatch = (a.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
+          const bMatch = (b.county || '').toLowerCase().includes((county || '').toLowerCase()) ? 0 : 1;
+          return aMatch - bMatch;
+        })[0];
+
+        let filledStatus: DocumentInfo['status'] = item.needs_signature ? 'needs_signature' : 'generated';
+        let filledUrl: string | undefined;
+
+        if (template) {
+          const filledBytes = await fillTemplatePdf(supabase, template, projectData, LOVABLE_API_KEY);
+          if (filledBytes) {
+            const uploadedPath = await uploadFilledTemplate(supabase, filledBytes, permitRequestId, template.id);
+            if (uploadedPath) {
+              filledUrl = uploadedPath;
+              pdfUrls.push(uploadedPath);
+            }
+          }
+        } else {
+          console.warn(`No template found for auto_fill type=${item.type} county=${county}`);
+          filledStatus = 'missing';
+        }
+
         documentIndex.push({
           type: item.type,
           name: docName,
           pages: item.pages || 2,
-          status: item.needs_signature ? 'needs_signature' : 'generated',
+          url: filledUrl,
+          status: filledStatus,
           source: 'auto_fill',
           requiresNotary: item.needs_notary,
           requiresRecording: item.requires_recording,
