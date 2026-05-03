@@ -970,7 +970,7 @@ serve(async (req) => {
               source: 'user_upload',
             });
             totalPages += 2;
-            if (url) pdfUrls.push(url);
+            queueMerge(url);
             continue;
           }
         }
@@ -995,7 +995,7 @@ serve(async (req) => {
               requiresRecording: item.requires_recording,
             });
             totalPages += 1;
-            if (url) pdfUrls.push(url);
+            queueMerge(url);
             continue;
           }
         }
@@ -1032,7 +1032,7 @@ serve(async (req) => {
                   const uploadedPath = await uploadFilledTemplate(supabase, filledBytes, permitRequestId, template.id);
                   if (uploadedPath) {
                     filledUrl = uploadedPath;
-                    pdfUrls.push(uploadedPath);
+                    queueMerge(uploadedPath);
                   } else {
                     console.warn(`[auto_fill] upload returned no path for template ${template.id}`);
                   }
@@ -1083,7 +1083,7 @@ serve(async (req) => {
             source: 'user_upload',
           });
           totalPages += 1;
-          if (url) pdfUrls.push(url);
+          queueMerge(url);
         } else {
           documentIndex.push({
             type: item.type,
@@ -1167,7 +1167,7 @@ serve(async (req) => {
               source: 'auto_source',
             });
             totalPages += 2;
-            pdfUrls.push(fileUrl);
+            queueMerge(fileUrl);
             console.log(`[auto_source] queued NOA for merge: ${manufacturer} ${productName} -> ${fileUrl.substring(0, 100)}`);
           } else if (noaNumber) {
             // Mark as needs_sourcing with the NOA number for manual lookup
@@ -1222,7 +1222,7 @@ serve(async (req) => {
             requiresRecording: item.requires_recording,
           });
           totalPages += item.pages || 1;
-          if (url) pdfUrls.push(url);
+          queueMerge(url);
         } else {
           // No upload - check if condition is met to determine if required
           const conditionMet = evaluateCondition(item.condition, permit);
