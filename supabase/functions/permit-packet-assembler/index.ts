@@ -226,15 +226,109 @@ async function generateCoverSheetPdf(permit: any, documentIndex: DocumentInfo[])
   return await pdfDoc.save();
 }
 
+// Resolve a working NOA PDF URL by NOA number when the primary URL fails or
+// returns non-PDF content. Tries the DB first, then known Miami-Dade pattern,
+// then falls back to the search-and-store edge function.
+async function resolveNoaPdfByNumber(
+  supabase: any,
+  noaNumber: string,
+  excludeUrl?: string,
+): Promise<{ url: string; via: 'db' | 'pattern' | 'search' } | null> {
+  if (!noaNumber) return null;
+  try {
+    // 1. DB lookup — find any product_approval row carrying this NOA number
+    //    with a stored file_url that differs from the failing one.
+    const { data: rows } = await supabase
+      .from('product_approvals')
+      .select('file_url, noa_pdf_url, fl_approval_pdf_url, source_status, updated_at')
+      .eq('noa_number', noaNumber)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+    for (const r of rows || []) {
+      const candidates = [r.file_url, r.noa_pdf_url, r.fl_approval_pdf_url].filter(Boolean) as string[];
+      for (const c of candidates) {
+        if (c && c !== excludeUrl) return { url: c, via: 'db' };
+      }
+    }
+
+    // 2. Miami-Dade canonical PDF location
+    const cleaned = noaNumber.replace(/^NOA\s*/i, '').replace(/\./g, '').trim();
+    if (cleaned) {
+      const tryUrl = `https://www.miamidade.gov/building/library/noa/${cleaned}.pdf`;
+      if (tryUrl !== excludeUrl) {
+        try {
+          const head = await fetchWithTimeout(tryUrl, { method: 'HEAD' }, 6000);
+          if (head.ok) return { url: tryUrl, via: 'pattern' };
+        } catch (_) { /* ignore */ }
+      }
+    }
+
+    // 3. Search-and-store fallback
+    try {
+      const { data: searchData } = await supabase.functions.invoke('search-and-store', {
+        body: { query: `NOA ${noaNumber} product approval PDF`, documentType: 'product_approval' },
+      });
+      const found = searchData?.results?.[0]?.pdf_url || searchData?.url;
+      if (found && found !== excludeUrl) return { url: found, via: 'search' };
+    } catch (_) { /* ignore */ }
+  } catch (e) {
+    console.warn('[resolveNoaPdfByNumber] error:', e instanceof Error ? e.message : e);
+  }
+  return null;
+}
+
+// Fetch + validate a PDF URL. Returns parsed PDFDocument bytes or a failure reason.
+async function fetchPdfBytes(
+  url: string,
+  supabase: any,
+): Promise<{ ok: true; bytes: ArrayBuffer } | { ok: false; reason: string }> {
+  if (!url) return { ok: false, reason: 'empty_url' };
+  let fetchUrl = url;
+  if (!url.startsWith('http')) {
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('permit-documents')
+      .createSignedUrl(url, 3600);
+    if (signedError || !signedData?.signedUrl) {
+      return { ok: false, reason: `signed_url_failed: ${signedError?.message || 'unknown'}` };
+    }
+    fetchUrl = signedData.signedUrl;
+  }
+  const isGovSite = fetchUrl.includes('miamidade.gov') || fetchUrl.includes('floridabuilding.org');
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(fetchUrl, {
+      headers: isGovSite ? {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/pdf,*/*',
+      } : {},
+    }, isGovSite ? 12000 : 20000);
+  } catch (e) {
+    return { ok: false, reason: `fetch_threw: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  if (!response.ok) {
+    return { ok: false, reason: `http_${response.status}` };
+  }
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('pdf') && !contentType.includes('octet-stream') && !isGovSite) {
+    return { ok: false, reason: `non_pdf_content_type:${contentType.slice(0, 40)}` };
+  }
+  const bytes = await response.arrayBuffer();
+  const header = new Uint8Array(bytes.slice(0, 5));
+  if (!String.fromCharCode(...header).startsWith('%PDF')) {
+    return { ok: false, reason: 'magic_bytes_mismatch' };
+  }
+  return { ok: true, bytes };
+}
+
 async function mergePdfDocuments(
   coverSheetBytes: Uint8Array,
-  documentUrls: string[],
-  supabase: any
+  items: PdfMergeItem[],
+  supabase: any,
 ): Promise<Uint8Array> {
   const mergedPdf = await PDFDocument.create();
   let successfulMerges = 0;
-  let failedMerges: string[] = [];
-  
+  let failedMerges = 0;
+
   // Add cover sheet
   try {
     const coverPdf = await PDFDocument.load(coverSheetBytes);
@@ -244,105 +338,80 @@ async function mergePdfDocuments(
   } catch (e) {
     console.warn('Could not add cover sheet:', e);
   }
-  
-  // Add uploaded documents
-  for (const url of documentUrls) {
-    if (!url) continue;
-    
-    try {
-      console.log(`Attempting to fetch PDF: ${url}`);
-      
-      // Handle Supabase storage paths
-      let fetchUrl = url;
-      if (!url.startsWith('http')) {
-        // This is a storage path, generate signed URL
-        const { data: signedData, error: signedError } = await supabase.storage
-          .from('permit-documents')
-          .createSignedUrl(url, 3600); // 1 hour
-        
-        if (signedError || !signedData?.signedUrl) {
-          console.warn(`Could not create signed URL for ${url}:`, signedError);
-          failedMerges.push(url);
-          continue;
+
+  for (const item of items) {
+    if (!item.url) continue;
+    const doc = item.doc;
+    let used: 'primary' | 'fallback' = 'primary';
+
+    let result = await fetchPdfBytes(item.url, supabase);
+
+    // NOA fallback — re-resolve via DB / pattern / search if the primary URL failed.
+    if (!result.ok && doc?.noaNumber) {
+      console.log(`[merge-fallback] primary failed (${result.reason}) for NOA ${doc.noaNumber}, attempting fallback lookup`);
+      const fallback = await resolveNoaPdfByNumber(supabase, doc.noaNumber, item.url);
+      if (fallback) {
+        const retry = await fetchPdfBytes(fallback.url, supabase);
+        if (retry.ok) {
+          result = retry;
+          used = 'fallback';
+          item.url = fallback.url;
+          if (doc) {
+            doc.url = fallback.url;
+            doc.fetchSource = 'fallback';
+          }
+          console.log(`[merge-fallback] recovered NOA ${doc.noaNumber} via ${fallback.via}`);
+        } else {
+          console.log(`[merge-fallback] fallback URL also failed: ${retry.reason}`);
         }
-        fetchUrl = signedData.signedUrl;
-        console.log(`Using signed URL for storage path`);
       }
-      
-      // Try fetching with custom headers for government sites
-      const isGovSite = fetchUrl.includes('miamidade.gov') || fetchUrl.includes('floridabuilding.org');
-      
-      const response = await fetchWithTimeout(fetchUrl, {
-        headers: isGovSite ? {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/pdf,*/*',
-        } : {},
-      }, isGovSite ? 12000 : 20000);
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch ${fetchUrl}: ${response.status} ${response.statusText}`);
-        failedMerges.push(url);
-        continue;
+    }
+
+    if (!result.ok) {
+      failedMerges++;
+      if (doc) {
+        doc.merged = false;
+        doc.status = 'failed_fetch';
+        doc.fetchError = result.reason;
       }
-      
-      const contentType = response.headers.get('content-type') || '';
-      // Be more lenient with content-type checking for government sites
-      if (!contentType.includes('pdf') && !contentType.includes('octet-stream') && !isGovSite) {
-        console.log(`Skipping non-PDF (${contentType}): ${url}`);
-        failedMerges.push(url);
-        continue;
-      }
-      
-      const pdfBytes = await response.arrayBuffer();
-      
-      // Validate it's actually a PDF by checking magic bytes
-      const header = new Uint8Array(pdfBytes.slice(0, 5));
-      const pdfMagic = String.fromCharCode(...header);
-      if (!pdfMagic.startsWith('%PDF')) {
-        console.warn(`Not a valid PDF file: ${url}`);
-        failedMerges.push(url);
-        continue;
-      }
-      
-      const srcPdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+      console.warn(`Failed to merge ${doc?.name || item.url}: ${result.reason}`);
+      continue;
+    }
+
+    try {
+      const srcPdf = await PDFDocument.load(result.bytes, { ignoreEncryption: true });
       const pageCount = srcPdf.getPageCount();
-      
-      if (pageCount === 0) {
-        console.warn(`PDF has no pages: ${url}`);
-        failedMerges.push(url);
-        continue;
-      }
-      
+      if (pageCount === 0) throw new Error('no_pages');
       const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
-      pages.forEach(page => mergedPdf.addPage(page));
+      pages.forEach(p => mergedPdf.addPage(p));
       successfulMerges++;
-      console.log(`Successfully merged ${pageCount} pages from: ${url.substring(0, 80)}...`);
+      if (doc) {
+        doc.merged = true;
+        doc.mergedPages = pageCount;
+        if (!doc.fetchSource) doc.fetchSource = used;
+      }
     } catch (e) {
-      console.warn(`Could not add document from ${url}:`, e);
-      failedMerges.push(url);
+      failedMerges++;
+      if (doc) {
+        doc.merged = false;
+        doc.status = 'failed_fetch';
+        doc.fetchError = `parse_failed: ${e instanceof Error ? e.message : String(e)}`;
+      }
     }
   }
-  
-  console.log(`PDF merge complete: ${successfulMerges} successful, ${failedMerges.length} failed`);
-  if (failedMerges.length > 0) {
-    console.log('Failed URLs:', failedMerges.slice(0, 5).join(', '));
-  }
-  
+
+  console.log(`PDF merge complete: ${successfulMerges} successful, ${failedMerges} failed`);
+
   // Add page numbers
   const pages = mergedPdf.getPages();
   const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica);
-  
   pages.forEach((page, i) => {
     const { width } = page.getSize();
     page.drawText(`Page ${i + 1} of ${pages.length}`, {
-      x: width - 100,
-      y: 15,
-      size: 9,
-      font: helvetica,
-      color: rgb(0.4, 0.4, 0.4),
+      x: width - 100, y: 15, size: 9, font: helvetica, color: rgb(0.4, 0.4, 0.4),
     });
   });
-  
+
   return await mergedPdf.save();
 }
 
