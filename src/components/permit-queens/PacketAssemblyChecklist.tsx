@@ -37,6 +37,7 @@ export function PacketAssemblyChecklist({
 }: PacketAssemblyChecklistProps) {
   const [isAssembling, setIsAssembling] = useState(false);
   const [packetUrl, setPacketUrl] = useState<string | null>(null);
+  const [mergeResults, setMergeResults] = useState<MergeDocument[]>([]);
   const [autoSourceDoc, setAutoSourceDoc] = useState<PacketDocument | null>(null);
   const [bulkSourcing, setBulkSourcing] = useState(false);
 
