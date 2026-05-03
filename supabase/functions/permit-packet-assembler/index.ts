@@ -1467,7 +1467,7 @@ Respond with JSON:
       const coverSheetBytes = await generateCoverSheetPdf(permit, documentIndex);
       
       // Merge all documents
-      const mergedPdfBytes = await mergePdfDocuments(coverSheetBytes, pdfUrls, supabase);
+      const mergedPdfBytes = await mergePdfDocuments(coverSheetBytes, pdfDocs, supabase);
       
       // Upload to storage
       const packetPath = `packets/${permitRequestId}/${Date.now()}-permit-packet.pdf`;
