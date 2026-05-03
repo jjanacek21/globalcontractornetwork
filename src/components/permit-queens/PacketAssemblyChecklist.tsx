@@ -9,6 +9,7 @@ import { PacketDocumentRow, type PacketDocument } from './PacketDocumentRow';
 import { AutoSourceModal } from './AutoSourceModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PacketMergeChecklist, type MergeDocument } from './PacketMergeChecklist';
 
 interface PacketAssemblyChecklistProps {
   projectId: string;
@@ -36,6 +37,7 @@ export function PacketAssemblyChecklist({
 }: PacketAssemblyChecklistProps) {
   const [isAssembling, setIsAssembling] = useState(false);
   const [packetUrl, setPacketUrl] = useState<string | null>(null);
+  const [mergeResults, setMergeResults] = useState<MergeDocument[]>([]);
   const [autoSourceDoc, setAutoSourceDoc] = useState<PacketDocument | null>(null);
   const [bulkSourcing, setBulkSourcing] = useState(false);
 
@@ -79,8 +81,10 @@ export function PacketAssemblyChecklist({
 
       if (data?.success && data?.data?.packetUrl) {
         setPacketUrl(data.data.packetUrl);
+        setMergeResults(data.data.documentIndex || []);
         toast.success('Permit packet assembled successfully!');
       } else if (data?.success) {
+        setMergeResults(data?.data?.documentIndex || []);
         toast.success('Packet generated — download available from project details.');
       } else {
         throw new Error(data?.error || 'Assembly failed');
@@ -308,6 +312,29 @@ export function PacketAssemblyChecklist({
           </div>
         </CardContent>
       </Card>
+
+      {mergeResults.length > 0 && (
+        <div className="mt-3">
+          <PacketMergeChecklist
+            permitRequestId={projectId}
+            documents={mergeResults}
+            selectedProducts={documents
+              .filter(d => d.source === 'auto_source' && d.status === 'ready' && d.url)
+              .map(d => ({
+                id: d.type,
+                manufacturer: '',
+                product_name: d.name,
+                file_url: d.url,
+                noa_number: d.noaNumber,
+              }))}
+            onUpdated={(docs, url) => {
+              setMergeResults(docs);
+              if (url) setPacketUrl(url);
+              onRefresh?.();
+            }}
+          />
+        </div>
+      )}
 
       {/* Auto-Source Modal */}
       {autoSourceDoc && (
