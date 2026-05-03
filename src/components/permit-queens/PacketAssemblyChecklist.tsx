@@ -81,8 +81,10 @@ export function PacketAssemblyChecklist({
 
       if (data?.success && data?.data?.packetUrl) {
         setPacketUrl(data.data.packetUrl);
+        setMergeResults(data.data.documentIndex || []);
         toast.success('Permit packet assembled successfully!');
       } else if (data?.success) {
+        setMergeResults(data?.data?.documentIndex || []);
         toast.success('Packet generated — download available from project details.');
       } else {
         throw new Error(data?.error || 'Assembly failed');
