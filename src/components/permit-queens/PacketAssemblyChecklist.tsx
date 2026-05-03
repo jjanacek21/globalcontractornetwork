@@ -313,6 +313,29 @@ export function PacketAssemblyChecklist({
         </CardContent>
       </Card>
 
+      {mergeResults.length > 0 && (
+        <div className="mt-3">
+          <PacketMergeChecklist
+            permitRequestId={projectId}
+            documents={mergeResults}
+            selectedProducts={documents
+              .filter(d => d.source === 'auto_source' && d.status === 'ready' && d.url)
+              .map(d => ({
+                id: d.type,
+                manufacturer: '',
+                product_name: d.name,
+                file_url: d.url,
+                noa_number: d.noaNumber,
+              }))}
+            onUpdated={(docs, url) => {
+              setMergeResults(docs);
+              if (url) setPacketUrl(url);
+              onRefresh?.();
+            }}
+          />
+        </div>
+      )}
+
       {/* Auto-Source Modal */}
       {autoSourceDoc && (
         <AutoSourceModal
