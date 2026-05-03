@@ -6,23 +6,67 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Lock, CheckCircle } from "lucide-react";
+import { AlertCircle, Loader2, Lock, CheckCircle } from "lucide-react";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingRecovery, setCheckingRecovery] = useState(true);
+  const [canResetPassword, setCanResetPassword] = useState(false);
+  const [recoveryError, setRecoveryError] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        // User is in password recovery mode
-        console.log("Password recovery mode active");
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const authError = urlParams.get("error_description") || hashParams.get("error_description");
+
+    if (authError) {
+      setRecoveryError(authError.replace(/\+/g, " "));
+      setCheckingRecovery(false);
+      return;
+    }
+
+    const verifyRecoverySession = async () => {
+      const code = urlParams.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          setRecoveryError("This password reset link is invalid or expired. Please request a new reset link.");
+          setCheckingRecovery(false);
+          return;
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      const { data } = await supabase.auth.getSession();
+
+      if (data.session) {
+        setCanResetPassword(true);
+        setRecoveryError("");
+      } else {
+        setRecoveryError("This password reset link is missing, expired, or was already used. Please request a new reset link.");
+      }
+
+      setCheckingRecovery(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
+        setCanResetPassword(true);
+        setRecoveryError("");
+        setCheckingRecovery(false);
       }
     });
+
+    verifyRecoverySession();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -41,6 +85,12 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
+      const { data } = await supabase.auth.getSession();
+
+      if (!data.session) {
+        throw new Error("Your reset link expired or is invalid. Please request a new password reset link.");
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: password
       });
@@ -83,6 +133,42 @@ const ResetPassword = () => {
     );
   }
 
+  if (checkingRecovery) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-muted p-4">
+        <Card className="w-full max-w-md shadow-elevated">
+          <CardContent className="flex items-center justify-center gap-3 py-10 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Verifying reset link...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canResetPassword) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-muted p-4">
+        <Card className="w-full max-w-md shadow-elevated">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-destructive/10">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Reset Link Not Active</CardTitle>
+            <CardDescription>{recoveryError}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" className="w-full" onClick={() => navigate("/crm/auth")}>
+              Request New Reset Link
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-secondary via-background to-muted p-4">
       <Card className="w-full max-w-md shadow-elevated">
@@ -105,6 +191,7 @@ const ResetPassword = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter new password"
+                autoComplete="new-password"
                 required
                 minLength={6}
               />
@@ -117,6 +204,7 @@ const ResetPassword = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
+                autoComplete="new-password"
                 required
                 minLength={6}
               />
