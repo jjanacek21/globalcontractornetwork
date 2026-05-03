@@ -1167,6 +1167,9 @@ serve(async (req) => {
               url: fileUrl,
               status: 'auto_sourced',
               source: 'auto_source',
+              noaNumber: noaNumber || undefined,
+              manufacturer,
+              productName,
             });
             totalPages += 2;
             queueMerge(fileUrl);
