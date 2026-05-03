@@ -1066,6 +1066,8 @@ serve(async (req) => {
           requiresRecording: item.requires_recording,
         });
         totalPages += item.pages || 2;
+        // Queue AFTER push so the merge item references the right document.
+        if (filledUrl) queueMerge(filledUrl);
       } else if (item.source === 'user_upload') {
         // Check DB documents first
         const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
