@@ -844,6 +844,16 @@ serve(async (req) => {
       { order: 10, type: 'site_photos', source: 'user_upload' },
     ];
     
+    // Aliases mapping packet item types to all common DB/upload document_type values.
+    const UPLOAD_TYPE_ALIASES: Record<string, string[]> = {
+      signed_contract: ['signed_contract', 'contract', 'signed contract'],
+      coi: ['coi', 'insurance', 'certificate_of_insurance', 'cert_of_insurance'],
+      contractor_license: ['contractor_license', 'license', 'contractors_license'],
+      owner_authorization: ['owner_authorization', 'owner_auth', 'authorization_letter'],
+      roof_layout: ['roof_layout', 'roof_diagram', 'roof_plan'],
+      site_photos: ['site_photos', 'property_photos', 'photos'],
+    };
+
     // Document type name mapping
     const DOC_TYPE_NAMES: Record<string, string> = {
       'cover_sheet': 'Cover Sheet',
@@ -1069,10 +1079,11 @@ serve(async (req) => {
         // Queue AFTER push so the merge item references the right document.
         if (filledUrl) queueMerge(filledUrl);
       } else if (item.source === 'user_upload') {
-        // Check DB documents first
-        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
-        // Then check passed uploadedDocuments
-        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        // Map packet types to common upload aliases used by the upload UI / DB.
+        const aliases = (UPLOAD_TYPE_ALIASES[item.type] || [item.type]);
+        const matchType = (t: any) => aliases.includes(String(t || '').toLowerCase());
+        const dbDoc = dbDocuments?.find(d => matchType(d.document_type));
+        const passedDoc = uploadedDocuments.find(d => matchType(d.type));
         
         if (dbDoc || passedDoc) {
           const url = dbDoc?.file_path || dbDoc?.file_url || passedDoc?.url;
@@ -1209,8 +1220,10 @@ serve(async (req) => {
         totalPages += item.pages || 4;
       } else if (item.source === 'conditional') {
         // Conditional documents - FIRST check if user already uploaded this document
-        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
-        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        const condAliases = (UPLOAD_TYPE_ALIASES[item.type] || [item.type]);
+        const condMatch = (t: any) => condAliases.includes(String(t || '').toLowerCase());
+        const dbDoc = dbDocuments?.find(d => condMatch(d.document_type));
+        const passedDoc = uploadedDocuments.find(d => condMatch(d.type));
         
         if (dbDoc || passedDoc) {
           // User uploaded this document - mark as included regardless of condition
