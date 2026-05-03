@@ -59,7 +59,7 @@ const JoinNetwork = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       const { data } = await supabase
-        .from('companies')
+        .from('permit_companies')
         .select('id, name')
         .eq('is_active', true)
         .order('name');

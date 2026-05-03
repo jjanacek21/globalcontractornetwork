@@ -50,7 +50,7 @@ export function useLeads(companyId?: string) {
     setIsLoading(true);
     try {
       let query = supabase
-        .from("leads")
+        .from("permit_leads")
         .select(`
           *,
           contact:contacts(id, first_name, last_name, primary_phone, email),
@@ -81,7 +81,7 @@ export function useLeads(companyId?: string) {
   const createLead = async (lead: LeadInsert) => {
     try {
       const { data, error } = await supabase
-        .from("leads")
+        .from("permit_leads")
         .insert(lead)
         .select()
         .single();
@@ -104,7 +104,7 @@ export function useLeads(companyId?: string) {
   const updateLead = async (id: string, updates: LeadUpdate) => {
     try {
       const { data, error } = await supabase
-        .from("leads")
+        .from("permit_leads")
         .update(updates)
         .eq("id", id)
         .select()
@@ -137,7 +137,7 @@ export function useLeads(companyId?: string) {
 
   const deleteLead = async (id: string) => {
     try {
-      const { error } = await supabase.from("leads").delete().eq("id", id);
+      const { error } = await supabase.from("permit_leads").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -184,7 +184,7 @@ export function useLead(leadId: string | null) {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("leads")
+        .from("permit_leads")
         .select(`
           *,
           contact:contacts(id, first_name, last_name, primary_phone, email),

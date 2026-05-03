@@ -95,7 +95,7 @@ export function UserManagementDialog({ open, onOpenChange, member, mode, onModeC
   }, [member, mode]);
 
   const fetchCompanies = async () => {
-    const { data } = await supabase.from('companies').select('id, name').eq('is_active', true).order('name');
+    const { data } = await supabase.from('permit_companies').select('id, name').eq('is_active', true).order('name');
     setCompanies(data || []);
   };
 

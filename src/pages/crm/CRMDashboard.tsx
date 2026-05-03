@@ -94,10 +94,10 @@ export default function CRMDashboard() {
           activitiesRes,
         ] = await Promise.all([
           supabase.from("contractor_profiles").select("company_name").eq("user_id", session.user.id).maybeSingle(),
-          supabase.from("contacts").select("id", { count: "exact", head: true }),
+          supabase.from("permit_contacts").select("id", { count: "exact", head: true }),
           supabase.from("estimates").select("total, status"),
           supabase.from("crm_jobs").select("stage, collected_amount, completion_date"),
-          supabase.from("leads").select("status, assigned_rep_id"),
+          supabase.from("permit_leads").select("status, assigned_rep_id"),
           supabase.from("activities").select(`
             id, action, description, entity_type, created_at,
             user:profiles(first_name, last_name)

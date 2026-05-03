@@ -50,7 +50,7 @@ export const CompanyProfileTab = ({ companyId }: CompanyProfileTabProps) => {
     const fetchProfile = async () => {
       try {
         const { data, error } = await supabase
-          .from("companies")
+          .from("permit_companies")
           .select("*")
           .eq("id", companyId)
           .single();
@@ -86,7 +86,7 @@ export const CompanyProfileTab = ({ companyId }: CompanyProfileTabProps) => {
     setSaving(true);
     try {
       const { error } = await supabase
-        .from("companies")
+        .from("permit_companies")
         .update({
           name: profile.name,
           description: profile.description,

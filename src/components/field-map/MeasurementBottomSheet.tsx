@@ -63,7 +63,7 @@ export function MeasurementBottomSheet({
   const loadCustomers = async () => {
     try {
       const { data, error } = await supabase
-        .from("customers")
+        .from("permit_customers")
         .select("id, name, address")
         .order("name");
 

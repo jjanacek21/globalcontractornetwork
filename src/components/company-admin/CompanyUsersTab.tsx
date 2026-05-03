@@ -122,7 +122,7 @@ export const CompanyUsersTab = ({ companyId }: CompanyUsersTabProps) => {
 
       // Get company name
       const { data: company } = await supabase
-        .from('companies')
+        .from('permit_companies')
         .select('name')
         .eq('id', companyId)
         .single();

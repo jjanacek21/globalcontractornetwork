@@ -43,7 +43,7 @@ serve(async (req) => {
 
     // Fetch all companies with credential info
     const { data: companies, error: companiesError } = await supabase
-      .from("companies")
+      .from("permit_companies")
       .select("id, name, email, insurance_expiration, workers_comp_expiration, licenses, credential_warnings, has_crew")
       .eq("is_active", true);
 
@@ -238,7 +238,7 @@ serve(async (req) => {
     // Update company credential warnings
     for (const update of companyUpdates) {
       await supabase
-        .from("companies")
+        .from("permit_companies")
         .update({ credential_warnings: update.credential_warnings })
         .eq("id", update.id);
     }

@@ -73,7 +73,7 @@ export function useEstimateBuilder(editEstimateId?: string) {
   useEffect(() => {
     const load = async () => {
       const [contactRes, tradeRes, catalogRes] = await Promise.all([
-        supabase.from("contacts").select("*").order("first_name"),
+        supabase.from("permit_contacts").select("*").order("first_name"),
         supabase.from("trades").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("catalog_items").select("*").eq("is_active", true).order("name"),
       ]);
