@@ -1210,8 +1210,10 @@ serve(async (req) => {
         totalPages += item.pages || 4;
       } else if (item.source === 'conditional') {
         // Conditional documents - FIRST check if user already uploaded this document
-        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
-        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        const condAliases = (UPLOAD_TYPE_ALIASES[item.type] || [item.type]);
+        const condMatch = (t: any) => condAliases.includes(String(t || '').toLowerCase());
+        const dbDoc = dbDocuments?.find(d => condMatch(d.document_type));
+        const passedDoc = uploadedDocuments.find(d => condMatch(d.type));
         
         if (dbDoc || passedDoc) {
           // User uploaded this document - mark as included regardless of condition
