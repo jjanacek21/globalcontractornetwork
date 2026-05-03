@@ -9,6 +9,7 @@ import { PacketDocumentRow, type PacketDocument } from './PacketDocumentRow';
 import { AutoSourceModal } from './AutoSourceModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PacketMergeChecklist, type MergeDocument } from './PacketMergeChecklist';
 
 interface PacketAssemblyChecklistProps {
   projectId: string;
