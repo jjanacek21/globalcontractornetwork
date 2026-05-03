@@ -33,7 +33,7 @@ const Customers = () => {
   const fetchCustomers = async () => {
     try {
       const { data, error } = await supabase
-        .from("customers")
+        .from("permit_customers")
         .select("*")
         .order("created_at", { ascending: false });
 

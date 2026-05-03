@@ -54,7 +54,7 @@ export function CompaniesTable() {
     setLoading(true);
     try {
       const { data: companiesData, error } = await supabase
-        .from('companies')
+        .from('permit_companies')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -95,7 +95,7 @@ export function CompaniesTable() {
     setDeleting(company.id);
     try {
       const { error } = await supabase
-        .from('companies')
+        .from('permit_companies')
         .delete()
         .eq('id', company.id);
 

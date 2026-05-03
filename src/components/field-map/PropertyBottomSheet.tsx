@@ -154,7 +154,7 @@ export function PropertyBottomSheet({ property, onClose, onUpdate, onAddMeasurem
 
       // Create customer
       const { error: customerError } = await supabase
-        .from("customers")
+        .from("permit_customers")
         .insert({
           name: address || "Unknown Customer",
           address: address,

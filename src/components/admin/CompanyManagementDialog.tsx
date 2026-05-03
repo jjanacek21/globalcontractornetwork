@@ -105,13 +105,13 @@ export function CompanyManagementDialog({
 
       if (mode === 'add') {
         const { error } = await supabase
-          .from("companies")
+          .from("permit_companies")
           .insert(companyData);
         if (error) throw error;
         toast({ title: "Company created successfully" });
       } else if (company) {
         const { error } = await supabase
-          .from("companies")
+          .from("permit_companies")
           .update(companyData)
           .eq('id', company.id);
         if (error) throw error;
@@ -137,7 +137,7 @@ export function CompanyManagementDialog({
     setDeleting(true);
     try {
       const { error } = await supabase
-        .from("companies")
+        .from("permit_companies")
         .delete()
         .eq('id', company.id);
 

@@ -23,7 +23,7 @@ export function useContacts(companyId?: string) {
     setIsLoading(true);
     try {
       let query = supabase
-        .from("contacts")
+        .from("permit_contacts")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -49,7 +49,7 @@ export function useContacts(companyId?: string) {
   const createContact = async (contact: ContactInsert) => {
     try {
       const { data, error } = await supabase
-        .from("contacts")
+        .from("permit_contacts")
         .insert(contact)
         .select()
         .single();
@@ -72,7 +72,7 @@ export function useContacts(companyId?: string) {
   const updateContact = async (id: string, updates: ContactUpdate) => {
     try {
       const { data, error } = await supabase
-        .from("contacts")
+        .from("permit_contacts")
         .update(updates)
         .eq("id", id)
         .select()
@@ -97,7 +97,7 @@ export function useContacts(companyId?: string) {
 
   const deleteContact = async (id: string) => {
     try {
-      const { error } = await supabase.from("contacts").delete().eq("id", id);
+      const { error } = await supabase.from("permit_contacts").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -143,7 +143,7 @@ export function useContact(contactId: string | null) {
     setIsLoading(true);
     try {
       const { data: contactData, error: contactError } = await supabase
-        .from("contacts")
+        .from("permit_contacts")
         .select("*")
         .eq("id", contactId)
         .single();
@@ -156,7 +156,7 @@ export function useContact(contactId: string | null) {
         .eq("contact_id", contactId);
 
       const { data: leads } = await supabase
-        .from("leads")
+        .from("permit_leads")
         .select("*")
         .eq("contact_id", contactId);
 

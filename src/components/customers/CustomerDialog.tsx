@@ -105,7 +105,7 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
       
       if (customer) {
         const { error } = await supabase
-          .from("customers")
+          .from("permit_customers")
           .update(formData as any)
           .eq("id", customer.id);
 
@@ -113,7 +113,7 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
         toast.success("Customer updated successfully");
       } else {
         const { error } = await supabase
-          .from("customers")
+          .from("permit_customers")
           .insert([{ ...formData, assigned_rep_id: user?.id }] as any);
 
         if (error) throw error;

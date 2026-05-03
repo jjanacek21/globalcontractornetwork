@@ -125,7 +125,7 @@ export function ContractorsTable() {
   };
 
   const fetchCompanies = async () => {
-    const { data } = await supabase.from('companies').select('id, name').order('name');
+    const { data } = await supabase.from('permit_companies').select('id, name').order('name');
     setCompanies(data || []);
   };
 

@@ -25,7 +25,7 @@ const Dashboard = () => {
       try {
         // Get total leads
         const { count: leadsCount } = await supabase
-          .from("customers")
+          .from("permit_customers")
           .select("*", { count: "exact", head: true });
 
         // Get estimates sent
@@ -35,7 +35,7 @@ const Dashboard = () => {
 
         // Get sold customers
         const { count: soldCount } = await supabase
-          .from("customers")
+          .from("permit_customers")
           .select("*", { count: "exact", head: true })
           .eq("pipeline_stage", "sold");
 

@@ -40,7 +40,7 @@ export function CreateEstimateDialog({ open, onOpenChange }: CreateEstimateDialo
   useEffect(() => {
     const fetchCustomers = async () => {
       const { data } = await supabase
-        .from("customers")
+        .from("permit_customers")
         .select("*")
         .order("name", { ascending: true });
       setCustomers(data || []);

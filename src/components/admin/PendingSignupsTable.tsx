@@ -123,7 +123,7 @@ const PendingSignupsTable = () => {
 
       // Fetch companies for assignment
       const { data: companiesData } = await supabase
-        .from("companies")
+        .from("permit_companies")
         .select("id, name")
         .eq("is_active", true)
         .order("name");
@@ -211,7 +211,7 @@ const PendingSignupsTable = () => {
 
         // Also update company verification status
         await supabase
-          .from("companies")
+          .from("permit_companies")
           .update({ 
             verification_status: "verified",
             is_active: true
