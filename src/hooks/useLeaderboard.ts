@@ -79,8 +79,8 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
         .select('user_id, company_name, logo_url')
         .in('user_id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      const contractorMap = new Map(contractorProfiles?.map(c => [c.user_id, c]) || []);
+      const profileMap = new Map<string, any>((profiles as any[])?.map((p: any) => [p.id, p]) || []);
+      const contractorMap = new Map<string, any>((contractorProfiles as any[])?.map((c: any) => [c.user_id, c]) || []);
 
       const leaderboard: LeaderboardEntry[] = (data || []).map((entry, index) => {
         const profile = profileMap.get(entry.user_id);
@@ -146,8 +146,8 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
         .select('id, name')
         .in('id', companyIds);
 
-      const teamMap = new Map(teams?.map(t => [t.id, t]) || []);
-      const companyMap = new Map(companies?.map(c => [c.id, c]) || []);
+      const teamMap = new Map<string, any>((teams as any[])?.map((t: any) => [t.id, t]) || []);
+      const companyMap = new Map<string, any>((companies as any[])?.map((c: any) => [c.id, c]) || []);
 
       const leaderboard: TeamLeaderboardEntry[] = (data || []).map((entry, index) => {
         const team = teamMap.get(entry.team_id);
@@ -195,7 +195,7 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
         .select('id, name, logo_url')
         .in('id', companyIds);
 
-      const companyMap = new Map(companies?.map(c => [c.id, c]) || []);
+      const companyMap = new Map<string, any>((companies as any[])?.map((c: any) => [c.id, c]) || []);
 
       const leaderboard: CompanyLeaderboardEntry[] = (data || []).map((entry, index) => {
         const company = companyMap.get(entry.company_id);
