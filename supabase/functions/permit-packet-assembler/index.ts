@@ -844,6 +844,16 @@ serve(async (req) => {
       { order: 10, type: 'site_photos', source: 'user_upload' },
     ];
     
+    // Aliases mapping packet item types to all common DB/upload document_type values.
+    const UPLOAD_TYPE_ALIASES: Record<string, string[]> = {
+      signed_contract: ['signed_contract', 'contract', 'signed contract'],
+      coi: ['coi', 'insurance', 'certificate_of_insurance', 'cert_of_insurance'],
+      contractor_license: ['contractor_license', 'license', 'contractors_license'],
+      owner_authorization: ['owner_authorization', 'owner_auth', 'authorization_letter'],
+      roof_layout: ['roof_layout', 'roof_diagram', 'roof_plan'],
+      site_photos: ['site_photos', 'property_photos', 'photos'],
+    };
+
     // Document type name mapping
     const DOC_TYPE_NAMES: Record<string, string> = {
       'cover_sheet': 'Cover Sheet',
