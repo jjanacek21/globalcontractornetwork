@@ -45,12 +45,24 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required' | 'needs_sourcing';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required' | 'needs_sourcing' | 'failed_fetch';
   source?: 'auto_fill' | 'auto_source' | 'user_upload' | 'generated' | 'city_specific' | 'conditional';
   requiresNotary?: boolean;
   requiresRecording?: boolean;
   condition?: string;
   noaNumber?: string; // Include for manual lookup
+  manufacturer?: string;
+  productName?: string;
+  // Per-document merge telemetry (populated by mergePdfDocuments)
+  fetchError?: string;
+  fetchSource?: 'primary' | 'fallback';
+  merged?: boolean;
+  mergedPages?: number;
+}
+
+interface PdfMergeItem {
+  url: string;
+  doc: DocumentInfo;
 }
 
 interface PacketStructureDocument {
