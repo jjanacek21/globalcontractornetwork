@@ -30,6 +30,20 @@ const ResetPassword = () => {
     }
 
     const verifyRecoverySession = async () => {
+      const code = urlParams.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          setRecoveryError("This password reset link is invalid or expired. Please request a new reset link.");
+          setCheckingRecovery(false);
+          return;
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       const { data } = await supabase.auth.getSession();
 
       if (data.session) {
