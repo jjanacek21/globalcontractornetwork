@@ -176,7 +176,7 @@ export function EnhancedInstantEstimate({
     try {
       // Attempt to get coordinates from Mapbox geocoding
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(propertyAddress)}.json?access_token=pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g&country=US&types=address&limit=1`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(propertyAddress)}.json?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}&country=US&types=address&limit=1`
       );
       const data = await response.json();
       

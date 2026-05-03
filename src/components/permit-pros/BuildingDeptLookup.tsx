@@ -56,7 +56,7 @@ interface RequiredDocument {
   notes: string | null;
 }
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export function BuildingDeptLookup() {
   const [query, setQuery] = useState("");

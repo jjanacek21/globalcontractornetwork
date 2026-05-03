@@ -65,7 +65,7 @@ export function JobBoardMap({ jobs, contractorLocation, onJobClick }: JobBoardMa
 
     // Use environment variable with hardcoded fallback for reliability
     const token = import.meta.env.VITE_MAPBOX_TOKEN || 
-      'pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g';
+      import.meta.env.VITE_MAPBOX_TOKEN;
     
     if (!token) {
       setMapError('Mapbox token not configured');

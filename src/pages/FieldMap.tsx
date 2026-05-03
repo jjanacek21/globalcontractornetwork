@@ -15,7 +15,7 @@ import { Roof3DVisualization } from "@/components/shared/Roof3DVisualization";
 import { Button } from "@/components/ui/button";
 import { MapPin, Locate, Box } from "lucide-react";
 
-mapboxgl.accessToken = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 // Fixed multipliers
 const FIXED_PITCH_MULTIPLIER = 1.1;
