@@ -874,7 +874,12 @@ serve(async (req) => {
     // Map uploaded documents to packet structure
     const documentIndex: DocumentInfo[] = [];
     let totalPages = 0;
-    const pdfUrls: string[] = [];
+    const pdfDocs: PdfMergeItem[] = [];
+    const queueMerge = (url: string | undefined) => {
+      if (!url) return;
+      const last = documentIndex[documentIndex.length - 1];
+      pdfDocs.push({ url, doc: last });
+    };
 
     // ---- Build unified projectData used to fill all auto_fill templates ----
     let contractorData: any = null;
