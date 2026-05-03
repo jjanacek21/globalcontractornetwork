@@ -246,7 +246,7 @@ export function useChallenges(userId?: string) {
         .select('id, first_name, last_name')
         .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map<string, any>((profiles as any[])?.map((p: any) => [p.id, p]) || []);
 
       return (data || []).map((entry, index) => {
         const profile = profileMap.get(entry.user_id);
