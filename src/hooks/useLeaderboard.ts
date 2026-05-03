@@ -79,8 +79,8 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
         .select('user_id, company_name, logo_url')
         .in('user_id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      const contractorMap = new Map(contractorProfiles?.map(c => [c.user_id, c]) || []);
+      const profileMap = new Map<string, any>((profiles as any[])?.map((p: any) => [p.id, p]) || []);
+      const contractorMap = new Map<string, any>((contractorProfiles as any[])?.map((c: any) => [c.user_id, c]) || []);
 
       const leaderboard: LeaderboardEntry[] = (data || []).map((entry, index) => {
         const profile = profileMap.get(entry.user_id);
