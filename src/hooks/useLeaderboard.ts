@@ -195,7 +195,7 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
         .select('id, name, logo_url')
         .in('id', companyIds);
 
-      const companyMap = new Map(companies?.map(c => [c.id, c]) || []);
+      const companyMap = new Map<string, any>((companies as any[])?.map((c: any) => [c.id, c]) || []);
 
       const leaderboard: CompanyLeaderboardEntry[] = (data || []).map((entry, index) => {
         const company = companyMap.get(entry.company_id);
