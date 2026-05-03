@@ -1,33 +1,29 @@
-## Issue
+I can see why this is stuck: the app is currently pointed at a different external auth project in `src/integrations/supabase/client.ts`, and that auto-generated client file was manually edited earlier. That means the in-app reset flow and the backend/admin tools are not operating against the same managed backend, so dashboard/password actions can appear to succeed but still not let you log in from `/crm/auth`.
 
-The packet UI shows "Missing" for **Signed Contract**, **Certificate of Insurance**, and **Contractor License** even though the user uploaded them. DB confirms uploads are stored as `document_type = 'contract'`, `'insurance'`, `'license'`, but the assembler's `user_upload` branch does an exact-match lookup against the packet structure types `'signed_contract'`, `'coi'`, `'contractor_license'`, so they never match.
+Plan:
 
-## Fix
+1. Restore the app's auth client to the managed project configuration
+   - Stop hardcoding the external auth URL/key in `src/integrations/supabase/client.ts`.
+   - Use the managed environment variables again so `/crm/auth`, reset password, database access, and backend functions all target the same backend.
+   - Avoid manually editing generated backend type files.
 
-In `supabase/functions/permit-packet-assembler/index.ts`, in the `item.source === 'user_upload'` branch (~line 1071), replace the exact-equality lookup with an alias-aware match:
+2. Add a secure admin password reset backend function
+   - Create a protected backend function that can update a user's password using server-side admin privileges.
+   - Require an authenticated admin/super-admin session before it can run.
+   - Validate email/password input and return only safe error messages.
+   - Do not expose service keys, tokens, or raw backend errors to the browser.
 
-```ts
-const TYPE_ALIASES: Record<string, string[]> = {
-  signed_contract:    ['signed_contract', 'contract', 'signed contract'],
-  coi:                ['coi', 'insurance', 'certificate_of_insurance', 'cert_of_insurance'],
-  contractor_license: ['contractor_license', 'license', 'contractors_license'],
-  owner_authorization:['owner_authorization', 'owner_auth', 'authorization_letter'],
-  roof_layout:        ['roof_layout', 'roof_diagram', 'roof_plan'],
-  site_photos:        ['site_photos', 'property_photos', 'photos'],
-};
-const aliases = TYPE_ALIASES[item.type] || [item.type];
-const match = (t: any) => aliases.includes(String(t || '').toLowerCase());
-const dbDoc     = dbDocuments?.find(d => match(d.document_type));
-const passedDoc = uploadedDocuments.find(d => match(d.type));
-```
+3. Add a temporary admin UI/action for this case
+   - Add a guarded reset-password action for authorized admins, or wire it into an existing admin user-management area if present.
+   - Use it to set `j.janacek21@gmail.com` to the requested new password without sending another reset email, avoiding the email rate-limit entirely.
+   - After the password is set, test login from `/crm/auth`.
 
-The rest of the branch (push to `documentIndex`, `queueMerge(url)`) is unchanged. The same alias map also covers the conditional branch (~line 1212) — apply identical change there for consistency.
+4. Improve the normal recovery flow messaging
+   - Keep the existing reset-password code path for future users.
+   - Show a clearer message when the auth email rate limit is hit, so it does not look like a broken app.
 
-## Files touched
-- `supabase/functions/permit-packet-assembler/index.ts`
+Technical notes:
 
-Then redeploy the function and re-assemble the packet — the three uploaded files will be detected, marked Included, merged into the PDF, and packet completion will jump well past 31%.
-
-## Out of scope
-- No DB migration. Existing `contract` / `insurance` / `license` rows stay as-is; aliases reconcile both old and new values.
-- No UI change — the checklist already renders correctly once the assembler reports them as `included`.
+- This cannot be solved reliably by repeatedly sending password reset emails because the auth provider is throttling that email address.
+- The immediate fix is to make sure the frontend and backend use the same managed auth project, then perform the password update through a secure server-side admin path.
+- I will not expose secrets or put admin credentials in frontend code.
