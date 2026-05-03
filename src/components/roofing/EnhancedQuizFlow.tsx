@@ -26,7 +26,7 @@ const normalizeAddress = (addr: string): string => {
   return addr.toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9\s]/g, '').trim();
 };
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface EnhancedQuizFlowProps {
   open: boolean;

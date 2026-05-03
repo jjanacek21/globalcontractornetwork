@@ -12,7 +12,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type CanvassingDisposition = Database["public"]["Enums"]["canvassing_disposition"];
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const DISPOSITIONS: { label: string; value: CanvassingDisposition; color: string; markerColor: string }[] = [
   { label: "Not Home", value: "not_home", color: "bg-muted text-muted-foreground hover:bg-muted/80", markerColor: "#9ca3af" },

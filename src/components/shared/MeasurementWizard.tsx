@@ -29,7 +29,7 @@ import {
   getConfidenceColor,
 } from "@/lib/roofMeasurements";
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiamphbmFjZWsyMSIsImEiOiJjbWdmNHg1YXowNHh1MmlxMmdubjdjdzUzIn0.JKeexzDNUQk8_5cItGJQ2g";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface MeasurementWizardProps {
   serviceType: ServiceType;
