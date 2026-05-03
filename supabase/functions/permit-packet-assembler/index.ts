@@ -1069,10 +1069,11 @@ serve(async (req) => {
         // Queue AFTER push so the merge item references the right document.
         if (filledUrl) queueMerge(filledUrl);
       } else if (item.source === 'user_upload') {
-        // Check DB documents first
-        const dbDoc = dbDocuments?.find(d => d.document_type === item.type);
-        // Then check passed uploadedDocuments
-        const passedDoc = uploadedDocuments.find(d => d.type === item.type);
+        // Map packet types to common upload aliases used by the upload UI / DB.
+        const aliases = (UPLOAD_TYPE_ALIASES[item.type] || [item.type]);
+        const matchType = (t: any) => aliases.includes(String(t || '').toLowerCase());
+        const dbDoc = dbDocuments?.find(d => matchType(d.document_type));
+        const passedDoc = uploadedDocuments.find(d => matchType(d.type));
         
         if (dbDoc || passedDoc) {
           const url = dbDoc?.file_path || dbDoc?.file_url || passedDoc?.url;
