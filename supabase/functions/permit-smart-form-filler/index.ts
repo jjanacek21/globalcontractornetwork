@@ -407,27 +407,35 @@ serve(async (req) => {
       }
     }
     
-    // Download the template PDF
-    const templateUrl = template.file_url;
-    if (!templateUrl) {
-      throw new Error('Template has no file URL');
+    // Download the template PDF — prefer file_path from storage, fallback to file_url
+    const templateUrl = (template as any).file_url as string | undefined;
+    const filePath = (template as any).file_path as string | undefined;
+
+    if (!filePath && !templateUrl) {
+      throw new Error('Template has no file_path or file_url');
     }
-    
+
     let pdfBytes: ArrayBuffer;
-    
-    // Check if it's a storage path or full URL
-    if (templateUrl.startsWith('http')) {
-      const response = await fetch(templateUrl);
+
+    if (filePath) {
+      // Download directly from storage using service role
+      const { data, error } = await supabase.storage
+        .from('permit-form-templates')
+        .download(filePath);
+      if (error || !data) {
+        throw new Error(`Failed to download template from storage (${filePath}): ${error?.message}`);
+      }
+      pdfBytes = await data.arrayBuffer();
+    } else if (templateUrl!.startsWith('http')) {
+      const response = await fetch(templateUrl!);
       if (!response.ok) {
         throw new Error(`Failed to fetch template: ${response.status}`);
       }
       pdfBytes = await response.arrayBuffer();
     } else {
-      // It's a storage path
       const { data, error } = await supabase.storage
         .from('permit-form-templates')
-        .download(templateUrl);
-      
+        .download(templateUrl!);
       if (error || !data) {
         throw new Error(`Failed to download template: ${error?.message}`);
       }
