@@ -1,118 +1,48 @@
-# Fix NOA download + scraper input handling
-
 ## Problem
 
-**`noa-bulk-downloader`** ignores the `noa_pdf_url` column that already holds working URLs (most pointing to our own `product-approvals` bucket) and instead guesses Miami-Dade URLs like `https://www.miamidade.gov/building/library/noa/<digits>.pdf` — a path pattern that 404s. Result: every row gets marked `needs_manual_upload` even when the PDF is already cached.
+`firecrawl-noa-scraper` is failing with `ActionError: Error in action 2: Element not found`. Root cause: it submits a sequence of click/write/click "Actions" against `https://www.miamidade.gov/building/pc-searchnoa.asp`, which **no longer exists** (the URL 404s now — confirmed by direct fetch). All click selectors (`input[name="fldNOA"]`, `input[name="Applicant"]`, `input[name="AdvancedSearch"]`) target a form that is gone. Miami-Dade moved NOA lookup to a JavaScript-heavy SPA that is unreliable to drive via headless click steps.
 
-**`firecrawl-noa-scraper`** accepts only `searchValue` in the request body. The current admin UI does send `searchValue`, but other callers (and your message) expect `manufacturer` / `noa_number` / `category`. We should accept aliases so both work.
+`search-manufacturer-noas` returns garbage product names like `[] 22-1221.04` because `parseProductName()` strips the NOA number from the title, but Firecrawl search results for `site:miamidade.gov` return titles that are *just* the NOA number, leaving an empty string — which then falls back to `${manufacturer} Product` only if length<3 *after* trim of brackets. The bracket residue (`[]`) survives and gets emitted.
 
----
+## Fix
 
-## Changes
+### 1. Rewrite `firecrawl-noa-scraper/index.ts` — drop Actions, use Firecrawl Search
 
-### 1. Rewrite `supabase/functions/noa-bulk-downloader/index.ts`
+Stop trying to drive the broken Miami-Dade form. Instead, use the same proven pattern as `search-manufacturer-noas`: call Firecrawl's `/v2/search` with a `site:miamidade.gov` query for the manufacturer/NOA, get back result URLs + snippets, then run each through Gemini for structured extraction.
 
-Replace the per-row logic with a 3-tier decision tree. For each `product_approvals` row in the batch:
-
-```text
-fetch row { id, noa_number, manufacturer, noa_pdf_url, file_url }
-
-if noa_pdf_url is set:
-    if it points to THIS project's storage (contains `${SUPABASE_URL}/storage/v1/object/`
-       OR contains `/storage/v1/object/public/product-approvals/`):
-        → SKIP, count as "already_cached"
-        → ensure source_status='verified', is_active=true, file_url mirrors noa_pdf_url
-    else (external URL, e.g. miamidade.gov):
-        → fetch that URL
-        → validate (HTTP 200, content-type pdf/octet-stream, size ≥ 1000 bytes)
-        → upload to `product-approvals/noa-pdfs/<sanitized_manufacturer>/<sanitized_noa>.pdf` (upsert)
-        → getPublicUrl → update row: noa_pdf_url + file_url = internal URL,
-                                     source_status='verified', is_active=true
-        → count as "rehosted"
-        → on failure: leave row alone, count as "external_fetch_failed", record reason
-
-else (noa_pdf_url is null):
-    → run the existing Miami-Dade pattern guesser (HEAD then GET each candidate)
-    → on first success: upload + update row (same internal path as above)
-    → on total failure: mark source_status='needs_manual_upload',
-                        last_source_attempt=now(),
-                        source_notes="Auto-sourcing failed after N URL patterns…"
+Per-step try/catch + structured logs so failures pinpoint which step broke:
+```
+[firecrawl-noa-scraper] step=search status=ok results=N
+[firecrawl-noa-scraper] step=scrape url=<u> status=failed error=<msg>
+[firecrawl-noa-scraper] step=ai_extract status=ok records=N
 ```
 
-Skip-existing query change: instead of filtering by `file_url is null` only, select rows where (`noa_pdf_url is null`) OR (`noa_pdf_url is set AND not pointing to our bucket`) OR (`source_status in (pending, imported, training_extracted, needs_manual_upload)`). When the caller passes `forceRehost: true`, also re-process internal-URL rows (useful if the bucket path was renamed).
+Three-step flow:
+1. **Search**: `POST /v2/search` with `query: "site:miamidade.gov NOA <searchValue>"`, `limit: 20`, `scrapeOptions: { formats: ['markdown'] }`. Wrap in try/catch; on failure log `step=search` and return 502 with the Firecrawl error message verbatim.
+2. **Aggregate**: collect title + url + markdown snippets from each result.
+3. **AI extract**: feed combined snippets to Gemini with the existing tool-calling schema. Wrap in try/catch with `step=ai_extract` logging.
 
-Helper to detect "internal" URL:
-```ts
-const isInternalUrl = (url: string) => {
-  if (!url) return false;
-  return url.includes(`${SUPABASE_URL}/storage/v1/object/`)
-      || url.includes('/storage/v1/object/public/product-approvals/')
-      || url.includes('/storage/v1/object/sign/product-approvals/');
-};
-```
+For `searchType=noa_number`, query becomes `"site:miamidade.gov NOA <noa_number>"`. For `searchType=category`, query becomes `"site:miamidade.gov NOA <category> approval"`.
 
-Storage path stays consistent with `download-noa-pdfs`:
-```
-noa-pdfs/<manufacturer-slug-30char>/<noa-number-with-dots-as-dashes>.pdf
-```
+Keep PDF URL construction (`/building/library/noa/<noaForUrl>.pdf`) but mark `source_status='crawl_discovered'` so the existing `noa-bulk-downloader` 3-tier rehosting flow validates and rehosts each one.
 
-Response shape:
-```json
-{
-  "success": true,
-  "processed": N,
-  "alreadyCached": N,
-  "rehosted": N,
-  "downloadedFromGuess": N,
-  "failed": N,
-  "results": [ { productId, noaNumber, action: "skipped|rehosted|guessed|failed", fileUrl?, error? } ]
-}
-```
+### 2. Fix `search-manufacturer-noas/index.ts` `parseProductName`
 
-Keep 300–500 ms rate-limit between any external fetch (skipped rows incur no delay).
+Current bug: regex removes NOA number from title leaving empty brackets `[]` which still pass the `length < 3` check after `.trim()` because brackets aren't whitespace. Fix:
+- After all the `.replace()` strips, also strip leftover punctuation: `.replace(/[\[\](){}<>:|;,.\-_\s]+/g, ' ').trim()`
+- Then check `length < 3` and fall back to `${manufacturer} Product`.
+- Also: if title is literally just an NOA number (matches `/^\d{2}-\d{4}\.\d{2}$/`), skip directly to content extraction or manufacturer fallback.
 
-Preserve existing CORS headers, service-role client init, `Deno.serve` style (do NOT switch to `https://deno.land/std/http/server.ts` — the file currently uses it but per project memory native `Deno.serve` is required to avoid bundle timeouts; switch to `Deno.serve(async (req) => { … })`).
+### 3. Deploy + test
 
-### 2. Patch `supabase/functions/firecrawl-noa-scraper/index.ts`
+Deploy both functions. Test `firecrawl-noa-scraper` with `{ "manufacturer": "GAF" }` and verify response contains records with non-empty `product_name` and valid `noa_number`.
 
-Accept input aliases. After `await req.json()`:
+## Technical notes
 
-```ts
-const body = await req.json();
-const params: NoaSearchParams = {
-  searchType: body.searchType
-    ?? (body.noa_number ? 'noa_number'
-      : body.manufacturer ? 'manufacturer'
-      : body.category ? 'category'
-      : 'manufacturer'),
-  searchValue: body.searchValue
-    ?? body.manufacturer
-    ?? body.noa_number
-    ?? body.category
-    ?? '',
-  category: body.category && body.searchType !== 'category' ? body.category : body.categoryFilter,
-  classification: body.classification,
-  limit: body.limit,
-};
-```
+- Firecrawl Actions are kept *removed*, not patched. The Miami-Dade form URL returns 404; no selector update will work. Search-based approach is the same one `search-manufacturer-noas` uses successfully.
+- Both functions retain existing `Deno.serve`, CORS headers, body-alias parsing, service-role client, job record creation, and product_approvals upsert logic.
+- No DB schema changes.
 
-No other behavior changes. Keep CORS, AI extraction, and storage logic intact.
-
----
-
-## Files touched
-
-- `supabase/functions/noa-bulk-downloader/index.ts` — full rewrite of per-row loop + query
-- `supabase/functions/firecrawl-noa-scraper/index.ts` — body parsing block only
-
-## Out of scope
-
-- No DB schema changes
-- No admin-UI changes (existing `NoaSearchTab` already sends `searchValue` correctly)
-- `download-noa-pdfs` stays as-is (it already does the external→internal rehost path correctly for Miami-Dade-only rows)
-
-## Verification after deploy
-
-1. Call `noa-bulk-downloader` with `{ limit: 5 }` and confirm response shows `alreadyCached > 0` for rows whose `noa_pdf_url` already points to `product-approvals/noa-pdfs/...`.
-2. Spot-check one row that previously was marked `needs_manual_upload` despite having a populated `noa_pdf_url` — it should now flip to `verified` without any external fetch.
-3. Call `firecrawl-noa-scraper` with `{ "manufacturer": "GAF" }` (no `searchValue`) and confirm it runs instead of returning `searchValue is required`.
+## Files changed
+- `supabase/functions/firecrawl-noa-scraper/index.ts` — replace `buildScrapeActions` + scrape call with search-based flow + per-step try/catch logging
+- `supabase/functions/search-manufacturer-noas/index.ts` — fix `parseProductName` to strip residual brackets/punctuation and detect bare-NOA titles
