@@ -101,39 +101,48 @@ function extractFLNumbers(content: string): string[] {
 // Helper function to parse product name from title/content
 function parseProductName(title: string | undefined, manufacturer: string, content?: string): string {
   if (!title && !content) return `${manufacturer} Product`;
-  
-  const source = title || '';
-  
-  // Clean up common patterns
-  let name = source
-    .split(' - ')[0]
-    .split(' | ')[0]
-    .split(' :: ')[0]
-    .replace(/NOA\s*(?:No\.?\s*)?#?\s*\d{2}-\d{4}\.\d{2}/gi, '')
-    .replace(/FL\s*\d{5,}/gi, '')
-    .replace(/Miami[- ]Dade/gi, '')
-    .replace(/Product Approval/gi, '')
-    .replace(/Florida Building/gi, '')
-    .replace(/County/gi, '')
-    .replace(/Search Results?/gi, '')
-    .replace(/PDF/gi, '')
-    .trim();
-  
-  // If name is too short or empty, try to extract from content
-  if (name.length < 3 && content) {
-    // Look for product-related keywords in content
+
+  const source = (title || '').trim();
+
+  // If title is just an NOA number, skip straight to content/fallback
+  const bareNoa = /^\s*\[?\s*\d{2}-\d{4}\.\d{2}\s*\]?\s*$/;
+  let name = bareNoa.test(source) ? '' : source;
+
+  if (name) {
+    name = name
+      .split(' - ')[0]
+      .split(' | ')[0]
+      .split(' :: ')[0]
+      .replace(/NOA\s*(?:No\.?\s*)?#?\s*\d{2}-\d{4}\.\d{2}/gi, '')
+      .replace(/\d{2}-\d{4}\.\d{2}/g, '')
+      .replace(/FL\s*\d{5,}/gi, '')
+      .replace(/Miami[- ]Dade/gi, '')
+      .replace(/Product Approval/gi, '')
+      .replace(/Florida Building/gi, '')
+      .replace(/County/gi, '')
+      .replace(/Search Results?/gi, '')
+      .replace(/PDF/gi, '')
+      // strip residual brackets/punctuation that survive the strips above
+      .replace(/[\[\](){}<>:|;,]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Validate: alphanumeric content of length >= 3
+  const alphanumeric = name.replace(/[^A-Za-z0-9]/g, '');
+  if (alphanumeric.length < 3 && content) {
     const productMatch = content.match(/(?:product|system|coating|shingle|tile|membrane)[:\s]+([A-Za-z0-9\s\-]+)/i);
     if (productMatch) {
       name = productMatch[1].trim().substring(0, 100);
     }
   }
-  
-  // If still empty, use manufacturer
-  if (name.length < 3) {
+
+  const finalAlpha = name.replace(/[^A-Za-z0-9]/g, '');
+  if (finalAlpha.length < 3) {
     return `${manufacturer} Product`;
   }
-  
-  return name.substring(0, 100); // Limit length
+
+  return name.substring(0, 100);
 }
 
 serve(async (req) => {
