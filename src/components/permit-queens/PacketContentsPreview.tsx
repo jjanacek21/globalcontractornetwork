@@ -142,6 +142,10 @@ export function PacketContentsPreview({
     });
   });
 
+  // Helper to test if user already uploaded a doc of given type
+  const hasUpload = (...types: string[]) =>
+    uploadedDocTypes.some(t => types.includes((t || '').toLowerCase()));
+
   // 4. NOC
   if (['roofing', 'general_construction', 'windows_doors'].includes(permitType)) {
     expectedDocs.push({
@@ -149,6 +153,8 @@ export function PacketContentsPreview({
       source: hasUploadedNOC ? 'upload' : 'generated',
       status: hasUploadedNOC ? 'ready' : (hasOwnerInfo ? 'ready' : 'pending'),
       required: true,
+      reason: !hasUploadedNOC && !hasOwnerInfo ? 'Owner info needed to auto-generate' : undefined,
+      uploadType: 'notice_of_commencement',
     });
   }
 
@@ -164,13 +170,36 @@ export function PacketContentsPreview({
     expectedDocs.push({ name: 'Product NOA Documents', source: 'product', status: 'missing', required: true });
   }
 
-  // 7. Uploads
-  if (uploadedDocumentCount > 0) {
-    expectedDocs.push({ name: `Uploaded Documents (${uploadedDocumentCount})`, source: 'upload', status: 'ready', required: false });
-  }
+  // 7. Mandatory City Packet Uploads (restored)
+  const mandatoryUploads: Array<{ name: string; type: string }> = [
+    { name: 'Permit Application (signed)', type: 'permit_application' },
+    { name: 'Owner Authorization Letter', type: 'owner_authorization' },
+    { name: 'Signed Contract', type: 'signed_contract' },
+    { name: 'Certificate of Insurance', type: 'certificate_of_insurance' },
+    { name: 'Contractor License', type: 'contractor_license' },
+    { name: 'Roof Layout / Diagram', type: 'roof_diagram' },
+    { name: 'Property Photos', type: 'property_photos' },
+  ];
+  mandatoryUploads.forEach(u => {
+    const uploaded = hasUpload(u.type);
+    expectedDocs.push({
+      name: uploaded ? `${u.name} (Uploaded)` : u.name,
+      source: 'upload',
+      status: uploaded ? 'ready' : 'missing',
+      required: true,
+      uploadType: u.type,
+    });
+  });
 
-  // 8. Contractor license
-  expectedDocs.push({ name: 'Contractor License & Insurance', source: 'upload', status: hasContractorInfo ? 'ready' : 'pending', required: true });
+  // 8. Additional uploaded documents (beyond mandatory)
+  const mandatoryTypeSet = new Set(mandatoryUploads.map(u => u.type));
+  const extraUploads = uploadedDocTypes.filter(t => {
+    const tl = (t || '').toLowerCase();
+    return !mandatoryTypeSet.has(tl) && !['noc','signed_noc','notice_of_commencement'].includes(tl);
+  }).length;
+  if (extraUploads > 0) {
+    expectedDocs.push({ name: `Additional Uploaded Documents (${extraUploads})`, source: 'upload', status: 'ready', required: false });
+  }
 
   const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
   const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
