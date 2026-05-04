@@ -354,10 +354,28 @@ export function PacketViewer({
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(doc.status)}
-                  {doc.status === 'missing' ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                  {doc.status === 'needs_sourcing' && doc.noaNumber ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1"
+                      disabled={sourcingId === `${doc.manufacturer}-${doc.noaNumber}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSourceNow(doc);
+                      }}
+                    >
+                      {sourcingId === `${doc.manufacturer}-${doc.noaNumber}` ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Source Now
+                    </Button>
+                  ) : (doc.status === 'missing' || doc.status === 'failed_fetch') ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-8 gap-1"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -368,9 +386,9 @@ export function PacketViewer({
                       Upload
                     </Button>
                   ) : doc.url && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
