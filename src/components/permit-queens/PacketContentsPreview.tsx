@@ -251,7 +251,12 @@ export function PacketContentsPreview({
                 ) : (
                   <FileText className="h-4 w-4 text-amber-500 shrink-0" />
                 )}
-                <span className="truncate">{doc.name}</span>
+                <div className="min-w-0">
+                  <div className="truncate">{doc.name}</div>
+                  {doc.reason && (
+                    <div className="text-[11px] text-amber-700 mt-0.5">{doc.reason}</div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
                 {doc.required && (
@@ -274,6 +279,17 @@ export function PacketContentsPreview({
                     <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
                     Will print blank
                   </Badge>
+                )}
+                {doc.uploadType && doc.status !== 'ready' && onUploadClick && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => onUploadClick(doc.uploadType!)}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    Upload
+                  </Button>
                 )}
               </div>
             </div>
