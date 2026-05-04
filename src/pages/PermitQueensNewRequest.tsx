@@ -1093,7 +1093,7 @@ export default function PermitQueensNewRequest() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Jurisdiction</p>
-                      <p className="font-medium">{formData.jurisdiction_county || 'Auto-detected'}</p>
+                      <p className="font-medium">{formData.jurisdiction_county ? `${formData.jurisdiction_county} County${formData.isHVHZ ? ' (HVHZ)' : ''}` : 'Detecting…'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Permit Type</p>
