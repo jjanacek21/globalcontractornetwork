@@ -19,7 +19,7 @@ interface SearchResult {
 interface PermitAddressInputProps {
   value: string;
   onChange: (address: string) => void;
-  onJurisdictionDetected: (info: JurisdictionInfo) => void;
+  onJurisdictionDetected: (info: JurisdictionInfo, fullAddress: string) => void;
   className?: string;
 }
 
