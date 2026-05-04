@@ -31,8 +31,11 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required' | 'needs_sourcing' | 'failed_fetch';
   order?: number;
+  noaNumber?: string;
+  manufacturer?: string;
+  productName?: string;
 }
 
 export interface PacketData {
