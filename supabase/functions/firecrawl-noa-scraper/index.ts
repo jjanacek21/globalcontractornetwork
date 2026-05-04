@@ -84,11 +84,24 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const params: NoaSearchParams = await req.json();
+    const body = await req.json();
+
+    // Accept body aliases: { manufacturer }, { noa_number }, { category } in addition to { searchType, searchValue }
+    const params: NoaSearchParams = {
+      searchType:
+        body.searchType ??
+        (body.noa_number ? 'noa_number' : body.manufacturer ? 'manufacturer' : body.category ? 'category' : 'manufacturer'),
+      searchValue:
+        body.searchValue ?? body.manufacturer ?? body.noa_number ?? (body.searchType === 'category' ? body.category : '') ?? '',
+      // Only forward `category` as a filter when it isn't itself the primary search field
+      category: body.searchType === 'category' ? undefined : (body.categoryFilter ?? body.category),
+      classification: body.classification,
+      limit: body.limit,
+    };
 
     if (!params.searchValue) {
       return new Response(
-        JSON.stringify({ success: false, error: 'searchValue is required' }),
+        JSON.stringify({ success: false, error: 'searchValue (or manufacturer/noa_number/category) is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
