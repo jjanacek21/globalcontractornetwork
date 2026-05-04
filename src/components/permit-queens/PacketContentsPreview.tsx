@@ -37,6 +37,8 @@ export function PacketContentsPreview({
   hasOwnerInfo,
   hasContractorInfo,
   hasUploadedNOC = false,
+  uploadedDocTypes = [],
+  onUploadClick,
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
