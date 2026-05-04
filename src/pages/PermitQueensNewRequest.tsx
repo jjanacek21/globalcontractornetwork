@@ -445,13 +445,45 @@ export default function PermitQueensNewRequest() {
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers;
 
-  const handleJurisdictionDetected = (info: JurisdictionInfo) => {
+  const handleJurisdictionDetected = async (info: JurisdictionInfo) => {
+    // Parse zip / city / state from selected address (Mapbox-style "..., City, State 33470, ...")
+    const addr = formData.property_address;
+    const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
+    const zip = zipMatch?.[1] ?? '';
+    const stateMatch = addr.match(/\b(FL|Florida)\b/i);
+    const state = stateMatch ? 'FL' : 'FL';
+
     setFormData(prev => ({
       ...prev,
       jurisdiction_county: info.county,
       jurisdiction_city: info.city,
       isHVHZ: info.isHVHZ,
+      zip_code: zip,
+      state,
     }));
+
+    // Look up building department by zip — prefer city-level over county-level
+    if (zip) {
+      try {
+        const { data: dept } = await supabase
+          .from('permit_building_departments')
+          .select('id, county, is_hvhz')
+          .contains('zip_codes', [zip])
+          .order('jurisdiction_type', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (dept) {
+          setFormData(prev => ({
+            ...prev,
+            building_dept_id: dept.id,
+            jurisdiction_county: dept.county || prev.jurisdiction_county,
+            isHVHZ: dept.is_hvhz ?? prev.isHVHZ,
+          }));
+        }
+      } catch (e) {
+        console.warn('Building dept lookup failed', e);
+      }
+    }
   };
 
   const handlePermitTypeChange = (type: TradeType) => {
