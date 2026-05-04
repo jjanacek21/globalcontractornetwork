@@ -445,43 +445,67 @@ export default function PermitQueensNewRequest() {
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers;
 
-  const handleJurisdictionDetected = async (info: JurisdictionInfo) => {
+  const handleJurisdictionDetected = async (info: JurisdictionInfo, fullAddress?: string) => {
     // Parse zip / city / state from selected address (Mapbox-style "..., City, State 33470, ...")
-    const addr = formData.property_address;
+    const addr = fullAddress || formData.property_address;
     const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
     const zip = zipMatch?.[1] ?? '';
-    const stateMatch = addr.match(/\b(FL|Florida)\b/i);
-    const state = stateMatch ? 'FL' : 'FL';
+
+    console.log('[jurisdiction] detected from address:', { county: info.county, city: info.city, isHVHZ: info.isHVHZ, zip });
 
     setFormData(prev => ({
       ...prev,
-      jurisdiction_county: info.county,
-      jurisdiction_city: info.city,
+      jurisdiction_county: info.county || prev.jurisdiction_county,
+      jurisdiction_city: info.city || prev.jurisdiction_city,
       isHVHZ: info.isHVHZ,
       zip_code: zip,
-      state,
+      state: 'FL',
     }));
 
     // Look up building department by zip — prefer city-level over county-level
+    let resolved: { id?: string; county?: string; is_hvhz?: boolean } | null = null;
     if (zip) {
       try {
-        const { data: dept } = await supabase
+        const { data: dept, error } = await supabase
           .from('permit_building_departments')
-          .select('id, county, is_hvhz')
+          .select('id, county, is_hvhz, jurisdiction_type')
           .contains('zip_codes', [zip])
           .order('jurisdiction_type', { ascending: true })
           .limit(1)
           .maybeSingle();
+        if (error) console.warn('[jurisdiction] dept lookup error', error);
         if (dept) {
+          resolved = dept;
+          console.log('[jurisdiction] resolved by zip', zip, '→', dept);
           setFormData(prev => ({
             ...prev,
             building_dept_id: dept.id,
             jurisdiction_county: dept.county || prev.jurisdiction_county,
             isHVHZ: dept.is_hvhz ?? prev.isHVHZ,
           }));
+        } else {
+          console.warn('[jurisdiction] no dept for zip', zip);
         }
       } catch (e) {
-        console.warn('Building dept lookup failed', e);
+        console.warn('[jurisdiction] dept lookup failed', e);
+      }
+    }
+
+    // Persist to draft permit if it already exists
+    if (tempPermitId) {
+      try {
+        await supabase
+          .from('permit_projects')
+          .update({
+            jurisdiction_county: resolved?.county || info.county || null,
+            city: info.city || null,
+            zip_code: zip || null,
+            is_hvhz: resolved?.is_hvhz ?? info.isHVHZ ?? false,
+            building_dept_id: resolved?.id || null,
+          } as any)
+          .eq('id', tempPermitId);
+      } catch (e) {
+        console.warn('[jurisdiction] failed to persist to draft', e);
       }
     }
   };

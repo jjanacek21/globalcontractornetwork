@@ -33,6 +33,14 @@ interface SmartDocumentUploaderProps {
   onDocumentsChange?: (documents: UploadedDocument[]) => void;
 }
 
+// Auto-process map: when these doc types are uploaded, run AI extraction + form fill
+const AUTO_PROCESS_TYPES: Record<string, { templateMatch: string[]; label: string }> = {
+  signed_permit_app: { templateMatch: ['permit application', 'reroof', 'building permit'], label: 'permit application' },
+  permit_application: { templateMatch: ['permit application', 'reroof', 'building permit'], label: 'permit application' },
+  signed_noc: { templateMatch: ['notice of commencement', 'noc'], label: 'NOC' },
+  notice_of_commencement: { templateMatch: ['notice of commencement', 'noc'], label: 'NOC' },
+};
+
 interface ViewingDocument {
   url: string;
   name: string;
@@ -138,13 +146,89 @@ export function SmartDocumentUploader({
         newDocs.push(newDoc);
 
         // If we have a project ID, save to database
+        let projectDocId: string | null = null;
         if (permitProjectId) {
-          await supabase.from('permit_project_documents').insert({
+          const { data: pdRow } = await supabase.from('permit_project_documents').insert({
             project_id: permitProjectId,
             document_type: selectedType || 'other',
             file_name: file.name,
             file_path: filePath,
-          });
+          }).select('id').single();
+          projectDocId = pdRow?.id ?? null;
+        }
+
+        // 🔁 AUTO-PROCESS: if user uploaded a permit application or NOC,
+        // run AI extraction + smart-form-filler so it becomes a smart document
+        // rather than a static blob.
+        const autoCfg = AUTO_PROCESS_TYPES[(selectedType || '').toLowerCase()];
+        if (autoCfg && permitProjectId && file.type === 'application/pdf') {
+          // Don't block the UI — fire-and-forget
+          (async () => {
+            try {
+              newDoc.status = 'processing';
+              setDocuments(prev => prev.map(d => d.id === newDoc.id ? { ...d, status: 'processing' } : d));
+
+              // 1. Find a matching template for this jurisdiction + doc type
+              const { data: templates } = await supabase
+                .from('permit_form_templates')
+                .select('id, form_name, file_path, county')
+                .or(`county.eq.${jurisdiction},county.is.null`)
+                .limit(50);
+
+              const matched = (templates || []).find((t: any) => {
+                const name = (t.form_name || '').toLowerCase();
+                return autoCfg.templateMatch.some(m => name.includes(m));
+              });
+
+              if (!matched) {
+                console.warn(`[auto-process] no template found for ${autoCfg.label} in ${jurisdiction}`);
+                setDocuments(prev => prev.map(d => d.id === newDoc.id ? { ...d, status: 'uploaded' } : d));
+                return;
+              }
+
+              // 2. Extract fields from the user's signed PDF (best-effort)
+              try {
+                await supabase.functions.invoke('permit-form-extractor', {
+                  body: { templateId: matched.id, filePath: matched.file_path, autoMap: true },
+                });
+              } catch (e) {
+                console.warn('[auto-process] extractor failed (non-fatal)', e);
+              }
+
+              // 3. Run smart-form-filler to merge project data into the template draft
+              const { data: filled, error: fillErr } = await supabase.functions.invoke(
+                'permit-smart-form-filler',
+                { body: { permitProjectId, templateId: matched.id } }
+              );
+              if (fillErr) throw fillErr;
+
+              const aiUrl: string | undefined =
+                filled?.data?.publicUrl || filled?.data?.signedUrl || filled?.publicUrl;
+
+              // 4. Persist as a smart document on permit_packets so generator skips re-creating it
+              if (aiUrl) {
+                await supabase.from('permit_packets').insert({
+                  permit_request_id: permitProjectId,
+                  packet_type: autoCfg.label === 'NOC' ? 'noc' : 'permit_application',
+                  file_path: filePath, // primary = user's signed PDF
+                  status: 'signed_uploaded',
+                  document_index: [
+                    { type: 'user_signed', url: filePath, role: 'primary' },
+                    { type: 'ai_filled', url: aiUrl, role: 'fallback' },
+                  ],
+                  ai_notes: `Signed copy uploaded — AI-filled fallback generated from template ${matched.form_name}`,
+                } as any);
+              }
+
+              newDoc.status = 'signed';
+              setDocuments(prev => prev.map(d => d.id === newDoc.id ? { ...d, status: 'signed' } : d));
+              toast.success(`${autoCfg.label} processed — signed copy uploaded`);
+            } catch (e: any) {
+              console.error('[auto-process] failed', e);
+              setDocuments(prev => prev.map(d => d.id === newDoc.id ? { ...d, status: 'uploaded' } : d));
+              toast.error(`Auto-processing failed for ${autoCfg.label}: ${e?.message || 'unknown'}`);
+            }
+          })();
         }
 
       } catch (error) {

@@ -19,7 +19,7 @@ interface SearchResult {
 interface PermitAddressInputProps {
   value: string;
   onChange: (address: string) => void;
-  onJurisdictionDetected: (info: JurisdictionInfo) => void;
+  onJurisdictionDetected: (info: JurisdictionInfo, fullAddress: string) => void;
   className?: string;
 }
 
@@ -101,7 +101,7 @@ export function PermitAddressInput({
     // Detect jurisdiction from the selected address
     const info = detectFromAddress(fullAddress);
     setJurisdictionInfo(info);
-    onJurisdictionDetected(info);
+    onJurisdictionDetected(info, fullAddress);
   }, [onChange, detectFromAddress, onJurisdictionDetected]);
 
   return (

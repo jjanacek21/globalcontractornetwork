@@ -31,8 +31,11 @@ interface DocumentInfo {
   name: string;
   pages: number;
   url?: string;
-  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required';
+  status: 'included' | 'generated' | 'missing' | 'needs_signature' | 'auto_sourced' | 'city_specific' | 'conditional' | 'not_required' | 'needs_sourcing' | 'failed_fetch';
   order?: number;
+  noaNumber?: string;
+  manufacturer?: string;
+  productName?: string;
 }
 
 export interface PacketData {
@@ -114,7 +117,10 @@ export function PacketViewer({
       case 'needs_signature':
         return <PenTool className="h-4 w-4 text-orange-500" />;
       case 'missing':
+      case 'failed_fetch':
         return <AlertCircle className="h-4 w-4 text-destructive" />;
+      case 'needs_sourcing':
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
       case 'not_required':
         return <FileText className="h-4 w-4 text-muted-foreground" />;
       default:
@@ -133,10 +139,40 @@ export function PacketViewer({
         return <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-orange-500/20">Needs Signature</Badge>;
       case 'missing':
         return <Badge variant="destructive">Missing</Badge>;
+      case 'failed_fetch':
+        return <Badge variant="destructive">Missing PDF</Badge>;
+      case 'needs_sourcing':
+        return <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 border-amber-300">Needs Sourcing</Badge>;
       case 'not_required':
         return <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">Not Required</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  const [sourcingId, setSourcingId] = useState<string | null>(null);
+  const handleSourceNow = async (doc: DocumentInfo) => {
+    if (!doc.noaNumber) return;
+    const key = `${doc.manufacturer}-${doc.noaNumber}`;
+    setSourcingId(key);
+    try {
+      toast.info(`Searching for ${doc.manufacturer || ''} NOA ${doc.noaNumber}…`);
+      const { data, error } = await supabase.functions.invoke('firecrawl-noa-scraper', {
+        body: { manufacturer: doc.manufacturer, noaNumber: doc.noaNumber },
+      });
+      if (error) throw error;
+      const found = data?.results?.[0]?.noa_number || data?.found;
+      if (found) {
+        toast.success('NOA found — regenerating packet…');
+        onRegenerate?.();
+      } else {
+        toast.warning('No matching NOA found. Upload manually.');
+      }
+    } catch (e: any) {
+      console.error('Source Now failed', e);
+      toast.error('Sourcing failed: ' + (e?.message || 'unknown error'));
+    } finally {
+      setSourcingId(null);
     }
   };
 
@@ -318,10 +354,28 @@ export function PacketViewer({
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(doc.status)}
-                  {doc.status === 'missing' ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                  {doc.status === 'needs_sourcing' && doc.noaNumber ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1"
+                      disabled={sourcingId === `${doc.manufacturer}-${doc.noaNumber}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSourceNow(doc);
+                      }}
+                    >
+                      {sourcingId === `${doc.manufacturer}-${doc.noaNumber}` ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Source Now
+                    </Button>
+                  ) : (doc.status === 'missing' || doc.status === 'failed_fetch') ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-8 gap-1"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -332,9 +386,9 @@ export function PacketViewer({
                       Upload
                     </Button>
                   ) : doc.url && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
