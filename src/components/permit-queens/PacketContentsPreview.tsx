@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2, Search, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,8 @@ interface PacketContentsPreviewProps {
   hasOwnerInfo: boolean;
   hasContractorInfo: boolean;
   hasUploadedNOC?: boolean;
+  uploadedDocTypes?: string[];
+  onUploadClick?: (docType: string) => void;
 }
 
 interface ExpectedDocument {
@@ -22,6 +25,8 @@ interface ExpectedDocument {
   status: 'ready' | 'pending' | 'missing';
   required: boolean;
   unmapped?: boolean; // template exists but has 0 field mappings → will print blank
+  reason?: string;
+  uploadType?: string;
 }
 
 export function PacketContentsPreview({
@@ -33,6 +38,8 @@ export function PacketContentsPreview({
   hasOwnerInfo,
   hasContractorInfo,
   hasUploadedNOC = false,
+  uploadedDocTypes = [],
+  onUploadClick,
 }: PacketContentsPreviewProps) {
   const [templates, setTemplates] = useState<any[]>([]);
   const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
@@ -136,6 +143,10 @@ export function PacketContentsPreview({
     });
   });
 
+  // Helper to test if user already uploaded a doc of given type
+  const hasUpload = (...types: string[]) =>
+    uploadedDocTypes.some(t => types.includes((t || '').toLowerCase()));
+
   // 4. NOC
   if (['roofing', 'general_construction', 'windows_doors'].includes(permitType)) {
     expectedDocs.push({
@@ -143,6 +154,8 @@ export function PacketContentsPreview({
       source: hasUploadedNOC ? 'upload' : 'generated',
       status: hasUploadedNOC ? 'ready' : (hasOwnerInfo ? 'ready' : 'pending'),
       required: true,
+      reason: !hasUploadedNOC && !hasOwnerInfo ? 'Owner info needed to auto-generate' : undefined,
+      uploadType: 'notice_of_commencement',
     });
   }
 
@@ -158,13 +171,36 @@ export function PacketContentsPreview({
     expectedDocs.push({ name: 'Product NOA Documents', source: 'product', status: 'missing', required: true });
   }
 
-  // 7. Uploads
-  if (uploadedDocumentCount > 0) {
-    expectedDocs.push({ name: `Uploaded Documents (${uploadedDocumentCount})`, source: 'upload', status: 'ready', required: false });
-  }
+  // 7. Mandatory City Packet Uploads (restored)
+  const mandatoryUploads: Array<{ name: string; type: string }> = [
+    { name: 'Permit Application (signed)', type: 'permit_application' },
+    { name: 'Owner Authorization Letter', type: 'owner_authorization' },
+    { name: 'Signed Contract', type: 'signed_contract' },
+    { name: 'Certificate of Insurance', type: 'certificate_of_insurance' },
+    { name: 'Contractor License', type: 'contractor_license' },
+    { name: 'Roof Layout / Diagram', type: 'roof_diagram' },
+    { name: 'Property Photos', type: 'property_photos' },
+  ];
+  mandatoryUploads.forEach(u => {
+    const uploaded = hasUpload(u.type);
+    expectedDocs.push({
+      name: uploaded ? `${u.name} (Uploaded)` : u.name,
+      source: 'upload',
+      status: uploaded ? 'ready' : 'missing',
+      required: true,
+      uploadType: u.type,
+    });
+  });
 
-  // 8. Contractor license
-  expectedDocs.push({ name: 'Contractor License & Insurance', source: 'upload', status: hasContractorInfo ? 'ready' : 'pending', required: true });
+  // 8. Additional uploaded documents (beyond mandatory)
+  const mandatoryTypeSet = new Set(mandatoryUploads.map(u => u.type));
+  const extraUploads = uploadedDocTypes.filter(t => {
+    const tl = (t || '').toLowerCase();
+    return !mandatoryTypeSet.has(tl) && !['noc','signed_noc','notice_of_commencement'].includes(tl);
+  }).length;
+  if (extraUploads > 0) {
+    expectedDocs.push({ name: `Additional Uploaded Documents (${extraUploads})`, source: 'upload', status: 'ready', required: false });
+  }
 
   const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
   const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
@@ -215,7 +251,12 @@ export function PacketContentsPreview({
                 ) : (
                   <FileText className="h-4 w-4 text-amber-500 shrink-0" />
                 )}
-                <span className="truncate">{doc.name}</span>
+                <div className="min-w-0">
+                  <div className="truncate">{doc.name}</div>
+                  {doc.reason && (
+                    <div className="text-[11px] text-amber-700 mt-0.5">{doc.reason}</div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
                 {doc.required && (
@@ -238,6 +279,17 @@ export function PacketContentsPreview({
                     <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
                     Will print blank
                   </Badge>
+                )}
+                {doc.uploadType && doc.status !== 'ready' && onUploadClick && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => onUploadClick(doc.uploadType!)}
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    Upload
+                  </Button>
                 )}
               </div>
             </div>

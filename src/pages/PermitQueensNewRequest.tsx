@@ -1157,9 +1157,11 @@ export default function PermitQueensNewRequest() {
                 selectedMaterialCount={selectedMaterials.length}
                 hasOwnerInfo={!!formData.owner_name && !!formData.owner_email}
                 hasContractorInfo={true}
+                uploadedDocTypes={uploadedDocuments.map(d => d.type || '')}
                 hasUploadedNOC={uploadedDocuments.some(d =>
                   ['noc', 'signed_noc', 'notice_of_commencement'].includes((d.type || '').toLowerCase())
                 )}
+                onUploadClick={() => setCurrentStep(2)}
               />
 
               {/* Auto-Generated Packet Viewer */}
