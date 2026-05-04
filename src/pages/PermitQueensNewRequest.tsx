@@ -148,6 +148,8 @@ export default function PermitQueensNewRequest() {
     property_address: '',
     jurisdiction_county: '',
     jurisdiction_city: '',
+    zip_code: '',
+    state: 'FL',
     permit_type: '',
     owner_name: '',
     owner_email: '',
