@@ -445,9 +445,9 @@ export default function PermitQueensNewRequest() {
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers;
 
-  const handleJurisdictionDetected = async (info: JurisdictionInfo) => {
+  const handleJurisdictionDetected = async (info: JurisdictionInfo, fullAddress?: string) => {
     // Parse zip / city / state from selected address (Mapbox-style "..., City, State 33470, ...")
-    const addr = formData.property_address;
+    const addr = fullAddress || formData.property_address;
     const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
     const zip = zipMatch?.[1] ?? '';
 
