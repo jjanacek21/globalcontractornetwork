@@ -127,6 +127,10 @@ Deno.serve(async (req) => {
       const noaNumber = product.noa_number as string;
       if (!noaNumber) continue;
       const pdfUrl = (product.noa_pdf_url as string | null) || null;
+      const logRow = (action: string, reason: string) =>
+        console.log(
+          `[noa-bulk-downloader] row=${product.id} noa=${noaNumber} action=${action} reason=${reason}`,
+        );
 
       // === Tier 1: noa_pdf_url already internal ===
       if (pdfUrl && isInternalUrl(pdfUrl) && !forceRehost) {
@@ -145,6 +149,7 @@ Deno.serve(async (req) => {
             .eq("id", product.id);
         }
         alreadyCached++;
+        logRow("skipped", "already cached in product-approvals bucket");
         results.push({ productId: product.id, noaNumber, action: "skipped", fileUrl: pdfUrl });
         continue;
       }
@@ -168,9 +173,11 @@ Deno.serve(async (req) => {
             })
             .eq("id", product.id);
           rehosted++;
+          logRow("rehosted", `fetched external ${pdfUrl} -> stored internally`);
           results.push({ productId: product.id, noaNumber, action: "rehosted", fileUrl: dl.fileUrl });
         } else {
           failed++;
+          logRow("failed", `external fetch failed (${dl.error}) url=${pdfUrl}`);
           results.push({
             productId: product.id,
             noaNumber,
@@ -216,6 +223,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", product.id);
         downloadedFromGuess++;
+        logRow("guessed", `matched ${guessed.sourceUrl} after ${attempted.length} attempt(s)`);
         results.push({
           productId: product.id,
           noaNumber,
@@ -234,6 +242,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", product.id);
         failed++;
+        logRow("failed", `no URL matched after ${attempted.length} guesses; marked needs_manual_upload`);
         results.push({
           productId: product.id,
           noaNumber,
