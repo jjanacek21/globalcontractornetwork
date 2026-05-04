@@ -33,6 +33,14 @@ interface SmartDocumentUploaderProps {
   onDocumentsChange?: (documents: UploadedDocument[]) => void;
 }
 
+// Auto-process map: when these doc types are uploaded, run AI extraction + form fill
+const AUTO_PROCESS_TYPES: Record<string, { templateMatch: string[]; label: string }> = {
+  signed_permit_app: { templateMatch: ['permit application', 'reroof', 'building permit'], label: 'permit application' },
+  permit_application: { templateMatch: ['permit application', 'reroof', 'building permit'], label: 'permit application' },
+  signed_noc: { templateMatch: ['notice of commencement', 'noc'], label: 'NOC' },
+  notice_of_commencement: { templateMatch: ['notice of commencement', 'noc'], label: 'NOC' },
+};
+
 interface ViewingDocument {
   url: string;
   name: string;
