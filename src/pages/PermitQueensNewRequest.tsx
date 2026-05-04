@@ -64,6 +64,8 @@ interface FormData {
   property_address: string;
   jurisdiction_county: string;
   jurisdiction_city: string;
+  zip_code: string;
+  state: string;
   permit_type: TradeType | '';
   owner_name: string;
   owner_email: string;
@@ -71,6 +73,7 @@ interface FormData {
   valuation: number;
   complexity_tier: string;
   isHVHZ: boolean;
+  building_dept_id?: string;
 }
 
 /**
@@ -145,6 +148,8 @@ export default function PermitQueensNewRequest() {
     property_address: '',
     jurisdiction_county: '',
     jurisdiction_city: '',
+    zip_code: '',
+    state: 'FL',
     permit_type: '',
     owner_name: '',
     owner_email: '',
@@ -440,13 +445,45 @@ export default function PermitQueensNewRequest() {
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers;
 
-  const handleJurisdictionDetected = (info: JurisdictionInfo) => {
+  const handleJurisdictionDetected = async (info: JurisdictionInfo) => {
+    // Parse zip / city / state from selected address (Mapbox-style "..., City, State 33470, ...")
+    const addr = formData.property_address;
+    const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
+    const zip = zipMatch?.[1] ?? '';
+    const stateMatch = addr.match(/\b(FL|Florida)\b/i);
+    const state = stateMatch ? 'FL' : 'FL';
+
     setFormData(prev => ({
       ...prev,
       jurisdiction_county: info.county,
       jurisdiction_city: info.city,
       isHVHZ: info.isHVHZ,
+      zip_code: zip,
+      state,
     }));
+
+    // Look up building department by zip — prefer city-level over county-level
+    if (zip) {
+      try {
+        const { data: dept } = await supabase
+          .from('permit_building_departments')
+          .select('id, county, is_hvhz')
+          .contains('zip_codes', [zip])
+          .order('jurisdiction_type', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (dept) {
+          setFormData(prev => ({
+            ...prev,
+            building_dept_id: dept.id,
+            jurisdiction_county: dept.county || prev.jurisdiction_county,
+            isHVHZ: dept.is_hvhz ?? prev.isHVHZ,
+          }));
+        }
+      } catch (e) {
+        console.warn('Building dept lookup failed', e);
+      }
+    }
   };
 
   const handlePermitTypeChange = (type: TradeType) => {
@@ -535,6 +572,10 @@ export default function PermitQueensNewRequest() {
             permit_type: formData.permit_type,
             jurisdiction_county: formData.jurisdiction_county,
             city: formData.jurisdiction_city,
+            zip_code: formData.zip_code || null,
+            state: formData.state || 'FL',
+            is_hvhz: formData.isHVHZ,
+            building_dept_id: formData.building_dept_id || null,
             scope_description: JSON.stringify(tradeData),
             valuation: formData.valuation,
             complexity_tier: formData.complexity_tier,
@@ -1093,7 +1134,7 @@ export default function PermitQueensNewRequest() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Jurisdiction</p>
-                      <p className="font-medium">{formData.jurisdiction_county || 'Auto-detected'}</p>
+                      <p className="font-medium">{formData.jurisdiction_county ? `${formData.jurisdiction_county} County${formData.isHVHZ ? ' (HVHZ)' : ''}` : 'Detecting…'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Permit Type</p>
