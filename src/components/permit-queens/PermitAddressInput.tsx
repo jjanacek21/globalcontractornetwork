@@ -101,7 +101,7 @@ export function PermitAddressInput({
     // Detect jurisdiction from the selected address
     const info = detectFromAddress(fullAddress);
     setJurisdictionInfo(info);
-    onJurisdictionDetected(info);
+    onJurisdictionDetected(info, fullAddress);
   }, [onChange, detectFromAddress, onJurisdictionDetected]);
 
   return (
