@@ -14,6 +14,8 @@ interface PacketContentsPreviewProps {
   hasOwnerInfo: boolean;
   hasContractorInfo: boolean;
   hasUploadedNOC?: boolean;
+  uploadedDocTypes?: string[];
+  onUploadClick?: (docType: string) => void;
 }
 
 interface ExpectedDocument {
@@ -22,6 +24,8 @@ interface ExpectedDocument {
   status: 'ready' | 'pending' | 'missing';
   required: boolean;
   unmapped?: boolean; // template exists but has 0 field mappings → will print blank
+  reason?: string;
+  uploadType?: string;
 }
 
 export function PacketContentsPreview({
