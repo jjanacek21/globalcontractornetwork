@@ -64,6 +64,8 @@ interface FormData {
   property_address: string;
   jurisdiction_county: string;
   jurisdiction_city: string;
+  zip_code: string;
+  state: string;
   permit_type: TradeType | '';
   owner_name: string;
   owner_email: string;
@@ -71,6 +73,7 @@ interface FormData {
   valuation: number;
   complexity_tier: string;
   isHVHZ: boolean;
+  building_dept_id?: string;
 }
 
 /**
