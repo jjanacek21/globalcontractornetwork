@@ -54,11 +54,34 @@ const DOCUMENT_TYPES = [
   { id: 'insurance', label: 'Certificate of Insurance', description: 'Contractor liability insurance' },
   { id: 'license', label: 'Contractor License', description: 'State license copy' },
   { id: 'product_approval', label: 'Product Approval/NOA', description: 'Florida Product Approval or Miami-Dade NOA' },
-  { id: 'measurement', label: 'Roof Measurement', description: 'EagleView or satellite measurement report' },
+  { id: 'measurement', label: 'Roof Measurement Report', description: 'EagleView, RoofR, or hand-drawn diagram — AI will read sqft' },
+  { id: 'property_appraiser', label: 'Property Appraiser Screenshot', description: 'County property card — AI extracts year built, folio, legal' },
+  { id: 'hoa_approval', label: 'HOA Approval Letter', description: 'HOA architectural committee approval' },
   { id: 'photos', label: 'Site Photos', description: 'Before photos of existing conditions' },
-  { id: 'hoa_approval', label: 'HOA Approval', description: 'HOA architectural committee approval' },
   { id: 'other', label: 'Other Document', description: 'Additional supporting documentation' },
 ];
+
+// Doc types that get sent to the upload parser for AI field extraction
+const PARSE_TYPES = new Set([
+  'signed_permit_app', 'permit_application',
+  'signed_noc', 'notice_of_commencement',
+  'license', 'insurance',
+  'measurement', 'property_appraiser',
+  'contract',
+]);
+
+// Map UI doc-type ids to the parser's docType vocabulary
+const PARSER_TYPE_MAP: Record<string, string> = {
+  signed_permit_app: 'permit_application',
+  permit_application: 'permit_application',
+  signed_noc: 'noc',
+  notice_of_commencement: 'noc',
+  license: 'license',
+  insurance: 'insurance',
+  measurement: 'measurement',
+  property_appraiser: 'property_appraiser',
+  contract: 'contract',
+};
 
 export function SmartDocumentUploader({
   permitProjectId,
