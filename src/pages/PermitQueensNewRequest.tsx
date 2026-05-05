@@ -256,6 +256,9 @@ export default function PermitQueensNewRequest() {
               permit_type: formData.permit_type,
               jurisdiction_county: formData.jurisdiction_county,
               city: formData.jurisdiction_city,
+              zip_code: formData.zip_code || null,
+              is_hvhz: formData.isHVHZ ?? false,
+              building_dept_id: formData.building_dept_id || null,
               pipeline_status: 'draft',
               status: 'draft',
               user_id: user.id,
@@ -1191,17 +1194,11 @@ export default function PermitQueensNewRequest() {
 
               {/* Packet Contents Preview - Shows what will be in the packet */}
               <PacketContentsPreview
+                permitProjectId={tempPermitId}
                 jurisdictionCounty={formData.jurisdiction_county}
                 permitType={formData.permit_type || 'roofing'}
                 isHVHZ={formData.isHVHZ}
-                uploadedDocumentCount={uploadedDocuments.length}
-                selectedMaterialCount={selectedMaterials.length}
-                hasOwnerInfo={!!formData.owner_name && !!formData.owner_email}
-                hasContractorInfo={true}
                 uploadedDocTypes={uploadedDocuments.map(d => d.type || '')}
-                hasUploadedNOC={uploadedDocuments.some(d =>
-                  ['noc', 'signed_noc', 'notice_of_commencement'].includes((d.type || '').toLowerCase())
-                )}
                 onUploadClick={() => setCurrentStep(2)}
               />
 

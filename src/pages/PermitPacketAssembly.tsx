@@ -1,16 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, MapPin, User, Building2, Search } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, User, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PacketAssemblyChecklist } from '@/components/permit-queens/PacketAssemblyChecklist';
 import type { PacketDocument } from '@/components/permit-queens/PacketDocumentRow';
+import { useResolvedRequiredForms } from '@/hooks/useResolvedRequiredForms';
+import { runAutoFill } from '@/lib/permitAutoFill';
 import { toast } from 'sonner';
 
-// Document type name mapping (matches edge function)
 const DOC_TYPE_NAMES: Record<string, string> = {
   cover_sheet: 'Cover Sheet',
   property_appraiser_summary: 'Property Appraiser Summary',
@@ -35,216 +36,38 @@ const DOC_TYPE_NAMES: Record<string, string> = {
   roofing_material_fpa: 'Roofing Material Product Approval',
   fastening_patterns: 'Fastening Pattern Documentation',
   impact_test_report: 'Impact Test Report (UL 2218)',
-  form_100_shingle: 'Form 100 - Reroofing Summary (Shingle)',
-  form_300_metal: 'Form 300 - Reroofing Summary (Metal)',
-  underlayment_options: 'Underlayment Options Selection',
-  skylight_noa: 'Skylight NOA',
-  change_of_plan: 'Change of Plan Submittal',
 };
+
+function mapStatus(s: string): PacketDocument['status'] {
+  switch (s) {
+    case 'included': return 'ready';
+    case 'sourcing': return 'needs_sourcing';
+    case 'upload_required':
+    case 'missing_pdf': return 'missing';
+    default: return 'pending';
+  }
+}
 
 export default function PermitPacketAssembly() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<any>(null);
-  const [documents, setDocuments] = useState<PacketDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadProjectAndStructure = useCallback(async () => {
+  const { items, projectHash, loading: resolving, refresh } = useResolvedRequiredForms(projectId);
+  const [filling, setFilling] = useState(false);
+
+  const loadProject = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
-
     try {
-      // Fetch project
-      const { data: proj, error: projErr } = await supabase
+      const { data: proj, error } = await supabase
         .from('permit_projects')
         .select('*')
         .eq('id', projectId)
         .single();
-      if (projErr || !proj) throw new Error('Project not found');
+      if (error || !proj) throw new Error('Project not found');
       setProject(proj);
-
-      const county = proj.jurisdiction_county || '';
-      const city = proj.city || '';
-      const tradeType = proj.permit_type || proj.service_type || 'roofing';
-      const materialType = proj.new_roof_material || '';
-
-      // Look up packet structure: city-specific first, then county default
-      let structure: any = null;
-      
-      if (city) {
-        const { data } = await supabase
-          .from('permit_packet_structures')
-          .select('document_structure, conditional_documents')
-          .eq('county', county)
-          .eq('city', city)
-          .eq('trade_type', tradeType)
-          .eq('is_active', true)
-          .single();
-        structure = data;
-      }
-
-      if (!structure) {
-        // Try with material_type match
-        if (materialType) {
-          const { data } = await supabase
-            .from('permit_packet_structures')
-            .select('document_structure, conditional_documents')
-            .eq('county', county)
-            .is('city', null)
-            .eq('trade_type', tradeType)
-            .eq('material_type', materialType.toLowerCase().includes('metal') ? 'metal' : 'shingle')
-            .eq('is_active', true)
-            .single();
-          structure = data;
-        }
-        
-        // Fallback to generic county structure
-        if (!structure) {
-          const { data } = await supabase
-            .from('permit_packet_structures')
-            .select('document_structure, conditional_documents')
-            .eq('county', county)
-            .is('city', null)
-            .eq('trade_type', tradeType)
-            .is('material_type', null)
-            .eq('is_active', true)
-            .single();
-          structure = data;
-        }
-      }
-
-      // Fetch uploaded documents for this project
-      const { data: uploadedDocs } = await supabase
-        .from('permit_project_documents')
-        .select('document_type, file_path')
-        .eq('project_id', projectId);
-
-      // Fetch selected products from project
-      let productMatches = (proj.selected_products as any[]) || [];
-
-      // Fallback: auto-match from product_approvals table when no products selected
-      if (productMatches.length === 0) {
-        const { data: approvals } = await supabase
-          .from('product_approvals')
-          .select('id, manufacturer, product_name, noa_number, file_url, product_category')
-          .eq('is_active', true)
-          .not('file_url', 'is', null)
-          .limit(500);
-
-        productMatches = (approvals || []).map(a => ({
-          id: a.id,
-          manufacturer: a.manufacturer,
-          product_name: a.product_name,
-          noa_number: a.noa_number,
-          file_url: a.file_url,
-          category: a.product_category,
-        }));
-      }
-
-      // Fetch firecrawl-discovered templates for this county
-      const { data: firecrawlTemplates } = await supabase
-        .from('permit_form_templates')
-        .select('id, form_name, document_classification, file_path, source')
-        .eq('source', 'firecrawl')
-        .eq('county', county);
-
-      // Build document list from structure
-      const docs: PacketDocument[] = [];
-      const structureDocs = (structure?.document_structure || []) as any[];
-      const conditionalDocs = (structure?.conditional_documents || []) as any[];
-
-      for (const item of structureDocs) {
-        const docName = DOC_TYPE_NAMES[item.type] || item.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-        
-        let status: PacketDocument['status'] = 'pending';
-        let url: string | undefined;
-        let noaNumber: string | undefined;
-
-        if (item.source === 'generated') {
-          status = 'ready';
-        } else if (item.source === 'auto_fill') {
-          status = item.needs_signature ? 'needs_signature' : 'ready';
-        } else if (item.source === 'user_upload') {
-          const uploaded = uploadedDocs?.find(d => d.document_type === item.type);
-          if (uploaded) {
-            status = 'ready';
-            url = uploaded.file_path;
-          } else {
-            status = 'missing';
-          }
-        } else if (item.source === 'auto_source') {
-          const matchingProduct = productMatches.find((p: any) => {
-            if (item.product_category) {
-              return (p.category || p.product_category || '').toLowerCase().includes(item.product_category);
-            }
-            return true;
-          });
-
-          if (matchingProduct?.file_url) {
-            status = 'ready';
-            url = matchingProduct.file_url;
-            noaNumber = matchingProduct.noa_number;
-          } else if (matchingProduct?.noa_number) {
-            status = 'needs_sourcing';
-            noaNumber = matchingProduct.noa_number;
-          } else {
-            status = 'needs_sourcing';
-          }
-        } else if (item.source === 'city_specific') {
-          status = 'pending';
-        }
-
-        docs.push({
-          order: item.order,
-          type: item.type,
-          name: docName,
-          source: item.source,
-          status,
-          pages: item.pages,
-          url,
-          noaNumber,
-          condition: item.condition,
-          requiresNotary: item.needs_notary,
-          requiresRecording: item.requires_recording,
-          productCategory: item.product_category,
-        });
-      }
-
-      // Add conditional documents
-      for (const item of conditionalDocs) {
-        const docName = DOC_TYPE_NAMES[item.type] || item.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-        const conditionMet = evaluateCondition(item.condition, proj);
-        
-        const uploaded = uploadedDocs?.find(d => d.document_type === item.type);
-
-        docs.push({
-          order: docs.length + 1,
-          type: item.type,
-          name: docName,
-          source: 'conditional',
-          status: uploaded ? 'ready' : conditionMet ? 'missing' : 'not_required',
-          pages: item.pages || 1,
-          url: uploaded?.file_path,
-          condition: item.condition,
-          requiresNotary: item.needs_notary,
-        });
-      }
-
-      // Add firecrawl auto-discovered documents
-      for (const fcTemplate of (firecrawlTemplates || [])) {
-        docs.push({
-          order: docs.length + 1,
-          type: fcTemplate.document_classification || 'permit_application',
-          name: `${fcTemplate.form_name}`,
-          source: 'auto_fill',
-          status: fcTemplate.file_path ? 'ready' : 'pending',
-          pages: 1,
-          url: fcTemplate.file_path,
-          isFirecrawlDiscovered: true,
-        });
-      }
-
-      setDocuments(docs);
     } catch (err: any) {
       console.error('Load error:', err);
       toast.error(err.message || 'Failed to load project');
@@ -253,11 +76,45 @@ export default function PermitPacketAssembly() {
     }
   }, [projectId]);
 
-  useEffect(() => {
-    loadProjectAndStructure();
-  }, [loadProjectAndStructure]);
+  useEffect(() => { loadProject(); }, [loadProject]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!projectId || !projectHash || resolving || filling) return;
+    const needs = items.some(
+      (i) => i.template_id && i.field_mapping && i.source === 'auto_fill' && i.cached_hash !== projectHash,
+    );
+    if (!needs) return;
+    let cancelled = false;
+    (async () => {
+      setFilling(true);
+      await runAutoFill(projectId, items, projectHash);
+      if (!cancelled) {
+        setFilling(false);
+        await refresh();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, projectHash]);
+
+  const documents: PacketDocument[] = useMemo(() => items
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((item) => ({
+      order: item.order,
+      type: item.doc_type,
+      name: item.template_name || DOC_TYPE_NAMES[item.doc_type] || item.doc_type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      source: item.source as any,
+      status: mapStatus(item.status),
+      pages: item.meta?.pages ?? 1,
+      url: item.file_path ?? undefined,
+      condition: item.meta?.condition,
+      requiresNotary: item.needs_notary,
+      requiresRecording: item.meta?.requires_recording,
+      productCategory: item.meta?.product_category,
+    })), [items]);
+
+  if (loading || (resolving && !project)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -276,7 +133,6 @@ export default function PermitPacketAssembly() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
@@ -285,17 +141,16 @@ export default function PermitPacketAssembly() {
             <h1 className="text-xl font-bold">Permit Packet Assembly</h1>
             <p className="text-sm text-muted-foreground">
               Build and assemble the complete permit submission packet
+              {filling && <span className="ml-2 text-primary">• AI-filling forms…</span>}
             </p>
           </div>
         </div>
 
-        {/* Project Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-primary" />
-                Property
+                <MapPin className="h-4 w-4 text-primary" />Property
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm">
@@ -311,8 +166,7 @@ export default function PermitPacketAssembly() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-primary" />
-                Permit Details
+                <Building2 className="h-4 w-4 text-primary" />Permit Details
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm">
@@ -327,8 +181,7 @@ export default function PermitPacketAssembly() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                <User className="h-4 w-4 text-primary" />
-                Owner
+                <User className="h-4 w-4 text-primary" />Owner
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm">
@@ -341,38 +194,18 @@ export default function PermitPacketAssembly() {
 
         <Separator />
 
-        {/* Assembly Checklist */}
         <PacketAssemblyChecklist
           projectId={projectId!}
           documents={documents}
           onDocumentPreview={(doc) => {
-            if (doc.url) {
-              window.open(doc.url, '_blank');
-            } else {
-              toast.info('Preview not available yet — generate the form first.');
-            }
+            if (doc.url) window.open(doc.url, '_blank');
+            else toast.info('Preview not available yet — generate the form first.');
           }}
-          onDocumentUpload={(doc) => {
-            toast.info(`Upload ${doc.name} from the project wizard upload step.`);
-          }}
-          onSelectProduct={(doc) => {
-            toast.info(`Select a ${doc.productCategory || 'product'} from the Product Approvals library for ${doc.name}.`);
-          }}
-          onRefresh={loadProjectAndStructure}
+          onDocumentUpload={(doc) => toast.info(`Upload ${doc.name} from the project wizard upload step.`)}
+          onSelectProduct={(doc) => toast.info(`Select a ${doc.productCategory || 'product'} from the Product Approvals library for ${doc.name}.`)}
+          onRefresh={refresh}
         />
       </div>
     </div>
   );
-}
-
-function evaluateCondition(condition: string | undefined, project: any): boolean {
-  if (!condition) return true;
-  switch (condition) {
-    case 'if_hoa': return project.hoa_approval === true;
-    case 'if_skylights': return (project.obstacles || '').toLowerCase().includes('skylight');
-    case 'if_pre_1988': return (project.year_built || 9999) < 1988;
-    case 'if_pre_1994': return (project.year_built || 9999) < 1994;
-    case 'if_change_of_plan': return false; // Manual toggle
-    default: return true;
-  }
 }

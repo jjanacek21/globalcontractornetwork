@@ -1,217 +1,126 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2, Search, Upload } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { FileText, CheckCircle2, AlertTriangle, Shield, Package, Loader2, Search, Upload, Sparkles, RotateCw } from 'lucide-react';
+import { useResolvedRequiredForms, type ResolvedItem } from '@/hooks/useResolvedRequiredForms';
+import { runAutoFill, type AutoFillProgress } from '@/lib/permitAutoFill';
 import { cn } from '@/lib/utils';
 
 interface PacketContentsPreviewProps {
-  jurisdictionCounty: string;
-  permitType: string;
-  isHVHZ: boolean;
-  uploadedDocumentCount: number;
-  selectedMaterialCount: number;
-  hasOwnerInfo: boolean;
-  hasContractorInfo: boolean;
-  hasUploadedNOC?: boolean;
+  /** Preferred: when provided, the resolver edge function drives the contents list. */
+  permitProjectId?: string | null;
+  /** Legacy fallback (kept so other callers still compile while migrating). */
+  jurisdictionCounty?: string;
+  permitType?: string;
+  isHVHZ?: boolean;
   uploadedDocTypes?: string[];
   onUploadClick?: (docType: string) => void;
+  /** When true (default), auto-runs the AI form filler on mount for items that need it. */
+  autoFill?: boolean;
 }
 
-interface ExpectedDocument {
-  name: string;
-  source: 'template' | 'upload' | 'generated' | 'product' | 'firecrawl';
-  status: 'ready' | 'pending' | 'missing';
-  required: boolean;
-  unmapped?: boolean; // template exists but has 0 field mappings → will print blank
-  reason?: string;
-  uploadType?: string;
-}
+const STATUS_BADGE: Record<ResolvedItem['status'], { label: string; cls: string; icon: any }> = {
+  included: { label: 'Included', cls: 'bg-green-500/10 text-green-700 border-green-200', icon: CheckCircle2 },
+  pending: { label: 'Pending', cls: 'bg-amber-500/10 text-amber-700 border-amber-200', icon: FileText },
+  upload_required: { label: 'Upload required', cls: 'bg-destructive/10 text-destructive border-destructive/30', icon: AlertTriangle },
+  sourcing: { label: 'Auto-sourcing', cls: 'bg-purple-500/10 text-purple-700 border-purple-200', icon: Search },
+  missing_pdf: { label: 'Missing PDF', cls: 'bg-destructive/10 text-destructive border-destructive/30', icon: AlertTriangle },
+};
 
 export function PacketContentsPreview({
-  jurisdictionCounty,
-  permitType,
+  permitProjectId,
   isHVHZ,
-  uploadedDocumentCount,
-  selectedMaterialCount,
-  hasOwnerInfo,
-  hasContractorInfo,
-  hasUploadedNOC = false,
   uploadedDocTypes = [],
   onUploadClick,
+  autoFill = true,
 }: PacketContentsPreviewProps) {
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [firecrawlTemplates, setFirecrawlTemplates] = useState<any[]>([]);
-  const [mappingCounts, setMappingCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+  const { items, projectHash, loading, error, refresh } = useResolvedRequiredForms(permitProjectId);
+  const [progress, setProgress] = useState<AutoFillProgress | null>(null);
+  const [currentName, setCurrentName] = useState<string | undefined>();
+  const [failedKeys, setFailedKeys] = useState<Set<string>>(new Set());
+  const [filling, setFilling] = useState(false);
 
+  // Kick off AI auto-fill when items resolve (one shot per project hash)
   useEffect(() => {
-    const fetchTemplates = async () => {
-      if (!jurisdictionCounty) {
-        setLoading(false);
-        return;
-      }
+    if (!autoFill || !permitProjectId || !projectHash || filling || loading) return;
+    const needsWork = items.some(
+      (i) => i.template_id && i.field_mapping && i.source === 'auto_fill' && i.cached_hash !== projectHash,
+    );
+    if (!needsWork) return;
 
-      try {
-        // Fetch standard templates
-        let query = supabase
-          .from('permit_form_templates')
-          .select('id, form_name, form_type, category, trade_types, hvhz_only, requires_signature, requires_notary, source')
-          .or(`county.eq.${jurisdictionCounty},county.is.null`)
-          .or('source.is.null,source.eq.manual,source.eq.imported')
-          .order('category');
-
-        if (!isHVHZ) {
-          query = query.eq('hvhz_only', false);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        const filtered = (data || []).filter(t => {
-          if (t.trade_types && !t.trade_types.includes('*') && !t.trade_types.includes(permitType)) return false;
-          return true;
-        });
-        setTemplates(filtered);
-
-        // Fetch firecrawl-discovered templates for this county
-        const { data: fcData, error: fcError } = await supabase
-          .from('permit_form_templates')
-          .select('id, form_name, document_classification, trade_types, hvhz_only, source')
-          .eq('source', 'firecrawl')
-          .eq('county', jurisdictionCounty);
-
-        if (!fcError && fcData) {
-          const fcFiltered = fcData.filter(t => {
-            if (!isHVHZ && t.hvhz_only) return false;
-            if (t.trade_types && !t.trade_types.includes('*') && !t.trade_types.includes(permitType)) return false;
-            return true;
-          });
-          setFirecrawlTemplates(fcFiltered);
-        }
-
-        // Count field mappings per template so we can flag "Will print blank"
-        const allIds = [...filtered.map(t => t.id), ...(fcData || []).map(t => t.id)];
-        if (allIds.length > 0) {
-          const { data: mappings } = await supabase
-            .from('permit_field_mappings')
-            .select('template_id')
-            .in('template_id', allIds);
-          const counts: Record<string, number> = {};
-          (mappings || []).forEach((m: any) => {
-            counts[m.template_id] = (counts[m.template_id] || 0) + 1;
-          });
-          setMappingCounts(counts);
-        }
-      } catch (err) {
-        console.error('Failed to fetch templates:', err);
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    (async () => {
+      setFilling(true);
+      const results = await runAutoFill(permitProjectId, items, projectHash, (p, name) => {
+        if (cancelled) return;
+        setProgress(p);
+        setCurrentName(name);
+      });
+      if (cancelled) return;
+      const failed = new Set(results.filter((r) => !r.ok).map((r) => r.item.key));
+      setFailedKeys(failed);
+      setFilling(false);
+      setCurrentName(undefined);
+      await refresh();
+    })();
+    return () => {
+      cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permitProjectId, projectHash, autoFill]);
 
-    fetchTemplates();
-  }, [jurisdictionCounty, permitType, isHVHZ]);
-
-  const expectedDocs: ExpectedDocument[] = [];
-
-  // 1. Cover Sheet
-  expectedDocs.push({ name: 'Cover Sheet & Document Index', source: 'generated', status: 'ready', required: true });
-
-  // 2. Templates from DB
-  templates.forEach(t => {
-    const mapped = mappingCounts[t.id] || 0;
-    expectedDocs.push({
-      name: t.form_name,
-      source: 'template',
-      status: 'ready',
-      required: true,
-      unmapped: mapped === 0,
+  const retryFailed = async () => {
+    if (!permitProjectId || !projectHash) return;
+    const targets = items.filter((i) => failedKeys.has(i.key));
+    setFilling(true);
+    const results = await runAutoFill(permitProjectId, targets, projectHash, (p, name) => {
+      setProgress(p);
+      setCurrentName(name);
     });
+    const stillFailed = new Set(results.filter((r) => !r.ok).map((r) => r.item.key));
+    setFailedKeys(stillFailed);
+    setFilling(false);
+    setCurrentName(undefined);
+    await refresh();
+  };
+
+  // Mark "upload_required" status for user_upload items the user hasn't uploaded yet
+  const enriched = items.map((item) => {
+    if (item.source === 'user_upload') {
+      const t = (item.doc_type || '').toLowerCase();
+      const hasUpload = uploadedDocTypes.some((u) => (u || '').toLowerCase() === t);
+      return { ...item, status: hasUpload ? ('included' as const) : ('upload_required' as const) };
+    }
+    return item;
   });
 
-  // 3. Firecrawl auto-discovered templates
-  firecrawlTemplates.forEach(t => {
-    const mapped = mappingCounts[t.id] || 0;
-    expectedDocs.push({
-      name: t.form_name,
-      source: 'firecrawl',
-      status: 'ready',
-      required: false,
-      unmapped: mapped === 0,
-    });
-  });
+  const readyCount = enriched.filter((d) => d.status === 'included').length;
+  const missingCount = enriched.filter((d) => d.status === 'upload_required' || d.status === 'missing_pdf').length;
 
-  // Helper to test if user already uploaded a doc of given type
-  const hasUpload = (...types: string[]) =>
-    uploadedDocTypes.some(t => types.includes((t || '').toLowerCase()));
-
-  // 4. NOC
-  if (['roofing', 'general_construction', 'windows_doors'].includes(permitType)) {
-    expectedDocs.push({
-      name: hasUploadedNOC ? 'Notice of Commencement (Uploaded)' : 'Notice of Commencement (NOC)',
-      source: hasUploadedNOC ? 'upload' : 'generated',
-      status: hasUploadedNOC ? 'ready' : (hasOwnerInfo ? 'ready' : 'pending'),
-      required: true,
-      reason: !hasUploadedNOC && !hasOwnerInfo ? 'Owner info needed to auto-generate' : undefined,
-      uploadType: 'notice_of_commencement',
-    });
-  }
-
-  // 5. Roofing Compliance
-  if (permitType === 'roofing') {
-    expectedDocs.push({ name: 'Roofing Compliance Statement', source: 'generated', status: 'ready', required: true });
-  }
-
-  // 6. Product NOAs
-  if (selectedMaterialCount > 0) {
-    expectedDocs.push({ name: `Product NOA Documents (${selectedMaterialCount})`, source: 'product', status: 'ready', required: isHVHZ });
-  } else if (isHVHZ) {
-    expectedDocs.push({ name: 'Product NOA Documents', source: 'product', status: 'missing', required: true });
-  }
-
-  // 7. Mandatory City Packet Uploads (restored)
-  const mandatoryUploads: Array<{ name: string; type: string }> = [
-    { name: 'Permit Application (signed)', type: 'permit_application' },
-    { name: 'Owner Authorization Letter', type: 'owner_authorization' },
-    { name: 'Signed Contract', type: 'signed_contract' },
-    { name: 'Certificate of Insurance', type: 'certificate_of_insurance' },
-    { name: 'Contractor License', type: 'contractor_license' },
-    { name: 'Roof Layout / Diagram', type: 'roof_diagram' },
-    { name: 'Property Photos', type: 'property_photos' },
-  ];
-  mandatoryUploads.forEach(u => {
-    const uploaded = hasUpload(u.type);
-    expectedDocs.push({
-      name: uploaded ? `${u.name} (Uploaded)` : u.name,
-      source: 'upload',
-      status: uploaded ? 'ready' : 'missing',
-      required: true,
-      uploadType: u.type,
-    });
-  });
-
-  // 8. Additional uploaded documents (beyond mandatory)
-  const mandatoryTypeSet = new Set(mandatoryUploads.map(u => u.type));
-  const extraUploads = uploadedDocTypes.filter(t => {
-    const tl = (t || '').toLowerCase();
-    return !mandatoryTypeSet.has(tl) && !['noc','signed_noc','notice_of_commencement'].includes(tl);
-  }).length;
-  if (extraUploads > 0) {
-    expectedDocs.push({ name: `Additional Uploaded Documents (${extraUploads})`, source: 'upload', status: 'ready', required: false });
-  }
-
-  const readyCount = expectedDocs.filter(d => d.status === 'ready').length;
-  const missingCount = expectedDocs.filter(d => d.status === 'missing' && d.required).length;
-  const unmappedCount = expectedDocs.filter(d => d.unmapped).length;
-
-  if (loading) {
+  if (loading && items.length === 0) {
     return (
       <Card>
         <CardContent className="py-6 text-center">
           <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-sm text-muted-foreground mt-2">Loading packet contents...</p>
+          <p className="text-sm text-muted-foreground mt-2">Resolving required forms...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-start gap-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4 mt-0.5" />
+            <div>
+              <p className="font-medium">Couldn't load packet contents</p>
+              <p className="text-xs mt-1">{error}</p>
+              <Button size="sm" variant="outline" onClick={refresh} className="mt-2">Retry</Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -222,78 +131,71 @@ export function PacketContentsPreview({
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Packet Contents Preview
+          Packet Contents
         </CardTitle>
         <CardDescription>
-          {readyCount} of {expectedDocs.length} documents ready
-          {missingCount > 0 && ` • ${missingCount} required items missing`}
-          {unmappedCount > 0 && ` • ${unmappedCount} form${unmappedCount === 1 ? '' : 's'} will print blank (no field mapping)`}
-          {firecrawlTemplates.length > 0 && ` • ${firecrawlTemplates.length} auto-discovered`}
+          {readyCount} of {enriched.length} documents ready
+          {missingCount > 0 && ` • ${missingCount} need attention`}
         </CardDescription>
+        {filling && progress && (
+          <div className="flex items-center gap-2 text-xs text-primary mt-2">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+            AI-filling form {progress.completed + 1} of {progress.total}
+            {currentName ? ` — ${currentName}` : ''}
+            {progress.failed > 0 && <span className="text-destructive ml-1">({progress.failed} failed)</span>}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {expectedDocs.map((doc, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "flex items-center justify-between p-2.5 rounded-lg border text-sm",
-                doc.status === 'ready' && "bg-muted/30 border-border",
-                doc.status === 'pending' && "bg-amber-500/5 border-amber-200",
-                doc.status === 'missing' && doc.required && "bg-destructive/5 border-destructive/20",
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                {doc.status === 'ready' ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                ) : doc.status === 'missing' && doc.required ? (
-                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                ) : (
-                  <FileText className="h-4 w-4 text-amber-500 shrink-0" />
+          {enriched.sort((a, b) => a.order - b.order).map((doc) => {
+            const cfg = STATUS_BADGE[doc.status];
+            const Icon = cfg.icon;
+            const failed = failedKeys.has(doc.key);
+            return (
+              <div
+                key={doc.key}
+                className={cn(
+                  'flex items-center justify-between p-2.5 rounded-lg border text-sm',
+                  doc.status === 'included' && 'bg-muted/30 border-border',
+                  doc.status === 'pending' && 'bg-amber-500/5 border-amber-200',
+                  (doc.status === 'upload_required' || doc.status === 'missing_pdf') && 'bg-destructive/5 border-destructive/20',
                 )}
-                <div className="min-w-0">
-                  <div className="truncate">{doc.name}</div>
-                  {doc.reason && (
-                    <div className="text-[11px] text-amber-700 mt-0.5">{doc.reason}</div>
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className={cn('h-4 w-4 shrink-0', doc.status === 'included' ? 'text-green-600' : doc.status === 'upload_required' ? 'text-destructive' : 'text-amber-500')} />
+                  <div className="min-w-0">
+                    <div className="truncate">{doc.template_name ?? doc.doc_type}</div>
+                    {failed && (
+                      <div className="text-[11px] text-destructive mt-0.5">AI fill failed</div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', cfg.cls)}>{cfg.label}</Badge>
+                  {doc.source === 'auto_fill' && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Smart Form</Badge>
+                  )}
+                  {doc.source === 'auto_source' && (
+                    <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-700 border-purple-200">Auto-sourced</Badge>
+                  )}
+                  {doc.source === 'generated' && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Auto-generated</Badge>
+                  )}
+                  {failed && (
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={retryFailed}>
+                      <RotateCw className="h-3 w-3 mr-1" /> Retry
+                    </Button>
+                  )}
+                  {doc.status === 'upload_required' && onUploadClick && (
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => onUploadClick(doc.doc_type)}>
+                      <Upload className="h-3 w-3 mr-1" /> Upload
+                    </Button>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                {doc.required && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Required</Badge>
-                )}
-                {doc.source === 'generated' && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Auto-generated</Badge>
-                )}
-                {doc.source === 'template' && (
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Smart Form</Badge>
-                )}
-                {doc.source === 'firecrawl' && (
-                  <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 border-purple-200">
-                    <Search className="h-2.5 w-2.5 mr-0.5" />
-                    Auto-Discovered
-                  </Badge>
-                )}
-                {doc.unmapped && (
-                  <Badge className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-700 border-amber-300">
-                    <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                    Will print blank
-                  </Badge>
-                )}
-                {doc.uploadType && doc.status !== 'ready' && onUploadClick && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 px-2 text-[10px]"
-                    onClick={() => onUploadClick(doc.uploadType!)}
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    Upload
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {isHVHZ && (

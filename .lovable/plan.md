@@ -1,92 +1,99 @@
-# Member Dashboard Restructure
+## Approved + 3 additions
 
-## 1. Remove RoofScope AI Estimator (built in separate app)
+---
 
-**Frontend removals:**
-- Remove `RoofScope AI Estimator` service tile from `MemberDashboard.tsx`
-- Delete `src/components/roofscope/RoofScopeLayout.tsx` and any other `src/components/roofscope/*` files
-- Delete pages: `src/pages/crm/RoofScopeAnalyzer.tsx`, `RoofScopeCustomers.tsx`, `RoofScopeDashboard.tsx`, `RoofScopeEstimates.tsx`
-- Remove `/roofscope/*` routes from `src/App.tsx`
-- Remove `useRoofScope.ts` hook
+## Addition 1 — Rule table reconciliation (the 14 seeded rules are NOT stranded)
 
-**Backend removals:**
-- Delete edge function `roofscope-analyze` (call `supabase--delete_edge_functions`)
-- Drop RoofScope tables (prefix `rs_*`) via migration: I will first run a `supabase--read_query` to enumerate exact tables, then issue a `DROP TABLE ... CASCADE` migration
+`permit_form_requirements` and `permit_packet_structures` are **two different tables** that both exist:
 
-## 2. Remove the in-app Roofing CRM (combined into separate app)
+| | `permit_form_requirements` (your 14 rules) | `permit_packet_structures` (10 rows) |
+|---|---|---|
+| Key | `building_dept_id + permit_type` | `county/city/trade_type/material_type/is_hvhz` |
+| Output | `required_template_ids uuid[]` + `conditions jsonb` (e.g. `{year_built_before:1994, work_type:'full_reroof'}`) | `document_structure jsonb` (ordered list with `source: generated|auto_fill|user_upload|auto_source`) + `conditional_documents` |
+| Granularity | Per-department, per-condition, per-priority | Per city/material, full doc list & order |
 
-**Frontend removals:**
-- Remove `Roofing CRM` service tile
-- Delete `src/pages/crm/*` (all CRM pages — Dashboard, Contacts, Pipeline, Jobs, Estimates, Calendar, Insurance*, FollowUp*, StormCanvas, CanvassMap, ScopeIntelligence, SmartDocs, CrewPortal, EstimateBuilder, Presentations, Placeholder, Help, HomeownerPortal, Settings, PermitExpediter)
-- Delete CRM-only components: `src/components/crm/*`, `src/components/layout/AppSidebar.tsx`, `AppHeader.tsx`, `AppLayout.tsx`
-- Remove all `/crm/*` and `/member/crm` routes from `App.tsx`
-- Remove CRM-specific hooks (useCRMJobs, useEstimateBuilder*, useEstimates, useContacts, useLeads, useProperties, useActivities, useNotes, useInspections, usePresentations, useContactDocuments, useContactCommunications, useGPSTracking, useDoorToDoorSession, usePropertyDispositions)
+**Decision: use BOTH. They serve different purposes.**
 
-**Backend:** Leave CRM tables in place for now (they may still hold data the user wants exported). Plan will note this and ask before dropping. *Note: I will NOT auto-drop CRM tables — only RoofScope tables, since user explicitly said RoofScope's data should be deleted but only said the CRM module should be removed.*
+- `permit_form_requirements` → answers **"which template IDs are required?"** (your dept + condition rules; includes the Palm Beach Expedited Reroof Form mapping)
+- `permit_packet_structures` → answers **"in what order, with what source-strategy, plus the non-template items (NOC, cover sheet, NOAs, uploads)?"**
 
-## 3. Regroup remaining services into 3 top-level tabs
+**Resolver merge order in the new edge function:**
+1. Load `permit_form_requirements` rows for `(building_dept_id, permit_type)` ordered by `priority DESC`. Evaluate each row's `conditions` JSON against the project (year_built, work_type, valuation, hvhz, etc.). Union all matching `required_template_ids` → this is the **authoritative template list**, your 14 rules included.
+2. Load the matching `permit_packet_structures` row (existing fallback hierarchy: city+material → city → county+material → county). Use it for ordering, the `source` strategy per item, and the non-template items (NOC, cover sheet, uploads, NOAs).
+3. Merge: items that appear in both keep their structure metadata; templates only in `permit_form_requirements` are appended as `source: 'auto_fill'` with default ordering after structure items.
+4. Append firecrawl-discovered templates and `selected_products` NOAs as before.
 
-New dashboard layout — only 3 nav tabs at top:
+No data migration needed — both tables remain authoritative for their own concern. The 14 seeded rules become the **primary driver** of which forms are required.
+
+---
+
+## Addition 2 — Fix jurisdiction resolution upstream FIRST (blocking)
+
+Before the resolver can work, fix the address-pick handler in Step 1 of `PermitQueensNewRequest.tsx`:
 
 ```text
-[ My Profile ]   [ Contractor Services ]   [ Contractor Apps ]
+on address selected from autocomplete:
+  console.log('[jurisdiction] address picked:', addr)
+  parse zip from addr.postal_code (fall back to last token of address)
+  console.log('[jurisdiction] zip:', zip)
+  query: supabase
+    .from('permit_building_departments')
+    .select('id, jurisdiction_name, county, is_hvhz')
+    .contains('zip_codes', [zip])
+    .limit(1).maybeSingle()
+  console.log('[jurisdiction] dept lookup result:', dept)
+  if (dept):
+    setFormData(... building_dept_id, jurisdiction_county=dept.county, is_hvhz=dept.is_hvhz)
+    if tempPermitId:
+      AWAIT supabase.from('permit_projects').update({
+        building_dept_id: dept.id,
+        jurisdiction_county: dept.county,
+        is_hvhz: dept.is_hvhz,
+        zip_code: zip,
+      }).eq('id', tempPermitId)
+      console.log('[jurisdiction] persisted to permit_projects', tempPermitId)
+  else:
+    console.warn('[jurisdiction] no dept matched zip', zip)
+    show toast: "Couldn't auto-detect jurisdiction — please select manually"
 ```
 
-**My Profile tab** — combines personal + company management:
-- Sub-tabs inside profile view: `Overview` · `Personal Info & Bio` · `My Projects` · `Communications & Service Requests` · `Points & Rewards` · `Company` (only if user is a company owner/admin → manage team, listing, links/references, company requests)
-- Move `/homeowner-profile` content + `/homeowner-dashboard` projects into tabbed `MyProfile.tsx` page
-- "My Projects" becomes a tab inside My Profile (not a separate dashboard tile)
+The "Next" button on Step 1 must `await` this write before transitioning to Step 2. Add a `jurisdictionResolving` state flag — disable Next while pending. Replace the "Detecting…" UI in the Request Summary card with the resolved jurisdiction name once written.
 
-**Contractor Services tab** (services GCN provides to contractors):
-- Estimating / Supplementing
-- Digital Marketing, Management & Design
-- Permit Expediting
-- Training Academy
-- Directory (contractor lookup)
-- (Also keep: Instant Quote — but flagged as **property-owner only**, shown only when `!isContractor`)
+---
 
-**Contractor Apps tab** (tools for running the business):
-- Contractor Social Hub
-- Job Marketplace
-- Door to Door World
-- PropertyIQ
-- Future placeholder card: "GCN Business Suite (estimating, invoicing, contracts, prospecting, gamification, social, marketplace) — Coming Soon" linking to the new Lovable project once connected
+## Addition 3 — Restore previous-permit autofill banner
 
-## 4. Maintenance Membership — Coming Soon (homeowner-only)
+On Step 1 address change (debounced 400ms), query:
 
-- Replace current `/prep-property` link tile with a `Maintenance Membership` card visible **only when `!isContractor`**
-- Card shows full program details (preventative maintenance plans, property care schedule, perks) but with a `Coming Soon` overlay badge and disabled CTA
-- New page `src/pages/MaintenanceMembership.tsx` with the marketing details + waitlist signup (writes to a new `maintenance_membership_waitlist` table)
+```text
+supabase.from('permit_projects')
+  .select('id, owner_name, owner_email, owner_phone, valuation, permit_type, created_at')
+  .eq('property_address_normalized', normalize(addr))   // existing normalized column
+  .neq('id', tempPermitId)
+  .order('created_at', { ascending: false })
+  .limit(1).maybeSingle()
+```
 
-## 5. Profile moved to top of screen
+If a row is returned, render an amber banner above the form:
 
-- In header, replace the small avatar+name with a prominent **profile button on the top-left** of the dashboard header (next to logo) that opens the My Profile tab
-- Mobile: profile button stays pinned top-right with avatar
+```text
+[ ! ] Previous permit found at this address
+      Owner: {owner_name} • Last valuation: ${valuation} • {timeAgo(created_at)}
+      [ Use This Data ]   [ Dismiss ]
+```
 
-## Technical notes
+`Use This Data` copies owner/valuation/permit_type into the current form and updates the draft permit row. Dismissed banners stay dismissed for the session.
 
-- New dashboard structure uses shadcn `Tabs` at the top of `MemberDashboard.tsx` driven by URL query param `?tab=profile|services|apps` so deep links work
-- `contractorOnlyServices` array updated to remove RoofScope/Roofing CRM and reflect new groupings
-- Routes file (`App.tsx`) cleaned of all `/crm/*`, `/roofscope/*` entries; lazy imports removed
-- Add `homeownerOnlyServices = ["Instant Quote", "Maintenance Membership", "My Projects"]` filter
-- Migration file: `DROP TABLE IF EXISTS public.rs_<each> CASCADE;` after enumerating
-- `supabase--delete_edge_functions(["roofscope-analyze"])`
+---
 
-## Order of execution
+## Updated execution order (with verification checkpoints)
 
-1. Enumerate `rs_*` tables via read_query
-2. Migration: drop RoofScope tables
-3. Delete RoofScope edge function + frontend files
-4. Delete CRM frontend (pages, components, hooks, routes)
-5. Restructure `MemberDashboard.tsx` with 3 tabs + new profile header
-6. Build `MyProfile.tsx` with internal sub-tabs (merging homeowner profile + projects)
-7. Create `MaintenanceMembership.tsx` coming-soon page + waitlist table migration
-8. Wire homeowner-only filter for Instant Quote / Maintenance Membership
+1. **Migration** — add `permit_packets.source_hash text` + index. *Verify:* `SELECT column_name FROM information_schema.columns WHERE table_name='permit_packets' AND column_name='source_hash'` returns 1 row.
+2. **Fix jurisdiction handler in Step 1** (Addition 2) + restore previous-permit banner (Addition 3). *Verify:* console logs show dept lookup → `permit_projects` row has `jurisdiction_county` + `building_dept_id` populated. Banner shows for repeat address.
+3. **Edge function `resolve-required-forms`** with the merged-rules logic (Addition 1). *Verify:* POST with the Fleming permit id returns `items[]` containing the Palm Beach Expedited Reroof Form template.
+4. **`useResolvedRequiredForms` hook + `permitAutoFill.ts` orchestrator.**
+5. **Wire `PacketContentsPreview` (Step 3) AND `PermitPacketAssembly` page** to the hook; remove their old per-component queries. *Verify:* walk wizard end-to-end — both panels render identical state for the same project.
 
-## Open question before I start
+All other items from the original plan (response schema, hash caching, parallel fills with retry, signed-URL eye icon, NOA sourcing fallback, native `Deno.serve` + CORS preflight) stand unchanged.
 
-The CRM has live data (contacts, jobs, estimates, measurements, etc.). Should I:
-- (a) Just remove the UI and leave the data in the database for export later, or
-- (b) Drop the CRM tables too?
-
-I'll default to **(a)** unless you say otherwise.
+Proceeding now with the migration.
