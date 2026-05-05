@@ -1,48 +1,92 @@
-## Problem
+# Member Dashboard Restructure
 
-`firecrawl-noa-scraper` is failing with `ActionError: Error in action 2: Element not found`. Root cause: it submits a sequence of click/write/click "Actions" against `https://www.miamidade.gov/building/pc-searchnoa.asp`, which **no longer exists** (the URL 404s now — confirmed by direct fetch). All click selectors (`input[name="fldNOA"]`, `input[name="Applicant"]`, `input[name="AdvancedSearch"]`) target a form that is gone. Miami-Dade moved NOA lookup to a JavaScript-heavy SPA that is unreliable to drive via headless click steps.
+## 1. Remove RoofScope AI Estimator (built in separate app)
 
-`search-manufacturer-noas` returns garbage product names like `[] 22-1221.04` because `parseProductName()` strips the NOA number from the title, but Firecrawl search results for `site:miamidade.gov` return titles that are *just* the NOA number, leaving an empty string — which then falls back to `${manufacturer} Product` only if length<3 *after* trim of brackets. The bracket residue (`[]`) survives and gets emitted.
+**Frontend removals:**
+- Remove `RoofScope AI Estimator` service tile from `MemberDashboard.tsx`
+- Delete `src/components/roofscope/RoofScopeLayout.tsx` and any other `src/components/roofscope/*` files
+- Delete pages: `src/pages/crm/RoofScopeAnalyzer.tsx`, `RoofScopeCustomers.tsx`, `RoofScopeDashboard.tsx`, `RoofScopeEstimates.tsx`
+- Remove `/roofscope/*` routes from `src/App.tsx`
+- Remove `useRoofScope.ts` hook
 
-## Fix
+**Backend removals:**
+- Delete edge function `roofscope-analyze` (call `supabase--delete_edge_functions`)
+- Drop RoofScope tables (prefix `rs_*`) via migration: I will first run a `supabase--read_query` to enumerate exact tables, then issue a `DROP TABLE ... CASCADE` migration
 
-### 1. Rewrite `firecrawl-noa-scraper/index.ts` — drop Actions, use Firecrawl Search
+## 2. Remove the in-app Roofing CRM (combined into separate app)
 
-Stop trying to drive the broken Miami-Dade form. Instead, use the same proven pattern as `search-manufacturer-noas`: call Firecrawl's `/v2/search` with a `site:miamidade.gov` query for the manufacturer/NOA, get back result URLs + snippets, then run each through Gemini for structured extraction.
+**Frontend removals:**
+- Remove `Roofing CRM` service tile
+- Delete `src/pages/crm/*` (all CRM pages — Dashboard, Contacts, Pipeline, Jobs, Estimates, Calendar, Insurance*, FollowUp*, StormCanvas, CanvassMap, ScopeIntelligence, SmartDocs, CrewPortal, EstimateBuilder, Presentations, Placeholder, Help, HomeownerPortal, Settings, PermitExpediter)
+- Delete CRM-only components: `src/components/crm/*`, `src/components/layout/AppSidebar.tsx`, `AppHeader.tsx`, `AppLayout.tsx`
+- Remove all `/crm/*` and `/member/crm` routes from `App.tsx`
+- Remove CRM-specific hooks (useCRMJobs, useEstimateBuilder*, useEstimates, useContacts, useLeads, useProperties, useActivities, useNotes, useInspections, usePresentations, useContactDocuments, useContactCommunications, useGPSTracking, useDoorToDoorSession, usePropertyDispositions)
 
-Per-step try/catch + structured logs so failures pinpoint which step broke:
+**Backend:** Leave CRM tables in place for now (they may still hold data the user wants exported). Plan will note this and ask before dropping. *Note: I will NOT auto-drop CRM tables — only RoofScope tables, since user explicitly said RoofScope's data should be deleted but only said the CRM module should be removed.*
+
+## 3. Regroup remaining services into 3 top-level tabs
+
+New dashboard layout — only 3 nav tabs at top:
+
+```text
+[ My Profile ]   [ Contractor Services ]   [ Contractor Apps ]
 ```
-[firecrawl-noa-scraper] step=search status=ok results=N
-[firecrawl-noa-scraper] step=scrape url=<u> status=failed error=<msg>
-[firecrawl-noa-scraper] step=ai_extract status=ok records=N
-```
 
-Three-step flow:
-1. **Search**: `POST /v2/search` with `query: "site:miamidade.gov NOA <searchValue>"`, `limit: 20`, `scrapeOptions: { formats: ['markdown'] }`. Wrap in try/catch; on failure log `step=search` and return 502 with the Firecrawl error message verbatim.
-2. **Aggregate**: collect title + url + markdown snippets from each result.
-3. **AI extract**: feed combined snippets to Gemini with the existing tool-calling schema. Wrap in try/catch with `step=ai_extract` logging.
+**My Profile tab** — combines personal + company management:
+- Sub-tabs inside profile view: `Overview` · `Personal Info & Bio` · `My Projects` · `Communications & Service Requests` · `Points & Rewards` · `Company` (only if user is a company owner/admin → manage team, listing, links/references, company requests)
+- Move `/homeowner-profile` content + `/homeowner-dashboard` projects into tabbed `MyProfile.tsx` page
+- "My Projects" becomes a tab inside My Profile (not a separate dashboard tile)
 
-For `searchType=noa_number`, query becomes `"site:miamidade.gov NOA <noa_number>"`. For `searchType=category`, query becomes `"site:miamidade.gov NOA <category> approval"`.
+**Contractor Services tab** (services GCN provides to contractors):
+- Estimating / Supplementing
+- Digital Marketing, Management & Design
+- Permit Expediting
+- Training Academy
+- Directory (contractor lookup)
+- (Also keep: Instant Quote — but flagged as **property-owner only**, shown only when `!isContractor`)
 
-Keep PDF URL construction (`/building/library/noa/<noaForUrl>.pdf`) but mark `source_status='crawl_discovered'` so the existing `noa-bulk-downloader` 3-tier rehosting flow validates and rehosts each one.
+**Contractor Apps tab** (tools for running the business):
+- Contractor Social Hub
+- Job Marketplace
+- Door to Door World
+- PropertyIQ
+- Future placeholder card: "GCN Business Suite (estimating, invoicing, contracts, prospecting, gamification, social, marketplace) — Coming Soon" linking to the new Lovable project once connected
 
-### 2. Fix `search-manufacturer-noas/index.ts` `parseProductName`
+## 4. Maintenance Membership — Coming Soon (homeowner-only)
 
-Current bug: regex removes NOA number from title leaving empty brackets `[]` which still pass the `length < 3` check after `.trim()` because brackets aren't whitespace. Fix:
-- After all the `.replace()` strips, also strip leftover punctuation: `.replace(/[\[\](){}<>:|;,.\-_\s]+/g, ' ').trim()`
-- Then check `length < 3` and fall back to `${manufacturer} Product`.
-- Also: if title is literally just an NOA number (matches `/^\d{2}-\d{4}\.\d{2}$/`), skip directly to content extraction or manufacturer fallback.
+- Replace current `/prep-property` link tile with a `Maintenance Membership` card visible **only when `!isContractor`**
+- Card shows full program details (preventative maintenance plans, property care schedule, perks) but with a `Coming Soon` overlay badge and disabled CTA
+- New page `src/pages/MaintenanceMembership.tsx` with the marketing details + waitlist signup (writes to a new `maintenance_membership_waitlist` table)
 
-### 3. Deploy + test
+## 5. Profile moved to top of screen
 
-Deploy both functions. Test `firecrawl-noa-scraper` with `{ "manufacturer": "GAF" }` and verify response contains records with non-empty `product_name` and valid `noa_number`.
+- In header, replace the small avatar+name with a prominent **profile button on the top-left** of the dashboard header (next to logo) that opens the My Profile tab
+- Mobile: profile button stays pinned top-right with avatar
 
 ## Technical notes
 
-- Firecrawl Actions are kept *removed*, not patched. The Miami-Dade form URL returns 404; no selector update will work. Search-based approach is the same one `search-manufacturer-noas` uses successfully.
-- Both functions retain existing `Deno.serve`, CORS headers, body-alias parsing, service-role client, job record creation, and product_approvals upsert logic.
-- No DB schema changes.
+- New dashboard structure uses shadcn `Tabs` at the top of `MemberDashboard.tsx` driven by URL query param `?tab=profile|services|apps` so deep links work
+- `contractorOnlyServices` array updated to remove RoofScope/Roofing CRM and reflect new groupings
+- Routes file (`App.tsx`) cleaned of all `/crm/*`, `/roofscope/*` entries; lazy imports removed
+- Add `homeownerOnlyServices = ["Instant Quote", "Maintenance Membership", "My Projects"]` filter
+- Migration file: `DROP TABLE IF EXISTS public.rs_<each> CASCADE;` after enumerating
+- `supabase--delete_edge_functions(["roofscope-analyze"])`
 
-## Files changed
-- `supabase/functions/firecrawl-noa-scraper/index.ts` — replace `buildScrapeActions` + scrape call with search-based flow + per-step try/catch logging
-- `supabase/functions/search-manufacturer-noas/index.ts` — fix `parseProductName` to strip residual brackets/punctuation and detect bare-NOA titles
+## Order of execution
+
+1. Enumerate `rs_*` tables via read_query
+2. Migration: drop RoofScope tables
+3. Delete RoofScope edge function + frontend files
+4. Delete CRM frontend (pages, components, hooks, routes)
+5. Restructure `MemberDashboard.tsx` with 3 tabs + new profile header
+6. Build `MyProfile.tsx` with internal sub-tabs (merging homeowner profile + projects)
+7. Create `MaintenanceMembership.tsx` coming-soon page + waitlist table migration
+8. Wire homeowner-only filter for Instant Quote / Maintenance Membership
+
+## Open question before I start
+
+The CRM has live data (contacts, jobs, estimates, measurements, etc.). Should I:
+- (a) Just remove the UI and leave the data in the database for export later, or
+- (b) Drop the CRM tables too?
+
+I'll default to **(a)** unless you say otherwise.

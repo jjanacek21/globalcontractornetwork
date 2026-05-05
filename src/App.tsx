@@ -13,7 +13,6 @@ const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 
 // CRM Pages
 import { CRMLayout } from "./components/crm/CRMLayout";
-import { RoofScopeLayout } from "./components/roofscope/RoofScopeLayout";
 const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
 const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
 const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
@@ -45,11 +44,6 @@ const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
 const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
-const RoofScopeDashboard = lazy(() => import("./pages/crm/RoofScopeDashboard"));
-const RoofScopeEstimates = lazy(() => import("./pages/crm/RoofScopeEstimates"));
-const RoofScopeEstimateWizard = lazy(() => import("./pages/crm/RoofScopeEstimateWizard"));
-const RoofScopeCustomers = lazy(() => import("./pages/crm/RoofScopeCustomers"));
-const RoofScopeAnalyzer = lazy(() => import("./pages/crm/RoofScopeAnalyzer"));
 import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -138,6 +132,7 @@ const PropertyIQDashboard = lazy(() => import("./pages/PropertyIQDashboard"));
 const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
 const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 const InstantQuote = lazy(() => import("./pages/InstantQuote"));
+const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 
 const queryClient = new QueryClient();
 
@@ -346,37 +341,6 @@ const GCNRoutes = () => (
         <CRMLayout><Suspense fallback={<div />}><CRMSettings /></Suspense></CRMLayout>
       </ProtectedRoute>
     } />
-    {/* RoofScope Routes */}
-    <Route path="/roofscope" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeDashboard /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/roofscope/estimates" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeEstimates /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/roofscope/estimate/new" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeEstimateWizard /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/roofscope/estimate/:id" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeEstimateWizard /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/roofscope/customers" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeCustomers /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/roofscope/analyzer" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <RoofScopeLayout><Suspense fallback={<div />}><RoofScopeAnalyzer /></Suspense></RoofScopeLayout>
-      </ProtectedRoute>
-    } />
     <Route path="/my-profile" element={
       <ProtectedRoute redirectTo="/network-login">
         <MyProfile />
@@ -502,6 +466,7 @@ const GCNRoutes = () => (
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
           <Route path="/instant-quote" element={<Suspense fallback={<div />}><InstantQuote /></Suspense>} />
+          <Route path="/maintenance-membership" element={<Suspense fallback={<div />}><MaintenanceMembership /></Suspense>} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing-services" element={<RoofingServices />} />
           <Route path="/roofing" element={<Roofing />} />
