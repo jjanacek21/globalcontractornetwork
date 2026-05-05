@@ -54,11 +54,34 @@ const DOCUMENT_TYPES = [
   { id: 'insurance', label: 'Certificate of Insurance', description: 'Contractor liability insurance' },
   { id: 'license', label: 'Contractor License', description: 'State license copy' },
   { id: 'product_approval', label: 'Product Approval/NOA', description: 'Florida Product Approval or Miami-Dade NOA' },
-  { id: 'measurement', label: 'Roof Measurement', description: 'EagleView or satellite measurement report' },
+  { id: 'measurement', label: 'Roof Measurement Report', description: 'EagleView, RoofR, or hand-drawn diagram — AI will read sqft' },
+  { id: 'property_appraiser', label: 'Property Appraiser Screenshot', description: 'County property card — AI extracts year built, folio, legal' },
+  { id: 'hoa_approval', label: 'HOA Approval Letter', description: 'HOA architectural committee approval' },
   { id: 'photos', label: 'Site Photos', description: 'Before photos of existing conditions' },
-  { id: 'hoa_approval', label: 'HOA Approval', description: 'HOA architectural committee approval' },
   { id: 'other', label: 'Other Document', description: 'Additional supporting documentation' },
 ];
+
+// Doc types that get sent to the upload parser for AI field extraction
+const PARSE_TYPES = new Set([
+  'signed_permit_app', 'permit_application',
+  'signed_noc', 'notice_of_commencement',
+  'license', 'insurance',
+  'measurement', 'property_appraiser',
+  'contract',
+]);
+
+// Map UI doc-type ids to the parser's docType vocabulary
+const PARSER_TYPE_MAP: Record<string, string> = {
+  signed_permit_app: 'permit_application',
+  permit_application: 'permit_application',
+  signed_noc: 'noc',
+  notice_of_commencement: 'noc',
+  license: 'license',
+  insurance: 'insurance',
+  measurement: 'measurement',
+  property_appraiser: 'property_appraiser',
+  contract: 'contract',
+};
 
 export function SmartDocumentUploader({
   permitProjectId,
@@ -231,6 +254,40 @@ export function SmartDocumentUploader({
           })();
         }
 
+        // 🧠 PARSE: send relevant uploads to permit-upload-parser to extract
+        // structured fields (NOC owner/lender, license #, COI carrier, roof sqft, etc.)
+        // and write them back to permit_projects so Step 3 doesn't re-ask the user.
+        const parserType = PARSER_TYPE_MAP[(selectedType || '').toLowerCase()];
+        if (parserType && permitProjectId && file.type === 'application/pdf') {
+          (async () => {
+            try {
+              const { data: parsed, error: parseErr } = await supabase.functions.invoke(
+                'permit-upload-parser',
+                {
+                  body: {
+                    permitProjectId,
+                    filePath,
+                    fileName: file.name,
+                    docType: parserType,
+                    bucket: 'permit-documents',
+                  },
+                }
+              );
+              if (parseErr) throw parseErr;
+              const cols: string[] = parsed?.updated_columns ?? [];
+              if (cols.length > 0) {
+                toast.success(
+                  `Parsed ${file.name} — filled ${cols.length} field${cols.length === 1 ? '' : 's'}`
+                );
+              } else {
+                console.log(`[upload-parser] ${file.name} returned no new fields`, parsed);
+              }
+            } catch (e: any) {
+              console.warn('[upload-parser] failed (non-fatal)', e);
+            }
+          })();
+        }
+
       } catch (error) {
         console.error('Upload error:', error);
         toast.error(`Failed to upload ${file.name}`);
@@ -351,7 +408,7 @@ export function SmartDocumentUploader({
           <div className="space-y-3">
             <label className="text-sm font-medium">Select Document Type</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {DOCUMENT_TYPES.slice(0, 6).map(type => (
+              {DOCUMENT_TYPES.map(type => (
                 <button
                   key={type.id}
                   onClick={() => setSelectedType(selectedType === type.id ? null : type.id)}
