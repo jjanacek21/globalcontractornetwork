@@ -254,6 +254,40 @@ export function SmartDocumentUploader({
           })();
         }
 
+        // 🧠 PARSE: send relevant uploads to permit-upload-parser to extract
+        // structured fields (NOC owner/lender, license #, COI carrier, roof sqft, etc.)
+        // and write them back to permit_projects so Step 3 doesn't re-ask the user.
+        const parserType = PARSER_TYPE_MAP[(selectedType || '').toLowerCase()];
+        if (parserType && permitProjectId && file.type === 'application/pdf') {
+          (async () => {
+            try {
+              const { data: parsed, error: parseErr } = await supabase.functions.invoke(
+                'permit-upload-parser',
+                {
+                  body: {
+                    permitProjectId,
+                    filePath,
+                    fileName: file.name,
+                    docType: parserType,
+                    bucket: 'permit-documents',
+                  },
+                }
+              );
+              if (parseErr) throw parseErr;
+              const cols: string[] = parsed?.updated_columns ?? [];
+              if (cols.length > 0) {
+                toast.success(
+                  `Parsed ${file.name} — filled ${cols.length} field${cols.length === 1 ? '' : 's'}`
+                );
+              } else {
+                console.log(`[upload-parser] ${file.name} returned no new fields`, parsed);
+              }
+            } catch (e: any) {
+              console.warn('[upload-parser] failed (non-fatal)', e);
+            }
+          })();
+        }
+
       } catch (error) {
         console.error('Upload error:', error);
         toast.error(`Failed to upload ${file.name}`);
