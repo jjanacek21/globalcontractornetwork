@@ -109,6 +109,7 @@ const MemberDashboard = () => {
   const [contractorProfile, setContractorProfile] = useState<ContractorProfile | null>(null);
   const [companyMembership, setCompanyMembership] = useState<CompanyMembership | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("services");
   const navigate = useNavigate();
 
