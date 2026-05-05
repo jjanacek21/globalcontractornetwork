@@ -1135,6 +1135,7 @@ export default function PermitQueensNewRequest() {
               
               {/* Smart Document Uploader - Moved from Step 3 */}
               <SmartDocumentUploader
+                permitProjectId={tempPermitId ?? undefined}
                 jurisdiction={formData.jurisdiction_county}
                 permitType={formData.permit_type || ''}
                 onDocumentsChange={setUploadedDocuments}
