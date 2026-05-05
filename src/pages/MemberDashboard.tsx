@@ -126,8 +126,9 @@ const MemberDashboard = () => {
     navigate("/");
   };
 
-  const isContractor = !!contractorProfile;
-  const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  // Super admins see everything (treated as contractor + extra admin view)
+  const isContractor = !!contractorProfile || isSuperAdmin;
+  const isPendingContractor = !!contractorProfile && contractorProfile?.subscription_status === "pending" && !isSuperAdmin;
   const isCompanyAdmin = !!companyMembership && ["company_admin", "owner", "admin"].includes(companyMembership.role);
   const canManageCompany = isCompanyAdmin || isSuperAdmin;
 
