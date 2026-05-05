@@ -492,21 +492,28 @@ export default function PermitQueensNewRequest() {
     }
 
     // Persist to draft permit if it already exists
+    console.log('[jurisdiction] persist check — tempPermitId:', tempPermitId);
     if (tempPermitId) {
       try {
-        await supabase
+        const payload = {
+          jurisdiction_county: resolved?.county || info.county || null,
+          city: info.city || null,
+          zip_code: zip || null,
+          is_hvhz: resolved?.is_hvhz ?? info.isHVHZ ?? false,
+          building_dept_id: resolved?.id || null,
+        };
+        console.log('[jurisdiction] writing to permit_projects', tempPermitId, payload);
+        const { error: updErr } = await supabase
           .from('permit_projects')
-          .update({
-            jurisdiction_county: resolved?.county || info.county || null,
-            city: info.city || null,
-            zip_code: zip || null,
-            is_hvhz: resolved?.is_hvhz ?? info.isHVHZ ?? false,
-            building_dept_id: resolved?.id || null,
-          } as any)
+          .update(payload as any)
           .eq('id', tempPermitId);
+        if (updErr) console.error('[jurisdiction] persist error', updErr);
+        else console.log('[jurisdiction] persist OK');
       } catch (e) {
         console.warn('[jurisdiction] failed to persist to draft', e);
       }
+    } else {
+      console.warn('[jurisdiction] no tempPermitId yet — skipping DB write (state-only)');
     }
   };
 
