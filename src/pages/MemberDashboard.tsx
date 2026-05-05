@@ -126,8 +126,9 @@ const MemberDashboard = () => {
     navigate("/");
   };
 
-  const isContractor = !!contractorProfile;
-  const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  // Super admins see everything (treated as contractor + extra admin view)
+  const isContractor = !!contractorProfile || isSuperAdmin;
+  const isPendingContractor = !!contractorProfile && contractorProfile?.subscription_status === "pending" && !isSuperAdmin;
   const isCompanyAdmin = !!companyMembership && ["company_admin", "owner", "admin"].includes(companyMembership.role);
   const canManageCompany = isCompanyAdmin || isSuperAdmin;
 
@@ -264,7 +265,10 @@ const MemberDashboard = () => {
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isContractor ? contractorServices : homeownerServices).map((s) => (
+              {(isSuperAdmin
+                ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title))]
+                : isContractor ? contractorServices : homeownerServices
+              ).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
@@ -283,7 +287,10 @@ const MemberDashboard = () => {
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")).map((s) => (
+              {(isSuperAdmin
+                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
+                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
+              ).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
