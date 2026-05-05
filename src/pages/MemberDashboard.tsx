@@ -128,6 +128,8 @@ const MemberDashboard = () => {
 
   const isContractor = !!contractorProfile;
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  const isCompanyAdmin = !!companyMembership && ["company_admin", "owner", "admin"].includes(companyMembership.role);
+  const canManageCompany = isCompanyAdmin || isSuperAdmin;
 
   // Contractor Services tab
   const contractorServices: ServiceCard[] = [
