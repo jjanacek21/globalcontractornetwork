@@ -287,7 +287,10 @@ const MemberDashboard = () => {
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")).map((s) => (
+              {(isSuperAdmin
+                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
+                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
+              ).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
