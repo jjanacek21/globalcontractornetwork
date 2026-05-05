@@ -451,6 +451,7 @@ export default function PermitQueensNewRequest() {
     const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
     const zip = zipMatch?.[1] ?? '';
 
+    console.log('[wizard] zip parsed', zip);
     console.log('[jurisdiction] detected from address:', { county: info.county, city: info.city, isHVHZ: info.isHVHZ, zip });
 
     setFormData(prev => ({
@@ -466,6 +467,7 @@ export default function PermitQueensNewRequest() {
     let resolved: { id?: string; county?: string; is_hvhz?: boolean } | null = null;
     if (zip) {
       try {
+        console.log('[wizard] looking up dept for zip', zip);
         const { data: dept, error } = await supabase
           .from('permit_building_departments')
           .select('id, county, is_hvhz, jurisdiction_type')
@@ -473,6 +475,8 @@ export default function PermitQueensNewRequest() {
           .order('jurisdiction_type', { ascending: true })
           .limit(1)
           .maybeSingle();
+        const deptData = dept;
+        console.log('[wizard] dept result', deptData);
         if (error) console.warn('[jurisdiction] dept lookup error', error);
         if (dept) {
           resolved = dept;
@@ -502,6 +506,11 @@ export default function PermitQueensNewRequest() {
           is_hvhz: resolved?.is_hvhz ?? info.isHVHZ ?? false,
           building_dept_id: resolved?.id || null,
         };
+        console.log('[wizard] writing jurisdiction', {
+          jurisdiction_county: payload.jurisdiction_county,
+          building_dept_id: payload.building_dept_id,
+          is_hvhz: payload.is_hvhz,
+        });
         console.log('[jurisdiction] writing to permit_projects', tempPermitId, payload);
         const { error: updErr } = await supabase
           .from('permit_projects')
