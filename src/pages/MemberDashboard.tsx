@@ -356,7 +356,7 @@ const MemberDashboard = () => {
                   </Button>
                   {(isCompanyAdmin || isSuperAdmin) && (
                     <Button
-                      onClick={() => navigate("/company-admin")}
+                      onClick={() => navigate("/company/dashboard")}
                       className="bg-gradient-to-r from-accent to-amber-400 text-accent-foreground"
                     >
                       <Building2 className="h-4 w-4 mr-2" />
