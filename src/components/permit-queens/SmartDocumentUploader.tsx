@@ -408,7 +408,7 @@ export function SmartDocumentUploader({
           <div className="space-y-3">
             <label className="text-sm font-medium">Select Document Type</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {DOCUMENT_TYPES.slice(0, 6).map(type => (
+              {DOCUMENT_TYPES.map(type => (
                 <button
                   key={type.id}
                   onClick={() => setSelectedType(selectedType === type.id ? null : type.id)}
