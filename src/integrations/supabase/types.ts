@@ -6041,6 +6041,50 @@ export type Database = {
           },
         ]
       }
+      permit_form_requirements: {
+        Row: {
+          building_dept_id: string
+          conditions: Json
+          created_at: string
+          id: string
+          notes: string | null
+          permit_type: string
+          priority: number
+          required_template_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          building_dept_id: string
+          conditions?: Json
+          created_at?: string
+          id?: string
+          notes?: string | null
+          permit_type: string
+          priority?: number
+          required_template_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          building_dept_id?: string
+          conditions?: Json
+          created_at?: string
+          id?: string
+          notes?: string | null
+          permit_type?: string
+          priority?: number
+          required_template_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_form_requirements_building_dept_id_fkey"
+            columns: ["building_dept_id"]
+            isOneToOne: false
+            referencedRelation: "permit_building_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_form_templates: {
         Row: {
           analysis_status: string | null
