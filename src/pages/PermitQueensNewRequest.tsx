@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,6 +181,8 @@ export default function PermitQueensNewRequest() {
   const [generatingPacket, setGeneratingPacket] = useState(false);
   const [generationStage, setGenerationStage] = useState('');
   const [tempPermitId, setTempPermitId] = useState<string | null>(null);
+  const tempPermitIdRef = useRef<string | null>(null);
+  useEffect(() => { tempPermitIdRef.current = tempPermitId; }, [tempPermitId]);
   
   // Signature requirements state
   const [signatureRequirements, setSignatureRequirements] = useState<SignatureRequirement[]>([]);
@@ -448,11 +450,22 @@ export default function PermitQueensNewRequest() {
 
   const displayTiers = tiers.length > 0 ? tiers : defaultTiers;
 
-  const handleJurisdictionDetected = async (info: JurisdictionInfo, fullAddress?: string) => {
-    // Parse zip / city / state from selected address (Mapbox-style "..., City, State 33470, ...")
+  const handleJurisdictionDetected = async (
+    info: JurisdictionInfo,
+    fullAddress?: string,
+    context?: Array<{ id: string; text: string; short_code?: string }>,
+  ) => {
     const addr = fullAddress || formData.property_address;
-    const zipMatch = addr.match(/\b(\d{5})(?:-\d{4})?\b/);
-    const zip = zipMatch?.[1] ?? '';
+
+    // Prefer the structured Mapbox postcode context entry (avoids regexing the street number).
+    let zip = '';
+    const postcodeCtx = context?.find((c) => c.id?.startsWith('postcode'));
+    if (postcodeCtx?.text) zip = postcodeCtx.text.match(/\d{5}/)?.[0] ?? '';
+    // Fallback: take the LAST 5-digit token in the formatted string (street number is first).
+    if (!zip) {
+      const all = [...addr.matchAll(/\b(\d{5})(?:-\d{4})?\b/g)].map((m) => m[1]);
+      zip = all[all.length - 1] ?? '';
+    }
 
     console.log('[wizard] zip parsed', zip);
     console.log('[jurisdiction] detected from address:', { county: info.county, city: info.city, isHVHZ: info.isHVHZ, zip });
@@ -478,8 +491,7 @@ export default function PermitQueensNewRequest() {
           .order('jurisdiction_type', { ascending: true })
           .limit(1)
           .maybeSingle();
-        const deptData = dept;
-        console.log('[wizard] dept result', deptData);
+        console.log('[wizard] dept result', dept);
         if (error) console.warn('[jurisdiction] dept lookup error', error);
         if (dept) {
           resolved = dept;
@@ -498,9 +510,10 @@ export default function PermitQueensNewRequest() {
       }
     }
 
-    // Persist to draft permit if it already exists
-    console.log('[jurisdiction] persist check — tempPermitId:', tempPermitId);
-    if (tempPermitId) {
+    // Persist to draft permit if it already exists (read via ref to avoid stale closure).
+    const currentDraftId = tempPermitIdRef.current;
+    console.log('[jurisdiction] persist check — tempPermitId:', currentDraftId);
+    if (currentDraftId) {
       try {
         const payload = {
           jurisdiction_county: resolved?.county || info.county || null,
@@ -509,16 +522,11 @@ export default function PermitQueensNewRequest() {
           is_hvhz: resolved?.is_hvhz ?? info.isHVHZ ?? false,
           building_dept_id: resolved?.id || null,
         };
-        console.log('[wizard] writing jurisdiction', {
-          jurisdiction_county: payload.jurisdiction_county,
-          building_dept_id: payload.building_dept_id,
-          is_hvhz: payload.is_hvhz,
-        });
-        console.log('[jurisdiction] writing to permit_projects', tempPermitId, payload);
+        console.log('[jurisdiction] writing to permit_projects', currentDraftId, payload);
         const { error: updErr } = await supabase
           .from('permit_projects')
           .update(payload as any)
-          .eq('id', tempPermitId);
+          .eq('id', currentDraftId);
         if (updErr) console.error('[jurisdiction] persist error', updErr);
         else console.log('[jurisdiction] persist OK');
       } catch (e) {

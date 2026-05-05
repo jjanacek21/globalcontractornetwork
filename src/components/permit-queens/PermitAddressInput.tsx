@@ -19,7 +19,7 @@ interface SearchResult {
 interface PermitAddressInputProps {
   value: string;
   onChange: (address: string) => void;
-  onJurisdictionDetected: (info: JurisdictionInfo, fullAddress: string) => void;
+  onJurisdictionDetected: (info: JurisdictionInfo, fullAddress: string, context?: Array<{ id: string; text: string; short_code?: string }>) => void;
   className?: string;
 }
 
@@ -105,7 +105,7 @@ export function PermitAddressInput({
     console.log('[PermitAddressInput] detectFromAddress result:', info, '(departments loaded:', !detectingJurisdiction, ')');
     setJurisdictionInfo(info);
     console.log('[PermitAddressInput] invoking onJurisdictionDetected handler...');
-    onJurisdictionDetected(info, fullAddress);
+    onJurisdictionDetected(info, fullAddress, result.context);
   }, [onChange, detectFromAddress, onJurisdictionDetected, detectingJurisdiction]);
 
   return (
