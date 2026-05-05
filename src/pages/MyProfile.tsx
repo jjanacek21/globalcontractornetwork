@@ -211,7 +211,7 @@ export default function MyProfile() {
           </TabsList>
 
           <TabsContent value="quotes" className="space-y-4">
-            <Card>
+            <Card className="glass-card border-border/40">
               <CardHeader>
                 <CardTitle>Quote Requests</CardTitle>
                 <CardDescription>All quote and estimate requests linked to your account</CardDescription>
@@ -244,7 +244,7 @@ export default function MyProfile() {
           </TabsContent>
 
           <TabsContent value="projects" className="space-y-4">
-            <Card>
+            <Card className="glass-card border-border/40">
               <CardHeader>
                 <CardTitle>My Projects</CardTitle>
                 <CardDescription>Projects you've created or been assigned to</CardDescription>
@@ -274,7 +274,7 @@ export default function MyProfile() {
 
           {isContractor ? (
             <TabsContent value="referrals" className="space-y-4">
-              <Card>
+              <Card className="glass-card border-border/40">
                 <CardHeader>
                   <CardTitle>My Referrals</CardTitle>
                   <CardDescription>
@@ -314,7 +314,7 @@ export default function MyProfile() {
             </TabsContent>
           ) : (
             <TabsContent value="requests" className="space-y-4">
-              <Card>
+              <Card className="glass-card border-border/40">
                 <CardHeader>
                   <CardTitle>Contact Requests</CardTitle>
                   <CardDescription>Support requests and inquiries you've submitted</CardDescription>
