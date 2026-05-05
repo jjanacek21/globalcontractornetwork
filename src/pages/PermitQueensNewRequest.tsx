@@ -1194,17 +1194,11 @@ export default function PermitQueensNewRequest() {
 
               {/* Packet Contents Preview - Shows what will be in the packet */}
               <PacketContentsPreview
+                permitProjectId={tempPermitId}
                 jurisdictionCounty={formData.jurisdiction_county}
                 permitType={formData.permit_type || 'roofing'}
                 isHVHZ={formData.isHVHZ}
-                uploadedDocumentCount={uploadedDocuments.length}
-                selectedMaterialCount={selectedMaterials.length}
-                hasOwnerInfo={!!formData.owner_name && !!formData.owner_email}
-                hasContractorInfo={true}
                 uploadedDocTypes={uploadedDocuments.map(d => d.type || '')}
-                hasUploadedNOC={uploadedDocuments.some(d =>
-                  ['noc', 'signed_noc', 'notice_of_commencement'].includes((d.type || '').toLowerCase())
-                )}
                 onUploadClick={() => setCurrentStep(2)}
               />
 
