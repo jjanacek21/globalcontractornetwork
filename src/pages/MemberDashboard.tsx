@@ -277,7 +277,7 @@ const MemberDashboard = () => {
         {/* 3-tab nav */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 p-1 glass-card border border-border/40 rounded-2xl">
-            <TabsTrigger value="profile" onClick={() => navigate("/my-profile")} className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+            <TabsTrigger value="profile" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <User className="h-4 w-4 mr-2" /> My Profile
             </TabsTrigger>
             <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
@@ -289,6 +289,52 @@ const MemberDashboard = () => {
               {isSuperAdmin ? "All Apps" : isContractor ? "Contractor Apps" : "For Property Owners"}
             </TabsTrigger>
           </TabsList>
+
+          {/* Profile tab */}
+          <TabsContent value="profile" className="space-y-4">
+            <Card className="glass-card border-border/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" /> Profile Overview
+                </CardTitle>
+                <CardDescription>Your account info and quick actions.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Name</p>
+                    <p className="font-semibold">
+                      {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Email</p>
+                    <p className="font-semibold break-all">{profile?.email || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Account Type</p>
+                    <p className="font-semibold capitalize">
+                      {isSuperAdmin ? "Super Admin" : isContractor ? "Contractor" : "Property Owner"}
+                    </p>
+                  </div>
+                  {contractorProfile?.company_name && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Company</p>
+                      <p className="font-semibold">{contractorProfile.company_name}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Button onClick={() => navigate("/my-profile")} className="bg-gradient-to-r from-primary to-primary/80">
+                    Edit Full Profile <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/forgot-password")}>
+                    Reset Password
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Services tab */}
           <TabsContent value="services" className="space-y-4">
