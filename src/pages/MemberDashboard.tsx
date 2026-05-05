@@ -354,6 +354,15 @@ const MemberDashboard = () => {
                   <Button variant="outline" onClick={() => navigate("/forgot-password")}>
                     Reset Password
                   </Button>
+                  {(isCompanyAdmin || isSuperAdmin) && (
+                    <Button
+                      onClick={() => navigate("/company-admin")}
+                      className="bg-gradient-to-r from-accent to-amber-400 text-accent-foreground"
+                    >
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Manage Company{companyMembership?.companyName ? `: ${companyMembership.companyName}` : ""}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
