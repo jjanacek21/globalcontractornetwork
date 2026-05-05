@@ -277,7 +277,7 @@ const MemberDashboard = () => {
         {/* 3-tab nav */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 p-1 glass-card border border-border/40 rounded-2xl">
-            <TabsTrigger value="profile" onClick={() => navigate("/my-profile")} className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+            <TabsTrigger value="profile" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <User className="h-4 w-4 mr-2" /> My Profile
             </TabsTrigger>
             <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
