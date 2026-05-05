@@ -241,11 +241,11 @@ const MemberDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="services">
               <Briefcase className="h-4 w-4 mr-2" />
-              {isContractor ? "Contractor Services" : "Services"}
+              {isSuperAdmin ? "All Services" : isContractor ? "Contractor Services" : "Services"}
             </TabsTrigger>
             <TabsTrigger value="apps">
               <Rocket className="h-4 w-4 mr-2" />
-              {isContractor ? "Contractor Apps" : "For Property Owners"}
+              {isSuperAdmin ? "All Apps" : isContractor ? "Contractor Apps" : "For Property Owners"}
             </TabsTrigger>
           </TabsList>
 
@@ -253,16 +253,21 @@ const MemberDashboard = () => {
           <TabsContent value="services" className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold mb-1">
-                {isContractor ? "Contractor Services" : "Services"}
+                {isSuperAdmin ? "All Services (Admin View)" : isContractor ? "Contractor Services" : "Services"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {isContractor
+                {isSuperAdmin
+                  ? "Full admin access — every contractor and homeowner service."
+                  : isContractor
                   ? "Services the Global Contractor Network offers to help your business grow."
                   : "Get a quote, find a verified contractor, or join the Maintenance Membership."}
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isContractor ? contractorServices : homeownerServices).map((s) => (
+              {(isSuperAdmin
+                ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title))]
+                : isContractor ? contractorServices : homeownerServices
+              ).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
@@ -272,16 +277,21 @@ const MemberDashboard = () => {
           <TabsContent value="apps" className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold mb-1">
-                {isContractor ? "Contractor Apps" : "For Property Owners"}
+                {isSuperAdmin ? "All Apps (Admin View)" : isContractor ? "Contractor Apps" : "For Property Owners"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {isContractor
+                {isSuperAdmin
+                  ? "Full admin access — every contractor app and property-owner program."
+                  : isContractor
                   ? "Tools to run your day-to-day business — and the all-in-one suite arriving in 2026."
                   : "Property-owner exclusive features and programs."}
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")).map((s) => (
+              {(isSuperAdmin
+                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
+                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
+              ).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
