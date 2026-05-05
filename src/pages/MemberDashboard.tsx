@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,32 +51,56 @@ interface ServiceCard {
   comingSoon?: boolean;
 }
 
-const ServiceTile = ({ s, onClick }: { s: ServiceCard; onClick: () => void }) => (
-  <Card
-    onClick={s.comingSoon ? undefined : onClick}
-    className={`group transition-all ${
-      s.comingSoon ? "opacity-70" : "hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
-    }`}
+const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => void; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 24, rotateX: -8 }}
+    animate={{ opacity: 1, y: 0, rotateX: 0 }}
+    transition={{ duration: 0.55, delay: index * 0.05, ease: [0.175, 0.885, 0.32, 1.275] }}
+    whileHover={s.comingSoon ? {} : { y: -8, rotateX: 2, rotateY: -2, scale: 1.02 }}
+    style={{ transformStyle: "preserve-3d", perspective: 1000 }}
   >
-    <CardHeader>
-      <div className="flex items-start justify-between">
-        <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center">
-          <s.icon className="h-5 w-5 text-primary" />
+    <Card
+      onClick={s.comingSoon ? undefined : onClick}
+      className={`relative overflow-hidden glass-card border-border/40 h-full ${
+        s.comingSoon ? "opacity-70" : "cursor-pointer"
+      }`}
+      style={{
+        boxShadow: "0 10px 30px -12px hsl(var(--primary) / 0.18), 0 4px 12px -6px hsl(var(--accent) / 0.12), inset 0 1px 0 hsl(0 0% 100% / 0.6)",
+      }}
+    >
+      {/* gradient halo */}
+      <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-gradient-to-br from-accent/30 to-primary/20 blur-3xl opacity-60" />
+      <div className="pointer-events-none absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-gradient-to-tr from-primary/30 to-accent/10 blur-3xl opacity-50" />
+
+      <CardHeader className="relative">
+        <div className="flex items-start justify-between">
+          <motion.div
+            whileHover={{ rotate: [0, -6, 6, 0], scale: 1.08 }}
+            transition={{ duration: 0.6 }}
+            className="h-12 w-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg ring-1 ring-accent/40"
+            style={{ boxShadow: "0 8px 20px -8px hsl(var(--primary) / 0.6), inset 0 1px 0 hsl(45 100% 80% / 0.4)" }}
+          >
+            <s.icon className="h-5 w-5" />
+          </motion.div>
+          {s.badge && (
+            <Badge className="text-[10px] bg-gradient-to-r from-accent to-amber-300 text-accent-foreground border-0 shadow">
+              {s.badge}
+            </Badge>
+          )}
+          {s.comingSoon && <Badge variant="outline" className="text-[10px] border-accent/50 text-accent-foreground bg-accent/10">Coming Soon</Badge>}
         </div>
-        {s.badge && <Badge variant="secondary" className="text-[10px]">{s.badge}</Badge>}
-        {s.comingSoon && <Badge variant="outline" className="text-[10px]">Coming Soon</Badge>}
-      </div>
-      <CardTitle className="text-lg mt-3">{s.title}</CardTitle>
-      <CardDescription>{s.description}</CardDescription>
-    </CardHeader>
-    {!s.comingSoon && (
-      <CardContent className="pt-0">
-        <div className="flex items-center text-sm text-primary group-hover:gap-2 gap-1 transition-all">
-          Open <ArrowRight className="h-4 w-4" />
-        </div>
-      </CardContent>
-    )}
-  </Card>
+        <CardTitle className="text-lg mt-4 group-hover:text-primary transition-colors">{s.title}</CardTitle>
+        <CardDescription className="leading-relaxed">{s.description}</CardDescription>
+      </CardHeader>
+      {!s.comingSoon && (
+        <CardContent className="pt-0 relative">
+          <div className="flex items-center text-sm font-medium text-primary gap-1.5 transition-all">
+            Open <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  </motion.div>
 );
 
 const MemberDashboard = () => {
@@ -111,7 +136,6 @@ const MemberDashboard = () => {
             role: companyMemberData.role,
           });
         }
-        // default tab: contractors -> services, homeowners -> services (with homeowner-only items)
         setActiveTab("services");
       } catch (err) {
         console.error(err);
@@ -129,7 +153,6 @@ const MemberDashboard = () => {
   const isContractor = !!contractorProfile;
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
 
-  // Contractor Services tab
   const contractorServices: ServiceCard[] = [
     { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
     { icon: Megaphone, title: "Digital Marketing, Management & Design", description: "Social media, ads, SEO, web design & CRM support", link: "/digital-marketing" },
@@ -138,7 +161,6 @@ const MemberDashboard = () => {
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
   ];
 
-  // Contractor Apps tab
   const contractorApps: ServiceCard[] = [
     { icon: Users, title: "Contractor Social Hub", description: "Connect, message and post with the network", link: "/social", badge: "Coming Soon" },
     { icon: Briefcase, title: "Job Marketplace", description: "Browse and bid on homeowner job requests", link: "/job-board" },
@@ -147,7 +169,6 @@ const MemberDashboard = () => {
     { icon: Rocket, title: "GCN Business Suite", description: "Estimating, invoicing, contracts, prospecting, gamification, social & marketplace — all in one.", comingSoon: true },
   ];
 
-  // Homeowner-only services (shown to non-contractors instead of Contractor Apps tab)
   const homeownerServices: ServiceCard[] = [
     { icon: Sparkles, title: "Instant Quote", description: "AI-powered estimates for roofing, windows, emergency, landscaping & cleaning", link: "/instant-quote" },
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
@@ -169,28 +190,40 @@ const MemberDashboard = () => {
   const fullName = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || "Member";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Ambient cinematic background */}
+      <div className="floating-orb floating-orb-1" />
+      <div className="floating-orb floating-orb-2" />
+      <div className="floating-orb floating-orb-3" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08),transparent_60%)]" />
+
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-border/40 bg-background/70 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between gap-3">
-          {/* Profile Button — top-left, primary entry */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => navigate("/my-profile")}
-            className="flex items-center gap-3 group rounded-full pl-1 pr-3 py-1 hover:bg-muted transition-colors"
+            className="flex items-center gap-3 group rounded-full pl-1 pr-4 py-1 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent border border-border/40 hover:border-accent/50 transition-all"
             aria-label="My Profile"
           >
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground flex items-center justify-center text-sm font-semibold ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
+            <div
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-primary via-primary/80 to-accent text-primary-foreground flex items-center justify-center text-sm font-bold ring-2 ring-accent/40 group-hover:ring-accent transition-all"
+              style={{ boxShadow: "0 6px 16px -6px hsl(var(--primary) / 0.6), inset 0 1px 0 hsl(45 100% 80% / 0.5)" }}
+            >
               {initials}
             </div>
             <div className="hidden sm:flex flex-col items-start">
-              <span className="text-sm font-medium leading-tight">{fullName}</span>
+              <span className="text-sm font-semibold leading-tight">{fullName}</span>
               <span className="text-[11px] text-muted-foreground leading-tight">My Profile</span>
             </div>
-          </button>
+          </motion.button>
 
-          <Link to="/" className="hidden md:flex items-center gap-2">
-            <img src={gcnLogo} alt="GCN" className="h-8 w-auto rounded" />
-            <span className="text-sm font-semibold">Global Contractor Network</span>
+          <Link to="/" className="hidden md:flex items-center gap-2 group">
+            <img src={gcnLogo} alt="GCN" className="h-8 w-auto rounded transition-transform group-hover:scale-105" />
+            <span className="text-sm font-semibold gold-shimmer-text">Global Contractor Network</span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -199,7 +232,7 @@ const MemberDashboard = () => {
                 <Settings className="h-4 w-4" />
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="border-border/60 backdrop-blur">
               <LogOut className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign Out</span>
             </Button>
@@ -207,22 +240,30 @@ const MemberDashboard = () => {
         </div>
       </header>
 
-      <main className="container py-8 space-y-8">
+      <main className="container py-10 space-y-10 relative">
         {/* Welcome */}
-        <div className="space-y-2">
-          <span className="text-sm text-primary font-medium">{getTimeGreeting()}</span>
-          <h1 className="text-3xl md:text-4xl font-bold">
-            Welcome back, <span className="text-primary">{profile?.first_name || "Member"}</span>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="space-y-2"
+        >
+          <span className="text-sm text-accent font-semibold uppercase tracking-widest">{getTimeGreeting()}</span>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+            Welcome back,{" "}
+            <span className="bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+              {profile?.first_name || "Member"}
+            </span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-2xl">
             {isContractor
               ? "Run your business — services from the network and the apps that power your day."
               : "Your property hub — instant quotes, trusted contractors, and the upcoming Maintenance Membership."}
           </p>
-        </div>
+        </motion.div>
 
         {isPendingContractor && (
-          <Card className="border-amber-300/50 bg-amber-50 dark:bg-amber-950/20">
+          <Card className="border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 glass-card">
             <CardContent className="pt-6 flex items-start gap-3">
               <Construction className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
@@ -235,15 +276,15 @@ const MemberDashboard = () => {
 
         {/* 3-tab nav */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="profile" onClick={() => navigate("/my-profile")}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 p-1 glass-card border border-border/40 rounded-2xl">
+            <TabsTrigger value="profile" onClick={() => navigate("/my-profile")} className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <User className="h-4 w-4 mr-2" /> My Profile
             </TabsTrigger>
-            <TabsTrigger value="services">
+            <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <Briefcase className="h-4 w-4 mr-2" />
               {isSuperAdmin ? "All Services" : isContractor ? "Contractor Services" : "Services"}
             </TabsTrigger>
-            <TabsTrigger value="apps">
+            <TabsTrigger value="apps" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <Rocket className="h-4 w-4 mr-2" />
               {isSuperAdmin ? "All Apps" : isContractor ? "Contractor Apps" : "For Property Owners"}
             </TabsTrigger>
@@ -252,7 +293,7 @@ const MemberDashboard = () => {
           {/* Services tab */}
           <TabsContent value="services" className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold mb-1">
+              <h2 className="text-2xl font-bold mb-1">
                 {isSuperAdmin ? "All Services (Admin View)" : isContractor ? "Contractor Services" : "Services"}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -263,12 +304,12 @@ const MemberDashboard = () => {
                   : "Get a quote, find a verified contractor, or join the Maintenance Membership."}
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {(isSuperAdmin
                 ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title))]
                 : isContractor ? contractorServices : homeownerServices
-              ).map((s) => (
-                <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
+              ).map((s, i) => (
+                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
           </TabsContent>
@@ -276,7 +317,7 @@ const MemberDashboard = () => {
           {/* Apps tab */}
           <TabsContent value="apps" className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold mb-1">
+              <h2 className="text-2xl font-bold mb-1">
                 {isSuperAdmin ? "All Apps (Admin View)" : isContractor ? "Contractor Apps" : "For Property Owners"}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -287,30 +328,32 @@ const MemberDashboard = () => {
                   : "Property-owner exclusive features and programs."}
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {(isSuperAdmin
                 ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
                 : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
-              ).map((s) => (
-                <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
+              ).map((s, i) => (
+                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
           </TabsContent>
         </Tabs>
 
         {companyMembership && (
-          <Card className="bg-muted/40">
-            <CardContent className="pt-6 flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Company</p>
-                <p className="font-semibold">{companyMembership.companyName}</p>
-                <p className="text-xs text-muted-foreground">Role: {companyMembership.role}</p>
-              </div>
-              <Button variant="outline" onClick={() => navigate("/company/dashboard")}>
-                Manage Company <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="glass-card border-accent/30">
+              <CardContent className="pt-6 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-accent font-semibold">Company</p>
+                  <p className="font-semibold text-lg">{companyMembership.companyName}</p>
+                  <p className="text-xs text-muted-foreground">Role: {companyMembership.role}</p>
+                </div>
+                <Button onClick={() => navigate("/company/dashboard")} className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90">
+                  Manage Company <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </main>
     </div>
