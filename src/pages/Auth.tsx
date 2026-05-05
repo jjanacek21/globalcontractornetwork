@@ -241,13 +241,12 @@ const Auth = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="login-password">Password</Label>
-                      <button
-                        type="button"
+                      <Link
+                        to="/forgot-password"
                         className="text-xs text-primary hover:underline"
-                        onClick={() => setForgotPasswordMode(true)}
                       >
                         Forgot Password?
-                      </button>
+                      </Link>
                     </div>
                     <Input
                       id="login-password"
