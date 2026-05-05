@@ -290,6 +290,52 @@ const MemberDashboard = () => {
             </TabsTrigger>
           </TabsList>
 
+          {/* Profile tab */}
+          <TabsContent value="profile" className="space-y-4">
+            <Card className="glass-card border-border/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" /> Profile Overview
+                </CardTitle>
+                <CardDescription>Your account info and quick actions.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Name</p>
+                    <p className="font-semibold">
+                      {[userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(" ") || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Email</p>
+                    <p className="font-semibold break-all">{userProfile?.email || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">Account Type</p>
+                    <p className="font-semibold capitalize">
+                      {isSuperAdmin ? "Super Admin" : isContractor ? "Contractor" : "Property Owner"}
+                    </p>
+                  </div>
+                  {contractorProfile?.company_name && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Company</p>
+                      <p className="font-semibold">{contractorProfile.company_name}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Button onClick={() => navigate("/my-profile")} className="bg-gradient-to-r from-primary to-primary/80">
+                    Edit Full Profile <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/forgot-password")}>
+                    Reset Password
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Services tab */}
           <TabsContent value="services" className="space-y-4">
             <div>
