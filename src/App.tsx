@@ -123,6 +123,7 @@ import HomeownerMessages from "./pages/HomeownerMessages";
 import QuoteDetail from "./pages/QuoteDetail";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { HomeownerOnlyRoute } from "./components/auth/HomeownerOnlyRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { GlobalAIChat } from "./components/ai/GlobalAIChat";
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
@@ -466,7 +467,7 @@ const GCNRoutes = () => (
           <Route path="/property-iq/search" element={<Suspense fallback={<div />}><PropertyIQSearch /></Suspense>} />
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
-          <Route path="/instant-quote" element={<Suspense fallback={<div />}><InstantQuote /></Suspense>} />
+          <Route path="/instant-quote" element={<HomeownerOnlyRoute><Suspense fallback={<div />}><InstantQuote /></Suspense></HomeownerOnlyRoute>} />
           <Route path="/maintenance-membership" element={<Suspense fallback={<div />}><MaintenanceMembership /></Suspense>} />
           <Route path="/prep-property" element={<PrepYourProperty />} />
           <Route path="/roofing-services" element={<RoofingServices />} />
