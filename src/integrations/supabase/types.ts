@@ -5153,6 +5153,45 @@ export type Database = {
           },
         ]
       }
+      maintenance_membership_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          plan_interest: string | null
+          property_address: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          plan_interest?: string | null
+          property_address?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          plan_interest?: string | null
+          property_address?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       marketing_leads: {
         Row: {
           budget_range: string | null
