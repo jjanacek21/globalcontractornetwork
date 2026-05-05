@@ -109,6 +109,7 @@ const MemberDashboard = () => {
   const [contractorProfile, setContractorProfile] = useState<ContractorProfile | null>(null);
   const [companyMembership, setCompanyMembership] = useState<CompanyMembership | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCompanyAdmin, setIsCompanyAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("services");
   const navigate = useNavigate();
 
@@ -135,6 +136,28 @@ const MemberDashboard = () => {
             companyName: (companyMemberData.companies as any)?.name || "Your Company",
             role: companyMemberData.role,
           });
+          if (companyMemberData.role === "company_admin") setIsCompanyAdmin(true);
+        }
+        // Also check company_admins table
+        const { data: companyAdminData } = await supabase
+          .from("company_admins")
+          .select("company_id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (companyAdminData) {
+          setIsCompanyAdmin(true);
+          if (!companyMemberData) {
+            const { data: companyData } = await supabase
+              .from("permit_companies")
+              .select("name")
+              .eq("id", companyAdminData.company_id)
+              .maybeSingle();
+            setCompanyMembership({
+              companyId: companyAdminData.company_id,
+              companyName: (companyData as any)?.name || "Your Company",
+              role: "company_admin",
+            });
+          }
         }
         setActiveTab("services");
       } catch (err) {
@@ -331,6 +354,15 @@ const MemberDashboard = () => {
                   <Button variant="outline" onClick={() => navigate("/forgot-password")}>
                     Reset Password
                   </Button>
+                  {(isCompanyAdmin || isSuperAdmin) && (
+                    <Button
+                      onClick={() => navigate("/company/dashboard")}
+                      className="bg-gradient-to-r from-accent to-amber-400 text-accent-foreground"
+                    >
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Manage Company{companyMembership?.companyName ? `: ${companyMembership.companyName}` : ""}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
