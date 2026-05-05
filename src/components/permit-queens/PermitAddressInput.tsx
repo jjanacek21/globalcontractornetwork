@@ -95,14 +95,17 @@ export function PermitAddressInput({
 
   const handleSelectResult = useCallback((result: SearchResult) => {
     const fullAddress = result.place_name;
+    console.log('[PermitAddressInput] address picked:', fullAddress);
     onChange(fullAddress);
     setShowResults(false);
-    
+
     // Detect jurisdiction from the selected address
     const info = detectFromAddress(fullAddress);
+    console.log('[PermitAddressInput] detectFromAddress result:', info, '(departments loaded:', !detectingJurisdiction, ')');
     setJurisdictionInfo(info);
+    console.log('[PermitAddressInput] invoking onJurisdictionDetected handler...');
     onJurisdictionDetected(info, fullAddress);
-  }, [onChange, detectFromAddress, onJurisdictionDetected]);
+  }, [onChange, detectFromAddress, onJurisdictionDetected, detectingJurisdiction]);
 
   return (
     <div ref={containerRef} className={cn("space-y-4", className)}>
