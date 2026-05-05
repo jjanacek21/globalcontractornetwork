@@ -3297,6 +3297,63 @@ export type Database = {
           },
         ]
       }
+      field_extraction_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_template_id: string | null
+          current_template_name: string | null
+          error_log: Json
+          failed: number
+          id: string
+          processed: number
+          scope_template_id: string | null
+          started_at: string | null
+          status: string
+          succeeded: number
+          template_ids: string[]
+          total_templates: number
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_template_id?: string | null
+          current_template_name?: string | null
+          error_log?: Json
+          failed?: number
+          id?: string
+          processed?: number
+          scope_template_id?: string | null
+          started_at?: string | null
+          status?: string
+          succeeded?: number
+          template_ids?: string[]
+          total_templates?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_template_id?: string | null
+          current_template_name?: string | null
+          error_log?: Json
+          failed?: number
+          id?: string
+          processed?: number
+          scope_template_id?: string | null
+          started_at?: string | null
+          status?: string
+          succeeded?: number
+          template_ids?: string[]
+          total_templates?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       field_properties: {
         Row: {
           address: string
