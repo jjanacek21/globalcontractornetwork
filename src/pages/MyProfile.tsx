@@ -187,23 +187,23 @@ export default function MyProfile() {
         </motion.div>
 
         {/* Linked Records Tabs */}
-        <Tabs defaultValue={isContractor ? "referrals" : "quotes"} className="space-y-4">
-          <TabsList className="grid w-full" style={{ gridTemplateColumns: isContractor ? "repeat(3, 1fr)" : "repeat(3, 1fr)" }}>
-            <TabsTrigger value="quotes" className="gap-2">
-              <FileText className="h-4 w-4" />
-              My Quotes
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="gap-2">
+        <Tabs defaultValue="projects" className="space-y-4">
+          <TabsList className="grid w-full h-12 p-1 glass-card border border-border/40 rounded-2xl" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <TabsTrigger value="projects" className="gap-2 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <Home className="h-4 w-4" />
               My Projects
             </TabsTrigger>
+            <TabsTrigger value="quotes" className="gap-2 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+              <FileText className="h-4 w-4" />
+              My Quotes
+            </TabsTrigger>
             {isContractor ? (
-              <TabsTrigger value="referrals" className="gap-2">
+              <TabsTrigger value="referrals" className="gap-2 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <Users className="h-4 w-4" />
                 Referrals
               </TabsTrigger>
             ) : (
-              <TabsTrigger value="requests" className="gap-2">
+              <TabsTrigger value="requests" className="gap-2 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
                 <Users className="h-4 w-4" />
                 Requests
               </TabsTrigger>
