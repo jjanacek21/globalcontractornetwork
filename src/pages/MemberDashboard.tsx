@@ -304,12 +304,12 @@ const MemberDashboard = () => {
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">Name</p>
                     <p className="font-semibold">
-                      {[userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(" ") || "—"}
+                      {[profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">Email</p>
-                    <p className="font-semibold break-all">{userProfile?.email || "—"}</p>
+                    <p className="font-semibold break-all">{profile?.email || "—"}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">Account Type</p>
