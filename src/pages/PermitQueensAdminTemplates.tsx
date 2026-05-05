@@ -150,7 +150,66 @@ export default function PermitQueensAdminTemplates() {
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
   const [showMappingDialog, setShowMappingDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  
+
+  // Bulk extraction job state
+  const [bulkJobId, setBulkJobId] = useState<string | null>(null);
+  const [bulkJob, setBulkJob] = useState<any | null>(null);
+
+  // Poll the active extraction job
+  useEffect(() => {
+    if (!bulkJobId) return;
+    let cancelled = false;
+    const tick = async () => {
+      const { data } = await supabase
+        .from('field_extraction_jobs')
+        .select('*')
+        .eq('id', bulkJobId)
+        .maybeSingle();
+      if (cancelled) return;
+      setBulkJob(data);
+      if (data?.status === 'completed' || data?.status === 'failed') {
+        const fail = data.failed ?? 0;
+        const ok = data.succeeded ?? 0;
+        toast.success(`Field extraction done — ${ok} succeeded, ${fail} failed`);
+        fetchTemplates();
+        setBulkJobId(null);
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 2000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [bulkJobId]);
+
+  const startBulkExtraction = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke(
+        'permit-field-extraction-runner',
+        { body: { action: 'start', triggeredBy: user?.id ?? null } }
+      );
+      if (error) throw error;
+      if (!data?.jobId) throw new Error('No job id returned');
+      toast.info(`Started bulk extraction for ${data.total} template${data.total === 1 ? '' : 's'}`);
+      setBulkJobId(data.jobId);
+    } catch (e: any) {
+      toast.error(`Failed to start: ${e?.message || 'unknown error'}`);
+    }
+  };
+
+  const reExtractTemplate = async (templateId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'permit-field-extraction-runner',
+        { body: { action: 'start', scopeTemplateId: templateId } }
+      );
+      if (error) throw error;
+      toast.info('Re-running extraction…');
+      setBulkJobId(data.jobId);
+    } catch (e: any) {
+      toast.error(`Failed: ${e?.message || 'unknown'}`);
+    }
+  };
+
   const [newTemplate, setNewTemplate] = useState({
     jurisdiction_name: '',
     form_type: 'permit_application',
