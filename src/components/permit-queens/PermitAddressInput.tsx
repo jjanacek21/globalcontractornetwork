@@ -95,7 +95,8 @@ export function PermitAddressInput({
 
   const handleSelectResult = useCallback((result: SearchResult) => {
     const fullAddress = result.place_name;
-    console.log('[PermitAddressInput] address picked:', fullAddress);
+    const selectedAddress = fullAddress;
+    console.log('[wizard] address picked', selectedAddress);
     onChange(fullAddress);
     setShowResults(false);
 
