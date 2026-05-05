@@ -6695,6 +6695,7 @@ export type Database = {
           id: string
           packet_type: string | null
           permit_request_id: string | null
+          source_hash: string | null
           status: string | null
           submitted_at: string | null
           total_pages: number | null
@@ -6712,6 +6713,7 @@ export type Database = {
           id?: string
           packet_type?: string | null
           permit_request_id?: string | null
+          source_hash?: string | null
           status?: string | null
           submitted_at?: string | null
           total_pages?: number | null
@@ -6729,6 +6731,7 @@ export type Database = {
           id?: string
           packet_type?: string | null
           permit_request_id?: string | null
+          source_hash?: string | null
           status?: string | null
           submitted_at?: string | null
           total_pages?: number | null
