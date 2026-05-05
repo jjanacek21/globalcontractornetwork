@@ -48,6 +48,7 @@ import LandingPage from "./pages/LandingPage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Contacts from "./pages/Contacts";
@@ -485,6 +486,7 @@ const GCNRoutes = () => (
           
           {/* CRM Routes */}
           <Route path="/crm/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/crm/dashboard" element={
             <ProtectedRoute>
