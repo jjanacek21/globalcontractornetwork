@@ -514,6 +514,72 @@ export default function PermitQueensAdminTemplates() {
             </Card>
           </div>
 
+          {/* Bulk field extraction */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Bulk Field Detection
+              </CardTitle>
+              <CardDescription>
+                Auto-detect and AI-map AcroForm fields across every uploaded template.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={startBulkExtraction}
+                  disabled={!!bulkJobId || templates.filter(t => !t.file_path?.startsWith('pending/')).length === 0}
+                >
+                  {bulkJobId ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
+                  ) : (
+                    <>Auto-detect fields for ALL templates</>
+                  )}
+                </Button>
+                {bulkJob && (
+                  <div className="text-sm text-muted-foreground">
+                    {bulkJob.status === 'running' && bulkJob.current_template_name && (
+                      <span>Processing template {bulkJob.processed + 1} of {bulkJob.total_templates} — {bulkJob.current_template_name}</span>
+                    )}
+                    {bulkJob.status !== 'running' && (
+                      <span>{bulkJob.processed} / {bulkJob.total_templates} processed · {bulkJob.succeeded} ok · {bulkJob.failed} failed</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {bulkJob && Array.isArray(bulkJob.error_log) && bulkJob.error_log.length > 0 && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                  <p className="font-medium text-destructive mb-1">Failures ({bulkJob.error_log.length})</p>
+                  <ul className="space-y-1 max-h-40 overflow-y-auto">
+                    {bulkJob.error_log.map((e: any, i: number) => (
+                      <li key={i} className="text-xs">
+                        <span className="font-medium">{e.template_name || e.template_id}</span>: {e.error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Pending templates needing PDF upload */}
+              {templates.some(t => t.file_path?.startsWith('pending/')) && (
+                <div className="rounded-md border border-orange-300 bg-orange-50/50 p-3">
+                  <p className="text-sm font-medium text-orange-700 mb-2">
+                    {templates.filter(t => t.file_path?.startsWith('pending/')).length} templates are waiting for a PDF upload before fields can be detected.
+                  </p>
+                  <ul className="text-xs space-y-1 max-h-48 overflow-y-auto">
+                    {templates.filter(t => t.file_path?.startsWith('pending/')).map(t => (
+                      <li key={t.id} className="flex justify-between gap-2">
+                        <span><strong>{t.jurisdiction_name}</strong> — {t.form_name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Templates Table */}
           <Card>
             <CardHeader>
