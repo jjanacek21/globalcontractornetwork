@@ -17,6 +17,7 @@ export default function MyProfile() {
     profile, 
     contractorProfile, 
     isContractor, 
+    isSuperAdmin,
     quotes, 
     projects, 
     referrals, 
@@ -55,6 +56,7 @@ export default function MyProfile() {
 
   const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Member";
   const totalEarnings = referrals.reduce((sum, r) => sum + (r.payout_amount || 0), 0);
+  const profileRoleLabel = isSuperAdmin ? "Main Admin" : isContractor ? "Contractor" : "Homeowner";
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,8 +117,8 @@ export default function MyProfile() {
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <Badge variant={isContractor ? "default" : "secondary"}>
-                    {isContractor ? "Contractor" : "Homeowner"}
+                  <Badge variant={isSuperAdmin || isContractor ? "default" : "secondary"}>
+                    {profileRoleLabel}
                   </Badge>
                 </div>
               </div>

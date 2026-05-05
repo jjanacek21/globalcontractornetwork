@@ -51,6 +51,7 @@ interface UserProfileData {
   profile: ProfileInfo | null;
   contractorProfile: ContractorProfile | null;
   isContractor: boolean;
+  isSuperAdmin: boolean;
   quotes: LinkedQuote[];
   projects: LinkedProject[];
   referrals: LinkedReferral[];
@@ -64,6 +65,7 @@ export function useUserProfile(): UserProfileData {
     profile: null,
     contractorProfile: null,
     isContractor: false,
+    isSuperAdmin: false,
     quotes: [],
     projects: [],
     referrals: [],
@@ -100,6 +102,14 @@ export function useUserProfile(): UserProfileData {
           .maybeSingle();
 
         const isContractor = !!contractorProfile;
+
+        const { data: superAdmin } = await supabase
+          .from("super_admins")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const isSuperAdmin = !!superAdmin;
 
         // Fetch quotes (coating_leads, window_leads, roofing_consultations)
         const quotes: LinkedQuote[] = [];
@@ -189,6 +199,7 @@ export function useUserProfile(): UserProfileData {
           profile,
           contractorProfile,
           isContractor,
+          isSuperAdmin,
           quotes,
           projects: projects || [],
           referrals,
