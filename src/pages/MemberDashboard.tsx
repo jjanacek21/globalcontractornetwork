@@ -126,11 +126,8 @@ const MemberDashboard = () => {
     navigate("/");
   };
 
-  // Super admins see everything (treated as contractor + extra admin view)
-  const isContractor = !!contractorProfile || isSuperAdmin;
-  const isPendingContractor = !!contractorProfile && contractorProfile?.subscription_status === "pending" && !isSuperAdmin;
-  const isCompanyAdmin = !!companyMembership && ["company_admin", "owner", "admin"].includes(companyMembership.role);
-  const canManageCompany = isCompanyAdmin || isSuperAdmin;
+  const isContractor = !!contractorProfile;
+  const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
 
   // Contractor Services tab
   const contractorServices: ServiceCard[] = [
@@ -265,10 +262,7 @@ const MemberDashboard = () => {
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isSuperAdmin
-                ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title))]
-                : isContractor ? contractorServices : homeownerServices
-              ).map((s) => (
+              {(isContractor ? contractorServices : homeownerServices).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
@@ -287,10 +281,7 @@ const MemberDashboard = () => {
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(isSuperAdmin
-                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
-                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
-              ).map((s) => (
+              {(isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")).map((s) => (
                 <ServiceTile key={s.title} s={s} onClick={() => s.link && navigate(s.link)} />
               ))}
             </div>
@@ -305,13 +296,9 @@ const MemberDashboard = () => {
                 <p className="font-semibold">{companyMembership.companyName}</p>
                 <p className="text-xs text-muted-foreground">Role: {companyMembership.role}</p>
               </div>
-              {canManageCompany ? (
-                <Button variant="outline" onClick={() => navigate("/company/dashboard")}>
-                  Manage Company <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Badge variant="secondary">Team Member</Badge>
-              )}
+              <Button variant="outline" onClick={() => navigate("/company/dashboard")}>
+                Manage Company <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
             </CardContent>
           </Card>
         )}
