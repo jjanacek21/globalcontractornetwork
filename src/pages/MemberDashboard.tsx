@@ -298,9 +298,13 @@ const MemberDashboard = () => {
                 <p className="font-semibold">{companyMembership.companyName}</p>
                 <p className="text-xs text-muted-foreground">Role: {companyMembership.role}</p>
               </div>
-              <Button variant="outline" onClick={() => navigate("/company/dashboard")}>
-                Manage Company <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              {canManageCompany ? (
+                <Button variant="outline" onClick={() => navigate("/company/dashboard")}>
+                  Manage Company <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Badge variant="secondary">Team Member</Badge>
+              )}
             </CardContent>
           </Card>
         )}
