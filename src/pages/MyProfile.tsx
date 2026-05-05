@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  User, Mail, Phone, Building2, MapPin, FileText, 
-  Home, Briefcase, Users, ArrowLeft, CheckCircle2, Pencil
+import {
+  User, Mail, Phone, Building2, MapPin, FileText,
+  Home, Briefcase, Users, ArrowLeft, CheckCircle2, Pencil, Crown
 } from "lucide-react";
 import { format } from "date-fns";
 
