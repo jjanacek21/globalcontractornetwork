@@ -184,6 +184,7 @@ const MemberDashboard = () => {
 
   const isContractor = !!contractorProfile;
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  const profileRoute = (!isContractor && !isSuperAdmin) ? "/homeowner-profile" : "/my-profile";
 
   const contractorServices: ServiceCard[] = [
     { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
