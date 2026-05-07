@@ -313,7 +313,7 @@ const MemberDashboard = () => {
 
         {/* 3-tab nav */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 p-1 glass-card border border-border/40 rounded-2xl">
+          <TabsList className={`grid w-full max-w-2xl ${showAppsTab ? 'grid-cols-3' : 'grid-cols-2'} h-12 p-1 glass-card border border-border/40 rounded-2xl`}>
             <TabsTrigger value="profile" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <User className="h-4 w-4 mr-2" /> My Profile
             </TabsTrigger>
@@ -321,10 +321,12 @@ const MemberDashboard = () => {
               <Briefcase className="h-4 w-4 mr-2" />
               {isSuperAdmin ? "All Services" : isContractor ? "Contractor Services" : "Services"}
             </TabsTrigger>
-            <TabsTrigger value="apps" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
-              <Rocket className="h-4 w-4 mr-2" />
-              {isSuperAdmin ? "All Apps" : isContractor ? "Contractor Apps" : "For Property Owners"}
-            </TabsTrigger>
+            {showAppsTab && (
+              <TabsTrigger value="apps" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Rocket className="h-4 w-4 mr-2" />
+                {isSuperAdmin ? "All Apps" : "Contractor Apps"}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile tab */}
