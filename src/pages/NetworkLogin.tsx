@@ -19,22 +19,37 @@ const NetworkLogin = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let cancelled = false;
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        navigate("/member/dashboard");
+      // Validate token against the server (getSession only reads localStorage)
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (error || !user) {
+        // Stale/expired token — purge local session and stay on login
+        try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+        try {
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith("sb-"))
+            .forEach((k) => localStorage.removeItem(k));
+        } catch {}
+        setCheckingSession(false);
+        return;
       }
-      setCheckingSession(false);
+      navigate("/member/dashboard", { replace: true });
     };
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        navigate("/member/dashboard");
+      // Only redirect on an explicit sign-in event with a valid session
+      if (event === "SIGNED_IN" && session?.user) {
+        navigate("/member/dashboard", { replace: true });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {

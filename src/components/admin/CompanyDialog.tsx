@@ -55,7 +55,7 @@ export function CompanyDialog({ open, onOpenChange, company, mode, onModeChange,
     setSaving(true);
     try {
       if (mode === 'add') {
-        const { error } = await supabase.from('permit_companies').insert({
+        const { error } = await supabase.from('companies').insert({
           name: formData.name,
           address: formData.address,
           city: formData.city,
@@ -69,7 +69,7 @@ export function CompanyDialog({ open, onOpenChange, company, mode, onModeChange,
         if (error) throw error;
         toast({ title: "Success", description: "Company created successfully" });
       } else {
-        const { error } = await supabase.from('permit_companies').update({
+        const { error } = await supabase.from('companies').update({
           name: formData.name,
           address: formData.address,
           city: formData.city,
@@ -98,7 +98,7 @@ export function CompanyDialog({ open, onOpenChange, company, mode, onModeChange,
 
     setDeleting(true);
     try {
-      const { error } = await supabase.from('permit_companies').delete().eq('id', company.id);
+      const { error } = await supabase.from('companies').delete().eq('id', company.id);
       if (error) throw error;
       toast({ title: "Success", description: "Company deleted successfully" });
       onOpenChange(false);

@@ -148,7 +148,7 @@ const MemberDashboard = () => {
           setIsCompanyAdmin(true);
           if (!companyMemberData) {
             const { data: companyData } = await supabase
-              .from("permit_companies")
+              .from("companies")
               .select("name")
               .eq("id", companyAdminData.company_id)
               .maybeSingle();
@@ -169,8 +169,17 @@ const MemberDashboard = () => {
   }, [navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (err) {
+      console.warn("signOut error (ignored):", err);
+    }
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    navigate("/", { replace: true });
   };
 
   const isContractor = !!contractorProfile;

@@ -73,7 +73,7 @@ export function UsersTable() {
     try {
       const [membersResult, companiesResult] = await Promise.all([
         supabase.from('company_members').select('*').order('created_at', { ascending: false }),
-        supabase.from('permit_companies').select('id, name').order('name'),
+        supabase.from('companies').select('id, name').order('name'),
       ]);
 
       if (membersResult.error) throw membersResult.error;
@@ -83,7 +83,7 @@ export function UsersTable() {
         (membersResult.data || []).map(async (member) => {
           const [profileResult, companyResult] = await Promise.all([
             supabase.from('profiles').select('email, first_name, last_name').eq('id', member.user_id).maybeSingle(),
-            supabase.from('permit_companies').select('name').eq('id', member.company_id).maybeSingle(),
+            supabase.from('companies').select('name').eq('id', member.company_id).maybeSingle(),
           ]);
           return {
             ...member,
