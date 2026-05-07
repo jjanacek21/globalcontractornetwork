@@ -89,17 +89,16 @@ const BuildingDeptCrawlerTab = () => {
   };
 
   const autoConvertDocs = async (department: string) => {
-    // Find all downloaded but unconverted docs for this department
+    // Find ALL unconverted docs (downloader self-heals inside the converter)
     const { data: unconverted } = await supabase
       .from('firecrawl_discovered_documents')
       .select('id')
       .eq('department', department)
-      .eq('is_downloaded', true)
       .eq('is_converted_to_smart_doc', false);
 
     if (!unconverted || unconverted.length === 0) return;
 
-    toast.info(`Auto-converting ${unconverted.length} docs from ${department}...`);
+    toast.info(`Converting ${unconverted.length} docs from ${department}...`);
 
     const { data, error } = await supabase.functions.invoke('firecrawl-to-smart-docs', {
       body: { documentIds: unconverted.map(d => d.id) },
