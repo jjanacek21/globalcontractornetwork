@@ -28,6 +28,13 @@ export default function MyProfile() {
     error 
   } = useUserProfile();
 
+  // Homeowners get the full-featured profile (messages, photos, post-a-job, etc.)
+  useEffect(() => {
+    if (!loading && profile && !isContractor && !isSuperAdmin) {
+      navigate("/homeowner-profile", { replace: true });
+    }
+  }, [loading, profile, isContractor, isSuperAdmin, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-6">
