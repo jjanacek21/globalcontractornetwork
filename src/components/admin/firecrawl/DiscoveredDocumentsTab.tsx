@@ -92,7 +92,7 @@ const DiscoveredDocumentsTab = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('firecrawl_discovered_documents')
-      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, storage_path, created_at')
+      .select('id, source_url, file_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, storage_path, created_at')
       .order('created_at', { ascending: false })
       .limit(200);
 
