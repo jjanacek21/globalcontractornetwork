@@ -577,6 +577,11 @@ const GCNRoutes = () => (
               <ContractorRewards />
             </ProtectedRoute>
           } />
+          <Route path="/contractor/referrals" element={
+            <ProtectedRoute redirectTo="/network-login">
+              <ContractorReferralsPage />
+            </ProtectedRoute>
+          } />
           <Route path="/job-board" element={
             <ProtectedRoute redirectTo="/network-login">
               <JobBoard />
