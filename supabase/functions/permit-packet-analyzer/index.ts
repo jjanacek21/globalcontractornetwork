@@ -295,7 +295,7 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
 
       if (!detectResponse.ok) {
         const errorText = await detectResponse.text();
-        console.error("[permit-packet-analyzer] Vision API error:", errorText);
+        console.error("[permit-packet-analyzer] Vision API error:", detectResponse.status, errorText);
         
         if (detectResponse.status === 429) {
           return new Response(
@@ -309,6 +309,49 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
+        // 413 = Payload Too Large. Fall back to filename-based detection so the upload doesn't fail.
+        if (detectResponse.status === 413 || detectResponse.status === 422) {
+          console.log("[permit-packet-analyzer] File too large for vision API, falling back to filename heuristic detection");
+          const fb = filenameHeuristicDetection(fileName || "");
+          const fallbackResult: DetectionResult = {
+            detected: fb.detected,
+            confidence: fb.confidence,
+            detected_from: [`File too large for vision (${detectResponse.status}) - detected from filename: ${fileName}`],
+            raw_text_sample: "",
+          };
+
+          if (trainingId) {
+            await supabase
+              .from("permit_packet_training")
+              .update({
+                county: fallbackResult.detected.county,
+                city: fallbackResult.detected.city,
+                trade_type: fallbackResult.detected.trade_type,
+                material_type: fallbackResult.detected.material_type,
+                is_hvhz: fallbackResult.detected.is_hvhz,
+                auto_detected: true,
+                detection_confidence: fallbackResult.confidence,
+                detected_from: fallbackResult.detected_from,
+                processing_status: "detected",
+                admin_notes: "Large file - filename-based detection used. Please verify and confirm.",
+              })
+              .eq("id", trainingId);
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              mode: "detect_and_analyze",
+              detection: fallbackResult,
+              trainingId,
+              templateId,
+              fallback: true,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         throw new Error(`Vision analysis failed: ${detectResponse.status}`);
       }
 
