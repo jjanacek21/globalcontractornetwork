@@ -184,6 +184,7 @@ const MemberDashboard = () => {
 
   const isContractor = !!contractorProfile;
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
+  const profileRoute = (!isContractor && !isSuperAdmin) ? "/homeowner-profile" : "/my-profile";
 
   const contractorServices: ServiceCard[] = [
     { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
@@ -237,7 +238,7 @@ const MemberDashboard = () => {
             animate={{ opacity: 1, x: 0 }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => navigate("/my-profile")}
+            onClick={() => navigate(profileRoute)}
             className="flex items-center gap-3 group rounded-full pl-1 pr-4 py-1 bg-gradient-to-r from-primary/5 via-accent/5 to-transparent border border-border/40 hover:border-accent/50 transition-all"
             aria-label="My Profile"
           >
@@ -357,7 +358,7 @@ const MemberDashboard = () => {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <Button onClick={() => navigate("/my-profile")} className="bg-gradient-to-r from-primary to-primary/80">
+                  <Button onClick={() => navigate(profileRoute)} className="bg-gradient-to-r from-primary to-primary/80">
                     Edit Full Profile <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                   <Button variant="outline" onClick={() => navigate("/forgot-password")}>
