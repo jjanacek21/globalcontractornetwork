@@ -170,6 +170,11 @@ Deno.serve(async (req) => {
         completed_at: new Date().toISOString(),
       }).eq('id', job.id);
 
+      // Auto-trigger PDF downloader for any pdf URLs we just discovered
+      supabase.functions.invoke('firecrawl-download-discovered-pdfs', {
+        body: { crawlJobId: job.id, limit: 200 },
+      }).catch(() => {});
+
       return new Response(
         JSON.stringify({ success: true, jobId: job.id, totalUrls: allUrls.length, permitUrls: permitUrls.length, docsFound }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
