@@ -962,7 +962,13 @@ Extract as much data as possible. If you cannot find a particular field, use nul
     const ext = getFileExtension(fileName || "document.pdf");
     const mimeType = getMimeType(fileName || "document.pdf");
 
-    if (fileContent && ["jpg", "jpeg", "png", "gif", "webp", "pdf"].includes(ext)) {
+    const inlineSizeAnalyze = fileContent ? base64SizeBytes(fileContent) : 0;
+    const skipInlineForAnalyze = inlineSizeAnalyze > MAX_INLINE_BASE64_BYTES;
+    if (skipInlineForAnalyze) {
+      console.log(`[permit-packet-analyzer] Skipping inline file in analyze_only: ${(inlineSizeAnalyze/1024/1024).toFixed(1)}MB > 4MB. Using context-only analysis.`);
+    }
+
+    if (fileContent && !skipInlineForAnalyze && ["jpg", "jpeg", "png", "gif", "webp", "pdf"].includes(ext)) {
       analysisContent = [
         { type: "text", text: userPrompt },
         {
