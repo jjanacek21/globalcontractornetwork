@@ -47,7 +47,7 @@ export function TeamsTable() {
     try {
       const [teamsResult, companiesResult] = await Promise.all([
         supabase.from('teams').select('*').order('created_at', { ascending: false }),
-        supabase.from('permit_companies').select('id, name').order('name'),
+        supabase.from('companies').select('id, name').order('name'),
       ]);
 
       if (teamsResult.error) throw teamsResult.error;
@@ -56,7 +56,7 @@ export function TeamsTable() {
       const teamsWithDetails = await Promise.all(
         (teamsResult.data || []).map(async (team) => {
           const [companyResult, memberCount] = await Promise.all([
-            supabase.from('permit_companies').select('name').eq('id', team.company_id).maybeSingle(),
+            supabase.from('companies').select('name').eq('id', team.company_id).maybeSingle(),
             supabase.from('company_members').select('*', { count: 'exact', head: true }).eq('team_id', team.id),
           ]);
           return {

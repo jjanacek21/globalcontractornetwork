@@ -25,7 +25,7 @@ export function CompanySettings() {
   const { data: companies, isLoading } = useQuery({
     queryKey: ["company-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("permit_companies").select("*").limit(1);
+      const { data, error } = await supabase.from("companies").select("*").limit(1);
       if (error) throw error;
       return data;
     },
@@ -61,10 +61,10 @@ export function CompanySettings() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (company) {
-        const { error } = await supabase.from("permit_companies").update(form).eq("id", company.id);
+        const { error } = await supabase.from("companies").update(form).eq("id", company.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("permit_companies").insert({ ...form });
+        const { error } = await supabase.from("companies").insert({ ...form });
         if (error) throw error;
       }
     },

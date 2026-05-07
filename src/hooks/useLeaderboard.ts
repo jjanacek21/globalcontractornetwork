@@ -142,7 +142,7 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
 
       const companyIds = teams?.map(t => t.company_id).filter(Boolean) || [];
       const { data: companies } = await supabase
-        .from('permit_companies')
+        .from('companies')
         .select('id, name')
         .in('id', companyIds);
 
@@ -191,7 +191,7 @@ export function useLeaderboard(type: LeaderboardType = 'personal', period: Leade
       // Fetch company details
       const companyIds = data?.map(d => d.company_id) || [];
       const { data: companies } = await supabase
-        .from('permit_companies')
+        .from('companies')
         .select('id, name, logo_url')
         .in('id', companyIds);
 

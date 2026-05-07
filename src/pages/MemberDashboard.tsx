@@ -148,7 +148,7 @@ const MemberDashboard = () => {
           setIsCompanyAdmin(true);
           if (!companyMemberData) {
             const { data: companyData } = await supabase
-              .from("permit_companies")
+              .from("companies")
               .select("name")
               .eq("id", companyAdminData.company_id)
               .maybeSingle();
