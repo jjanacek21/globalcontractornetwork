@@ -17,6 +17,7 @@ import { useDropzone } from 'react-dropzone';
 interface DiscoveredDoc {
   id: string;
   source_url: string;
+  file_url: string | null;
   document_type: string;
   title: string;
   department: string;
