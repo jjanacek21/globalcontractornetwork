@@ -144,13 +144,50 @@ const BuildingDeptCrawlerTab = () => {
     toast.success('Finished crawling all departments!');
   };
 
+  const downloadMissing = async (department?: string) => {
+    const label = department || 'all departments';
+    toast.info(`Downloading missing PDFs for ${label}...`);
+    const { data, error } = await supabase.functions.invoke('firecrawl-download-discovered-pdfs', {
+      body: department ? { department, limit: 200 } : { limit: 500 },
+    });
+    if (error || !data?.success) {
+      toast.error(`Download failed for ${label}`);
+      return;
+    }
+    toast.success(`Downloaded ${data.downloaded}/${data.total} PDFs for ${label}`);
+    fetchDeptStats();
+  };
+
+  const mapAllFlorida = async () => {
+    setCrawlingAll(true);
+    toast.info('Mapping every building department in the database. This runs in the background.');
+    const { data, error } = await supabase.functions.invoke('firecrawl-bulk-map-departments', {
+      body: {},
+    });
+    setCrawlingAll(false);
+    if (error || !data?.success) {
+      toast.error('Bulk map failed');
+      return;
+    }
+    toast.success(`Mapped ${data.total} departments. PDFs are downloading in the background.`);
+    fetchDeptStats();
+  };
+
   return (
     <div className="space-y-4">
-      {/* Crawl All Button */}
-      <div className="flex items-center gap-3">
-        <Button onClick={crawlAllDepartments} disabled={crawlingAll || !!loadingDept} size="lg">
+      {/* Bulk actions */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={mapAllFlorida} disabled={crawlingAll || !!loadingDept} size="lg">
+          {crawlingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Map className="h-4 w-4 mr-2" />}
+          Map All Florida Departments
+        </Button>
+        <Button onClick={crawlAllDepartments} disabled={crawlingAll || !!loadingDept} size="lg" variant="outline">
           {crawlingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PlayCircle className="h-4 w-4 mr-2" />}
-          Crawl All Departments
+          Crawl All (Slow)
+        </Button>
+        <Button onClick={() => downloadMissing()} disabled={crawlingAll || !!loadingDept} size="lg" variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Download Missing PDFs
         </Button>
         {crawlingAll && (
           <div className="flex-1 max-w-xs space-y-1">
