@@ -407,7 +407,7 @@ serve(async (req) => {
         }
         
         await supabaseAdmin
-          .from('permit_companies')
+          .from('companies')
           .update(updateData)
           .eq('id', companyId);
       }
