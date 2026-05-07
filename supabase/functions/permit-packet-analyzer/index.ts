@@ -159,6 +159,94 @@ function getMimeType(fileName: string): string {
   return mimeTypes[ext] || "application/octet-stream";
 }
 
+// Filename-based heuristic detection used when vision API rejects large files (413).
+function filenameHeuristicDetection(fileName: string): {
+  detected: DetectionResult["detected"];
+  confidence: DetectionResult["confidence"];
+} {
+  const name = (fileName || "").toLowerCase();
+
+  const cityMap: Record<string, { city: string; county: string; hvhz: boolean }> = {
+    "miami beach": { city: "Miami Beach", county: "Miami-Dade", hvhz: true },
+    "miami": { city: "Miami", county: "Miami-Dade", hvhz: true },
+    "homestead": { city: "Homestead", county: "Miami-Dade", hvhz: true },
+    "doral": { city: "Doral", county: "Miami-Dade", hvhz: true },
+    "hialeah": { city: "Hialeah", county: "Miami-Dade", hvhz: true },
+    "coral gables": { city: "Coral Gables", county: "Miami-Dade", hvhz: true },
+    "fort lauderdale": { city: "Fort Lauderdale", county: "Broward", hvhz: false },
+    "hollywood": { city: "Hollywood", county: "Broward", hvhz: false },
+    "pembroke pines": { city: "Pembroke Pines", county: "Broward", hvhz: false },
+    "coral springs": { city: "Coral Springs", county: "Broward", hvhz: false },
+    "parkland": { city: "Parkland", county: "Broward", hvhz: false },
+    "margate": { city: "Margate", county: "Broward", hvhz: false },
+    "boca raton": { city: "Boca Raton", county: "Palm Beach", hvhz: false },
+    "delray beach": { city: "Delray Beach", county: "Palm Beach", hvhz: false },
+    "boynton beach": { city: "Boynton Beach", county: "Palm Beach", hvhz: false },
+    "west palm beach": { city: "West Palm Beach", county: "Palm Beach", hvhz: false },
+    "wellington": { city: "Wellington", county: "Palm Beach", hvhz: false },
+    "riviera beach": { city: "Riviera Beach", county: "Palm Beach", hvhz: false },
+    "jupiter": { city: "Jupiter", county: "Palm Beach", hvhz: false },
+    "palm beach gardens": { city: "Palm Beach Gardens", county: "Palm Beach", hvhz: false },
+  };
+
+  let city: string | null = null;
+  let county: string | null = null;
+  let isHvhz = false;
+  for (const key of Object.keys(cityMap)) {
+    if (name.includes(key)) {
+      city = cityMap[key].city;
+      county = cityMap[key].county;
+      isHvhz = cityMap[key].hvhz;
+      break;
+    }
+  }
+
+  let tradeType: string | null = null;
+  if (/(roof|reroof|re-roof|shingle|tile|metal|standing seam|tpo|epdm)/i.test(name)) tradeType = "roofing";
+  else if (/(window|door|impact)/i.test(name)) tradeType = "windows_doors";
+  else if (/(solar|pv|photovoltaic)/i.test(name)) tradeType = "solar";
+  else if (/(electric|panel|service upgrade)/i.test(name)) tradeType = "electrical";
+  else if (/(hvac|ac|mechanical|air conditioning)/i.test(name)) tradeType = "mechanical";
+  else if (/(plumb|water heater|sewer)/i.test(name)) tradeType = "plumbing";
+
+  let materialType: string | null = null;
+  if (/standing seam/i.test(name)) materialType = "metal";
+  else if (/shingle/i.test(name)) materialType = "shingle";
+  else if (/tile/i.test(name)) materialType = "tile";
+  else if (/metal/i.test(name)) materialType = "metal";
+  else if (/tpo/i.test(name)) materialType = "tpo";
+  else if (/coating/i.test(name)) materialType = "coating";
+
+  return {
+    detected: {
+      building_department: city ? `City of ${city} Building Department` : null,
+      county,
+      city,
+      trade_type: tradeType,
+      material_type: materialType,
+      is_hvhz: isHvhz,
+    },
+    confidence: {
+      building_department: city ? 0.5 : 0,
+      county: county ? 0.6 : 0,
+      city: city ? 0.6 : 0,
+      trade_type: tradeType ? 0.5 : 0,
+      material_type: materialType ? 0.5 : 0,
+    },
+  };
+}
+
+// Estimate the size of a base64 string in bytes
+function base64SizeBytes(b64: string): number {
+  if (!b64) return 0;
+  // 4 base64 chars = 3 bytes; subtract padding
+  const padding = (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
+  return Math.floor((b64.length * 3) / 4) - padding;
+}
+
+// Max bytes we will inline as base64 to the AI gateway (4MB safety limit)
+const MAX_INLINE_BASE64_BYTES = 4 * 1024 * 1024;
+
 serve(async (req) => {
   // Capture trainingId early for error handling
   let capturedTrainingId: string | undefined;
