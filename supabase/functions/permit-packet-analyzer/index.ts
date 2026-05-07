@@ -159,6 +159,94 @@ function getMimeType(fileName: string): string {
   return mimeTypes[ext] || "application/octet-stream";
 }
 
+// Filename-based heuristic detection used when vision API rejects large files (413).
+function filenameHeuristicDetection(fileName: string): {
+  detected: DetectionResult["detected"];
+  confidence: DetectionResult["confidence"];
+} {
+  const name = (fileName || "").toLowerCase();
+
+  const cityMap: Record<string, { city: string; county: string; hvhz: boolean }> = {
+    "miami beach": { city: "Miami Beach", county: "Miami-Dade", hvhz: true },
+    "miami": { city: "Miami", county: "Miami-Dade", hvhz: true },
+    "homestead": { city: "Homestead", county: "Miami-Dade", hvhz: true },
+    "doral": { city: "Doral", county: "Miami-Dade", hvhz: true },
+    "hialeah": { city: "Hialeah", county: "Miami-Dade", hvhz: true },
+    "coral gables": { city: "Coral Gables", county: "Miami-Dade", hvhz: true },
+    "fort lauderdale": { city: "Fort Lauderdale", county: "Broward", hvhz: false },
+    "hollywood": { city: "Hollywood", county: "Broward", hvhz: false },
+    "pembroke pines": { city: "Pembroke Pines", county: "Broward", hvhz: false },
+    "coral springs": { city: "Coral Springs", county: "Broward", hvhz: false },
+    "parkland": { city: "Parkland", county: "Broward", hvhz: false },
+    "margate": { city: "Margate", county: "Broward", hvhz: false },
+    "boca raton": { city: "Boca Raton", county: "Palm Beach", hvhz: false },
+    "delray beach": { city: "Delray Beach", county: "Palm Beach", hvhz: false },
+    "boynton beach": { city: "Boynton Beach", county: "Palm Beach", hvhz: false },
+    "west palm beach": { city: "West Palm Beach", county: "Palm Beach", hvhz: false },
+    "wellington": { city: "Wellington", county: "Palm Beach", hvhz: false },
+    "riviera beach": { city: "Riviera Beach", county: "Palm Beach", hvhz: false },
+    "jupiter": { city: "Jupiter", county: "Palm Beach", hvhz: false },
+    "palm beach gardens": { city: "Palm Beach Gardens", county: "Palm Beach", hvhz: false },
+  };
+
+  let city: string | null = null;
+  let county: string | null = null;
+  let isHvhz = false;
+  for (const key of Object.keys(cityMap)) {
+    if (name.includes(key)) {
+      city = cityMap[key].city;
+      county = cityMap[key].county;
+      isHvhz = cityMap[key].hvhz;
+      break;
+    }
+  }
+
+  let tradeType: string | null = null;
+  if (/(roof|reroof|re-roof|shingle|tile|metal|standing seam|tpo|epdm)/i.test(name)) tradeType = "roofing";
+  else if (/(window|door|impact)/i.test(name)) tradeType = "windows_doors";
+  else if (/(solar|pv|photovoltaic)/i.test(name)) tradeType = "solar";
+  else if (/(electric|panel|service upgrade)/i.test(name)) tradeType = "electrical";
+  else if (/(hvac|ac|mechanical|air conditioning)/i.test(name)) tradeType = "mechanical";
+  else if (/(plumb|water heater|sewer)/i.test(name)) tradeType = "plumbing";
+
+  let materialType: string | null = null;
+  if (/standing seam/i.test(name)) materialType = "metal";
+  else if (/shingle/i.test(name)) materialType = "shingle";
+  else if (/tile/i.test(name)) materialType = "tile";
+  else if (/metal/i.test(name)) materialType = "metal";
+  else if (/tpo/i.test(name)) materialType = "tpo";
+  else if (/coating/i.test(name)) materialType = "coating";
+
+  return {
+    detected: {
+      building_department: city ? `City of ${city} Building Department` : null,
+      county,
+      city,
+      trade_type: tradeType,
+      material_type: materialType,
+      is_hvhz: isHvhz,
+    },
+    confidence: {
+      building_department: city ? 0.5 : 0,
+      county: county ? 0.6 : 0,
+      city: city ? 0.6 : 0,
+      trade_type: tradeType ? 0.5 : 0,
+      material_type: materialType ? 0.5 : 0,
+    },
+  };
+}
+
+// Estimate the size of a base64 string in bytes
+function base64SizeBytes(b64: string): number {
+  if (!b64) return 0;
+  // 4 base64 chars = 3 bytes; subtract padding
+  const padding = (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
+  return Math.floor((b64.length * 3) / 4) - padding;
+}
+
+// Max bytes we will inline as base64 to the AI gateway (4MB safety limit)
+const MAX_INLINE_BASE64_BYTES = 4 * 1024 * 1024;
+
 serve(async (req) => {
   // Capture trainingId early for error handling
   let capturedTrainingId: string | undefined;
@@ -192,6 +280,40 @@ serve(async (req) => {
     if (mode === "detect_and_analyze") {
       if (!fileContent && !fileUrl) {
         throw new Error("fileContent or fileUrl is required for detect_and_analyze mode");
+      }
+
+      // Pre-check: if file is too large to inline, skip vision and use filename heuristic.
+      const inlineSize = fileContent ? base64SizeBytes(fileContent) : 0;
+      if (fileContent && inlineSize > MAX_INLINE_BASE64_BYTES) {
+        console.log(`[permit-packet-analyzer] Skipping vision: file ${(inlineSize/1024/1024).toFixed(1)}MB exceeds ${MAX_INLINE_BASE64_BYTES/1024/1024}MB limit. Using filename heuristic.`);
+        const fb = filenameHeuristicDetection(fileName || "");
+        const fallbackResult: DetectionResult = {
+          detected: fb.detected,
+          confidence: fb.confidence,
+          detected_from: [`File too large for inline vision (${(inlineSize/1024/1024).toFixed(1)}MB) - detected from filename: ${fileName}`],
+          raw_text_sample: "",
+        };
+        if (trainingId) {
+          await supabase
+            .from("permit_packet_training")
+            .update({
+              county: fallbackResult.detected.county,
+              city: fallbackResult.detected.city,
+              trade_type: fallbackResult.detected.trade_type,
+              material_type: fallbackResult.detected.material_type,
+              is_hvhz: fallbackResult.detected.is_hvhz,
+              auto_detected: true,
+              detection_confidence: fallbackResult.confidence,
+              detected_from: fallbackResult.detected_from,
+              processing_status: "detected",
+              admin_notes: "Large file - filename-based detection used. Please verify and confirm.",
+            })
+            .eq("id", trainingId);
+        }
+        return new Response(
+          JSON.stringify({ success: true, mode: "detect_and_analyze", detection: fallbackResult, trainingId, templateId, fallback: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       console.log("[permit-packet-analyzer] Starting OCR/Vision detection...");
@@ -295,7 +417,7 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
 
       if (!detectResponse.ok) {
         const errorText = await detectResponse.text();
-        console.error("[permit-packet-analyzer] Vision API error:", errorText);
+        console.error("[permit-packet-analyzer] Vision API error:", detectResponse.status, errorText);
         
         if (detectResponse.status === 429) {
           return new Response(
@@ -309,6 +431,49 @@ IMPORTANT: If you cannot read or detect a field, set it to null and give confide
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
+        // 413 = Payload Too Large. Fall back to filename-based detection so the upload doesn't fail.
+        if (detectResponse.status === 413 || detectResponse.status === 422) {
+          console.log("[permit-packet-analyzer] File too large for vision API, falling back to filename heuristic detection");
+          const fb = filenameHeuristicDetection(fileName || "");
+          const fallbackResult: DetectionResult = {
+            detected: fb.detected,
+            confidence: fb.confidence,
+            detected_from: [`File too large for vision (${detectResponse.status}) - detected from filename: ${fileName}`],
+            raw_text_sample: "",
+          };
+
+          if (trainingId) {
+            await supabase
+              .from("permit_packet_training")
+              .update({
+                county: fallbackResult.detected.county,
+                city: fallbackResult.detected.city,
+                trade_type: fallbackResult.detected.trade_type,
+                material_type: fallbackResult.detected.material_type,
+                is_hvhz: fallbackResult.detected.is_hvhz,
+                auto_detected: true,
+                detection_confidence: fallbackResult.confidence,
+                detected_from: fallbackResult.detected_from,
+                processing_status: "detected",
+                admin_notes: "Large file - filename-based detection used. Please verify and confirm.",
+              })
+              .eq("id", trainingId);
+          }
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              mode: "detect_and_analyze",
+              detection: fallbackResult,
+              trainingId,
+              templateId,
+              fallback: true,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         throw new Error(`Vision analysis failed: ${detectResponse.status}`);
       }
 
@@ -797,7 +962,13 @@ Extract as much data as possible. If you cannot find a particular field, use nul
     const ext = getFileExtension(fileName || "document.pdf");
     const mimeType = getMimeType(fileName || "document.pdf");
 
-    if (fileContent && ["jpg", "jpeg", "png", "gif", "webp", "pdf"].includes(ext)) {
+    const inlineSizeAnalyze = fileContent ? base64SizeBytes(fileContent) : 0;
+    const skipInlineForAnalyze = inlineSizeAnalyze > MAX_INLINE_BASE64_BYTES;
+    if (skipInlineForAnalyze) {
+      console.log(`[permit-packet-analyzer] Skipping inline file in analyze_only: ${(inlineSizeAnalyze/1024/1024).toFixed(1)}MB > 4MB. Using context-only analysis.`);
+    }
+
+    if (fileContent && !skipInlineForAnalyze && ["jpg", "jpeg", "png", "gif", "webp", "pdf"].includes(ext)) {
       analysisContent = [
         { type: "text", text: userPrompt },
         {
@@ -890,6 +1061,22 @@ Extract as much data as possible. If you cannot find a particular field, use nul
         );
       }
       
+      // 413 Payload Too Large -> mark as completed with limited extraction so it isn't blocking
+      if (aiResponse.status === 413 || aiResponse.status === 422) {
+        await supabase
+          .from("permit_packet_training")
+          .update({
+            processing_status: "completed",
+            admin_notes: "File too large for full AI extraction - basic detection only. Re-upload smaller pages for full analysis.",
+            quality_score: 0.3,
+          })
+          .eq("id", trainingId);
+        return new Response(
+          JSON.stringify({ success: true, partial: true, reason: "file_too_large", trainingId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       throw new Error(`AI analysis failed: ${aiResponse.status}`);
     }
 
