@@ -17,6 +17,7 @@ import { useDropzone } from 'react-dropzone';
 interface DiscoveredDoc {
   id: string;
   source_url: string;
+  file_url: string | null;
   document_type: string;
   title: string;
   department: string;
@@ -92,7 +93,7 @@ const DiscoveredDocumentsTab = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('firecrawl_discovered_documents')
-      .select('id, source_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, storage_path, created_at')
+      .select('id, source_url, file_url, document_type, title, department, county, is_downloaded, is_converted_to_smart_doc, smart_doc_id, file_size, storage_path, created_at')
       .order('created_at', { ascending: false })
       .limit(200);
 
@@ -222,6 +223,12 @@ const DiscoveredDocumentsTab = () => {
         return;
       }
 
+      // External URL fallback (legacy rows where file_path is an https:// URL)
+      if (/^https?:\/\//i.test(data.file_path)) {
+        setViewingDoc({ url: data.file_path, title: data.form_name || 'Smart Document' });
+        return;
+      }
+
       const bucket = getBucketForPath(data.file_path);
       const { data: signedData, error: signedError } = await supabase.storage
         .from(bucket)
@@ -238,26 +245,23 @@ const DiscoveredDocumentsTab = () => {
     }
   };
 
-  const viewSourceDoc = (doc: DiscoveredDoc) => {
+  const viewSourceDoc = async (doc: DiscoveredDoc & { file_url?: string | null }) => {
     if (doc.storage_path) {
-      // Try signed URL from storage first
       const bucket = getBucketForPath(doc.storage_path);
-      supabase.storage.from(bucket).createSignedUrl(doc.storage_path, 3600).then(({ data, error }) => {
-        if (!error && data?.signedUrl) {
-          setViewingDoc({ url: data.signedUrl, title: doc.title || 'Source Document' });
-        } else if (doc.source_url) {
-          setViewingDoc({ url: doc.source_url, title: doc.title || 'Source Document' });
-        } else {
-          toast.error('No viewable file available');
-        }
-      });
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(doc.storage_path, 3600);
+      if (!error && data?.signedUrl) {
+        setViewingDoc({ url: data.signedUrl, title: doc.title || 'Source Document' });
+        return;
+      }
+    }
+    // Prefer the actual PDF file_url over the HTML source_url landing page
+    const anyDoc = doc as any;
+    const url = anyDoc.file_url || doc.source_url;
+    if (!url) {
+      toast.error('No viewable file available');
       return;
     }
-    if (!doc.source_url) {
-      toast.error('No source URL available');
-      return;
-    }
-    setViewingDoc({ url: doc.source_url, title: doc.title || 'Source Document' });
+    setViewingDoc({ url, title: doc.title || 'Source Document' });
   };
 
   const deleteDiscoveredDoc = async (doc: DiscoveredDoc) => {
