@@ -1,32 +1,29 @@
-## Restore the homeowner profile experience
+## Problem
 
-### What happened
-The "My Profile" button in the header of `MemberDashboard` now routes everyone (including homeowners) to `/my-profile` → `src/pages/MyProfile.tsx`. That page is a generic 3-tab summary (Projects / Quotes / Requests) and is missing all the homeowner tools.
+The new contractor dashboard UI (MemberDashboard) no longer surfaces any way to submit a referral. The full `ReferralsDashboard` component (which contains the "Submit Referral" button + `SubmitReferralDialog`) exists in the codebase but is no longer routed or rendered anywhere. The current `ReferralEarningsCard` shown on `ContractorDashboard` is read-only — no submit action.
 
-The full-featured page still exists at `/homeowner-profile` → `src/pages/HomeownerProfile.tsx` and already includes:
-- Messages icon with unread badge → `/homeowner-messages`
-- Notifications panel
-- `MyJobsSection` (lists posted jobs + opens `CreateJobDialog` to post to the Job Marketplace)
-- `PhotoGallery` (upload / delete project photos)
-- `MyEstimatesSection`, `AppointmentsSection`, `FavoriteContractorsList`, `ReferralInvitationsSection`, `PendingReviewsCard`, `HomeownerNotes`, `SubmissionsList`
+## Fix
 
-We just need to send homeowners back to that page.
+Restore two entry points so contractors can create a referral from the new UI:
 
-### Changes
+1. **Add a "Submit Referral" button to `ReferralEarningsCard`**
+   - File: `src/components/contractor/ReferralEarningsCard.tsx`
+   - Add a header action button (Plus icon, "Submit Referral") that opens `SubmitReferralDialog`.
+   - Remove the `if (referrals.length === 0) return null;` early-return so the card (and button) is always visible for contractors. Show empty-state copy when no referrals exist.
 
-1. **`src/pages/MemberDashboard.tsx`** — route homeowners to the rich profile, contractors/admins to the summary:
-   - Add a helper: `const profileRoute = (!isContractor && !isSuperAdmin) ? "/homeowner-profile" : "/my-profile";`
-   - Replace both `navigate("/my-profile")` calls (header avatar button ~line 240, "Edit Full Profile" button ~line 360) with `navigate(profileRoute)`.
+2. **Add a dedicated Referrals page + nav tile**
+   - New route: `/contractor/referrals` rendering `ReferralsDashboard` (passing the logged-in contractor's `profile.id`). Wire it up in `src/App.tsx` with the existing lazy-load + Suspense pattern.
+   - New file: `src/pages/ContractorReferralsPage.tsx` — thin page wrapper that loads the contractor profile (same pattern as `ContractorDashboard`) and renders `<ReferralsDashboard contractorId={profile.id} />` plus a "Return to Dashboard" link to `/member/dashboard`.
+   - Add a tile to `contractorApps` in `src/pages/MemberDashboard.tsx`:
+     `{ icon: Lightbulb, title: "Referrals", description: "Submit and track customer referrals", link: "/contractor/referrals" }`
 
-2. **`src/pages/MyProfile.tsx`** — safety net: if the logged-in user is a homeowner (not contractor, not super admin), `useEffect` redirect them to `/homeowner-profile` so deep links land on the full page too.
+## Technical notes
 
-3. **Verify Job Marketplace posting works for the homeowner**:
-   - `MyJobsSection` already renders a "Post a Job" CTA that opens `CreateJobDialog` and inserts into `job_requests` via `useHomeownerJobs`. No change needed; once the homeowner can reach `HomeownerProfile`, posting is restored.
-   - The `/job-board` route (`JobBoardAccessGuard`) is the contractor-side browse view — homeowners do not browse there. Keep as is.
+- `SubmitReferralDialog` already exists and is fully wired to the `referrals` table via `useReferrals`. No DB or RLS changes needed.
+- No backend changes. Pure UI restoration.
+- Follows the project memory rule: sub-modules include a "Return to Dashboard" link back to `/member/dashboard`.
 
-4. **Verify Messages**:
-   - The header in `HomeownerProfile` already has a `MessageSquare` button → `/homeowner-messages` with the unread badge from `useHomeownerMessages`. No change needed.
+## Out of scope
 
-### Technical notes
-- No DB / RLS changes. All hooks and tables (`job_requests`, `homeowner_uploads` storage bucket, `social_conversations`, etc.) are already wired up.
-- Role detection in `MemberDashboard` already exists via `isContractor`, `isSuperAdmin`, and the loaded `profile`. We reuse those flags — no new queries.
+- No changes to the referrals data model, payout logic, or RLS.
+- No redesign of `ReferralsDashboard` itself — just re-exposing it.
