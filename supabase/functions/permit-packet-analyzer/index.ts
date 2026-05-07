@@ -1061,6 +1061,22 @@ Extract as much data as possible. If you cannot find a particular field, use nul
         );
       }
       
+      // 413 Payload Too Large -> mark as completed with limited extraction so it isn't blocking
+      if (aiResponse.status === 413 || aiResponse.status === 422) {
+        await supabase
+          .from("permit_packet_training")
+          .update({
+            processing_status: "completed",
+            admin_notes: "File too large for full AI extraction - basic detection only. Re-upload smaller pages for full analysis.",
+            quality_score: 0.3,
+          })
+          .eq("id", trainingId);
+        return new Response(
+          JSON.stringify({ success: true, partial: true, reason: "file_too_large", trainingId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       throw new Error(`AI analysis failed: ${aiResponse.status}`);
     }
 
