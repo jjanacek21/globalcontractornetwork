@@ -408,29 +408,29 @@ const MemberDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* Apps tab */}
-          <TabsContent value="apps" className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">
-                {isSuperAdmin ? "All Apps (Admin View)" : isContractor ? "Contractor Apps" : "For Property Owners"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {isSuperAdmin
-                  ? "Full admin access — every contractor app and property-owner program."
-                  : isContractor
-                  ? "Tools to run your day-to-day business — and the all-in-one suite arriving in 2026."
-                  : "Property-owner exclusive features and programs."}
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {(isSuperAdmin
-                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
-                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
-              ).map((s, i) => (
-                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
-              ))}
-            </div>
-          </TabsContent>
+          {/* Apps tab — contractors & admins only */}
+          {showAppsTab && (
+            <TabsContent value="apps" className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">
+                  {isSuperAdmin ? "All Apps (Admin View)" : "Contractor Apps"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {isSuperAdmin
+                    ? "Full admin access — every contractor app and property-owner program."
+                    : "Tools to run your day-to-day business — and the all-in-one suite arriving in 2026."}
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {(isSuperAdmin
+                  ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
+                  : contractorApps
+                ).map((s, i) => (
+                  <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
+                ))}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
 
         {companyMembership && (
