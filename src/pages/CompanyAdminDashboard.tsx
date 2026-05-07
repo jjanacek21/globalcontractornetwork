@@ -86,7 +86,7 @@ const CompanyAdminDashboard = () => {
       } else {
         // Fetch company data
         const { data: companyData } = await supabase
-          .from("permit_companies")
+          .from("companies")
           .select("id, name, verification_status, verification_score, primary_category, services_offered, logo_url")
           .eq("id", memberData.company_id)
           .single();
