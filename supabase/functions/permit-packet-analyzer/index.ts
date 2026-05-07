@@ -282,6 +282,40 @@ serve(async (req) => {
         throw new Error("fileContent or fileUrl is required for detect_and_analyze mode");
       }
 
+      // Pre-check: if file is too large to inline, skip vision and use filename heuristic.
+      const inlineSize = fileContent ? base64SizeBytes(fileContent) : 0;
+      if (fileContent && inlineSize > MAX_INLINE_BASE64_BYTES) {
+        console.log(`[permit-packet-analyzer] Skipping vision: file ${(inlineSize/1024/1024).toFixed(1)}MB exceeds ${MAX_INLINE_BASE64_BYTES/1024/1024}MB limit. Using filename heuristic.`);
+        const fb = filenameHeuristicDetection(fileName || "");
+        const fallbackResult: DetectionResult = {
+          detected: fb.detected,
+          confidence: fb.confidence,
+          detected_from: [`File too large for inline vision (${(inlineSize/1024/1024).toFixed(1)}MB) - detected from filename: ${fileName}`],
+          raw_text_sample: "",
+        };
+        if (trainingId) {
+          await supabase
+            .from("permit_packet_training")
+            .update({
+              county: fallbackResult.detected.county,
+              city: fallbackResult.detected.city,
+              trade_type: fallbackResult.detected.trade_type,
+              material_type: fallbackResult.detected.material_type,
+              is_hvhz: fallbackResult.detected.is_hvhz,
+              auto_detected: true,
+              detection_confidence: fallbackResult.confidence,
+              detected_from: fallbackResult.detected_from,
+              processing_status: "detected",
+              admin_notes: "Large file - filename-based detection used. Please verify and confirm.",
+            })
+            .eq("id", trainingId);
+        }
+        return new Response(
+          JSON.stringify({ success: true, mode: "detect_and_analyze", detection: fallbackResult, trainingId, templateId, fallback: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       console.log("[permit-packet-analyzer] Starting OCR/Vision detection...");
 
       // Build the vision detection prompt
