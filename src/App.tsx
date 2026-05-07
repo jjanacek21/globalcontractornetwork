@@ -79,6 +79,7 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import ContractorAuth from "./pages/ContractorAuth";
 import ContractorDashboard from "./pages/ContractorDashboard";
+import ContractorReferralsPage from "./pages/ContractorReferralsPage";
 import CoatingKings from "./pages/CoatingKings";
 import CoatingKingsAdminAuth from "./pages/CoatingKingsAdminAuth";
 import CoatingKingsAdminDashboard from "./pages/CoatingKingsAdminDashboard";
