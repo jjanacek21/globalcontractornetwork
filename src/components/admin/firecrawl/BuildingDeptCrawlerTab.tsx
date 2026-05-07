@@ -249,7 +249,18 @@ const BuildingDeptCrawlerTab = () => {
                     {isLoading && loadingAction === 'crawl' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Globe className="h-3 w-3 mr-1" />}
                     Crawl for Permits
                   </Button>
-                  {stats && stats.downloaded > stats.converted && (
+                  {stats && stats.found > stats.downloaded && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => downloadMissing(dept.name)}
+                      disabled={isLoading || crawlingAll}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download ({stats.found - stats.downloaded})
+                    </Button>
+                  )}
+                  {stats && stats.found > stats.converted && (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -257,7 +268,7 @@ const BuildingDeptCrawlerTab = () => {
                       disabled={isLoading || crawlingAll}
                     >
                       <Wand2 className="h-3 w-3 mr-1" />
-                      Convert ({stats.downloaded - stats.converted})
+                      Convert ({stats.found - stats.converted})
                     </Button>
                   )}
                 </div>
