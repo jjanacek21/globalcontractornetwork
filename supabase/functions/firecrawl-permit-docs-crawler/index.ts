@@ -62,14 +62,35 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { department, action } = await req.json();
 
-    if (!department || !SOUTH_FL_DEPARTMENTS[department]) {
+    if (!department) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid department', available: Object.keys(SOUTH_FL_DEPARTMENTS) }),
+        JSON.stringify({ success: false, error: 'department is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const dept = SOUTH_FL_DEPARTMENTS[department];
+    // Resolve dept: try DB first, fall back to hardcoded map
+    let dept: { url: string; county: string } | null = null;
+    const { data: dbDept } = await supabase
+      .from('permit_building_departments')
+      .select('name, county, website, portal_url')
+      .eq('name', department)
+      .maybeSingle();
+    if (dbDept) {
+      const raw = dbDept.website || dbDept.portal_url;
+      if (raw) {
+        dept = { url: raw.startsWith('http') ? raw : `https://${raw}`, county: dbDept.county || 'Unknown' };
+      }
+    }
+    if (!dept && SOUTH_FL_DEPARTMENTS[department]) {
+      dept = SOUTH_FL_DEPARTMENTS[department];
+    }
+    if (!dept) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Department "${department}" not found and no website on record` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     console.log(`Processing ${department}: ${action} at ${dept.url}`);
 
     // Create job record
