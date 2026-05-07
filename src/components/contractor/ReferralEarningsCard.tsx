@@ -15,6 +15,7 @@ interface ReferralEarningsCardProps {
 
 export function ReferralEarningsCard({ contractorId }: ReferralEarningsCardProps) {
   const { referrals, stats, loading } = useReferrals(contractorId);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Calculate additional stats
   const paidReferrals = referrals.filter(r => r.status === 'paid');
@@ -38,18 +39,17 @@ export function ReferralEarningsCard({ contractorId }: ReferralEarningsCardProps
     );
   }
 
-  // Don't show if no referral activity
-  if (referrals.length === 0) {
-    return null;
-  }
-
   return (
     <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-primary" />
           Referral Earnings
         </CardTitle>
+        <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1">
+          <Plus className="h-4 w-4" />
+          Submit Referral
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Stats Grid */}
