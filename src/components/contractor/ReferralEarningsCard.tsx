@@ -163,7 +163,18 @@ export function ReferralEarningsCard({ contractorId }: ReferralEarningsCardProps
             </div>
           </>
         )}
+
+        {referrals.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No referrals yet. Click <span className="font-medium">Submit Referral</span> to send your first one.
+          </p>
+        )}
       </CardContent>
+      <SubmitReferralDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        contractorId={contractorId}
+      />
     </Card>
   );
 }
