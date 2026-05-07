@@ -260,11 +260,18 @@ Deno.serve(async (req) => {
 
         // Update crawl job counter
         if (doc.crawl_job_id) {
-          await supabase.rpc('increment_documents_converted', { job_id: doc.crawl_job_id }).catch(() => {
-            supabase.from('firecrawl_crawl_jobs')
+          try {
+            const { error: rpcError } = await supabase.rpc('increment_documents_converted', { job_id: doc.crawl_job_id });
+            if (rpcError) {
+              await supabase.from('firecrawl_crawl_jobs')
+                .update({ documents_converted: converted + 1 })
+                .eq('id', doc.crawl_job_id);
+            }
+          } catch {
+            await supabase.from('firecrawl_crawl_jobs')
               .update({ documents_converted: converted + 1 })
               .eq('id', doc.crawl_job_id);
-          });
+          }
         }
 
         converted++;
