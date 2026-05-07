@@ -290,7 +290,7 @@ serve(async (req) => {
 
       // 4. Create company record (service role bypasses RLS)
       const { data: companyData, error: companyError } = await supabaseAdmin
-        .from("permit_companies")
+        .from("companies")
         .insert({
           name: body.companyName,
           address: body.address,
