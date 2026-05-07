@@ -206,8 +206,11 @@ const MemberDashboard = () => {
   const homeownerServices: ServiceCard[] = [
     { icon: Sparkles, title: "Instant Quote", description: "AI-powered estimates for roofing, windows, emergency, landscaping & cleaning", link: "/instant-quote" },
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
+    { icon: Briefcase, title: "Job Marketplace", description: "Post your project and browse what others are paying", link: "/homeowner/marketplace" },
     { icon: ClipboardCheck, title: "Maintenance Membership", description: "Preventative maintenance & property care plans for property owners", link: "/maintenance-membership", badge: "Coming Soon" },
   ];
+
+  const showAppsTab = isSuperAdmin || isContractor;
 
   if (loading) {
     return (
@@ -310,7 +313,7 @@ const MemberDashboard = () => {
 
         {/* 3-tab nav */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12 p-1 glass-card border border-border/40 rounded-2xl">
+          <TabsList className={`grid w-full max-w-2xl ${showAppsTab ? 'grid-cols-3' : 'grid-cols-2'} h-12 p-1 glass-card border border-border/40 rounded-2xl`}>
             <TabsTrigger value="profile" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
               <User className="h-4 w-4 mr-2" /> My Profile
             </TabsTrigger>
@@ -318,10 +321,12 @@ const MemberDashboard = () => {
               <Briefcase className="h-4 w-4 mr-2" />
               {isSuperAdmin ? "All Services" : isContractor ? "Contractor Services" : "Services"}
             </TabsTrigger>
-            <TabsTrigger value="apps" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
-              <Rocket className="h-4 w-4 mr-2" />
-              {isSuperAdmin ? "All Apps" : isContractor ? "Contractor Apps" : "For Property Owners"}
-            </TabsTrigger>
+            {showAppsTab && (
+              <TabsTrigger value="apps" className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">
+                <Rocket className="h-4 w-4 mr-2" />
+                {isSuperAdmin ? "All Apps" : "Contractor Apps"}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile tab */}
@@ -403,29 +408,29 @@ const MemberDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* Apps tab */}
-          <TabsContent value="apps" className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">
-                {isSuperAdmin ? "All Apps (Admin View)" : isContractor ? "Contractor Apps" : "For Property Owners"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {isSuperAdmin
-                  ? "Full admin access — every contractor app and property-owner program."
-                  : isContractor
-                  ? "Tools to run your day-to-day business — and the all-in-one suite arriving in 2026."
-                  : "Property-owner exclusive features and programs."}
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {(isSuperAdmin
-                ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
-                : isContractor ? contractorApps : homeownerServices.filter(s => s.title !== "Directory")
-              ).map((s, i) => (
-                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
-              ))}
-            </div>
-          </TabsContent>
+          {/* Apps tab — contractors & admins only */}
+          {showAppsTab && (
+            <TabsContent value="apps" className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">
+                  {isSuperAdmin ? "All Apps (Admin View)" : "Contractor Apps"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {isSuperAdmin
+                    ? "Full admin access — every contractor app and property-owner program."
+                    : "Tools to run your day-to-day business — and the all-in-one suite arriving in 2026."}
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {(isSuperAdmin
+                  ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
+                  : contractorApps
+                ).map((s, i) => (
+                  <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
+                ))}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
 
         {companyMembership && (

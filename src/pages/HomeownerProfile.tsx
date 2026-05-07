@@ -16,7 +16,7 @@ import { LeaveReviewDialog } from '@/components/homeowner/LeaveReviewDialog';
 import { AppointmentsSection } from '@/components/homeowner/AppointmentsSection';
 import { NotificationsPanel } from '@/components/homeowner/NotificationsPanel';
 import { MyEstimatesSection } from '@/components/homeowner/MyEstimatesSection';
-import { MyJobsSection } from '@/components/homeowner/MyJobsSection';
+
 import { useHomeownerPhotos } from '@/hooks/useHomeownerPhotos';
 import { useHomeownerSubmissions } from '@/hooks/useHomeownerSubmissions';
 import { useFavoriteContractors } from '@/hooks/useFavoriteContractors';
@@ -236,9 +236,6 @@ export default function HomeownerProfile() {
             loading={estimatesLoading}
             onDownload={downloadEstimate}
           />
-
-          {/* My Job Listings */}
-          <MyJobsSection userId={userId} />
 
           {/* Pending Reviews */}
           <PendingReviewsCard

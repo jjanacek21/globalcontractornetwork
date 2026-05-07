@@ -1,29 +1,46 @@
-## Problem
+## Plan: Property Owner Marketplace overhaul
 
-The new contractor dashboard UI (MemberDashboard) no longer surfaces any way to submit a referral. The full `ReferralsDashboard` component (which contains the "Submit Referral" button + `SubmitReferralDialog`) exists in the codebase but is no longer routed or rendered anywhere. The current `ReferralEarningsCard` shown on `ContractorDashboard` is read-only — no submit action.
+### 1. MemberDashboard — remove "For Property Owners" tab, add Marketplace tile
+File: `src/pages/MemberDashboard.tsx`
 
-## Fix
+- For property owners (non-contractor, non-admin), hide the third tab ("For Property Owners") entirely. Tabs become 2 columns: My Profile + Services.
+- Add a new tile to `homeownerServices` next to Directory:
+  - `{ icon: Briefcase, title: "Job Marketplace", description: "Post jobs and browse listings in your area", link: "/homeowner/marketplace" }`
+- Contractor view unchanged.
 
-Restore two entry points so contractors can create a referral from the new UI:
+### 2. Remove Job Listings from HomeownerProfile
+File: `src/pages/HomeownerProfile.tsx`
 
-1. **Add a "Submit Referral" button to `ReferralEarningsCard`**
-   - File: `src/components/contractor/ReferralEarningsCard.tsx`
-   - Add a header action button (Plus icon, "Submit Referral") that opens `SubmitReferralDialog`.
-   - Remove the `if (referrals.length === 0) return null;` early-return so the card (and button) is always visible for contractors. Show empty-state copy when no referrals exist.
+- Remove the `<MyJobsSection userId={userId} />` block and its import (it's moving to the dedicated marketplace page).
 
-2. **Add a dedicated Referrals page + nav tile**
-   - New route: `/contractor/referrals` rendering `ReferralsDashboard` (passing the logged-in contractor's `profile.id`). Wire it up in `src/App.tsx` with the existing lazy-load + Suspense pattern.
-   - New file: `src/pages/ContractorReferralsPage.tsx` — thin page wrapper that loads the contractor profile (same pattern as `ContractorDashboard`) and renders `<ReferralsDashboard contractorId={profile.id} />` plus a "Return to Dashboard" link to `/member/dashboard`.
-   - Add a tile to `contractorApps` in `src/pages/MemberDashboard.tsx`:
-     `{ icon: Lightbulb, title: "Referrals", description: "Submit and track customer referrals", link: "/contractor/referrals" }`
+### 3. New page: Homeowner Marketplace
+File: `src/pages/HomeownerMarketplace.tsx` (new)
 
-## Technical notes
+Layout:
+- Header with "Return to Dashboard" link → `/member/dashboard`.
+- Section A: **My Listings** — uses existing `useHomeownerJobs` hook. Renders a horizontal/grid of compact cards showing: first photo, title, price (budget), Edit button, response count expanding `JobResponsesList`. "Post a Job" button opens existing `CreateJobDialog`. Edit opens the same dialog pre-filled (extend `CreateJobDialog` with optional `initialJob` + `onUpdate`).
+- Section B: **Browse Marketplace** — list/map view toggle of all open jobs (other homeowners' listings) with privacy redaction:
+  - Show: title, service category, description, photos, budget/price, urgency, timeline, posted-time.
+  - Hide: full address, city/state, contact info, contractor "View Details" interest button. No click-to-call, no contact dialog.
+  - New `PublicJobCard` component (or `JobCard` with `viewOnly` prop) that strips `MapPin`, `JobDetailsDialog` contact fields, and the express-interest CTA.
+  - Map view: optional — show approximate area (city only) or skip map for v1 to keep address private. **Decision:** include map view but plot only city-level (no exact pin); if too complex, omit map and keep list-only. Will implement list-only first to honor privacy.
 
-- `SubmitReferralDialog` already exists and is fully wired to the `referrals` table via `useReferrals`. No DB or RLS changes needed.
-- No backend changes. Pure UI restoration.
-- Follows the project memory rule: sub-modules include a "Return to Dashboard" link back to `/member/dashboard`.
+### 4. Data fetching for public marketplace
+- Reuse Supabase `job_requests` query filtered to `status='open'`, exclude current user's own jobs.
+- New lightweight hook `usePublicJobMarketplace.ts` returning sanitized rows (drop `property_address`, `homeowner_*` contact fields client-side; ideally also create a DB view later, but for now strip in-app).
 
-## Out of scope
+### 5. Routing
+File: `src/App.tsx`
+- Add lazy-loaded route `/homeowner/marketplace` → `HomeownerMarketplace`, wrapped in `Suspense` + `ProtectedRoute`.
 
-- No changes to the referrals data model, payout logic, or RLS.
-- No redesign of `ReferralsDashboard` itself — just re-exposing it.
+### 6. Edit listing support
+- Extend `CreateJobDialog` to accept `job?: JobRequest` and call `updateJob` (add to `useHomeownerJobs`) when present. Existing `createJob` path unchanged.
+
+### Out of scope
+- No DB schema changes; RLS already restricts contact info access. Address redaction is enforced in UI by simply not selecting/displaying those fields.
+- No changes to contractor-facing `/job-board`.
+
+### Question
+The map view for browsing other homeowners' listings reveals location. **Should I:**
+(a) skip the map view for the public browse section (list-only), or
+(b) include a map but plot only the city centroid (approximate)?
