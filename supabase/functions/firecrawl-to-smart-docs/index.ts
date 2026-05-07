@@ -208,12 +208,44 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Self-heal: if no storage_path but we have a PDF file_url, download it now
+        let workingDoc = doc;
+        if (!workingDoc.storage_path && workingDoc.file_url && workingDoc.file_url.toLowerCase().includes('.pdf')) {
+          try {
+            const resp = await fetch(workingDoc.file_url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/pdf,*/*',
+              },
+              redirect: 'follow',
+            });
+            if (resp.ok) {
+              const buf = new Uint8Array(await resp.arrayBuffer());
+              if (buf.length > 4 && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) {
+                const fname = (workingDoc.file_url.split('/').pop() || `${workingDoc.id}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+                const path = `firecrawl/${county}/${(workingDoc.department || 'unknown').replace(/\s+/g, '-')}/${Date.now()}_${fname}`;
+                const { error: upErr } = await supabase.storage
+                  .from('permit-documents')
+                  .upload(path, buf, { contentType: 'application/pdf', upsert: true });
+                if (!upErr) {
+                  workingDoc = { ...workingDoc, storage_path: path };
+                  await supabase.from('firecrawl_discovered_documents').update({
+                    storage_path: path, is_downloaded: true, file_size: buf.length,
+                  }).eq('id', workingDoc.id);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('self-heal download failed for', workingDoc.id, e);
+          }
+        }
+
         // Copy file from permit-documents to permit-form-templates bucket
-        const sourcePath = doc.storage_path || '';
-        let finalFilePath = doc.storage_path || doc.file_url || '';
+        const sourcePath = workingDoc.storage_path || '';
+        let finalFilePath = workingDoc.storage_path || workingDoc.file_url || '';
 
         if (sourcePath && (sourcePath.startsWith('firecrawl/') || sourcePath.startsWith('crawled/'))) {
-          const destPath = `converted/${county}/${doc.department || 'unknown'}/${Date.now()}_${sourcePath.split('/').pop()}`;
+          const destPath = `converted/${county}/${workingDoc.department || 'unknown'}/${Date.now()}_${sourcePath.split('/').pop()}`;
           const copied = await copyFileBetweenBuckets(
             supabase, 'permit-documents', sourcePath, 'permit-form-templates', destPath
           );
