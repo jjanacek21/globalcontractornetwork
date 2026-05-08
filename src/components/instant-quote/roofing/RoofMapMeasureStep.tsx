@@ -357,9 +357,13 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
       </div>
 
       <div className="rounded-2xl overflow-hidden border bg-card mb-4 relative">
-        <div ref={mapContainer} className="w-full h-[420px]" />
+        <div
+          ref={mapContainer}
+          className="w-full"
+          style={{ height: 460, minHeight: 460 }}
+        />
         {!coords && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 pointer-events-none">
             <div className="text-center text-muted-foreground">
               <MapPin className="h-10 w-10 mx-auto mb-2 opacity-50" />
               Enter your address above to load a satellite view.
