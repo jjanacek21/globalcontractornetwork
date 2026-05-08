@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Briefcase, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Briefcase, Loader2, Search, List, Map as MapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useHomeownerJobs, JobRequest } from '@/hooks/useHomeownerJobs';
 import { CreateJobDialog } from '@/components/homeowner/CreateJobDialog';
 import { JobResponsesList } from '@/components/homeowner/JobResponsesList';
 import { MyListingMiniCard } from '@/components/homeowner/MyListingMiniCard';
 import { PublicJobCard } from '@/components/homeowner/PublicJobCard';
+import { PublicMarketplaceMap } from '@/components/homeowner/PublicMarketplaceMap';
 import { toast } from 'sonner';
 
 interface PublicJob {
