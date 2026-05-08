@@ -1,62 +1,85 @@
-## Problem
+# Animated, Visual Trade Wizards with AI Photo Quoting
 
-The Bathrooms wizard (and other non-roofing trades) is showing absurd prices like **$3.9M – $31M**. Two root causes:
+Transform the generic measurement step in `TradeWizard.tsx` into rich, animated, **variant-picker** experiences for every trade — and let users either answer guided questions or upload photos that an AI analyzes to draft the quote.
 
-1. **Estimator multiplies the wrong quantity.** `iq-calculate-estimate` always multiplies `base_price_per_unit × measurements.sqft`. For Bathrooms the tier unit is **"each"** at $11,500–$67,500 per bathroom, but the wizard sets `sqft = rooms × 200`, so it computes `11,500 × 200 = $2.3M` per tier. It must use `count` when `unit='each'`, `linear_feet` when `unit='lf'`, etc.
-2. **Generic measurement step uses satellite + "sq ft" for everything.** Satellite/Mapbox is only meaningful for Roofing. Other trades need their own units (linear feet, sqft, count, # of rooms/bathrooms/openings) and friendlier wording.
+## What changes for the user
 
-The roofing wizard is already correct and is **not** touched.
+1. **Combined Windows + Doors wizard** (restored). Single flow handles both at once, like before.
+2. Every trade gets a **visual variant picker** instead of a plain number box:
+   - Animated SVG/3D illustration of each option
+   - Tap a card to select type → quantity stepper for each variant
+   - Optional size buttons where it matters (e.g. 36"x80" door, 6'x4' window)
+3. **"Skip the questions — use photos" toggle** on every wizard. Upload 1–6 pictures, AI analyzes condition/quantity/material and drafts the estimate plus a written scope summary.
+4. Address step stays first. Satellite mapping stays roofing-only.
 
-## Step 1 — Fix the estimator (edge function)
+## Visual design
 
-Update `supabase/functions/iq-calculate-estimate/index.ts` so each tier picks the quantity that matches its `unit`:
+- New shared component `VariantPicker` (cards with `Card3D` tilt, hover glow, `framer-motion` scale-in, animated selection ring).
+- New `QuantityStepper` with +/– buttons, large readout, bounce animation.
+- New `SizeChips` row for size variants (small / standard / large or actual dims).
+- All trade cards use the existing emerald/forest palette + gold accents.
 
-- `unit = 'each'` or `'count'` → use `measurements.count` (fallback `answers.count`, default `1`)
-- `unit = 'room'` → use `measurements.rooms` (fallback `1`)
-- `unit = 'lf'` / `'linear_feet'` → use `measurements.linear_feet` (default `50`)
-- `unit = 'sqft'` (or anything else) → use `measurements.sqft` (default `1000`)
-- Also clamp the result to a sane max (e.g. cap qty at 50,000 sqft / 500 lf / 50 each) to prevent typos producing million-dollar quotes
-- Return `quantity` and `unit` per tier so the UI can show "$11,500/each × 2"
+## Per-trade variant catalog (examples — full list lives in `tradeVariants.ts`)
 
-## Step 2 — Trade-aware Measurement step (`TradeWizard.tsx`)
-
-Replace the current single sqft input with a per-trade measurement block driven by the trade's `measurement_method` and the tier `unit` returned by the DB:
-
-| Trade group | measurement_method | Inputs shown |
+| Trade | Variants user picks (with icon/illustration) | Extra |
 |---|---|---|
-| Roofing | satellite | (already handled by roofing wizard – not touched) |
-| Gutters, Soffit & Fascia | satellite | **Linear feet of roof edge**, # of stories |
-| Pavers | satellite | **Square feet of paver area**, surface type |
-| Siding, Stucco, Exterior Paint, Pressure Washing | photo_ai | **Approx. wall sqft** + # of stories (no satellite image) |
-| Windows, Doors | photo_ai / count_based | **Number of windows / doors**, sizes |
-| EIFS Bands, Crown Molding | manual_input | **Linear feet** |
-| Drywall, Texture, Flooring, Interior Paint, Cabinets | manual_input / room_based | **Sqft of area** OR **# of rooms** |
-| Plumbing, Electrical | manual_input | **# of fixtures / outlets** |
-| Bathrooms, Kitchens | room_based | **Number of bathrooms / kitchens** (count, NOT sqft) |
-| Interior Renovation | room_based | **# of rooms** + total sqft |
-| Tree & Landscaping | count_based | **# of trees**, lot size |
-| Window Cleaning | count_based | **# of windows**, # of stories |
-| Emergency Services | photo_ai | Type + affected sqft |
+| Windows + Doors (combined) | Single Hung, Double Hung, Sliding, Casement, Picture, Impact-Rated · Entry Door, Sliding Glass, French, Garage, Storm | Size chips per item; impact y/n |
+| Doors only | Entry, Sliding Glass, French, Bifold, Garage, Storm, Interior | Size chip |
+| Siding | Vinyl, Hardie/Fiber Cement, Wood, Stucco-over | Wall sqft + stories |
+| Stucco | New, Re-stucco, Patch/Crack repair, Decorative | Wall sqft + stories |
+| Gutters | 5" K-style, 6" K-style, Half-round, Box, +Guards | LF + stories |
+| Soffit & Fascia | Aluminum, Vinyl, Wood, Combo | LF + stories |
+| Roofing | (untouched — keeps current roofing wizard) | — |
+| Pavers | Driveway, Patio, Pool deck, Walkway · Brick, Travertine, Concrete | Sqft |
+| Pressure Washing | Driveway, Roof soft-wash, House wash, Pool deck, Fence | Sqft |
+| Exterior Paint | Body+trim, Body only, Trim only, Doors+shutters | Sqft + stories |
+| EIFS Bands / Crown Molding | Profile size chips (4"/6"/8") | LF |
+| Drywall / Texture | Patch, Full wall, Ceiling, Knockdown / Orange peel / Smooth | Sqft |
+| Flooring | Tile, LVP, Hardwood, Carpet, Polished Concrete | Sqft |
+| Interior Paint | Walls, Ceiling, Trim, Cabinets | Rooms |
+| Cabinets | Refinish, Reface, New install, Custom | LF |
+| Plumbing | Faucet, Toilet, Water heater, Repipe, Drain | Count per fixture |
+| Electrical | Outlet, Switch, Fixture, Panel upgrade, EV charger | Count |
+| Bathrooms | Powder, Full, Master, Wet-room | Count + finish tier |
+| Kitchens | Refresh, Mid, Full gut | Count + finish tier |
+| Interior Renovation | Living, Bedroom, Office, Whole-home | Rooms + sqft |
+| Tree & Landscaping | Tree removal, Trimming, Sod, Mulch, Hedges | Count + lot sqft |
+| Window Cleaning | Interior+Exterior, Exterior only, Screens | Count + stories |
+| Emergency Services | Water mitigation, Mold, Tarp, Board-up, Fire | Affected sqft |
 
-Implementation details:
-- Remove the satellite image preview for every trade except Roofing (Roofing already lives in its own wizard, so this means simply: do not render `satelliteUrl` in `TradeWizard`).
-- Skip the Address→Measurement satellite call for trades whose `measurement_method !== 'satellite'` (still geocode, but don't fetch a satellite image).
-- Each input writes to the appropriate `measurements` key (`count`, `rooms`, `linear_feet`, `sqft`, `stories`).
-- Add help text above the input that names the unit ("Most full bathroom remodels are 1–3 bathrooms").
+## AI Photo Quoting (new path)
 
-## Step 3 — Results step polish
+A new "Quote from photos" toggle on the measurement step. When picked:
 
-In `TradeWizard` results phase:
-- Show `"$X,XXX – $Y,YYY"` formatted with thousands separators (already there) **and** show the per-unit basis returned by the function (e.g. "Based on 2 bathrooms at $11,500 / each").
-- Keep the existing 3D / colorful tier cards.
+1. User uploads up to 6 photos (existing `iq-photos` bucket).
+2. Frontend calls **new edge function `iq-photo-quote`** with `trade_slug` + photo URLs.
+3. Edge function calls **Lovable AI Gateway** (`google/gemini-3-flash-preview` for vision) with a trade-specific system prompt to extract: detected materials, visible damage/condition, recommended scope items, estimated quantities, and a confidence score.
+4. Result feeds straight into the existing `iq-calculate-estimate` flow (so we still produce Good/Better/Best tiers) plus shows an AI scope card on the results screen.
 
-## Out of scope
+> Per project memory we use the **Lovable AI Gateway**, not direct Anthropic/OpenAI keys. No new secrets needed — `LOVABLE_API_KEY` is already provisioned. If you specifically want raw Anthropic/OpenAI keys instead, say the word and we'll wire them via `add_secret`.
 
-- No changes to the Roofing wizard.
-- No DB migrations; `iq_trade_pricing_options` and `iq_trade_questions` already have correct unit/data.
-- No changes to lead-capture / Telegram (separate plan, still pending).
+## Technical scope
 
-## Files touched
+**New files**
+- `src/components/instant-quote/shared/VariantPicker.tsx` — animated card grid (Card3D + framer-motion).
+- `src/components/instant-quote/shared/QuantityStepper.tsx`
+- `src/components/instant-quote/shared/SizeChips.tsx`
+- `src/components/instant-quote/shared/PhotoQuotePanel.tsx` — upload + "analyze with AI" button.
+- `src/components/instant-quote/tradeVariants.ts` — single source of truth for per-trade variants/sizes/icons.
+- `supabase/functions/iq-photo-quote/index.ts` — vision call via Lovable AI Gateway, returns structured JSON via tool-calling.
 
-- `supabase/functions/iq-calculate-estimate/index.ts` — unit-aware quantity + caps
-- `src/components/instant-quote/TradeWizard.tsx` — per-trade measurement UI, drop satellite for non-roofing, show per-unit basis on results
+**Edited files**
+- `src/components/instant-quote/TradeWizard.tsx` — replace generic measurement card with `VariantPicker` + `QuantityStepper`; add "Quote from photos" toggle that swaps in `PhotoQuotePanel`. Combine windows+doors when slug is `windows` or `doors` (route both to the same combined view).
+- `src/components/instant-quote/InstantQuoteWizard.tsx` (legacy 5-trade path) — keep current `WindowsWizardSteps` import as the combined entry; remove separate doors entry if any.
+- `src/pages/InstantQuote.tsx` — when slug is `doors`, redirect/route to the combined windows+doors wizard.
+- `supabase/functions/iq-calculate-estimate/index.ts` — accept new `selected_variants` array `[{type, qty, size?}]` and sum quantity by tier unit (already unit-aware from last change).
+
+**Out of scope**
+- Roofing wizard (keeps satellite + current flow).
+- Lead-capture/Telegram piece (already done).
+- DB schema changes (variants stored inside existing `answers` JSONB on `iq_quote_requests`).
+
+## Open questions before building
+
+1. For the AI photo path — confirm we use **Lovable AI Gateway** (free, already wired) vs. supplying your own Anthropic/OpenAI keys?
+2. Should the "Quote from photos" path **skip the variant picker entirely**, or still ask 2-3 short follow-up questions after AI analysis to lock in the quote?
