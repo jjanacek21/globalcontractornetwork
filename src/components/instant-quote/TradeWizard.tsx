@@ -280,65 +280,186 @@ export default function TradeWizard() {
           </Card>
         )}
 
-        {phase === "measurement" && (() => {
-          // Per-trade measurement config. Keys = trade slug.
-          type Field = { key: "sqft" | "linear_feet" | "count" | "rooms" | "stories"; label: string; placeholder?: string; help?: string };
-          const CFG: Record<string, { title: string; intro: string; fields: Field[] }> = {
-            "gutters":            { title: "Roof edge length", intro: "Estimate the linear feet of roof edge that needs gutters.", fields: [{ key: "linear_feet", label: "Linear feet of roof edge", placeholder: "e.g. 180", help: "Average single-story home: 150–200 LF" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "soffit-fascia":      { title: "Soffit & fascia run", intro: "How many linear feet of soffit/fascia?", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 180" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "pavers":             { title: "Paver area", intro: "Roughly how big is the paver area?", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 600", help: "Typical driveway: 600–800 sqft. Patio: 200–400 sqft." }] },
-            "siding":             { title: "Siding area", intro: "Estimate the wall area to be sided.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 1800" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "stucco":             { title: "Stucco area", intro: "Estimate the wall area for stucco work.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 1800" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "exterior-paint":     { title: "Paint area", intro: "Estimate the exterior wall area to paint.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 2000" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "pressure-washing":   { title: "Wash area", intro: "Roughly how much surface needs cleaning?", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 1500" }] },
-            "windows":            { title: "Number of windows", intro: "How many windows are we quoting?", fields: [{ key: "count", label: "# of windows", placeholder: "e.g. 10" }] },
-            "doors":              { title: "Number of doors", intro: "How many doors are we quoting?", fields: [{ key: "count", label: "# of doors", placeholder: "e.g. 2" }] },
-            "eifs-bands":         { title: "Band length", intro: "Total linear feet of EIFS bands.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 120" }] },
-            "crown-molding":      { title: "Molding length", intro: "Total linear feet of crown molding.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 80" }] },
-            "drywall":            { title: "Drywall area", intro: "Approx wall/ceiling area.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 500" }] },
-            "texture":            { title: "Texture area", intro: "Approx ceiling/wall area to texture.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 500" }] },
-            "flooring":           { title: "Flooring area", intro: "Square feet of flooring needed.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 1200" }] },
-            "interior-paint":     { title: "Rooms to paint", intro: "How many rooms?", fields: [{ key: "rooms", label: "# of rooms", placeholder: "e.g. 4" }] },
-            "cabinets":           { title: "Cabinet linear feet", intro: "Estimated linear feet of cabinets.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 25" }] },
-            "plumbing":           { title: "Fixtures", intro: "How many plumbing fixtures?", fields: [{ key: "count", label: "# of fixtures", placeholder: "e.g. 5" }] },
-            "electrical":         { title: "Outlets/fixtures", intro: "How many outlets/fixtures?", fields: [{ key: "count", label: "# of outlets/fixtures", placeholder: "e.g. 8" }] },
-            "bathrooms":          { title: "Number of bathrooms", intro: "How many bathrooms are we remodeling?", fields: [{ key: "count", label: "# of bathrooms", placeholder: "e.g. 2", help: "Most projects are 1–3 bathrooms." }] },
-            "kitchens":           { title: "Number of kitchens", intro: "How many kitchens are we remodeling?", fields: [{ key: "count", label: "# of kitchens", placeholder: "1" }] },
-            "interior-renovation":{ title: "Rooms to renovate", intro: "How many rooms total?", fields: [{ key: "rooms", label: "# of rooms", placeholder: "e.g. 3" }, { key: "sqft", label: "Total sqft (optional)", placeholder: "e.g. 1500" }] },
-            "tree-landscaping":   { title: "Trees & lot", intro: "How many trees and how big is the lot?", fields: [{ key: "count", label: "# of trees", placeholder: "e.g. 4" }, { key: "sqft", label: "Lot size sqft (optional)", placeholder: "e.g. 6000" }] },
-            "window-cleaning":    { title: "Number of windows", intro: "How many windows to clean?", fields: [{ key: "count", label: "# of windows", placeholder: "e.g. 12" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
-            "emergency-services": { title: "Affected area", intro: "Roughly how much area is affected?", fields: [{ key: "sqft", label: "Affected sqft", placeholder: "e.g. 200" }] },
+        {phase === "measurement" && variantConfig && (() => {
+          // Compute aggregate measurements based on what each group needs.
+          const computeMeasurements = () => {
+            const m: Record<string, number> = { ...measurements };
+            // Reset the units we own
+            ["sqft", "linear_feet", "count", "rooms"].forEach((k) => { delete m[k]; });
+
+            variantConfig.groups.forEach((g, idx) => {
+              const sels = groupSelections[idx] || [];
+              if (g.mode === "items") {
+                const total = sels.reduce((sum, s) => sum + (s.qty || 0), 0);
+                m[g.unit] = (m[g.unit] || 0) + total;
+              } else {
+                m[g.unit] = (m[g.unit] || 0) + (groupAreas[idx] || 0);
+              }
+            });
+            // Carry extras (e.g. stories)
+            (variantConfig.extras || []).forEach((ex) => {
+              if (extras[ex.key] != null) m[ex.key] = extras[ex.key];
+            });
+            return m;
           };
-          const cfg = CFG[trade.slug] || { title: "Project size", intro: "Give us a rough size for ballpark pricing.", fields: [{ key: "sqft" as const, label: "Approx. sqft", placeholder: "e.g. 1000" }] };
+
+          const applyAndAdvance = (next: "questions" | "results") => {
+            const m = computeMeasurements();
+            setMeasurements(m);
+            // Persist variants in answers JSON for the contractor
+            const variantsBlob: any = {};
+            variantConfig.groups.forEach((g, idx) => {
+              variantsBlob[g.title] = {
+                mode: g.mode,
+                unit: g.unit,
+                selections: groupSelections[idx] || [],
+                amount: g.mode === "area" ? (groupAreas[idx] || 0) : undefined,
+              };
+            });
+            setAnswers({ ...answers, _selected_variants: variantsBlob });
+            if (next === "results") {
+              calcEstimate();
+              setPhase("results");
+            } else {
+              setPhase(next);
+            }
+          };
+
+          const hasAny = groupSelections.some((g, i) =>
+            variantConfig.groups[i].mode === "items"
+              ? g.some((s) => s.qty > 0)
+              : g.length > 0 && (groupAreas[i] || 0) > 0
+          );
 
           return (
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-2">{cfg.title}</h2>
-              <p className="text-muted-foreground mb-6">{cfg.intro}</p>
+            <Card className="p-6 overflow-hidden">
+              <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+                <div>
+                  <h2 className="text-2xl font-bold">{variantConfig.title}</h2>
+                  <p className="text-muted-foreground text-sm">{variantConfig.intro}</p>
+                </div>
+                {/* Mode toggle */}
+                <div className="inline-flex rounded-full bg-muted p-1 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setMeasureMode("variants")}
+                    className={cn("px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition", measureMode === "variants" ? "bg-background shadow font-semibold" : "text-muted-foreground")}
+                  >
+                    <ListChecks className="h-3.5 w-3.5" /> Pick options
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMeasureMode("photos")}
+                    className={cn("px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition", measureMode === "photos" ? "bg-background shadow font-semibold" : "text-muted-foreground")}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Quote from photos
+                  </button>
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cfg.fields.map((f) => (
-                  <div key={f.key}>
-                    <Label>{f.label}</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={(measurements as any)[f.key] ?? ""}
-                      placeholder={f.placeholder}
-                      onChange={(e) => setMeasurements({ ...measurements, [f.key]: Number(e.target.value) })}
+              <AnimatePresence mode="wait">
+                {measureMode === "variants" ? (
+                  <motion.div
+                    key="variants"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    className="space-y-8"
+                  >
+                    {variantConfig.groups.map((g, idx) => (
+                      <VariantPicker
+                        key={g.title + idx}
+                        group={g}
+                        selections={groupSelections[idx] || []}
+                        onChange={(next) => {
+                          const arr = [...groupSelections];
+                          arr[idx] = next;
+                          setGroupSelections(arr);
+                        }}
+                        areaValue={groupAreas[idx]}
+                        onAreaChange={(n) => {
+                          const arr = [...groupAreas];
+                          arr[idx] = n;
+                          setGroupAreas(arr);
+                        }}
+                      />
+                    ))}
+
+                    {(variantConfig.extras || []).length > 0 && (
+                      <div className="grid grid-cols-2 gap-3 pt-4 border-t">
+                        {variantConfig.extras!.map((ex) => (
+                          <div key={ex.key}>
+                            <Label className="text-xs">{ex.label}</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={extras[ex.key] ?? ""}
+                              placeholder={ex.placeholder}
+                              onChange={(e) => setExtras({ ...extras, [ex.key]: Number(e.target.value) })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-4">
+                      <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
+                      <Button onClick={() => applyAndAdvance("questions")} disabled={!hasAny}>
+                        Next <ArrowRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="photos"
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                  >
+                    <PhotoQuotePanel
+                      tradeSlug={trade.slug}
+                      photos={photos}
+                      onPhotosChange={setPhotos}
+                      onAnalyzed={(a: PhotoAnalysis) => {
+                        setAnalysis(a);
+                        // Merge AI-suggested measurements into state
+                        const sm = a.suggested_measurements || {};
+                        const m: Record<string, number> = { ...measurements };
+                        Object.entries(sm).forEach(([k, v]) => { if (typeof v === "number") m[k] = v; });
+                        setMeasurements(m);
+                        setAnswers({ ...answers, _ai_scope: a.scope_summary });
+                        // Trigger pricing + jump straight to results
+                        calcEstimate();
+                        setPhase("results");
+                      }}
                     />
-                    {f.help && <p className="text-xs text-muted-foreground mt-1">{f.help}</p>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
-                <Button onClick={() => setPhase("questions")}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
-              </div>
+                    <div className="flex justify-between pt-6">
+                      <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Card>
           );
         })()}
+
+        {phase === "measurement" && !variantConfig && (
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold mb-2">Project size</h2>
+            <p className="text-muted-foreground mb-6">Give us a rough size for ballpark pricing.</p>
+            <Label>Approx. sqft</Label>
+            <Input
+              type="number"
+              min={0}
+              value={(measurements as any).sqft ?? ""}
+              onChange={(e) => setMeasurements({ ...measurements, sqft: Number(e.target.value) })}
+            />
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
+              <Button onClick={() => setPhase("questions")}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
+            </div>
+          </Card>
+        )}
 
         {phase === "questions" && (
           <Card className="p-6">
