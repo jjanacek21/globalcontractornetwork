@@ -589,8 +589,14 @@ export default function TradeWizard() {
                   <CheckCircle2 className="h-4 w-4 text-primary" /> AI condition assessment
                 </h3>
                 <div className="text-sm space-y-1">
+                  {analysis.scope_summary && (
+                    <p className="mb-2 italic text-muted-foreground">{analysis.scope_summary}</p>
+                  )}
                   {analysis.condition && <div><strong>Condition:</strong> {analysis.condition}</div>}
                   {analysis.severity && <div><strong>Severity:</strong> {analysis.severity}</div>}
+                  {typeof analysis.confidence === "number" && (
+                    <div><strong>Confidence:</strong> {Math.round(analysis.confidence * 100)}%</div>
+                  )}
                   {Array.isArray(analysis.observations) && analysis.observations.length > 0 && (
                     <div className="mt-2"><strong>Observations:</strong>
                       <ul className="list-disc ml-5">{analysis.observations.map((o: string, i: number) => <li key={i}>{o}</li>)}</ul>
