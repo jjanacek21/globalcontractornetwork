@@ -44,7 +44,7 @@ const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
 const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
 const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
-import LandingPage from "./pages/LandingPage";
+
 import Home from "./pages/Home";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
