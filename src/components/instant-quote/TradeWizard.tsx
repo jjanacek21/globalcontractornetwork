@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Upload, X, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Upload, X, CheckCircle2, Sparkles, ListChecks } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddressAutocomplete } from "@/components/homeowner/AddressAutocomplete";
 import { toast } from "sonner";
+import { getTradeVariantConfig } from "./tradeVariants";
+import { VariantPicker, type SelectedVariant } from "./shared/VariantPicker";
+import { PhotoQuotePanel, type PhotoAnalysis } from "./shared/PhotoQuotePanel";
+import { cn } from "@/lib/utils";
 
 interface Trade {
   id: string;
