@@ -210,14 +210,26 @@ export default function HomeownerMarketplace() {
                 See what other property owners are paying — view-only. Personal info is hidden.
               </p>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by type, title…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by type, title…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Tabs value={browseView} onValueChange={(v) => setBrowseView(v as 'list' | 'map')}>
+                <TabsList>
+                  <TabsTrigger value="list" className="flex items-center gap-1.5">
+                    <List className="h-4 w-4" /> List
+                  </TabsTrigger>
+                  <TabsTrigger value="map" className="flex items-center gap-1.5">
+                    <MapIcon className="h-4 w-4" /> Map
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 
@@ -231,12 +243,24 @@ export default function HomeownerMarketplace() {
                 No listings found.
               </CardContent>
             </Card>
-          ) : (
+          ) : browseView === 'list' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPublic.map((j) => (
                 <PublicJobCard key={j.id} job={j} />
               ))}
             </div>
+          ) : (
+            <PublicMarketplaceMap
+              jobs={filteredPublic.map((j) => ({
+                id: j.id,
+                title: j.title,
+                service_category: j.service_category,
+                budget_min: j.budget_min,
+                budget_max: j.budget_max,
+                lat: j.lat,
+                lng: j.lng,
+              }))}
+            />
           )}
         </section>
       </main>
