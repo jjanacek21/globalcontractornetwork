@@ -397,8 +397,8 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
         )}
         <div className="px-4 py-3 border-t bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground">
           <Crosshair className="h-3.5 w-3.5" />
-          {addFlatMode
-            ? "Click on a flat / low-slope roof section to add it."
+          {drawingFlat
+            ? `Click each corner of the flat roof to trace it (${draftPoints.length} point${draftPoints.length === 1 ? "" : "s"} placed). Add 3+ points then press Finish.`
             : "Drag the red pin or click on the main roof to position it."}
         </div>
       </div>
