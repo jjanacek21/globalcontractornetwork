@@ -423,7 +423,7 @@ export default function Home() {
               <a href="#faq">FAQ</a>
             </nav>
             <div className="nav-cta">
-              <Link className="btn btn-ghost" to="/contractors">For Contractors</Link>
+              <Link className="btn btn-ghost" to="/login">Login</Link>
               <Link className="btn btn-green" to="/join">Join the Network</Link>
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
@@ -438,7 +438,7 @@ export default function Home() {
                     <a onClick={() => setOpen(false)} href="#about">About</a>
                     <a onClick={() => setOpen(false)} href="#process">How It Works</a>
                     <a onClick={() => setOpen(false)} href="#faq">FAQ</a>
-                    <Link onClick={() => setOpen(false)} to="/contractors" className="btn btn-ghost mt-2">For Contractors</Link>
+                    <Link onClick={() => setOpen(false)} to="/login" className="btn btn-ghost mt-2">Login</Link>
                     <Link onClick={() => setOpen(false)} to="/join" className="btn btn-green">Join the Network</Link>
                   </nav>
                 </SheetContent>
