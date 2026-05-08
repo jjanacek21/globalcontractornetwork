@@ -57,7 +57,7 @@ const SCOPED_CSS = `
 
 /* Nav */
 .gcn-home header.site{position:sticky;top:0;z-index:50;background:rgba(251,248,240,.86);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid rgba(31,84,54,.10)}
-.gcn-home .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0;gap:18px}
+.gcn-home .nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0;gap:18px;min-height:0}
 .gcn-home .brand{display:flex;align-items:center;gap:12px}
 .gcn-home .navlinks{display:flex;gap:26px;align-items:center}
 .gcn-home .navlinks a{font-weight:600;color:var(--ink-2);font-size:.95rem}
@@ -436,7 +436,7 @@ export default function Home() {
       <div className="gcn-home">
         {/* NAV */}
         <header className="site">
-          <div className="container nav mx-0 pb-0 border">
+          <div className="container nav">
             <a href="#top" className="brand" aria-label="Global Contractor Network">
               <img className="logo-img" src="/gcn-logo.png" alt="The Global Contractor Network" />
             </a>
