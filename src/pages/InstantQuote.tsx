@@ -1,5 +1,5 @@
-import ServicesGrid from "@/components/instant-quote/ServicesGrid";
+import { InstantQuoteWizard } from "@/components/instant-quote/InstantQuoteWizard";
 
 export default function InstantQuote() {
-  return <ServicesGrid />;
+  return <InstantQuoteWizard />;
 }
