@@ -436,7 +436,7 @@ export default function Home() {
       <div className="gcn-home">
         {/* NAV */}
         <header className="site">
-          <div className="container nav">
+          <div className="container nav mx-0 pb-0 border">
             <a href="#top" className="brand" aria-label="Global Contractor Network">
               <img className="logo-img" src="/gcn-logo.png" alt="The Global Contractor Network" />
             </a>
