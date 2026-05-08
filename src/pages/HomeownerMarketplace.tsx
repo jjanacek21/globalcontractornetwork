@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Briefcase, Loader2, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Briefcase, Loader2, Search, List, Map as MapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useHomeownerJobs, JobRequest } from '@/hooks/useHomeownerJobs';
 import { CreateJobDialog } from '@/components/homeowner/CreateJobDialog';
 import { JobResponsesList } from '@/components/homeowner/JobResponsesList';
 import { MyListingMiniCard } from '@/components/homeowner/MyListingMiniCard';
 import { PublicJobCard } from '@/components/homeowner/PublicJobCard';
+import { PublicMarketplaceMap } from '@/components/homeowner/PublicMarketplaceMap';
 import { toast } from 'sonner';
 
 interface PublicJob {
@@ -24,6 +26,8 @@ interface PublicJob {
   timeline: string | null;
   photos: string[];
   created_at: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 export default function HomeownerMarketplace() {
@@ -36,6 +40,7 @@ export default function HomeownerMarketplace() {
   const [publicJobs, setPublicJobs] = useState<PublicJob[]>([]);
   const [publicLoading, setPublicLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [browseView, setBrowseView] = useState<'list' | 'map'>('list');
 
   useEffect(() => {
     (async () => {
@@ -59,7 +64,7 @@ export default function HomeownerMarketplace() {
       setPublicLoading(true);
       const { data, error } = await supabase
         .from('job_requests')
-        .select('id,title,description,service_category,urgency,budget_min,budget_max,timeline,photos,created_at,homeowner_id,status')
+        .select('id,title,description,service_category,urgency,budget_min,budget_max,timeline,photos,created_at,homeowner_id,status,lat,lng')
         .eq('status', 'open')
         .neq('homeowner_id', userId)
         .order('created_at', { ascending: false })
@@ -87,6 +92,8 @@ export default function HomeownerMarketplace() {
             timeline: j.timeline,
             photos,
             created_at: j.created_at,
+            lat: j.lat !== null && j.lat !== undefined ? Number(j.lat) : null,
+            lng: j.lng !== null && j.lng !== undefined ? Number(j.lng) : null,
           } as PublicJob;
         });
         setPublicJobs(sanitized);
@@ -203,14 +210,26 @@ export default function HomeownerMarketplace() {
                 See what other property owners are paying — view-only. Personal info is hidden.
               </p>
             </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by type, title…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by type, title…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Tabs value={browseView} onValueChange={(v) => setBrowseView(v as 'list' | 'map')}>
+                <TabsList>
+                  <TabsTrigger value="list" className="flex items-center gap-1.5">
+                    <List className="h-4 w-4" /> List
+                  </TabsTrigger>
+                  <TabsTrigger value="map" className="flex items-center gap-1.5">
+                    <MapIcon className="h-4 w-4" /> Map
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 
@@ -224,12 +243,24 @@ export default function HomeownerMarketplace() {
                 No listings found.
               </CardContent>
             </Card>
-          ) : (
+          ) : browseView === 'list' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPublic.map((j) => (
                 <PublicJobCard key={j.id} job={j} />
               ))}
             </div>
+          ) : (
+            <PublicMarketplaceMap
+              jobs={filteredPublic.map((j) => ({
+                id: j.id,
+                title: j.title,
+                service_category: j.service_category,
+                budget_min: j.budget_min,
+                budget_max: j.budget_max,
+                lat: j.lat,
+                lng: j.lng,
+              }))}
+            />
           )}
         </section>
       </main>

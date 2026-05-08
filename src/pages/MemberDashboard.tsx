@@ -207,6 +207,7 @@ const MemberDashboard = () => {
     { icon: Sparkles, title: "Instant Quote", description: "AI-powered estimates for roofing, windows, emergency, landscaping & cleaning", link: "/instant-quote" },
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
     { icon: Briefcase, title: "Job Marketplace", description: "Post your project and browse what others are paying", link: "/homeowner/marketplace" },
+    { icon: Crown, title: "Permit Expediting", description: "Fast-track Florida building permits for your property", link: "/permit-queens/dashboard" },
     { icon: ClipboardCheck, title: "Maintenance Membership", description: "Preventative maintenance & property care plans for property owners", link: "/maintenance-membership", badge: "Coming Soon" },
   ];
 
@@ -400,7 +401,7 @@ const MemberDashboard = () => {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {(isSuperAdmin
-                ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title))]
+                ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title) && h.title !== "Job Marketplace" && h.title !== "Maintenance Membership")]
                 : isContractor ? contractorServices : homeownerServices
               ).map((s, i) => (
                 <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
@@ -422,10 +423,7 @@ const MemberDashboard = () => {
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {(isSuperAdmin
-                  ? [...contractorApps, ...homeownerServices.filter(s => s.title !== "Directory")]
-                  : contractorApps
-                ).map((s, i) => (
+                {contractorApps.map((s, i) => (
                   <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
                 ))}
               </div>
