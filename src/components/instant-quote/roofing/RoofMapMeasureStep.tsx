@@ -416,10 +416,21 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
             </div>
           </div>
         )}
+        {drawingFlat && (
+          <div className="absolute top-3 left-3 right-3 z-10 rounded-lg bg-blue-600 text-white px-3 py-2 shadow-lg pointer-events-none">
+            <p className="text-sm font-bold">✏️ Drawing flat roof — click each corner</p>
+            <p className="text-xs opacity-90 mt-0.5">
+              Trace only the flat roof edges (not the yard or street). {draftPoints.length} point
+              {draftPoints.length === 1 ? "" : "s"} placed
+              {draftPoints.length >= 3 && ` • ~${Math.round(polygonAreaSqft(draftPoints)).toLocaleString()} sqft`}
+              . Need 3+ then press Finish.
+            </p>
+          </div>
+        )}
         <div className="px-4 py-3 border-t bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground">
           <Crosshair className="h-3.5 w-3.5" />
           {drawingFlat
-            ? `Click each corner of the flat roof to trace it (${draftPoints.length} point${draftPoints.length === 1 ? "" : "s"} placed). Add 3+ points then press Finish.`
+            ? "Zoom in (scroll) and click each corner of the flat roof. Avoid clicking the yard or driveway."
             : "Drag the red pin or click on the main roof to position it."}
         </div>
       </div>
