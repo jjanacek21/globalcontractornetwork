@@ -68,6 +68,11 @@ export function WasteFactorStep({ measurement, onBack, onComplete }: Props) {
         <p className="text-2xl font-bold text-primary">
           {Math.round(baseSqft).toLocaleString()} sqft
         </p>
+        {flatSqft > 0 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Pitched: {Math.round(pitchedSqft).toLocaleString()} sqft + Flat: {Math.round(flatSqft).toLocaleString()} sqft
+          </p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           Avg pitch {measurement.average_pitch_degrees.toFixed(1)}° •{" "}
           {measurement.roof_segments_count} segments • {measurement.complexity}
