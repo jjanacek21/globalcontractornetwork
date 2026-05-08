@@ -64,7 +64,7 @@ export default function HomeownerMarketplace() {
       setPublicLoading(true);
       const { data, error } = await supabase
         .from('job_requests')
-        .select('id,title,description,service_category,urgency,budget_min,budget_max,timeline,photos,created_at,homeowner_id,status')
+        .select('id,title,description,service_category,urgency,budget_min,budget_max,timeline,photos,created_at,homeowner_id,status,lat,lng')
         .eq('status', 'open')
         .neq('homeowner_id', userId)
         .order('created_at', { ascending: false })
