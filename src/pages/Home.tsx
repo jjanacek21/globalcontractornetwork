@@ -66,10 +66,10 @@ const SCOPED_CSS = `
 .gcn-home .mobile-trigger{display:none;background:none;border:none;color:var(--ink);padding:8px;cursor:pointer}
 @media (max-width:980px){.gcn-home .navlinks{display:none}.gcn-home .mobile-trigger{display:inline-flex}}
 @media (max-width:560px){.gcn-home .nav-cta .btn:not(.btn-green){display:none}}
-.gcn-home .logo-img{height:192px;width:auto;max-width:720px;object-fit:contain;background:transparent;filter:drop-shadow(0 8px 14px rgba(122,90,20,.4));transition:transform .4s}
+.gcn-home .logo-img{height:125px;width:auto;max-width:468px;object-fit:contain;background:transparent;filter:drop-shadow(0 8px 14px rgba(122,90,20,.4));transition:transform .4s}
 .gcn-home .brand:hover .logo-img{transform:scale(1.03)}
-.gcn-home footer .logo-img{height:168px}
-@media (max-width:560px){.gcn-home .logo-img{height:120px}.gcn-home footer .logo-img{height:100px}}
+.gcn-home footer .logo-img{height:109px}
+@media (max-width:560px){.gcn-home .logo-img{height:78px}.gcn-home footer .logo-img{height:65px}}
 
 /* Hero */
 .gcn-home .hero{position:relative;overflow:hidden;padding:96px 0 110px;background:radial-gradient(900px 500px at 85% 20%,rgba(212,175,55,.18),transparent 55%),radial-gradient(800px 500px at 0% 80%,rgba(45,106,79,.12),transparent 55%),linear-gradient(180deg,var(--paper) 0%,var(--paper-2) 100%)}
