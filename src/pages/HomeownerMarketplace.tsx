@@ -26,6 +26,8 @@ interface PublicJob {
   timeline: string | null;
   photos: string[];
   created_at: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 export default function HomeownerMarketplace() {
