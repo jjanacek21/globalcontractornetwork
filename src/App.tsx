@@ -136,6 +136,7 @@ const PropertyIQDashboard = lazy(() => import("./pages/PropertyIQDashboard"));
 const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
 const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 const InstantQuote = lazy(() => import("./pages/InstantQuote"));
+const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"));
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 
