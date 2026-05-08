@@ -40,6 +40,7 @@ export default function HomeownerMarketplace() {
   const [publicJobs, setPublicJobs] = useState<PublicJob[]>([]);
   const [publicLoading, setPublicLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [browseView, setBrowseView] = useState<'list' | 'map'>('list');
 
   useEffect(() => {
     (async () => {
