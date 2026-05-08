@@ -92,6 +92,8 @@ export default function HomeownerMarketplace() {
             timeline: j.timeline,
             photos,
             created_at: j.created_at,
+            lat: j.lat !== null && j.lat !== undefined ? Number(j.lat) : null,
+            lng: j.lng !== null && j.lng !== undefined ? Number(j.lng) : null,
           } as PublicJob;
         });
         setPublicJobs(sanitized);
