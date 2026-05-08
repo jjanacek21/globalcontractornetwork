@@ -9,6 +9,28 @@ import { supabase } from "@/integrations/supabase/client";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
+// Geodesic polygon area (sq ft) using spherical excess.
+function polygonAreaSqft(coords: { lat: number; lng: number }[]): number {
+  if (coords.length < 3) return 0;
+  const R = 6378137; // earth radius m
+  let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const p1 = coords[i];
+    const p2 = coords[(i + 1) % coords.length];
+    area +=
+      ((p2.lng - p1.lng) * Math.PI) / 180 *
+      (2 + Math.sin((p1.lat * Math.PI) / 180) + Math.sin((p2.lat * Math.PI) / 180));
+  }
+  area = Math.abs((area * R * R) / 2); // sq m
+  return area * 10.7639; // sq ft
+}
+
+function polygonCentroid(coords: { lat: number; lng: number }[]): { lat: number; lng: number } {
+  const lat = coords.reduce((a, p) => a + p.lat, 0) / coords.length;
+  const lng = coords.reduce((a, p) => a + p.lng, 0) / coords.length;
+  return { lat, lng };
+}
+
 export interface FlatSection {
   id: string;
   center: { lat: number; lng: number };
@@ -65,8 +87,8 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
 
   const [primaryMeasurement, setPrimaryMeasurement] = useState<any>(null);
   const [flatSections, setFlatSections] = useState<FlatSection[]>([]);
-  const [addFlatMode, setAddFlatMode] = useState(false);
-  const [tracingFlat, setTracingFlat] = useState(false);
+  const [drawingFlat, setDrawingFlat] = useState(false);
+  const [draftPoints, setDraftPoints] = useState<{ lat: number; lng: number }[]>([]);
 
   // Init map ONCE on mount — wait for container to have a real height
   useEffect(() => {
@@ -154,106 +176,109 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
     }
   }, [coords]);
 
-  // Click handler — either move main pin or drop a flat-section pin
+  // Click handler — either move main pin or add a vertex to the flat polygon being drawn
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const handler = (e: mapboxgl.MapMouseEvent) => {
-      if (addFlatMode) {
-        addFlatPin(e.lngLat.lat, e.lngLat.lng);
+      if (drawingFlat) {
+        setDraftPoints((prev) => [...prev, { lat: e.lngLat.lat, lng: e.lngLat.lng }]);
       } else if (markerRef.current) {
         markerRef.current.setLngLat(e.lngLat);
         setPinCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       }
     };
     map.on("click", handler);
-    map.getCanvas().style.cursor = addFlatMode ? "crosshair" : "";
+    map.getCanvas().style.cursor = drawingFlat ? "crosshair" : "";
     return () => {
       map.off("click", handler);
       if (map.getCanvas()) map.getCanvas().style.cursor = "";
     };
-  }, [addFlatMode]);
+  }, [drawingFlat]);
 
-  // Render flat-section polygons + markers on map
+  // Render in-progress draft polygon (vertices + line)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return;
+    const SRC = "flat-draft";
+    const FILL = "flat-draft-fill";
+    const LINE = "flat-draft-line";
+    const POINTS = "flat-draft-points";
 
-    // Remove old markers
-    flatMarkersRef.current.forEach((m) => m.remove());
-    flatMarkersRef.current = [];
-
-    // Remove old polygon layers
-    if (map.isStyleLoaded()) {
-      flatSections.forEach((_, i) => {
-        const id = `flat-${i}`;
-        if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getLayer(`${id}-line`)) map.removeLayer(`${id}-line`);
-        if (map.getSource(id)) map.removeSource(id);
-      });
-    }
-
-    const drawAll = () => {
-      flatSections.forEach((sec, i) => {
-        const id = `flat-${i}`;
-        if (map.getSource(id)) return;
-        map.addSource(id, {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: {
-              type: "Polygon",
-              coordinates: [[...sec.polygon.map((p) => [p.lng, p.lat]), [sec.polygon[0].lng, sec.polygon[0].lat]]],
-            },
-            properties: {},
-          },
-        });
-        map.addLayer({
-          id, type: "fill", source: id,
-          paint: { "fill-color": "#3b82f6", "fill-opacity": 0.35 },
-        });
-        map.addLayer({
-          id: `${id}-line`, type: "line", source: id,
-          paint: { "line-color": "#1d4ed8", "line-width": 2 },
-        });
-
-        const m = new mapboxgl.Marker({ color: "#3b82f6" })
-          .setLngLat([sec.center.lng, sec.center.lat])
-          .setPopup(new mapboxgl.Popup({ offset: 24 }).setHTML(
-            `<div style="font-size:12px"><strong>Flat section</strong><br/>${Math.round(sec.area_sqft)} sqft</div>`
-          ))
-          .addTo(map);
-        flatMarkersRef.current.push(m);
-      });
+    const cleanup = () => {
+      [FILL, LINE, POINTS].forEach((id) => map.getLayer(id) && map.removeLayer(id));
+      [SRC, `${SRC}-pts`].forEach((id) => map.getSource(id) && map.removeSource(id));
     };
+    cleanup();
 
-    if (map.isStyleLoaded()) drawAll();
-    else map.once("load", drawAll);
-  }, [flatSections]);
+    if (!drawingFlat || draftPoints.length === 0) return;
 
-  const addFlatPin = useCallback(async (lat: number, lng: number) => {
-    setAddFlatMode(false);
-    setTracingFlat(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("trace-flat-roof", {
-        body: { latitude: lat, longitude: lng },
+    const coords = draftPoints.map((p) => [p.lng, p.lat]);
+    if (draftPoints.length >= 3) {
+      map.addSource(SRC, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Polygon", coordinates: [[...coords, coords[0]]] },
+        },
       });
-      if (error || !data?.success) throw new Error(error?.message || "Could not trace flat section");
-      const d = data.data;
-      const sec: FlatSection = {
-        id: `flat-${Date.now()}`,
-        center: { lat, lng },
-        polygon: d.polygon,
-        area_sqft: d.area_sqft,
-        confidence: d.confidence,
-      };
-      setFlatSections((prev) => [...prev, sec]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not trace flat section");
-    } finally {
-      setTracingFlat(false);
+      map.addLayer({ id: FILL, type: "fill", source: SRC, paint: { "fill-color": "#3b82f6", "fill-opacity": 0.25 } });
+      map.addLayer({ id: LINE, type: "line", source: SRC, paint: { "line-color": "#1d4ed8", "line-width": 2 } });
+    } else if (draftPoints.length === 2) {
+      map.addSource(SRC, {
+        type: "geojson",
+        data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } },
+      });
+      map.addLayer({ id: LINE, type: "line", source: SRC, paint: { "line-color": "#1d4ed8", "line-width": 2 } });
     }
-  }, []);
+
+    map.addSource(`${SRC}-pts`, {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: draftPoints.map((p) => ({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        })),
+      },
+    });
+    map.addLayer({
+      id: POINTS,
+      type: "circle",
+      source: `${SRC}-pts`,
+      paint: { "circle-radius": 5, "circle-color": "#1d4ed8", "circle-stroke-color": "#fff", "circle-stroke-width": 2 },
+    });
+
+    return cleanup;
+  }, [drawingFlat, draftPoints]);
+
+  const startDrawingFlat = () => {
+    setDrawingFlat(true);
+    setDraftPoints([]);
+  };
+
+  const cancelDrawingFlat = () => {
+    setDrawingFlat(false);
+    setDraftPoints([]);
+  };
+
+  const finishDrawingFlat = () => {
+    if (draftPoints.length < 3) return;
+    const area = polygonAreaSqft(draftPoints);
+    const center = polygonCentroid(draftPoints);
+    const sec: FlatSection = {
+      id: `flat-${Date.now()}`,
+      center,
+      polygon: draftPoints,
+      area_sqft: +area.toFixed(2),
+      confidence: "high",
+    };
+    setFlatSections((prev) => [...prev, sec]);
+    setDrawingFlat(false);
+    setDraftPoints([]);
+  };
 
   const removeFlatSection = (id: string) => {
     setFlatSections((prev) => prev.filter((s) => s.id !== id));
@@ -372,8 +397,8 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
         )}
         <div className="px-4 py-3 border-t bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground">
           <Crosshair className="h-3.5 w-3.5" />
-          {addFlatMode
-            ? "Click on a flat / low-slope roof section to add it."
+          {drawingFlat
+            ? `Click each corner of the flat roof to trace it (${draftPoints.length} point${draftPoints.length === 1 ? "" : "s"} placed). Add 3+ points then press Finish.`
             : "Drag the red pin or click on the main roof to position it."}
         </div>
       </div>
@@ -440,30 +465,39 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setAddFlatMode(true)}
-              disabled={addFlatMode || tracingFlat}
-              className="h-11 gap-2"
-            >
-              {tracingFlat ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Tracing...</>
-              ) : addFlatMode ? (
-                <>Click the map…</>
-              ) : (
-                <><Plus className="h-4 w-4" /> Add flat section</>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleMeasure}
-              disabled={measuring}
-              className="h-11 gap-2"
-            >
-              <RefreshCw className="h-4 w-4" /> Re-measure
-            </Button>
-          </div>
+          {drawingFlat ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={finishDrawingFlat}
+                disabled={draftPoints.length < 3}
+                className="h-11 gap-2"
+              >
+                Finish flat section
+                {draftPoints.length >= 3 && (
+                  <span className="text-xs opacity-80">
+                    ({Math.round(polygonAreaSqft(draftPoints)).toLocaleString()} sqft)
+                  </span>
+                )}
+              </Button>
+              <Button variant="outline" onClick={cancelDrawingFlat} className="h-11 gap-2">
+                <X className="h-4 w-4" /> Cancel drawing
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={startDrawingFlat} className="h-11 gap-2">
+                <Plus className="h-4 w-4" /> Draw flat roof
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleMeasure}
+                disabled={measuring}
+                className="h-11 gap-2"
+              >
+                <RefreshCw className="h-4 w-4" /> Re-measure
+              </Button>
+            </div>
+          )}
 
           <Button onClick={continueToNext} className="w-full h-12 text-base gap-2">
             Analyze roof condition ({Math.round(combined).toLocaleString()} sqft) <ArrowRight className="h-4 w-4" />

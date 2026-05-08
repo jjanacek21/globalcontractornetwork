@@ -84,12 +84,13 @@ export function RoofPackagesStep({
       setLoading(true);
       setError(null);
       try {
-        const combinedSqft =
-          (measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0) +
-          (measurement.user_added_flat_sqft ?? 0);
+        const pitchedSqft =
+          measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0;
+        const flatSqft = measurement.user_added_flat_sqft ?? 0;
         const { data: res, error: fnErr } = await supabase.functions.invoke("roofing-package-pricing", {
           body: {
-            totalSqft: combinedSqft,
+            totalSqft: pitchedSqft,
+            flatSqft,
             pitchMultiplier: measurement.pitch_multiplier,
             wasteFactor,
             condition: {
