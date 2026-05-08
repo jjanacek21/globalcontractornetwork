@@ -163,8 +163,8 @@ const GCNRoutes = () => (
     <Route path="/" element={<Home />} />
     <Route path="/report/:token" element={<Suspense fallback={<div />}><SharedMeasurementReport /></Suspense>} />
     <Route path="/services" element={<Index />} />
-    <Route path="/join" element={<LandingPage />} />
-    <Route path="/join-network" element={<JoinNetwork />} />
+    <Route path="/join" element={<JoinNetwork />} />
+    <Route path="/join-network" element={<Navigate to="/join" replace />} />
     <Route path="/register-company" element={<CompanyRegistration />} />
     <Route path="/company/dashboard" element={
       <ProtectedRoute redirectTo="/network-login">
