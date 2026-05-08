@@ -257,6 +257,12 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
   const startDrawingFlat = () => {
     setDrawingFlat(true);
     setDraftPoints([]);
+    setError(null);
+    // Auto-zoom in close so the user can trace edges accurately
+    const map = mapRef.current;
+    if (map && pinCoords) {
+      map.flyTo({ center: [pinCoords.lng, pinCoords.lat], zoom: 21, duration: 600 });
+    }
   };
 
   const cancelDrawingFlat = () => {
@@ -268,6 +274,21 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
     if (draftPoints.length < 3) return;
     const area = polygonAreaSqft(draftPoints);
     const center = polygonCentroid(draftPoints);
+
+    // Sanity check — flat section should not be wildly larger than the AI-pitched area.
+    const pitched = primaryMeasurement?.total_roof_area_sqft || 0;
+    if (pitched > 0 && area > pitched * 1.2) {
+      const ok = window.confirm(
+        `The flat section you drew is ${Math.round(area).toLocaleString()} sqft — larger than the main roof (${Math.round(pitched).toLocaleString()} sqft). ` +
+        `That usually means the polygon was drawn in the yard or street instead of on the roof. ` +
+        `\n\nClick Cancel to redraw, or OK to keep it.`,
+      );
+      if (!ok) {
+        setDraftPoints([]);
+        return;
+      }
+    }
+
     const sec: FlatSection = {
       id: `flat-${Date.now()}`,
       center,
@@ -395,10 +416,21 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
             </div>
           </div>
         )}
+        {drawingFlat && (
+          <div className="absolute top-3 left-3 right-3 z-10 rounded-lg bg-blue-600 text-white px-3 py-2 shadow-lg pointer-events-none">
+            <p className="text-sm font-bold">✏️ Drawing flat roof — click each corner</p>
+            <p className="text-xs opacity-90 mt-0.5">
+              Trace only the flat roof edges (not the yard or street). {draftPoints.length} point
+              {draftPoints.length === 1 ? "" : "s"} placed
+              {draftPoints.length >= 3 && ` • ~${Math.round(polygonAreaSqft(draftPoints)).toLocaleString()} sqft`}
+              . Need 3+ then press Finish.
+            </p>
+          </div>
+        )}
         <div className="px-4 py-3 border-t bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground">
           <Crosshair className="h-3.5 w-3.5" />
           {drawingFlat
-            ? `Click each corner of the flat roof to trace it (${draftPoints.length} point${draftPoints.length === 1 ? "" : "s"} placed). Add 3+ points then press Finish.`
+            ? "Zoom in (scroll) and click each corner of the flat roof. Avoid clicking the yard or driveway."
             : "Drag the red pin or click on the main roof to position it."}
         </div>
       </div>
