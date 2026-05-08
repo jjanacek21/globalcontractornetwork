@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -266,6 +267,24 @@ const JoinNetwork = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <Helmet>
+        <title>Join the Network — Global Contractor Network</title>
+        <meta
+          name="description"
+          content="Create your free Global Contractor Network account. Homeowners get AI quotes and vetted pros; contractors get verified referrals — no lead bidding."
+        />
+        <link rel="canonical" href="https://globalcontractor.network/join" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://globalcontractor.network/join" />
+        <meta property="og:site_name" content="Global Contractor Network" />
+        <meta property="og:title" content="Join the Network — Global Contractor Network" />
+        <meta property="og:description" content="Free signup for homeowners and contractors. Verified referrals, AI estimates, no bidding wars." />
+        <meta property="og:image" content="https://globalcontractor.network/gcn-logo.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Join the Network — Global Contractor Network" />
+        <meta name="twitter:description" content="Free signup for homeowners and contractors. Verified referrals, AI estimates, no bidding wars." />
+        <meta name="twitter:image" content="https://globalcontractor.network/gcn-logo.png" />
+      </Helmet>
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">

@@ -78,7 +78,12 @@ const SCOPED_CSS = `
 .gcn-home .rating-pill .stars{color:var(--gold-700);letter-spacing:1px}
 .gcn-home .hero h1{margin-top:18px}
 .gcn-home .quoteline{font-style:italic;color:var(--green-800);border-left:3px solid var(--gold-600);padding:8px 0 8px 14px;margin:8px 0 16px;font-size:1.05rem}
-.gcn-home .actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+.gcn-home .actions{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap;align-items:center}
+.gcn-home .actions .btn-lg{padding:18px 30px;font-size:1.05rem;border-radius:14px}
+.gcn-home .actions .btn-link{background:transparent;border:none;box-shadow:none;color:var(--green-800);font-weight:600;padding:10px 6px;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(31,84,54,.35)}
+.gcn-home .actions .btn-link:hover{color:var(--green-900);text-decoration-color:var(--green-700);transform:none}
+.gcn-home .actions-meta{margin-top:12px;font-size:.86rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gcn-home .actions-meta .dot{width:4px;height:4px;border-radius:50%;background:var(--muted);display:inline-block}
 .gcn-home .badge-strip{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,#fff 0%,var(--green-50) 100%);border:1px solid var(--line);box-shadow:var(--shadow-sm)}
 .gcn-home .badge-strip svg{width:18px;height:18px;color:var(--green-700);flex:none}
 .gcn-home .badge-strip strong{color:var(--green-900);font-size:.92rem;letter-spacing:.02em}
@@ -396,8 +401,27 @@ export default function Home() {
         <title>Global Contractor Network — Trusted Contractors. Real Accountability.</title>
         <meta
           name="description"
-          content="Global Contractor Network is a referral-driven network for homeowners and contractors. Free AI estimating, job marketplace, permit expediting, virtual contractor services, and a vetted contractor directory."
+          content="Get a free AI-powered home project quote in 60 seconds and connect with vetted, insured contractors. Referral-based network — no bidding wars, no spam calls."
         />
+        <link rel="canonical" href="https://globalcontractor.network/" />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://globalcontractor.network/" />
+        <meta property="og:site_name" content="Global Contractor Network" />
+        <meta property="og:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta
+          property="og:description"
+          content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
+        />
+        <meta property="og:image" content="https://globalcontractor.network/gcn-logo.png" />
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta
+          name="twitter:description"
+          content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
+        />
+        <meta name="twitter:image" content="https://globalcontractor.network/gcn-logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -451,13 +475,19 @@ export default function Home() {
         <section className="hero" id="top" style={{ borderTop: "none" }}>
           <div className="container">
             <div>
-              <span className="rating-pill"><span className="stars">★★★★★</span> Rated 4.9/5 with 500+ verified reviews</span>
-              <h1>One Platform for <span className="green-text">All Your</span> <span className="gold-text shimmer">Contractor Needs</span></h1>
-              <div className="quoteline">A trusted network for contractors and property owners — not a lead marketplace.</div>
-              <p className="lead">Whether you're a homeowner looking for trusted contractors or a contractor growing your business — GCN has everything you need in one place. Verified pros, AI estimating, permit help, and a marketplace built on referrals, not bidding wars.</p>
+              <span className="rating-pill"><span className="stars">★★★★★</span> Rated 4.9/5 by 500+ verified homeowners</span>
+              <h1>Trusted Contractors. <span className="green-text">Real</span> <span className="gold-text shimmer">Accountability.</span></h1>
+              <div className="quoteline">A referral-based network for homeowners and contractors — never a lead-bidding marketplace.</div>
+              <p className="lead">Get a free AI-powered quote in minutes, then connect with vetted, insured pros in your area. No spam calls, no bidding wars — just trusted work, backed by our network guarantee.</p>
               <div className="actions">
-                <Link to="/join" className="btn btn-green">Join the Network <span className="arr">→</span></Link>
-                <Link to="/contractors" className="btn btn-gold">For Contractors <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-green btn-lg">Get My Free Quote <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-ghost">Join the Network</Link>
+                <Link to="/contractors" className="btn btn-link">I'm a contractor →</Link>
+              </div>
+              <div className="actions-meta">
+                <span>✓ Free to start</span><span className="dot" />
+                <span>✓ No credit card</span><span className="dot" />
+                <span>✓ Quote in under 60 seconds</span>
               </div>
               <div className="badge-strip">
                 <Svg><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" /></Svg>
