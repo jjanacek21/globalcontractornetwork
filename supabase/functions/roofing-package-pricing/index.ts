@@ -1,6 +1,6 @@
-// Generates Good / Better / Best roofing package pricing using the Lovable AI Gateway.
-// Inputs: measured sqft, pitch multiplier, waste factor, condition severity, region.
-// Output: three packages with price ranges, scope bullets, warranty.
+// Generates Good / Better / Best roofing package pricing (Shingle + Metal) with optional add-ons.
+// Inputs: measured sqft, pitch multiplier, waste factor, condition severity/material, region.
+// Output: { shingle: Package[], metal: Package[], addOns: AddOn[] }
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -10,7 +10,7 @@ const corsHeaders = {
 interface RequestBody {
   totalSqft: number;
   pitchMultiplier?: number;
-  wasteFactor: number; // e.g. 0.12 for 12%
+  wasteFactor: number;
   condition?: {
     severity?: "minor" | "moderate" | "severe" | "unknown";
     issues?: string[];
@@ -18,10 +18,15 @@ interface RequestBody {
   };
   region?: string;
   stories?: number;
+  eaveLengthFt?: number;
 }
 
+type Tier = "good" | "better" | "best";
+type Category = "shingle" | "metal";
+
 interface Package {
-  tier: "good" | "better" | "best";
+  category: Category;
+  tier: Tier;
   name: string;
   pricePerSquare: number;
   totalLow: number;
@@ -31,11 +36,107 @@ interface Package {
   highlights: string[];
 }
 
-// Florida baseline price/square ($/100 sqft) — adjusted by AI for condition + complexity.
-const BASE_PRICE_PER_SQ: Record<Package["tier"], { low: number; high: number; name: string; warranty: string }> = {
-  good: { low: 525, high: 675, name: "Essential Shingle", warranty: "10-year workmanship, 25-year material" },
-  better: { low: 725, high: 925, name: "Premium Architectural", warranty: "20-year workmanship, lifetime material" },
-  best: { low: 1100, high: 1450, name: "Lifetime Metal / Tile", warranty: "Lifetime workmanship & material" },
+interface AddOn {
+  id: string;
+  name: string;
+  description: string;
+  priceLow: number;
+  priceHigh: number;
+}
+
+const SHINGLE_BASE: Record<Tier, { low: number; high: number; name: string; warranty: string; scope: string[]; highlights: string[] }> = {
+  good: {
+    low: 575, high: 650,
+    name: "Essential Architectural Shingle",
+    warranty: "10-yr workmanship · 25-yr material",
+    scope: [
+      "Tear off existing roof (1 layer)",
+      "Synthetic underlayment",
+      "Architectural asphalt shingles",
+      "New drip edge & pipe boots",
+      "Permit & inspection included",
+    ],
+    highlights: ["Best value", "FL code-compliant"],
+  },
+  better: {
+    low: 725, high: 900,
+    name: "Premium Shingle Plus",
+    warranty: "20-yr workmanship · lifetime material",
+    scope: [
+      "Full tear off + decking inspection",
+      "Full high-temp peel-and-stick underlayment",
+      "Impact-resistant architectural shingles",
+      "Solar attic fans included",
+      "10 sheets of plywood included",
+      "Replace bad fascia",
+      "New ridge vent & flashing",
+      "Permit, inspection & wind mitigation",
+    ],
+    highlights: ["Most popular", "Insurance-grade"],
+  },
+  best: {
+    low: 1100, high: 1250,
+    name: "Top-Tier Shingle System",
+    warranty: "Lifetime workmanship & material",
+    scope: [
+      "Full tear off to deck",
+      "All plywood replaced",
+      "New fascia (entire perimeter)",
+      "High-temp Polyglass underlayment",
+      "Impact-resistant architectural shingles",
+      "Attic Breeze solar attic fans",
+      "New gutters included",
+      "Lifetime warranty",
+      "Permit, inspection, wind mit & engineering letter",
+    ],
+    highlights: ["Top of the line", "Lifetime protection"],
+  },
+};
+
+const METAL_BASE: Record<Tier, { low: number; high: number; tileLow?: number; tileHigh?: number; name: string; warranty: string; scope: string[]; highlights: string[] }> = {
+  good: {
+    low: 800, high: 1000,
+    name: "5V Crimp / R-Panel Metal",
+    warranty: "30-yr paint · 10-yr workmanship",
+    scope: [
+      "Tear off existing roof",
+      "High-temp synthetic underlayment",
+      "Exposed-fastener 5V or R-panel (Galvalume or painted)",
+      "New drip edge, ridge cap & closures",
+      "Permit & inspection",
+    ],
+    highlights: ["Affordable metal", "Florida coastal favorite"],
+  },
+  better: {
+    low: 950, high: 1200,
+    name: '1" Standing Seam Snaplock',
+    warranty: "Lifetime paint · 20-yr workmanship",
+    scope: [
+      "Full tear off",
+      "High-temp peel-and-stick underlayment",
+      '1" snaplock standing seam (24-ga)',
+      "Concealed fastener system",
+      "Custom flashing & valley metal",
+      "Permit + wind mitigation",
+    ],
+    highlights: ["Concealed fasteners", "Sleek modern look"],
+  },
+  best: {
+    low: 1150, high: 1500,        // shingle baseline
+    tileLow: 1200, tileHigh: 1700, // tile baseline (heavier tear-off)
+    name: '1.5" 24-ga Standing Seam OR Stone-Coated Steel',
+    warranty: "Lifetime workmanship & material",
+    scope: [
+      "Full tear off",
+      "High-temp Polyglass underlayment",
+      '1.5" mechanical-lock standing seam OR stone-coated steel',
+      "All new flashing, ridge, hip & gable trim",
+      "Attic Breeze solar attic fans",
+      "New gutters included",
+      "Permit, wind mit & engineering letter",
+    ],
+    highlights: ["Top tier metal", "Lifetime protection"],
+  },
 };
 
 Deno.serve(async (req) => {
@@ -46,6 +147,8 @@ Deno.serve(async (req) => {
     const sqft = Math.max(0, Number(body.totalSqft) || 0);
     const waste = Math.max(0, Number(body.wasteFactor) || 0);
     const stories = Math.max(1, Math.min(4, Number(body.stories) || 1));
+    const materialStr = (body.condition?.material ?? "").toLowerCase();
+    const isTile = /tile/.test(materialStr);
 
     if (sqft <= 0) {
       return new Response(JSON.stringify({ error: "totalSqft is required" }), {
@@ -57,164 +160,84 @@ Deno.serve(async (req) => {
     const wastedSqft = sqft * (1 + waste);
     const squares = wastedSqft / 100;
 
-    // Severity multiplier (more damage = more tear-off / decking work).
     const severityMult: Record<string, number> = {
-      minor: 1.0,
-      moderate: 1.08,
-      severe: 1.18,
-      unknown: 1.05,
+      minor: 1.0, moderate: 1.08, severe: 1.18, unknown: 1.05,
     };
     const sevMult = severityMult[body.condition?.severity ?? "unknown"] ?? 1.05;
     const storyMult = stories === 1 ? 1.0 : stories === 2 ? 1.07 : 1.15;
     const adj = sevMult * storyMult;
 
-    const fallbackPackages: Package[] = (["good", "better", "best"] as const).map((tier) => {
-      const base = BASE_PRICE_PER_SQ[tier];
-      const lowPS = base.low * adj;
-      const highPS = base.high * adj;
+    const shingle: Package[] = (Object.keys(SHINGLE_BASE) as Tier[]).map((tier) => {
+      const b = SHINGLE_BASE[tier];
+      const lowPS = b.low * adj;
+      const highPS = b.high * adj;
       return {
+        category: "shingle",
         tier,
-        name: base.name,
+        name: b.name,
         pricePerSquare: Math.round((lowPS + highPS) / 2),
         totalLow: Math.round(lowPS * squares),
         totalHigh: Math.round(highPS * squares),
-        warranty: base.warranty,
-        scope:
-          tier === "good"
-            ? [
-                "Tear off existing roof (1 layer)",
-                "Synthetic underlayment",
-                "Architectural asphalt shingles",
-                "New drip edge & pipe boots",
-                "Permit & inspection included",
-              ]
-            : tier === "better"
-            ? [
-                "Full tear off + decking inspection",
-                "Peel-and-stick underlayment (HVHZ-compliant)",
-                "Impact-resistant architectural shingles",
-                "New ridge vent & ice/water shield",
-                "Replace up to 5 sheets of decking",
-                "Permit, inspection & 3rd-party wind mitigation",
-              ]
-            : [
-                "Full tear off to deck",
-                "Standing-seam metal OR concrete tile",
-                "High-temp peel-and-stick underlayment",
-                "Premium flashing & valley metal",
-                "Up to 10 sheets decking replacement",
-                "Permit, inspection, wind mit & engineering letter",
-              ],
-        highlights:
-          tier === "good"
-            ? ["Best value", "Florida code-compliant"]
-            : tier === "better"
-            ? ["Most popular", "Insurance-grade"]
-            : ["Top-of-the-line", "Lifetime protection"],
+        warranty: b.warranty,
+        scope: b.scope,
+        highlights: b.highlights,
       };
     });
 
-    // Try to enhance with AI but always return a usable answer.
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ packages: fallbackPackages, source: "fallback", squares, wastedSqft }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const aiPrompt = `You are pricing a Florida residential roof replacement.
-Measurements:
-- Roof area (with waste): ${Math.round(wastedSqft)} sqft (${squares.toFixed(1)} squares)
-- Stories: ${stories}
-- Condition severity: ${body.condition?.severity ?? "unknown"}
-- Reported issues: ${(body.condition?.issues ?? []).join(", ") || "none"}
-- Existing material: ${body.condition?.material ?? "unknown"}
-- Region: ${body.region ?? "Florida"}
-
-Return THREE packages (good, better, best) with realistic 2025 Florida retail pricing.
-Use these baseline price-per-square ranges before adjustment:
-- good $${BASE_PRICE_PER_SQ.good.low}-${BASE_PRICE_PER_SQ.good.high}
-- better $${BASE_PRICE_PER_SQ.better.low}-${BASE_PRICE_PER_SQ.better.high}
-- best $${BASE_PRICE_PER_SQ.best.low}-${BASE_PRICE_PER_SQ.best.high}
-Adjust for severity & stories. Be honest, not inflated.`;
-
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "You produce structured roofing estimates. Always call the tool." },
-          { role: "user", content: aiPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "return_packages",
-              description: "Return three pricing tiers",
-              parameters: {
-                type: "object",
-                properties: {
-                  packages: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        tier: { type: "string", enum: ["good", "better", "best"] },
-                        name: { type: "string" },
-                        pricePerSquare: { type: "number" },
-                        totalLow: { type: "number" },
-                        totalHigh: { type: "number" },
-                        warranty: { type: "string" },
-                        scope: { type: "array", items: { type: "string" } },
-                        highlights: { type: "array", items: { type: "string" } },
-                      },
-                      required: ["tier", "name", "pricePerSquare", "totalLow", "totalHigh", "warranty", "scope"],
-                    },
-                  },
-                },
-                required: ["packages"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "return_packages" } },
-      }),
+    const metal: Package[] = (Object.keys(METAL_BASE) as Tier[]).map((tier) => {
+      const b = METAL_BASE[tier];
+      const useTile = isTile && b.tileLow != null && b.tileHigh != null;
+      const low = useTile ? b.tileLow! : b.low;
+      const high = useTile ? b.tileHigh! : b.high;
+      const lowPS = low * adj;
+      const highPS = high * adj;
+      return {
+        category: "metal",
+        tier,
+        name: b.name,
+        pricePerSquare: Math.round((lowPS + highPS) / 2),
+        totalLow: Math.round(lowPS * squares),
+        totalHigh: Math.round(highPS * squares),
+        warranty: b.warranty,
+        scope: useTile ? [...b.scope, "Includes tile tear-off & disposal"] : b.scope,
+        highlights: b.highlights,
+      };
     });
 
-    if (!aiRes.ok) {
-      await aiRes.text();
-      return new Response(
-        JSON.stringify({ packages: fallbackPackages, source: "fallback", squares, wastedSqft }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // Add-ons — aluminum soffit/fascia wrap.
+    const eaveFt = Number(body.eaveLengthFt) || 0;
+    let wrapLow: number, wrapHigh: number;
+    if (eaveFt > 0) {
+      wrapLow = Math.round(eaveFt * 7);
+      wrapHigh = Math.round(eaveFt * 12);
+    } else {
+      wrapLow = 1800;
+      wrapHigh = 3500;
     }
 
-    const aiData = await aiRes.json();
-    const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
-    let packages: Package[] = fallbackPackages;
-    if (toolCall?.function?.arguments) {
-      try {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        if (Array.isArray(parsed.packages) && parsed.packages.length === 3) {
-          packages = parsed.packages.map((p: Package, i: number) => ({
-            ...fallbackPackages[i],
-            ...p,
-            highlights: p.highlights ?? fallbackPackages[i].highlights,
-          }));
-        }
-      } catch {
-        // keep fallback
-      }
-    }
+    const addOns: AddOn[] = [
+      {
+        id: "aluminum-wrap",
+        name: "Full aluminum wrap of soffit & fascia",
+        description: eaveFt > 0
+          ? `Approx. ${Math.round(eaveFt)} linear ft of perimeter wrap`
+          : "Typical home perimeter wrap (~250–350 linear ft)",
+        priceLow: wrapLow,
+        priceHigh: wrapHigh,
+      },
+    ];
 
     return new Response(
-      JSON.stringify({ packages, source: "ai", squares, wastedSqft }),
+      JSON.stringify({
+        shingle,
+        metal,
+        addOns,
+        // legacy field for older clients
+        packages: shingle,
+        squares,
+        wastedSqft,
+        existingMaterial: isTile ? "tile" : (materialStr || "unknown"),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
