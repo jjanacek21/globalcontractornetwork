@@ -38,6 +38,7 @@ interface PricingTier {
   tier_name: string;
   tier_order: number;
   unit: string;
+  quantity?: number;
   base_price_per_unit: number;
   inclusions: string[];
   description: string | null;
