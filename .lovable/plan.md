@@ -1,56 +1,62 @@
-## Restore originals + build custom wizards for all 20 new trades
+## Problem
 
-### Goals
-- Bring back the original Roofing, Windows, Emergency, Landscaping, Cleaning wizards exactly as they were (3D, colorful, animated).
-- Add a hand-tailored wizard for each of the 20 new trades — not a single generic engine.
-- Keep the look-and-feel consistent (colorful icon badges, gradient cards, fade/scale animations, good/better/best style results).
+The Bathrooms wizard (and other non-roofing trades) is showing absurd prices like **$3.9M – $31M**. Two root causes:
 
-### Step 1 — Restore the original entry flow
-- Revert `src/pages/InstantQuote.tsx` to render `<InstantQuoteWizard />` so the working Property Type → Service Type → Roofing/Windows/etc. → Photos → Results experience returns immediately.
-- No changes to `RoofingWizardSteps.tsx`, the `roofing/` subfolder, `WindowsWizardSteps.tsx`, `EmergencyWizardSteps.tsx`, `LandscapingWizardSteps.tsx`, `CleaningWizardSteps.tsx`, `PhotoAnalysisStep.tsx`, or `ResultsStep.tsx`.
+1. **Estimator multiplies the wrong quantity.** `iq-calculate-estimate` always multiplies `base_price_per_unit × measurements.sqft`. For Bathrooms the tier unit is **"each"** at $11,500–$67,500 per bathroom, but the wizard sets `sqft = rooms × 200`, so it computes `11,500 × 200 = $2.3M` per tier. It must use `count` when `unit='each'`, `linear_feet` when `unit='lf'`, etc.
+2. **Generic measurement step uses satellite + "sq ft" for everything.** Satellite/Mapbox is only meaningful for Roofing. Other trades need their own units (linear feet, sqft, count, # of rooms/bathrooms/openings) and friendlier wording.
 
-### Step 2 — Expand the Service Type screen to all 25 trades
-- Update `ServiceTypeStep.tsx` to display all 25 services, grouped by category with distinct color accents per category:
-  - Exterior (slate/blue): Roofing, Gutters, Soffit & Fascia, Siding, Stucco, EIFS Bands, Exterior Paint, Pavers, Pressure Washing, Windows, Doors
-  - Interior (amber/emerald): Interior Renovation, Cabinets, Flooring, Drywall, Interior Paint, Texture, Crown Molding
-  - Kitchen & Bath (rose/violet): Kitchens, Bathrooms
-  - MEP (indigo): Electrical, Plumbing
-  - Specialty (teal/green): Tree & Landscaping, Window Cleaning
-  - Emergency (red): Emergency Services
-- Each card keeps the same 3D hover + colored icon badge style as today, with `animate-fade-in` / `hover-scale`.
+The roofing wizard is already correct and is **not** touched.
 
-### Step 3 — Shared "wizard kit" for the 20 new trades
-Create reusable building blocks at `src/components/instant-quote/kit/` (NOT a generic engine — each wizard composes them with its own copy, questions, math, and visuals):
-- `WizardShell.tsx` — colored gradient header, animated step indicator, back/next, fade-in transitions
-- `OptionGrid.tsx` — large 3D selectable cards with icon + title + price modifier
-- `PhotoUploadStep.tsx` — drag-drop with thumbnail grid, calls `iq-analyze-photos`
-- `MeasurementStep.tsx` — variants for sqft / linear ft / count / room count / satellite preview
-- `PackagesResultsStep.tsx` — Standard / Premium / Luxury tier cards with gradient accents and animated price reveal, mirrors the roofing packages style
-- `useTradeConfig(slug)` — loads questions/pricing/AI prompts from `iq_trades`/`iq_trade_questions`/`iq_trade_pricing_options` for that trade
+## Step 1 — Fix the estimator (edge function)
 
-### Step 4 — Custom wizard per trade
-One file per trade in `src/components/instant-quote/trades/`. Each is a small bespoke component composing the kit pieces with its own logic and accents. Phase delivery in 4 batches so we can verify the look between each:
+Update `supabase/functions/iq-calculate-estimate/index.ts` so each tier picks the quantity that matches its `unit`:
 
-**Batch A (Exterior add-ons):** Gutters, Soffit & Fascia, Siding, Stucco, Exterior Paint, EIFS Bands, Pavers
-**Batch B (Interior renovations):** Interior Renovation, Cabinets, Flooring, Drywall, Interior Paint, Texture, Crown Molding
-**Batch C (Kitchen/Bath + MEP):** Kitchens, Bathrooms, Electrical, Plumbing
-**Batch D (Specialty):** Doors, Window Cleaning (Tree & Landscaping and Pressure Washing already exist)
+- `unit = 'each'` or `'count'` → use `measurements.count` (fallback `answers.count`, default `1`)
+- `unit = 'room'` → use `measurements.rooms` (fallback `1`)
+- `unit = 'lf'` / `'linear_feet'` → use `measurements.linear_feet` (default `50`)
+- `unit = 'sqft'` (or anything else) → use `measurements.sqft` (default `1000`)
+- Also clamp the result to a sane max (e.g. cap qty at 50,000 sqft / 500 lf / 50 each) to prevent typos producing million-dollar quotes
+- Return `quantity` and `unit` per tier so the UI can show "$11,500/each × 2"
 
-Each wizard step includes:
-- Trade-specific intro screen with a colored hero icon
-- 3–6 trade-specific questions (material choice, scope, finishes, urgency, etc.) sourced from already-seeded `iq_trade_questions`
-- Measurement step appropriate for that trade (sqft, lf, count, rooms, or satellite preview)
-- Optional photos → AI condition analysis using the per-trade prompt already seeded in `iq_trade_ai_prompts`
-- Results screen with 3 tier cards (Standard / Premium / Luxury) using the trade's seeded pricing, plus optional add-on chips
+## Step 2 — Trade-aware Measurement step (`TradeWizard.tsx`)
 
-### Step 5 — Routing
-- `/instant-quote` → original `<InstantQuoteWizard />`
-- `/instant-quote/:tradeSlug` → loads the matching custom wizard from `src/components/instant-quote/trades/` registry. The new generic `TradeWizard.tsx` is removed once Batch D ships.
+Replace the current single sqft input with a per-trade measurement block driven by the trade's `measurement_method` and the tier `unit` returned by the DB:
 
-### Out of Scope
-- DB schema/migrations (already in place from Phase 1).
-- Edge functions (already deployed).
-- Booking/payment flow after quote — CTA still writes to `iq_quote_requests`.
+| Trade group | measurement_method | Inputs shown |
+|---|---|---|
+| Roofing | satellite | (already handled by roofing wizard – not touched) |
+| Gutters, Soffit & Fascia | satellite | **Linear feet of roof edge**, # of stories |
+| Pavers | satellite | **Square feet of paver area**, surface type |
+| Siding, Stucco, Exterior Paint, Pressure Washing | photo_ai | **Approx. wall sqft** + # of stories (no satellite image) |
+| Windows, Doors | photo_ai / count_based | **Number of windows / doors**, sizes |
+| EIFS Bands, Crown Molding | manual_input | **Linear feet** |
+| Drywall, Texture, Flooring, Interior Paint, Cabinets | manual_input / room_based | **Sqft of area** OR **# of rooms** |
+| Plumbing, Electrical | manual_input | **# of fixtures / outlets** |
+| Bathrooms, Kitchens | room_based | **Number of bathrooms / kitchens** (count, NOT sqft) |
+| Interior Renovation | room_based | **# of rooms** + total sqft |
+| Tree & Landscaping | count_based | **# of trees**, lot size |
+| Window Cleaning | count_based | **# of windows**, # of stories |
+| Emergency Services | photo_ai | Type + affected sqft |
 
-### Note on scope
-20 hand-tailored wizards is substantial. To keep iteration tight, I'll ship Batch A first so you can confirm the look, then continue Batches B–D. Each batch is a single message that adds 4–7 wizards. Reply between batches with any styling tweaks you want propagated.
+Implementation details:
+- Remove the satellite image preview for every trade except Roofing (Roofing already lives in its own wizard, so this means simply: do not render `satelliteUrl` in `TradeWizard`).
+- Skip the Address→Measurement satellite call for trades whose `measurement_method !== 'satellite'` (still geocode, but don't fetch a satellite image).
+- Each input writes to the appropriate `measurements` key (`count`, `rooms`, `linear_feet`, `sqft`, `stories`).
+- Add help text above the input that names the unit ("Most full bathroom remodels are 1–3 bathrooms").
+
+## Step 3 — Results step polish
+
+In `TradeWizard` results phase:
+- Show `"$X,XXX – $Y,YYY"` formatted with thousands separators (already there) **and** show the per-unit basis returned by the function (e.g. "Based on 2 bathrooms at $11,500 / each").
+- Keep the existing 3D / colorful tier cards.
+
+## Out of scope
+
+- No changes to the Roofing wizard.
+- No DB migrations; `iq_trade_pricing_options` and `iq_trade_questions` already have correct unit/data.
+- No changes to lead-capture / Telegram (separate plan, still pending).
+
+## Files touched
+
+- `supabase/functions/iq-calculate-estimate/index.ts` — unit-aware quantity + caps
+- `src/components/instant-quote/TradeWizard.tsx` — per-trade measurement UI, drop satellite for non-roofing, show per-unit basis on results
