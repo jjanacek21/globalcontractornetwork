@@ -65,8 +65,8 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
 
   const [primaryMeasurement, setPrimaryMeasurement] = useState<any>(null);
   const [flatSections, setFlatSections] = useState<FlatSection[]>([]);
-  const [addFlatMode, setAddFlatMode] = useState(false);
-  const [tracingFlat, setTracingFlat] = useState(false);
+  const [drawingFlat, setDrawingFlat] = useState(false);
+  const [draftPoints, setDraftPoints] = useState<{ lat: number; lng: number }[]>([]);
 
   // Init map ONCE on mount — wait for container to have a real height
   useEffect(() => {
