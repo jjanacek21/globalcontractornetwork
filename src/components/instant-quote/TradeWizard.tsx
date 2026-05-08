@@ -471,7 +471,10 @@ export default function TradeWizard() {
                   >
                     <div className="text-xs uppercase tracking-wider text-muted-foreground">{t.tier_name}</div>
                     <div className="text-2xl font-bold mt-2">${t.low.toLocaleString()} – ${t.high.toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground mt-1">${t.base_price_per_unit}/{t.unit}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      ${t.base_price_per_unit.toLocaleString()}/{t.unit}
+                      {(t as any).quantity ? ` × ${(t as any).quantity} ${t.unit}` : ""}
+                    </div>
                     {t.description && <p className="text-sm mt-3">{t.description}</p>}
                     {t.inclusions?.length > 0 && (
                       <ul className="text-xs text-muted-foreground mt-3 space-y-1">
