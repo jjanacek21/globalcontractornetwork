@@ -110,20 +110,24 @@ export default function TradeWizard() {
       toast.error("Enter your property address");
       return;
     }
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("iq-analyze-property", {
-        body: { address },
-      });
-      if (error) throw error;
-      if (data?.lat && data?.lng) setCoords({ lat: data.lat, lng: data.lng });
-      if (data?.satellite_url) setSatelliteUrl(data.satellite_url);
-    } catch (e: any) {
-      console.warn("property lookup failed", e);
-    } finally {
-      setBusy(false);
-      setPhase(trade?.measurement_method === "none" ? "questions" : "measurement");
+    // Only roofing actually uses the satellite image; skip the network call for everyone else
+    const needsSatellite = trade?.slug === "roofing";
+    if (needsSatellite) {
+      setBusy(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("iq-analyze-property", {
+          body: { address },
+        });
+        if (error) throw error;
+        if (data?.lat && data?.lng) setCoords({ lat: data.lat, lng: data.lng });
+        if (data?.satellite_url) setSatelliteUrl(data.satellite_url);
+      } catch (e: any) {
+        console.warn("property lookup failed", e);
+      } finally {
+        setBusy(false);
+      }
     }
+    setPhase(trade?.measurement_method === "none" ? "questions" : "measurement");
   };
 
   const handleUploadPhoto = async (file: File) => {
