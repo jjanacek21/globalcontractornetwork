@@ -465,30 +465,39 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setAddFlatMode(true)}
-              disabled={addFlatMode || tracingFlat}
-              className="h-11 gap-2"
-            >
-              {tracingFlat ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Tracing...</>
-              ) : addFlatMode ? (
-                <>Click the map…</>
-              ) : (
-                <><Plus className="h-4 w-4" /> Add flat section</>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleMeasure}
-              disabled={measuring}
-              className="h-11 gap-2"
-            >
-              <RefreshCw className="h-4 w-4" /> Re-measure
-            </Button>
-          </div>
+          {drawingFlat ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={finishDrawingFlat}
+                disabled={draftPoints.length < 3}
+                className="h-11 gap-2"
+              >
+                Finish flat section
+                {draftPoints.length >= 3 && (
+                  <span className="text-xs opacity-80">
+                    ({Math.round(polygonAreaSqft(draftPoints)).toLocaleString()} sqft)
+                  </span>
+                )}
+              </Button>
+              <Button variant="outline" onClick={cancelDrawingFlat} className="h-11 gap-2">
+                <X className="h-4 w-4" /> Cancel drawing
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={startDrawingFlat} className="h-11 gap-2">
+                <Plus className="h-4 w-4" /> Draw flat roof
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleMeasure}
+                disabled={measuring}
+                className="h-11 gap-2"
+              >
+                <RefreshCw className="h-4 w-4" /> Re-measure
+              </Button>
+            </div>
+          )}
 
           <Button onClick={continueToNext} className="w-full h-12 text-base gap-2">
             Analyze roof condition ({Math.round(combined).toLocaleString()} sqft) <ArrowRight className="h-4 w-4" />
