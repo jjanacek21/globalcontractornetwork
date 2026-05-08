@@ -423,7 +423,7 @@ export default function Home() {
               <a href="#faq">FAQ</a>
             </nav>
             <div className="nav-cta">
-              <Link className="btn btn-ghost" to="/contractors">For Contractors</Link>
+              <Link className="btn btn-ghost" to="/login">Login</Link>
               <Link className="btn btn-green" to="/join">Join the Network</Link>
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
