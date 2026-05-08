@@ -68,22 +68,58 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
   const [addFlatMode, setAddFlatMode] = useState(false);
   const [tracingFlat, setTracingFlat] = useState(false);
 
-  // Init map ONCE on mount
+  // Init map ONCE on mount — wait for container to have a real height
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [-80.1, 26.35], // default Florida-ish, will recenter
-      zoom: 4,
-      pitch: 0,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
-    map.on("load", () => map.resize());
-    mapRef.current = map;
+    if (mapRef.current) return;
+    let cancelled = false;
+
+    const tryInit = (attempt = 0) => {
+      const el = mapContainer.current;
+      if (!el || cancelled) return;
+      // Force a guaranteed height in case Tailwind arbitrary class was purged
+      if (el.clientHeight < 100) {
+        el.style.height = "460px";
+        el.style.minHeight = "460px";
+      }
+      if (el.clientHeight < 50 && attempt < 10) {
+        requestAnimationFrame(() => tryInit(attempt + 1));
+        return;
+      }
+      try {
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        const map = new mapboxgl.Map({
+          container: el,
+          style: "mapbox://styles/mapbox/satellite-streets-v12",
+          center: [-80.1, 26.35],
+          zoom: 4,
+          pitch: 0,
+          attributionControl: false,
+        });
+        map.addControl(new mapboxgl.NavigationControl({ visualizePitch: false }), "top-right");
+        map.on("load", () => {
+          requestAnimationFrame(() => map.resize());
+          console.log("[RoofMap] map loaded, container size:", el.clientWidth, "x", el.clientHeight);
+        });
+        mapRef.current = map;
+
+        // Resize observer to fix late layout shifts
+        const ro = new ResizeObserver(() => {
+          if (mapRef.current) mapRef.current.resize();
+        });
+        ro.observe(el);
+        (mapRef as any).__ro = ro;
+      } catch (err) {
+        console.error("[RoofMap] init error", err);
+        setError("Map preview unavailable. You can still measure your roof.");
+      }
+    };
+
+    tryInit();
 
     return () => {
+      cancelled = true;
+      const ro = (mapRef as any).__ro as ResizeObserver | undefined;
+      ro?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
       markerRef.current = null;
