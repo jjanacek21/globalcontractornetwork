@@ -259,63 +259,65 @@ export default function TradeWizard() {
           </Card>
         )}
 
-        {phase === "measurement" && (
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-2">Measurements</h2>
-            <p className="text-muted-foreground mb-6">
-              {trade.measurement_method === "satellite" && "We pulled the satellite view. Confirm or override the size."}
-              {trade.measurement_method === "photo_ai" && "We'll use AI to measure from photos in the next step. Add an estimate if you know it."}
-              {trade.measurement_method === "manual_input" && "Enter the rough size of the area."}
-              {trade.measurement_method === "count_based" && "How many?"}
-              {trade.measurement_method === "room_based" && "How many rooms?"}
-            </p>
+        {phase === "measurement" && (() => {
+          // Per-trade measurement config. Keys = trade slug.
+          type Field = { key: "sqft" | "linear_feet" | "count" | "rooms" | "stories"; label: string; placeholder?: string; help?: string };
+          const CFG: Record<string, { title: string; intro: string; fields: Field[] }> = {
+            "gutters":            { title: "Roof edge length", intro: "Estimate the linear feet of roof edge that needs gutters.", fields: [{ key: "linear_feet", label: "Linear feet of roof edge", placeholder: "e.g. 180", help: "Average single-story home: 150–200 LF" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "soffit-fascia":      { title: "Soffit & fascia run", intro: "How many linear feet of soffit/fascia?", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 180" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "pavers":             { title: "Paver area", intro: "Roughly how big is the paver area?", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 600", help: "Typical driveway: 600–800 sqft. Patio: 200–400 sqft." }] },
+            "siding":             { title: "Siding area", intro: "Estimate the wall area to be sided.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 1800" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "stucco":             { title: "Stucco area", intro: "Estimate the wall area for stucco work.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 1800" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "exterior-paint":     { title: "Paint area", intro: "Estimate the exterior wall area to paint.", fields: [{ key: "sqft", label: "Wall sqft", placeholder: "e.g. 2000" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "pressure-washing":   { title: "Wash area", intro: "Roughly how much surface needs cleaning?", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 1500" }] },
+            "windows":            { title: "Number of windows", intro: "How many windows are we quoting?", fields: [{ key: "count", label: "# of windows", placeholder: "e.g. 10" }] },
+            "doors":              { title: "Number of doors", intro: "How many doors are we quoting?", fields: [{ key: "count", label: "# of doors", placeholder: "e.g. 2" }] },
+            "eifs-bands":         { title: "Band length", intro: "Total linear feet of EIFS bands.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 120" }] },
+            "crown-molding":      { title: "Molding length", intro: "Total linear feet of crown molding.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 80" }] },
+            "drywall":            { title: "Drywall area", intro: "Approx wall/ceiling area.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 500" }] },
+            "texture":            { title: "Texture area", intro: "Approx ceiling/wall area to texture.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 500" }] },
+            "flooring":           { title: "Flooring area", intro: "Square feet of flooring needed.", fields: [{ key: "sqft", label: "Square feet", placeholder: "e.g. 1200" }] },
+            "interior-paint":     { title: "Rooms to paint", intro: "How many rooms?", fields: [{ key: "rooms", label: "# of rooms", placeholder: "e.g. 4" }] },
+            "cabinets":           { title: "Cabinet linear feet", intro: "Estimated linear feet of cabinets.", fields: [{ key: "linear_feet", label: "Linear feet", placeholder: "e.g. 25" }] },
+            "plumbing":           { title: "Fixtures", intro: "How many plumbing fixtures?", fields: [{ key: "count", label: "# of fixtures", placeholder: "e.g. 5" }] },
+            "electrical":         { title: "Outlets/fixtures", intro: "How many outlets/fixtures?", fields: [{ key: "count", label: "# of outlets/fixtures", placeholder: "e.g. 8" }] },
+            "bathrooms":          { title: "Number of bathrooms", intro: "How many bathrooms are we remodeling?", fields: [{ key: "count", label: "# of bathrooms", placeholder: "e.g. 2", help: "Most projects are 1–3 bathrooms." }] },
+            "kitchens":           { title: "Number of kitchens", intro: "How many kitchens are we remodeling?", fields: [{ key: "count", label: "# of kitchens", placeholder: "1" }] },
+            "interior-renovation":{ title: "Rooms to renovate", intro: "How many rooms total?", fields: [{ key: "rooms", label: "# of rooms", placeholder: "e.g. 3" }, { key: "sqft", label: "Total sqft (optional)", placeholder: "e.g. 1500" }] },
+            "tree-landscaping":   { title: "Trees & lot", intro: "How many trees and how big is the lot?", fields: [{ key: "count", label: "# of trees", placeholder: "e.g. 4" }, { key: "sqft", label: "Lot size sqft (optional)", placeholder: "e.g. 6000" }] },
+            "window-cleaning":    { title: "Number of windows", intro: "How many windows to clean?", fields: [{ key: "count", label: "# of windows", placeholder: "e.g. 12" }, { key: "stories", label: "# of stories", placeholder: "1" }] },
+            "emergency-services": { title: "Affected area", intro: "Roughly how much area is affected?", fields: [{ key: "sqft", label: "Affected sqft", placeholder: "e.g. 200" }] },
+          };
+          const cfg = CFG[trade.slug] || { title: "Project size", intro: "Give us a rough size for ballpark pricing.", fields: [{ key: "sqft" as const, label: "Approx. sqft", placeholder: "e.g. 1000" }] };
 
-            {satelliteUrl && (
-              <img src={satelliteUrl} alt="Property satellite" className="w-full rounded-lg border mb-4" />
-            )}
+          return (
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-2">{cfg.title}</h2>
+              <p className="text-muted-foreground mb-6">{cfg.intro}</p>
 
-            <div className="grid grid-cols-2 gap-4">
-              {(trade.measurement_method === "satellite" || trade.measurement_method === "manual_input" || trade.measurement_method === "photo_ai") && (
-                <div>
-                  <Label>Approx. area (sq ft)</Label>
-                  <Input
-                    type="number"
-                    value={measurements.sqft || ""}
-                    onChange={(e) => setMeasurements({ ...measurements, sqft: Number(e.target.value) })}
-                    placeholder="e.g. 2000"
-                  />
-                </div>
-              )}
-              {trade.measurement_method === "count_based" && (
-                <div>
-                  <Label>Quantity</Label>
-                  <Input
-                    type="number"
-                    value={measurements.count || ""}
-                    onChange={(e) => setMeasurements({ ...measurements, count: Number(e.target.value) })}
-                    placeholder="e.g. 12"
-                  />
-                </div>
-              )}
-              {trade.measurement_method === "room_based" && (
-                <div>
-                  <Label>Number of rooms</Label>
-                  <Input
-                    type="number"
-                    value={measurements.count || ""}
-                    onChange={(e) => setMeasurements({ ...measurements, count: Number(e.target.value), sqft: Number(e.target.value) * 200 })}
-                    placeholder="e.g. 3"
-                  />
-                </div>
-              )}
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {cfg.fields.map((f) => (
+                  <div key={f.key}>
+                    <Label>{f.label}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(measurements as any)[f.key] ?? ""}
+                      placeholder={f.placeholder}
+                      onChange={(e) => setMeasurements({ ...measurements, [f.key]: Number(e.target.value) })}
+                    />
+                    {f.help && <p className="text-xs text-muted-foreground mt-1">{f.help}</p>}
+                  </div>
+                ))}
+              </div>
 
-            <div className="flex justify-between mt-6">
-              <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
-              <Button onClick={() => setPhase("questions")}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
-            </div>
-          </Card>
-        )}
+              <div className="flex justify-between mt-6">
+                <Button variant="outline" onClick={() => setPhase("address")}>Back</Button>
+                <Button onClick={() => setPhase("questions")}>Next <ArrowRight className="h-4 w-4 ml-1" /></Button>
+              </div>
+            </Card>
+          );
+        })()}
 
         {phase === "questions" && (
           <Card className="p-6">
