@@ -9,6 +9,28 @@ import { supabase } from "@/integrations/supabase/client";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
+// Geodesic polygon area (sq ft) using spherical excess.
+function polygonAreaSqft(coords: { lat: number; lng: number }[]): number {
+  if (coords.length < 3) return 0;
+  const R = 6378137; // earth radius m
+  let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const p1 = coords[i];
+    const p2 = coords[(i + 1) % coords.length];
+    area +=
+      ((p2.lng - p1.lng) * Math.PI) / 180 *
+      (2 + Math.sin((p1.lat * Math.PI) / 180) + Math.sin((p2.lat * Math.PI) / 180));
+  }
+  area = Math.abs((area * R * R) / 2); // sq m
+  return area * 10.7639; // sq ft
+}
+
+function polygonCentroid(coords: { lat: number; lng: number }[]): { lat: number; lng: number } {
+  const lat = coords.reduce((a, p) => a + p.lat, 0) / coords.length;
+  const lng = coords.reduce((a, p) => a + p.lng, 0) / coords.length;
+  return { lat, lng };
+}
+
 export interface FlatSection {
   id: string;
   center: { lat: number; lng: number };
