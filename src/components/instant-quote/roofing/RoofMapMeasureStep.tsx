@@ -154,106 +154,109 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
     }
   }, [coords]);
 
-  // Click handler — either move main pin or drop a flat-section pin
+  // Click handler — either move main pin or add a vertex to the flat polygon being drawn
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const handler = (e: mapboxgl.MapMouseEvent) => {
-      if (addFlatMode) {
-        addFlatPin(e.lngLat.lat, e.lngLat.lng);
+      if (drawingFlat) {
+        setDraftPoints((prev) => [...prev, { lat: e.lngLat.lat, lng: e.lngLat.lng }]);
       } else if (markerRef.current) {
         markerRef.current.setLngLat(e.lngLat);
         setPinCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       }
     };
     map.on("click", handler);
-    map.getCanvas().style.cursor = addFlatMode ? "crosshair" : "";
+    map.getCanvas().style.cursor = drawingFlat ? "crosshair" : "";
     return () => {
       map.off("click", handler);
       if (map.getCanvas()) map.getCanvas().style.cursor = "";
     };
-  }, [addFlatMode]);
+  }, [drawingFlat]);
 
-  // Render flat-section polygons + markers on map
+  // Render in-progress draft polygon (vertices + line)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return;
+    const SRC = "flat-draft";
+    const FILL = "flat-draft-fill";
+    const LINE = "flat-draft-line";
+    const POINTS = "flat-draft-points";
 
-    // Remove old markers
-    flatMarkersRef.current.forEach((m) => m.remove());
-    flatMarkersRef.current = [];
-
-    // Remove old polygon layers
-    if (map.isStyleLoaded()) {
-      flatSections.forEach((_, i) => {
-        const id = `flat-${i}`;
-        if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getLayer(`${id}-line`)) map.removeLayer(`${id}-line`);
-        if (map.getSource(id)) map.removeSource(id);
-      });
-    }
-
-    const drawAll = () => {
-      flatSections.forEach((sec, i) => {
-        const id = `flat-${i}`;
-        if (map.getSource(id)) return;
-        map.addSource(id, {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: {
-              type: "Polygon",
-              coordinates: [[...sec.polygon.map((p) => [p.lng, p.lat]), [sec.polygon[0].lng, sec.polygon[0].lat]]],
-            },
-            properties: {},
-          },
-        });
-        map.addLayer({
-          id, type: "fill", source: id,
-          paint: { "fill-color": "#3b82f6", "fill-opacity": 0.35 },
-        });
-        map.addLayer({
-          id: `${id}-line`, type: "line", source: id,
-          paint: { "line-color": "#1d4ed8", "line-width": 2 },
-        });
-
-        const m = new mapboxgl.Marker({ color: "#3b82f6" })
-          .setLngLat([sec.center.lng, sec.center.lat])
-          .setPopup(new mapboxgl.Popup({ offset: 24 }).setHTML(
-            `<div style="font-size:12px"><strong>Flat section</strong><br/>${Math.round(sec.area_sqft)} sqft</div>`
-          ))
-          .addTo(map);
-        flatMarkersRef.current.push(m);
-      });
+    const cleanup = () => {
+      [FILL, LINE, POINTS].forEach((id) => map.getLayer(id) && map.removeLayer(id));
+      [SRC, `${SRC}-pts`].forEach((id) => map.getSource(id) && map.removeSource(id));
     };
+    cleanup();
 
-    if (map.isStyleLoaded()) drawAll();
-    else map.once("load", drawAll);
-  }, [flatSections]);
+    if (!drawingFlat || draftPoints.length === 0) return;
 
-  const addFlatPin = useCallback(async (lat: number, lng: number) => {
-    setAddFlatMode(false);
-    setTracingFlat(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("trace-flat-roof", {
-        body: { latitude: lat, longitude: lng },
+    const coords = draftPoints.map((p) => [p.lng, p.lat]);
+    if (draftPoints.length >= 3) {
+      map.addSource(SRC, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Polygon", coordinates: [[...coords, coords[0]]] },
+        },
       });
-      if (error || !data?.success) throw new Error(error?.message || "Could not trace flat section");
-      const d = data.data;
-      const sec: FlatSection = {
-        id: `flat-${Date.now()}`,
-        center: { lat, lng },
-        polygon: d.polygon,
-        area_sqft: d.area_sqft,
-        confidence: d.confidence,
-      };
-      setFlatSections((prev) => [...prev, sec]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not trace flat section");
-    } finally {
-      setTracingFlat(false);
+      map.addLayer({ id: FILL, type: "fill", source: SRC, paint: { "fill-color": "#3b82f6", "fill-opacity": 0.25 } });
+      map.addLayer({ id: LINE, type: "line", source: SRC, paint: { "line-color": "#1d4ed8", "line-width": 2 } });
+    } else if (draftPoints.length === 2) {
+      map.addSource(SRC, {
+        type: "geojson",
+        data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } },
+      });
+      map.addLayer({ id: LINE, type: "line", source: SRC, paint: { "line-color": "#1d4ed8", "line-width": 2 } });
     }
-  }, []);
+
+    map.addSource(`${SRC}-pts`, {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: draftPoints.map((p) => ({
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+        })),
+      },
+    });
+    map.addLayer({
+      id: POINTS,
+      type: "circle",
+      source: `${SRC}-pts`,
+      paint: { "circle-radius": 5, "circle-color": "#1d4ed8", "circle-stroke-color": "#fff", "circle-stroke-width": 2 },
+    });
+
+    return cleanup;
+  }, [drawingFlat, draftPoints]);
+
+  const startDrawingFlat = () => {
+    setDrawingFlat(true);
+    setDraftPoints([]);
+  };
+
+  const cancelDrawingFlat = () => {
+    setDrawingFlat(false);
+    setDraftPoints([]);
+  };
+
+  const finishDrawingFlat = () => {
+    if (draftPoints.length < 3) return;
+    const area = polygonAreaSqft(draftPoints);
+    const center = polygonCentroid(draftPoints);
+    const sec: FlatSection = {
+      id: `flat-${Date.now()}`,
+      center,
+      polygon: draftPoints,
+      area_sqft: +area.toFixed(2),
+      confidence: "high",
+    };
+    setFlatSections((prev) => [...prev, sec]);
+    setDrawingFlat(false);
+    setDraftPoints([]);
+  };
 
   const removeFlatSection = (id: string) => {
     setFlatSections((prev) => prev.filter((s) => s.id !== id));
