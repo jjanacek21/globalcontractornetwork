@@ -146,19 +146,21 @@ Deno.serve(async (req) => {
   try {
     const body = (await req.json()) as RequestBody;
     const sqft = Math.max(0, Number(body.totalSqft) || 0);
+    const flatSqft = Math.max(0, Number(body.flatSqft) || 0);
     const waste = Math.max(0, Number(body.wasteFactor) || 0);
     const stories = Math.max(1, Math.min(4, Number(body.stories) || 1));
     const materialStr = (body.condition?.material ?? "").toLowerCase();
     const isTile = /tile/.test(materialStr);
 
-    if (sqft <= 0) {
+    if (sqft <= 0 && flatSqft <= 0) {
       return new Response(JSON.stringify({ error: "totalSqft is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const wastedSqft = sqft * (1 + waste);
+    // Pitched area gets waste; flat area is counted as-is (no pitch, no waste).
+    const wastedSqft = sqft * (1 + waste) + flatSqft;
     const squares = wastedSqft / 100;
 
     const severityMult: Record<string, number> = {
