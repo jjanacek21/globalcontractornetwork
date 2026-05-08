@@ -126,7 +126,7 @@ export function RoofPackagesStep({
         </div>
         <h1 className="text-2xl font-bold">Choose Your Roof Package</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {address} • {Math.round(measurement.total_pitched_area_sqft).toLocaleString()} sqft •{" "}
+          {address} • {Math.round((measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0) + (measurement.user_added_flat_sqft ?? 0)).toLocaleString()} sqft •{" "}
           {(wasteFactor * 100).toFixed(0)}% waste
         </p>
       </div>
