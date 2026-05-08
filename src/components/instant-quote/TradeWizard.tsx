@@ -74,6 +74,21 @@ export default function TradeWizard() {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Variant picker + photo-quote state
+  const variantConfig = useMemo(() => (trade ? getTradeVariantConfig(trade.slug) : null), [trade]);
+  const [groupSelections, setGroupSelections] = useState<SelectedVariant[][]>([]);
+  const [groupAreas, setGroupAreas] = useState<number[]>([]);
+  const [extras, setExtras] = useState<Record<string, number>>({});
+  const [measureMode, setMeasureMode] = useState<"variants" | "photos">("variants");
+
+  // Reset selections when trade changes
+  useEffect(() => {
+    if (variantConfig) {
+      setGroupSelections(variantConfig.groups.map(() => []));
+      setGroupAreas(variantConfig.groups.map(() => 0));
+    }
+  }, [variantConfig]);
+
   useEffect(() => {
     if (!tradeSlug) return;
     (async () => {
