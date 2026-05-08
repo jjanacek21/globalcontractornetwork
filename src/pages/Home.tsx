@@ -456,13 +456,19 @@ export default function Home() {
         <section className="hero" id="top" style={{ borderTop: "none" }}>
           <div className="container">
             <div>
-              <span className="rating-pill"><span className="stars">★★★★★</span> Rated 4.9/5 with 500+ verified reviews</span>
-              <h1>One Platform for <span className="green-text">All Your</span> <span className="gold-text shimmer">Contractor Needs</span></h1>
-              <div className="quoteline">A trusted network for contractors and property owners — not a lead marketplace.</div>
-              <p className="lead">Whether you're a homeowner looking for trusted contractors or a contractor growing your business — GCN has everything you need in one place. Verified pros, AI estimating, permit help, and a marketplace built on referrals, not bidding wars.</p>
+              <span className="rating-pill"><span className="stars">★★★★★</span> Rated 4.9/5 by 500+ verified homeowners</span>
+              <h1>Trusted Contractors. <span className="green-text">Real</span> <span className="gold-text shimmer">Accountability.</span></h1>
+              <div className="quoteline">A referral-based network for homeowners and contractors — never a lead-bidding marketplace.</div>
+              <p className="lead">Get a free AI-powered quote in minutes, then connect with vetted, insured pros in your area. No spam calls, no bidding wars — just trusted work, backed by our network guarantee.</p>
               <div className="actions">
-                <Link to="/join" className="btn btn-green">Join the Network <span className="arr">→</span></Link>
-                <Link to="/contractors" className="btn btn-gold">For Contractors <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-green btn-lg">Get My Free Quote <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-ghost">Join the Network</Link>
+                <Link to="/contractors" className="btn btn-link">I'm a contractor →</Link>
+              </div>
+              <div className="actions-meta">
+                <span>✓ Free to start</span><span className="dot" />
+                <span>✓ No credit card</span><span className="dot" />
+                <span>✓ Quote in under 60 seconds</span>
               </div>
               <div className="badge-strip">
                 <Svg><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" /></Svg>
