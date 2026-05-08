@@ -1,22 +1,15 @@
-## Goal
-Make the GCN gold logo prominent in the homepage header (and footer) with a transparent background, sized 3× current.
+## Plan
 
-## Changes
+1. **Fix the actual logo asset**
+   - Process `public/gcn-logo.png` directly to remove the remaining black rectangular border/background from the image pixels.
+   - Keep only the gold logo/text visible on transparent pixels.
+   - Preserve the current displayed logo size.
 
-### 1. Replace logo asset with a transparent version
-- The uploaded `gcn-logo-2.png` has a solid white background that will not blend with the cream/parchment hero background.
-- Use `imagegen--edit_image` on `user-uploads://gcn-logo-2.png` to remove the white background, output a clean transparent PNG to `public/gcn-logo.png` (overwrites existing).
+2. **Keep the header narrow**
+   - Leave the logo height as-is.
+   - Keep the compact nav padding already applied.
+   - If needed, ensure the image itself has no CSS border/background/shadow that could look like a border.
 
-### 2. Resize logo in `src/pages/Home.tsx`
-Update the `.gcn-home .logo-img` CSS block (around line 69-71):
-- Header logo: `height: 64px` → `height: 192px`, `max-width: 240px` → `max-width: 720px`
-- Footer logo: `height: 56px` → `height: 168px`
-- Keep `background: transparent`, drop-shadow, and hover scale.
-- Adjust header padding/row alignment if needed so the larger logo sits cleanly next to the nav (vertically centered, no clipping).
-
-### 3. No other content changes
-- Hero copy, CTAs, SEO, routes — all untouched.
-- Footer layout only adapts to the taller logo.
-
-## Out of scope
-Login/Join nav, JoinNetwork page, routing.
+3. **Verify the result**
+   - Inspect the generated PNG transparency/edges to confirm no black rectangle remains.
+   - Confirm `Home.tsx` still points to `/gcn-logo.png` and no `border` class remains on the nav container.
