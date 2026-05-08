@@ -18,6 +18,7 @@ interface Props {
   coords: { lat: number; lng: number };
   address: string;
   onBack: () => void;
+  onSkip?: () => void;
   onComplete: (condition: ConditionAnalysis) => void;
 }
 
