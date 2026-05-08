@@ -1,19 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle2, Phone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  DEFAULT_APRS,
-  DEFAULT_TERMS_MONTHS,
+  FINANCE_PRODUCTS,
+  DEFAULT_FINANCE_PRODUCT_ID,
   formatCurrency,
   monthlyPayment,
+  financedPrice,
+  type FinanceLender,
+  type FinanceProduct,
 } from "@/lib/financing";
 import type { MeasurementResult } from "./RoofMapMeasureStep";
 import type { ConditionAnalysis } from "./RoofConditionStep";
 
 interface Package {
+  category: "shingle" | "metal";
   tier: "good" | "better" | "best";
   name: string;
   pricePerSquare: number;
@@ -22,6 +26,20 @@ interface Package {
   warranty: string;
   scope: string[];
   highlights?: string[];
+}
+
+interface AddOn {
+  id: string;
+  name: string;
+  description: string;
+  priceLow: number;
+  priceHigh: number;
+}
+
+interface PricingResponse {
+  shingle: Package[];
+  metal: Package[];
+  addOns: AddOn[];
 }
 
 interface Props {
@@ -39,6 +57,8 @@ const TIER_STYLES: Record<Package["tier"], { label: string; ring: string; chip: 
   best: { label: "Best", ring: "border-amber-500/60", chip: "bg-amber-500 text-white" },
 };
 
+const LENDER_ORDER: FinanceLender[] = ["Service Finance", "PACE / YGreen", "Self Finance"];
+
 export function RoofPackagesStep({
   measurement,
   wasteFactor,
@@ -48,11 +68,16 @@ export function RoofPackagesStep({
   onBack,
 }: Props) {
   const navigate = useNavigate();
-  const [packages, setPackages] = useState<Package[] | null>(null);
+  const [data, setData] = useState<PricingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aprIndex, setAprIndex] = useState(1); // default 9.99%
-  const [termIndex, setTermIndex] = useState(1); // default 120 months
+
+  const [category, setCategory] = useState<"shingle" | "metal">("shingle");
+  const [financeId, setFinanceId] = useState<string>(DEFAULT_FINANCE_PRODUCT_ID);
+  const [activeAddOns, setActiveAddOns] = useState<Set<string>>(new Set());
+
+  const finance: FinanceProduct =
+    FINANCE_PRODUCTS.find((p) => p.id === financeId) ?? FINANCE_PRODUCTS[0];
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -62,7 +87,7 @@ export function RoofPackagesStep({
         const combinedSqft =
           (measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0) +
           (measurement.user_added_flat_sqft ?? 0);
-        const { data, error: fnErr } = await supabase.functions.invoke("roofing-package-pricing", {
+        const { data: res, error: fnErr } = await supabase.functions.invoke("roofing-package-pricing", {
           body: {
             totalSqft: combinedSqft,
             pitchMultiplier: measurement.pitch_multiplier,
@@ -77,7 +102,7 @@ export function RoofPackagesStep({
           },
         });
         if (fnErr) throw new Error(fnErr.message);
-        setPackages(data?.packages ?? null);
+        setData(res as PricingResponse);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to generate pricing");
       } finally {
@@ -87,8 +112,17 @@ export function RoofPackagesStep({
     fetchPackages();
   }, [measurement, wasteFactor, condition, stories]);
 
-  const apr = DEFAULT_APRS[aprIndex];
-  const months = DEFAULT_TERMS_MONTHS[termIndex];
+  const addOnTotal = useMemo(() => {
+    if (!data) return { low: 0, high: 0 };
+    let low = 0, high = 0;
+    for (const a of data.addOns) {
+      if (activeAddOns.has(a.id)) {
+        low += a.priceLow;
+        high += a.priceHigh;
+      }
+    }
+    return { low, high };
+  }, [data, activeAddOns]);
 
   if (loading) {
     return (
@@ -102,7 +136,7 @@ export function RoofPackagesStep({
     );
   }
 
-  if (error || !packages) {
+  if (error || !data) {
     return (
       <div className="max-w-3xl mx-auto pt-10 text-center">
         <p className="text-destructive mb-4">{error || "Could not generate estimate"}</p>
@@ -110,6 +144,17 @@ export function RoofPackagesStep({
       </div>
     );
   }
+
+  const packages = category === "shingle" ? data.shingle : data.metal;
+
+  const toggleAddOn = (id: string) => {
+    setActiveAddOns((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <div className="max-w-5xl mx-auto pt-4">
@@ -126,82 +171,127 @@ export function RoofPackagesStep({
         </div>
         <h1 className="text-2xl font-bold">Choose Your Roof Package</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {address} • {Math.round((measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0) + (measurement.user_added_flat_sqft ?? 0)).toLocaleString()} sqft •{" "}
-          {(wasteFactor * 100).toFixed(0)}% waste
+          {address} •{" "}
+          {Math.round(
+            (measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0) +
+              (measurement.user_added_flat_sqft ?? 0),
+          ).toLocaleString()}{" "}
+          sqft • {(wasteFactor * 100).toFixed(0)}% waste
         </p>
       </div>
 
-      {/* Financing controls */}
+      {/* Shingle vs Metal toggle */}
+      <div className="flex justify-center mb-5">
+        <div className="inline-flex rounded-full border bg-card p-1">
+          {(["shingle", "metal"] as const).map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`px-5 py-1.5 rounded-full text-sm font-medium transition-all capitalize ${
+                category === c ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              }`}
+            >
+              {c} roof
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Financing */}
       <div className="rounded-2xl border bg-card p-4 mb-6">
-        <p className="text-sm font-semibold mb-3">Financing estimate (optional)</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">APR</p>
-            <div className="flex gap-2">
-              {DEFAULT_APRS.map((a, i) => (
-                <button
-                  key={a}
-                  onClick={() => setAprIndex(i)}
-                  className={`flex-1 py-2 rounded-lg border-2 text-sm transition-all ${
-                    aprIndex === i ? "border-primary bg-primary/5 font-medium" : "border-border"
-                  }`}
-                >
-                  {(a * 100).toFixed(2)}%
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Term</p>
-            <div className="flex gap-2">
-              {DEFAULT_TERMS_MONTHS.map((m, i) => (
-                <button
-                  key={m}
-                  onClick={() => setTermIndex(i)}
-                  className={`flex-1 py-2 rounded-lg border-2 text-sm transition-all ${
-                    termIndex === i ? "border-primary bg-primary/5 font-medium" : "border-border"
-                  }`}
-                >
-                  {m / 12} yr
-                </button>
-              ))}
-            </div>
-          </div>
+        <p className="text-sm font-semibold mb-3">Financing options</p>
+        <div className="space-y-3">
+          {LENDER_ORDER.map((lender) => {
+            const products = FINANCE_PRODUCTS.filter((p) => p.lender === lender);
+            return (
+              <div key={lender}>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">
+                  {lender}
+                  {lender !== "Self Finance" && products[0] && (
+                    <span className="ml-2 normal-case tracking-normal text-muted-foreground/80">
+                      · {(products[0].dealerFee * 100).toFixed(0)}% dealer fee
+                      {lender === "Service Finance" && " (3% on 6.99%/15yr)"}
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {products.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setFinanceId(p.id)}
+                      className={`px-3 py-2 rounded-lg border-2 text-xs sm:text-sm transition-all ${
+                        financeId === p.id
+                          ? "border-primary bg-primary/5 font-medium"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      {p.label}
+                      {p.dealerFee > 0 && (
+                        <span className="ml-1.5 text-[10px] text-muted-foreground">
+                          ({(p.dealerFee * 100).toFixed(0)}% fee)
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <p className="text-[11px] text-muted-foreground mt-3">
-          Estimate only — not a credit offer. Actual rates depend on lender and credit profile.
+          Estimate only — not a credit offer. Actual rates depend on lender approval and credit profile.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {/* Package cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {packages.map((pkg) => {
           const styles = TIER_STYLES[pkg.tier];
-          const mid = (pkg.totalLow + pkg.totalHigh) / 2;
-          const monthly = monthlyPayment(mid, apr, months);
+          const cashLow = pkg.totalLow + addOnTotal.low;
+          const cashHigh = pkg.totalHigh + addOnTotal.high;
+          const cashMid = (cashLow + cashHigh) / 2;
+          const finMid = financedPrice(cashMid, finance.dealerFee);
+          const monthly = monthlyPayment(finMid, finance.apr, finance.termMonths);
+          const showFinanced = finance.dealerFee > 0;
+          const showMonthly = finance.termMonths > 0;
           return (
             <Card key={pkg.tier} className={`relative border-2 ${styles.ring}`}>
               <div className={`absolute -top-2 left-4 px-2 py-0.5 rounded text-xs font-bold uppercase ${styles.chip}`}>
                 {styles.label}
               </div>
               <CardContent className="p-5 pt-7">
-                <h3 className="font-bold text-lg">{pkg.name}</h3>
+                <h3 className="font-bold text-lg leading-tight">{pkg.name}</h3>
                 <p className="text-xs text-muted-foreground mb-3">{pkg.warranty}</p>
 
-                <p className="text-2xl font-bold text-primary">
-                  {formatCurrency(pkg.totalLow)}
-                  <span className="text-base font-medium text-muted-foreground"> – {formatCurrency(pkg.totalHigh)}</span>
+                <p className="text-xs text-muted-foreground">Cash price</p>
+                <p className="text-2xl font-bold text-primary leading-tight">
+                  {formatCurrency(cashLow)}
+                  <span className="text-base font-medium text-muted-foreground">
+                    {" "}– {formatCurrency(cashHigh)}
+                  </span>
                 </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  ≈ ${pkg.pricePerSquare}/square
-                </p>
+                <p className="text-xs text-muted-foreground mb-3">≈ ${pkg.pricePerSquare}/square</p>
 
-                <div className="rounded-lg bg-muted/40 p-3 mb-4">
-                  <p className="text-xs text-muted-foreground">Est. monthly payment</p>
-                  <p className="text-xl font-bold">{formatCurrency(monthly)}/mo</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {months / 12} yr @ {(apr * 100).toFixed(2)}% APR
-                  </p>
-                </div>
+                {showFinanced && (
+                  <div className="rounded-lg bg-muted/40 p-3 mb-3">
+                    <p className="text-xs text-muted-foreground">
+                      Financed price (incl. {(finance.dealerFee * 100).toFixed(0)}% fee)
+                    </p>
+                    <p className="text-base font-semibold">
+                      {formatCurrency(financedPrice(cashLow, finance.dealerFee))} –{" "}
+                      {formatCurrency(financedPrice(cashHigh, finance.dealerFee))}
+                    </p>
+                    {showMonthly && (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-1.5">Est. monthly payment</p>
+                        <p className="text-lg font-bold">{formatCurrency(monthly)}/mo</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {finance.termMonths / 12} yr @ {(finance.apr * 100).toFixed(2)}% APR · {finance.lender}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <ul className="space-y-1.5 mb-4">
                   {pkg.scope.map((s, i) => (
@@ -224,6 +314,40 @@ export function RoofPackagesStep({
           );
         })}
       </div>
+
+      {/* Add-ons */}
+      {data.addOns.length > 0 && (
+        <div className="rounded-2xl border bg-card p-4 mb-6">
+          <p className="text-sm font-semibold mb-3">Optional add-ons</p>
+          <div className="space-y-2">
+            {data.addOns.map((a) => {
+              const active = activeAddOns.has(a.id);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => toggleAddOn(a.id)}
+                  className={`w-full text-left flex items-start justify-between gap-3 rounded-lg border-2 p-3 transition-all ${
+                    active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2
+                      className={`h-4 w-4 mt-0.5 ${active ? "text-primary" : "text-muted-foreground/40"}`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{a.name}</p>
+                      <p className="text-xs text-muted-foreground">{a.description}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold whitespace-nowrap">
+                    {formatCurrency(a.priceLow)} – {formatCurrency(a.priceHigh)}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {(condition.issues.length > 0 || condition.notes) && (
         <div className="rounded-2xl border bg-card p-4 mb-6">
