@@ -48,7 +48,9 @@ interface Props {
 export function WasteFactorStep({ measurement, onBack, onComplete }: Props) {
   const [selected, setSelected] = useState<RoofShape | null>(null);
 
-  const baseSqft = measurement.total_pitched_area_sqft;
+  const pitchedSqft = measurement.total_roof_area_sqft ?? measurement.total_pitched_area_sqft ?? 0;
+  const flatSqft = measurement.user_added_flat_sqft ?? 0;
+  const baseSqft = pitchedSqft + flatSqft;
   const selectedOption = OPTIONS.find((o) => o.id === selected);
   const finalSqft = selectedOption ? baseSqft * (1 + selectedOption.waste) : baseSqft;
 
@@ -66,6 +68,11 @@ export function WasteFactorStep({ measurement, onBack, onComplete }: Props) {
         <p className="text-2xl font-bold text-primary">
           {Math.round(baseSqft).toLocaleString()} sqft
         </p>
+        {flatSqft > 0 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Pitched: {Math.round(pitchedSqft).toLocaleString()} sqft + Flat: {Math.round(flatSqft).toLocaleString()} sqft
+          </p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           Avg pitch {measurement.average_pitch_degrees.toFixed(1)}° •{" "}
           {measurement.roof_segments_count} segments • {measurement.complexity}
