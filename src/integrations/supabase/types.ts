@@ -4416,6 +4416,269 @@ export type Database = {
           },
         ]
       }
+      iq_quote_requests: {
+        Row: {
+          ai_analysis: Json | null
+          answers: Json
+          created_at: string
+          estimate_high: number | null
+          estimate_low: number | null
+          estimate_mid: number | null
+          id: string
+          measurements: Json | null
+          property_address: string | null
+          property_lat: number | null
+          property_lng: number | null
+          property_type: string | null
+          selected_tier: string | null
+          selected_upgrades: Json
+          status: string
+          trade_id: string
+          updated_at: string
+          uploaded_photos: string[]
+          user_id: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          answers?: Json
+          created_at?: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimate_mid?: number | null
+          id?: string
+          measurements?: Json | null
+          property_address?: string | null
+          property_lat?: number | null
+          property_lng?: number | null
+          property_type?: string | null
+          selected_tier?: string | null
+          selected_upgrades?: Json
+          status?: string
+          trade_id: string
+          updated_at?: string
+          uploaded_photos?: string[]
+          user_id?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          answers?: Json
+          created_at?: string
+          estimate_high?: number | null
+          estimate_low?: number | null
+          estimate_mid?: number | null
+          id?: string
+          measurements?: Json | null
+          property_address?: string | null
+          property_lat?: number | null
+          property_lng?: number | null
+          property_type?: string | null
+          selected_tier?: string | null
+          selected_upgrades?: Json
+          status?: string
+          trade_id?: string
+          updated_at?: string
+          uploaded_photos?: string[]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iq_quote_requests_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "iq_trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iq_trade_ai_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          output_schema: Json
+          prompt_type: string
+          system_prompt: string
+          trade_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          output_schema?: Json
+          prompt_type: string
+          system_prompt: string
+          trade_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          output_schema?: Json
+          prompt_type?: string
+          system_prompt?: string
+          trade_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iq_trade_ai_prompts_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "iq_trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iq_trade_pricing_options: {
+        Row: {
+          base_price_per_unit: number
+          created_at: string
+          description: string | null
+          id: string
+          inclusions: string[]
+          tier_name: string
+          tier_order: number
+          trade_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          base_price_per_unit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          inclusions?: string[]
+          tier_name: string
+          tier_order?: number
+          trade_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          base_price_per_unit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          inclusions?: string[]
+          tier_name?: string
+          tier_order?: number
+          trade_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iq_trade_pricing_options_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "iq_trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iq_trade_questions: {
+        Row: {
+          conditional_logic: Json | null
+          created_at: string
+          help_text: string | null
+          id: string
+          options: Json
+          question_text: string
+          question_type: string
+          required: boolean
+          step_number: number
+          trade_id: string
+          updated_at: string
+        }
+        Insert: {
+          conditional_logic?: Json | null
+          created_at?: string
+          help_text?: string | null
+          id?: string
+          options?: Json
+          question_text: string
+          question_type: string
+          required?: boolean
+          step_number?: number
+          trade_id: string
+          updated_at?: string
+        }
+        Update: {
+          conditional_logic?: Json | null
+          created_at?: string
+          help_text?: string | null
+          id?: string
+          options?: Json
+          question_text?: string
+          question_type?: string
+          required?: boolean
+          step_number?: number
+          trade_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iq_trade_questions_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "iq_trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iq_trades: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string | null
+          icon_name: string
+          id: string
+          licensed_entity_name: string | null
+          licensed_entity_number: string | null
+          measurement_method: string
+          name: string
+          property_types: string[]
+          requires_followup_call: boolean
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          description?: string | null
+          icon_name?: string
+          id?: string
+          licensed_entity_name?: string | null
+          licensed_entity_number?: string | null
+          measurement_method: string
+          name: string
+          property_types?: string[]
+          requires_followup_call?: boolean
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon_name?: string
+          id?: string
+          licensed_entity_name?: string | null
+          licensed_entity_number?: string | null
+          measurement_method?: string
+          name?: string
+          property_types?: string[]
+          requires_followup_call?: boolean
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_invoices: {
         Row: {
           amount: number
