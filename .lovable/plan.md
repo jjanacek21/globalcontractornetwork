@@ -1,58 +1,51 @@
-## Problems
+## What's wrong
 
-**1. Map not visible after address selection** — long page, no auto-scroll, missing `map.resize()` after layout change, and re-picking an address doesn't rebuild the marker cleanly.
+**1. Map doesn't appear** — Tiles ARE downloading from Mapbox (verified in network requests), so the token and API are fine. The problem is the map container is collapsing visually. Likely causes:
+- Tailwind arbitrary class `h-[420px]` not being applied/purged in this build
+- Map mounts before the container has measurable size, so the GL canvas stays at 0×0 and never resizes
+- Placeholder overlay's absolute positioning + `backdrop-blur` covering tiles
 
-**2. Measurements way off** — `solar-roof-measure` takes Google Solar's `roofSegmentStats[].stats.areaMeters2` (already the slanted/actual roof surface) and multiplies it by `1/cos(pitch)` again, inflating by 10–25%. Then `WasteFactorStep` adds another 11–18% on top.
+**2. No "Analyze Roof Condition" button visible** — A `RoofConditionStep` exists, but it only appears AFTER the user finishes the Waste Factor step. From the user's perspective, after measuring they go straight to waste-factor questions and never see a clear "analyze condition" CTA tied to the measurement.
 
-**3. Flat sections missed entirely (e.g. 2847 NE 2nd Ave, Boca Raton)** — Google Solar frequently skips low-slope/flat sections of a mixed roof (the gray flat area looks like a concrete slab). Florida has tons of mixed pitched-tile-front + flat-rear-addition homes, so this is a recurring blind spot. We need a way for the user to add the missing flat area without re-measuring everything.
+## Fix plan
 
-## Plan
+### A. `RoofMapMeasureStep.tsx` — guarantee the map renders
+1. Replace the Tailwind `h-[420px]` with an explicit inline `style={{ height: 460, minHeight: 460 }}` on the map container so the size is bulletproof regardless of CSS purge.
+2. Wrap the map container in a sized parent and add a `ResizeObserver` that calls `map.resize()` whenever the container's box changes (handles late layout, fonts, scroll).
+3. Defer `mapboxgl.Map` construction until the container has a non-zero `clientHeight` (poll a couple of animation frames). If still zero after 500ms, force-set inline style and try again.
+4. Move the placeholder overlay so it never overlaps the canvas once `coords` is set, and drop `backdrop-blur` (it can mask GL canvases on some GPUs).
+5. Add a visible **"Open in larger view"** / recenter row above the map and a satellite-image `<img>` fallback (using `primaryMeasurement.satellite_image` or a Mapbox Static API URL) shown beside the map only if `map.loaded()` is still false after 4s.
+6. After `map.on("load")` fires, also call `map.resize()` inside a `requestAnimationFrame` (fixes the well-known Mapbox sizing race).
 
-### A. Map visibility & UX (`RoofMapMeasureStep.tsx`)
-1. Always render the map container (placeholder overlay until `coords` exists) so the ref is stable.
-2. On `coords` change: `map.flyTo(...)`, `map.resize()`, move marker, and `scrollIntoView({ behavior: "smooth", block: "center" })` the first time.
-3. Resize on map `load` and on debounced window resize.
-4. Add helper text + a "Recenter on address" button.
+### B. Surface the Condition step right after measurement
+Two complementary changes:
 
-### B. Measurement accuracy (`supabase/functions/solar-roof-measure/index.ts`)
-1. Treat segment `areaMeters2` as **actual roof surface area**. Stop multiplying by `1/cos(pitch)`.
-2. Output:
-   - `total_roof_area_sqft` = sum of segment surface areas (this is what gets shingled).
-   - `footprint_area_sqft` = informational only.
-3. Drop `total_with_waste_sqft` from response; waste lives in the frontend only.
-4. If avg pitch < 1° but AI vision says "pitched", default display pitch to 22° (6/12); area unaffected.
-5. Return `building_bounding_box` and per-segment polygon coords so the frontend can outline what Solar measured.
-6. **New: detect missing flat sections.** Compute the building footprint area from `solarPotential.buildingStats.areaMeters2` (or the bounding box). If `sum(segment surface) * cos(avg pitch) < 0.7 × footprint`, flag `likely_missing_flat_section: true` with the estimated missing footprint sqft. This triggers the "add flat roof" UI on the frontend.
+1. **In `RoofMapMeasureStep`**, change the post-measurement primary CTA from "Continue with X sqft" to two stacked buttons:
+   - `Analyze roof condition` (primary) — calls `onComplete` with a flag `gotoCondition: true`
+   - `Skip — looks fine, continue` (ghost)
+   Update the `onComplete` payload to include this flag.
 
-### C. Multi-pin flat-roof addition (NEW — answers your question)
-Yes, the cleanest fix is a second-pin flow, and we'll automate it where possible:
+2. **In `RoofingWizardSteps.tsx`**, reorder the flow so Condition runs immediately after the map:
+   ```
+   stories → map → condition → waste → packages
+   ```
+   This matches how the user thinks ("I just measured my roof, now tell me what's wrong with it") and means the analyze button is one tap away. Waste factor still happens, just after we know roof shape/condition (which is actually more accurate because complexity feeds the waste %).
 
-1. After the primary "Measure this roof" runs, if `likely_missing_flat_section` is true (or the user opts in by clicking **"Add a flat / low-slope section"**), the map enters **Add Flat Section mode**:
-   - Cursor changes to a crosshair.
-   - User clicks anywhere on the flat portion of the roof.
-   - A blue pin drops; the AI auto-traces the flat section.
-2. **Auto-trace logic** (new edge function `trace-flat-roof`):
-   - Pulls the Mapbox high-res satellite tile centered on the new pin.
-   - Sends to Lovable AI Gateway (`google/gemini-3-flash-preview`) with vision: "Outline the rectangular/polygonal flat roof section centered on this pin. Return polygon corners as lat/lng offsets in meters from the pin."
-   - Converts polygon to sqft via Shoelace formula on a local equirectangular projection.
-   - Falls back to a draggable rectangle the user can resize if AI confidence is low.
-3. The added flat section is appended to the measurement as an additional segment with `pitch_degrees: 2`, `is_user_added: true`, and shown on the map as a translucent blue polygon with sqft label + delete button.
-4. User can drop **multiple flat pins** if there are several flat additions (Florida porches, carports, lanai roofs).
-5. Final `total_roof_area_sqft` = Solar surface area + Σ user-added flat sections. Pitch multiplier is **not** re-applied to flat additions.
+3. Pass measurement, coords, and address into `RoofConditionStep` (already wired). On `onBack` from Condition, return to Map. On Skip, set `condition` to `{ severity: 'unknown', source: 'photos', issues: [], recommendations: [], material: 'unknown' }` so downstream pricing still works.
 
-### D. Frontend wiring
-1. `MeasurementResult` gains `user_added_flat_sqft` and `segments_user_added[]`.
-2. `WasteFactorStep` shows a breakdown: "Pitched roof: 1,840 sqft + Flat section: 420 sqft = 2,260 sqft measured", then applies waste once.
-3. Surface the Solar building outline (yellow) and user-added flat sections (blue) on the map.
-4. Inline "Looks wrong? Re-measure" + "Add flat section" buttons before advancing.
-
-### E. Sanity check
-- Server logs raw Solar areas + computed surface sqft + footprint ratio for known addresses.
-- Test against 2847 NE 2nd Ave: expected ≈ pitched front + flat rear; without the fix Solar returns just the pitched area, after the fix the user adds the flat slab via second pin and total reconciles to building footprint ÷ cos(pitch) + flat add.
+### C. Safety / UX polish
+- Add a visible loading skeleton (animated grey block at 460px) before the first tiles paint, so users always see SOMETHING in the map area even if Mapbox is slow.
+- Catch Mapbox init errors and show a friendly fallback: "Map preview unavailable — using satellite snapshot instead" with the static Mapbox image and a manual "I confirmed this is my roof" checkbox so the flow still completes.
+- Log `[RoofMap] container size`, `[RoofMap] map loaded`, and `[RoofMap] resize` to console for future diagnosis.
 
 ## Out of scope
-- Contractor-side roof tools (CRM `InlineRoofMeasurement`) — separate code path.
-- Pricing logic in `roofing-package-pricing`.
+- Solar measurement math (handled in earlier round).
+- Pricing logic and financing breakdown.
+- Contractor-side CRM measurement tools.
 
-## Direct answer to your question
-**Yes — drop a second pin for flat sections.** It's the most reliable approach because Google Solar genuinely doesn't see them on a lot of Florida homes. The second pin will auto-trace via AI so the user doesn't have to draw, with a draggable rectangle fallback. The system will also auto-prompt for it whenever the measured surface area is less than ~70% of the building footprint, so users don't have to remember.
+## Files to touch
+- `src/components/instant-quote/roofing/RoofMapMeasureStep.tsx` — sizing fix, resize observer, fallback image, new CTA buttons
+- `src/components/instant-quote/RoofingWizardSteps.tsx` — reorder substeps to `map → condition → waste → packages`, handle skip
+- `src/components/instant-quote/roofing/RoofConditionStep.tsx` — minor: support back-to-map and a "Skip analysis" button
+
+After this, you should see the satellite map appear within ~1 second of address selection, and a clearly labelled **"Analyze roof condition"** button immediately after measurements complete.
