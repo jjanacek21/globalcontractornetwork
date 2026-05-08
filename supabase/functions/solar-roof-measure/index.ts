@@ -1,5 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -22,7 +20,7 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -59,7 +57,6 @@ serve(async (req) => {
       });
     }
 
-    // --- Google Solar API ---
     const callBuildingInsights = async (requiredQuality: "HIGH" | "MEDIUM") => {
       const endpoint = new URL("https://solar.googleapis.com/v1/buildingInsights:findClosest");
       endpoint.searchParams.set("location.latitude", latitude.toString());
@@ -72,10 +69,7 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json" },
       });
 
-      if (!response.ok) {
-        return null;
-      }
-
+      if (!response.ok) return null;
       const payload = await response.json();
       return { payload, requiredQuality };
     };
@@ -96,94 +90,95 @@ serve(async (req) => {
       ? solarPotential.roofSegmentStats
       : [];
 
+    // IMPORTANT: Google Solar's roofSegmentStats[].stats.areaMeters2 is already
+    // the ACTUAL/SLANTED roof surface area (what you shingle), not footprint.
+    // Do NOT multiply by 1/cos(pitch) — that double-counts the slope.
     const segments = segmentStats
       .map((segment: any, idx: number) => {
-        const areaM2 = toNumber(segment?.stats?.areaMeters2 ?? segment?.areaMeters2);
+        const surfaceM2 = toNumber(segment?.stats?.areaMeters2 ?? segment?.areaMeters2);
         const pitchDegrees = toNumber(segment?.pitchDegrees);
         const azimuthDegrees = toNumber(segment?.azimuthDegrees);
+        const bbox = segment?.boundingBox ?? null;
+
+        // Footprint = surface * cos(pitch). Used to compare against building footprint.
+        const footprintM2 = surfaceM2 * Math.cos((pitchDegrees * Math.PI) / 180);
 
         return {
           id: segment?.planeIndex ?? `${idx}`,
-          area_m2: areaM2,
-          area_sqft: +(areaM2 * M2_TO_SQFT).toFixed(2),
+          surface_area_m2: surfaceM2,
+          surface_area_sqft: +(surfaceM2 * M2_TO_SQFT).toFixed(2),
+          footprint_area_m2: footprintM2,
+          footprint_area_sqft: +(footprintM2 * M2_TO_SQFT).toFixed(2),
           pitch_degrees: +pitchDegrees.toFixed(2),
           pitch_over_12: toPitchOver12(pitchDegrees),
           azimuth_degrees: +azimuthDegrees.toFixed(2),
+          bounding_box: bbox,
         };
       })
-      .filter((segment: { area_m2: number }) => segment.area_m2 > 0)
-      .sort((a: { area_m2: number }, b: { area_m2: number }) => b.area_m2 - a.area_m2);
+      .filter((s) => s.surface_area_m2 > 0)
+      .sort((a, b) => b.surface_area_m2 - a.surface_area_m2);
 
-    // Filter segments by roof_type_override — no fallback to all segments
+    // Apply optional override filter
     let useSegments = segments;
     if (roof_type_override === "flat") {
-      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5);
+      useSegments = segments.filter((s) => s.pitch_degrees <= 5);
     } else if (roof_type_override === "low_slope") {
-      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 10);
+      useSegments = segments.filter((s) => s.pitch_degrees <= 10);
     } else if (roof_type_override === "pitched") {
-      useSegments = segments.filter((s: { pitch_degrees: number }) => s.pitch_degrees > 5);
+      useSegments = segments.filter((s) => s.pitch_degrees > 5);
     }
 
     const segmentCount = segments.length;
-    const filteredSegmentsCount = useSegments.length;
 
-    // Calculate flat vs pitched section areas from segments (pitch <= 5° = flat)
-    const flatSectionAreaM2 = segments
-      .filter((s: { pitch_degrees: number }) => s.pitch_degrees <= 5)
-      .reduce((acc: number, s: { area_m2: number }) => acc + s.area_m2, 0);
-    const pitchedSectionAreaM2 = segments
-      .filter((s: { pitch_degrees: number }) => s.pitch_degrees > 5)
-      .reduce((acc: number, s: { area_m2: number }) => acc + s.area_m2, 0);
+    // Surface (slanted) totals — what gets shingled
+    const totalSurfaceM2 = useSegments.reduce((acc, s) => acc + s.surface_area_m2, 0);
+    const totalSurfaceSqft = totalSurfaceM2 * M2_TO_SQFT;
 
+    // Footprint totals — for comparison vs building footprint
+    const totalSegmentFootprintM2 = useSegments.reduce((acc, s) => acc + s.footprint_area_m2, 0);
+    const totalSegmentFootprintSqft = totalSegmentFootprintM2 * M2_TO_SQFT;
+
+    // Weighted average pitch (by surface area)
     const weightedPitchSum = useSegments.reduce(
-      (acc: number, segment: { area_m2: number; pitch_degrees: number }) => acc + segment.area_m2 * segment.pitch_degrees,
+      (acc, s) => acc + s.surface_area_m2 * s.pitch_degrees,
       0,
     );
+    const averagePitchDegrees = totalSurfaceM2 > 0 ? weightedPitchSum / totalSurfaceM2 : 0;
+    const pitchMultiplier = averagePitchDegrees > 0
+      ? 1 / Math.cos((averagePitchDegrees * Math.PI) / 180)
+      : 1;
 
-    const segmentAreaM2 = useSegments.reduce(
-      (acc: number, segment: { area_m2: number }) => acc + segment.area_m2,
-      0,
+    // Building footprint (from Google Solar). Used to detect missing flat sections.
+    const buildingFootprintM2 = toNumber(
+      solarPotential?.buildingStats?.areaMeters2 ?? solarPotential?.wholeRoofStats?.areaMeters2,
     );
+    const buildingFootprintSqft = buildingFootprintM2 * M2_TO_SQFT;
 
-    const wholeRoofAreaM2 = toNumber(solarPotential?.wholeRoofStats?.areaMeters2);
-    const totalFlatAreaM2 = segmentAreaM2 > 0 ? segmentAreaM2 : wholeRoofAreaM2;
-    const averagePitchDegrees = totalFlatAreaM2 > 0 ? weightedPitchSum / totalFlatAreaM2 : 0;
-
-    const pitchRadians = (averagePitchDegrees * Math.PI) / 180;
-    const rawPitchMultiplier = averagePitchDegrees > 0 ? 1 / Math.cos(pitchRadians) : 1;
-
-    // Apply roof type override if provided
-    const pitchMultiplier = roof_type_override === "flat" ? 1.0
-      : roof_type_override === "low_slope" ? 1.02
-      : rawPitchMultiplier;
-
-    const totalFlatSqFt = totalFlatAreaM2 * M2_TO_SQFT;
-    const totalPitchedSqFt = totalFlatSqFt * pitchMultiplier;
-
-    const defaultWaste =
-      segmentCount <= 2 ? 10 : segmentCount <= 6 ? 13 : segmentCount <= 12 ? 15 : 17;
-
-    const wastePercent = (roof_type_override === "flat" || roof_type_override === "low_slope") ? 5 : defaultWaste;
-
-    const totalWithWasteSqFt = totalPitchedSqFt * (1 + wastePercent / 100);
-    const totalSquares = totalWithWasteSqFt / 100;
+    // If measured footprint is significantly less than building footprint,
+    // Solar likely missed a flat/low-slope section.
+    let likelyMissingFlatSection = false;
+    let missingFootprintSqft = 0;
+    if (buildingFootprintM2 > 0 && totalSegmentFootprintM2 > 0) {
+      const ratio = totalSegmentFootprintM2 / buildingFootprintM2;
+      if (ratio < 0.7) {
+        likelyMissingFlatSection = true;
+        missingFootprintSqft = +((buildingFootprintM2 - totalSegmentFootprintM2) * M2_TO_SQFT).toFixed(2);
+      }
+    }
 
     const complexity =
-      segmentCount <= 2
-        ? "Simple"
-        : segmentCount <= 6
-          ? "Moderate"
-          : segmentCount <= 12
-            ? "Complex"
+      segmentCount <= 2 ? "Simple"
+        : segmentCount <= 6 ? "Moderate"
+          : segmentCount <= 12 ? "Complex"
             : "Very Complex";
 
-    // --- Mapbox Satellite Image (replaces Google Static Maps) ---
+    // Mapbox satellite snapshot
     const centerLat = toNumber(solarResponse.payload?.center?.latitude ?? latitude);
     const centerLng = toNumber(solarResponse.payload?.center?.longitude ?? longitude);
+    const buildingBoundingBox = solarResponse.payload?.boundingBox ?? null;
 
     const mapboxToken = Deno.env.get("VITE_MAPBOX_TOKEN");
     let satellite_image = "";
-
     if (mapboxToken) {
       try {
         const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-s+ff0000(${centerLng},${centerLat})/${centerLng},${centerLat},19,0/600x400@2x?access_token=${mapboxToken}`;
@@ -191,81 +186,80 @@ serve(async (req) => {
         if (imgRes.ok) {
           const buf = new Uint8Array(await imgRes.arrayBuffer());
           let binary = "";
-          for (let i = 0; i < buf.length; i++) {
-            binary += String.fromCharCode(buf[i]);
-          }
+          for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
           satellite_image = `data:image/png;base64,${btoa(binary)}`;
         } else {
-          await imgRes.text(); // consume body
+          await imgRes.text();
         }
-      } catch {
-        // non-critical
-      }
+      } catch { /* non-critical */ }
     }
 
-    // --- AI Roof Type Verification via Lovable AI Gateway (Gemini) ---
+    // AI roof type cross-check
     let ai_roof_type_suggestion: string | null = null;
     let ai_roof_type_warning: string | null = null;
-
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (lovableApiKey && satellite_image) {
       try {
-        const aiPrompt = `Analyze this satellite image of a roof. Based on what you see, classify the roof type as exactly one of: "flat", "low_slope", or "pitched".
+        const aiPrompt = `Analyze this satellite image of a roof. Classify as exactly one of: "flat", "low_slope", "pitched", or "mixed".
 
 Rules:
-- "flat" = no visible slope, commercial-style flat roof
-- "low_slope" = slight slope, barely visible pitch (typically under 5 degrees)
-- "pitched" = clearly visible slope/angles on the roof
+- "flat" = no visible slope (commercial-style flat)
+- "low_slope" = slight slope (under ~5°)
+- "pitched" = clearly visible angles
+- "mixed" = home has BOTH a pitched section AND a flat/low-slope section (very common in Florida)
 
-The Google Solar API reports an average pitch of ${averagePitchDegrees.toFixed(1)} degrees for this roof.
+Google Solar reports avg pitch ${averagePitchDegrees.toFixed(1)}° across ${segmentCount} segment(s).
 
-Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "confidence": "high"|"medium"|"low"}`;
+Respond with ONLY a JSON object: {"roof_type":"flat"|"low_slope"|"pitched"|"mixed","has_flat_section":true|false,"confidence":"high"|"medium"|"low"}`;
 
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${lovableApiKey}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "google/gemini-3-flash-preview",
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { type: "text", text: aiPrompt },
-                  { type: "image_url", image_url: { url: satellite_image } },
-                ],
-              },
-            ],
+            messages: [{
+              role: "user",
+              content: [
+                { type: "text", text: aiPrompt },
+                { type: "image_url", image_url: { url: satellite_image } },
+              ],
+            }],
           }),
         });
 
         if (aiRes.ok) {
           const aiData = await aiRes.json();
           const rawContent = aiData?.choices?.[0]?.message?.content ?? "";
-          // Extract JSON from response
-          const jsonMatch = rawContent.match(/\{[^}]+\}/);
+          const jsonMatch = rawContent.match(/\{[\s\S]*?\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             ai_roof_type_suggestion = parsed.roof_type ?? null;
-
-            // Generate warning if AI disagrees with Solar API
-            if (ai_roof_type_suggestion) {
-              const solarClassification = averagePitchDegrees < 2 ? "flat" : averagePitchDegrees < 5 ? "low_slope" : "pitched";
-              if (ai_roof_type_suggestion !== solarClassification) {
-                const labels: Record<string, string> = { flat: "Flat Roof", low_slope: "Low Slope", pitched: "Pitched" };
-                ai_roof_type_warning = `AI analysis suggests this is a ${labels[ai_roof_type_suggestion] ?? ai_roof_type_suggestion}. The Solar API reported ${averagePitchDegrees.toFixed(1)}° avg pitch (${labels[solarClassification]}). Consider selecting "${labels[ai_roof_type_suggestion]}" above.`;
+            // If AI sees a flat section but we didn't measure one, flag it
+            if (parsed.has_flat_section === true || parsed.roof_type === "mixed") {
+              if (!segments.some((s) => s.pitch_degrees <= 5)) {
+                likelyMissingFlatSection = true;
+                ai_roof_type_warning = "AI detected a flat section that Google Solar did not measure. Drop a blue pin on the flat area to add it.";
               }
             }
           }
         } else {
-          await aiRes.text(); // consume body
+          await aiRes.text();
         }
-      } catch {
-        // non-critical — AI verification is optional
-      }
+      } catch { /* non-critical */ }
     }
+
+    // Sanity logging
+    console.log("[solar-roof-measure]", {
+      address,
+      latitude, longitude,
+      segmentCount,
+      totalSurfaceSqft: +totalSurfaceSqft.toFixed(0),
+      totalSegmentFootprintSqft: +totalSegmentFootprintSqft.toFixed(0),
+      buildingFootprintSqft: +buildingFootprintSqft.toFixed(0),
+      averagePitchDegrees: +averagePitchDegrees.toFixed(1),
+      likelyMissingFlatSection,
+      missingFootprintSqft,
+    });
 
     const responseData = {
       address,
@@ -275,19 +269,26 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
       average_pitch_degrees: +averagePitchDegrees.toFixed(2),
       average_pitch_over_12: toPitchOver12(averagePitchDegrees),
       pitch_multiplier: +pitchMultiplier.toFixed(4),
-      waste_percent: wastePercent,
-      total_flat_area_sqft: +totalFlatSqFt.toFixed(2),
-      total_pitched_area_sqft: +totalPitchedSqFt.toFixed(2),
-      total_with_waste_sqft: +totalWithWasteSqFt.toFixed(2),
-      total_squares: +totalSquares.toFixed(2),
+
+      // Primary: actual roof surface area (this is what gets shingled)
+      total_roof_area_sqft: +totalSurfaceSqft.toFixed(2),
+      // Footprint sums for diagnostics
+      total_segment_footprint_sqft: +totalSegmentFootprintSqft.toFixed(2),
+      building_footprint_sqft: +buildingFootprintSqft.toFixed(2),
+
+      // Backwards-compat aliases (frontend may still read these)
+      total_pitched_area_sqft: +totalSurfaceSqft.toFixed(2),
+      total_flat_area_sqft: +totalSurfaceSqft.toFixed(2),
+
       max_panels_count: toNumber(solarPotential?.maxArrayPanelsCount),
-      carbon_offset_factor_kg_per_mwh: toNumber(solarPotential?.carbonOffsetFactorKgPerMwh),
       satellite_image,
       center: { latitude: centerLat, longitude: centerLng },
+      building_bounding_box: buildingBoundingBox,
       segments,
-      filtered_segments_count: filteredSegmentsCount,
-      flat_section_area_sqft: +(flatSectionAreaM2 * M2_TO_SQFT).toFixed(2),
-      pitched_section_area_sqft: +(pitchedSectionAreaM2 * M2_TO_SQFT).toFixed(2),
+
+      likely_missing_flat_section: likelyMissingFlatSection,
+      missing_footprint_sqft: missingFootprintSqft,
+
       ai_roof_type_suggestion,
       ai_roof_type_warning,
     };
@@ -295,7 +296,8 @@ Respond with ONLY a JSON object: {"roof_type": "flat"|"low_slope"|"pitched", "co
     return new Response(JSON.stringify({ success: true, data: responseData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch {
+  } catch (err) {
+    console.error("[solar-roof-measure] error", err);
     return new Response(JSON.stringify({ success: false, error: "Something went wrong. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
