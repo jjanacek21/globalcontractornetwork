@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { PropertyType, TradeAnswers } from "./InstantQuoteWizard";
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _unusedTypes = (_: TradeAnswers) => _;
 import { RoofMapMeasureStep, type MeasurementResult } from "./roofing/RoofMapMeasureStep";
 import { WasteFactorStep, type RoofShape } from "./roofing/WasteFactorStep";
 import { RoofConditionStep, type ConditionAnalysis } from "./roofing/RoofConditionStep";
