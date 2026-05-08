@@ -8,7 +8,8 @@ const corsHeaders = {
 };
 
 interface RequestBody {
-  totalSqft: number;
+  totalSqft: number;          // pitched/main roof area (waste + pitch will apply here)
+  flatSqft?: number;          // user-traced flat sections (NO pitch, NO waste)
   pitchMultiplier?: number;
   wasteFactor: number;
   condition?: {
