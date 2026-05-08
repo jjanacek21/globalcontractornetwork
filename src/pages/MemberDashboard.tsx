@@ -207,6 +207,7 @@ const MemberDashboard = () => {
     { icon: Sparkles, title: "Instant Quote", description: "AI-powered estimates for roofing, windows, emergency, landscaping & cleaning", link: "/instant-quote" },
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
     { icon: Briefcase, title: "Job Marketplace", description: "Post your project and browse what others are paying", link: "/homeowner/marketplace" },
+    { icon: Crown, title: "Permit Expediting", description: "Fast-track Florida building permits for your property", link: "/permit-queens/dashboard" },
     { icon: ClipboardCheck, title: "Maintenance Membership", description: "Preventative maintenance & property care plans for property owners", link: "/maintenance-membership", badge: "Coming Soon" },
   ];
 
