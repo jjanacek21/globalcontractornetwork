@@ -257,6 +257,12 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
   const startDrawingFlat = () => {
     setDrawingFlat(true);
     setDraftPoints([]);
+    setError(null);
+    // Auto-zoom in close so the user can trace edges accurately
+    const map = mapRef.current;
+    if (map && pinCoords) {
+      map.flyTo({ center: [pinCoords.lng, pinCoords.lat], zoom: 21, duration: 600 });
+    }
   };
 
   const cancelDrawingFlat = () => {
@@ -268,6 +274,21 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
     if (draftPoints.length < 3) return;
     const area = polygonAreaSqft(draftPoints);
     const center = polygonCentroid(draftPoints);
+
+    // Sanity check — flat section should not be wildly larger than the AI-pitched area.
+    const pitched = primaryMeasurement?.total_roof_area_sqft || 0;
+    if (pitched > 0 && area > pitched * 1.2) {
+      const ok = window.confirm(
+        `The flat section you drew is ${Math.round(area).toLocaleString()} sqft — larger than the main roof (${Math.round(pitched).toLocaleString()} sqft). ` +
+        `That usually means the polygon was drawn in the yard or street instead of on the roof. ` +
+        `\n\nClick Cancel to redraw, or OK to keep it.`,
+      );
+      if (!ok) {
+        setDraftPoints([]);
+        return;
+      }
+    }
+
     const sec: FlatSection = {
       id: `flat-${Date.now()}`,
       center,
