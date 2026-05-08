@@ -1,48 +1,56 @@
-## Remaining Work — Phase 2 of Trade Wizard Engine
+## Restore originals + build custom wizards for all 20 new trades
 
-Phase 1 (migration, seed data, schema) is already approved and applied. This plan covers the remaining build needed to make all 25 trades functional end-to-end.
+### Goals
+- Bring back the original Roofing, Windows, Emergency, Landscaping, Cleaning wizards exactly as they were (3D, colorful, animated).
+- Add a hand-tailored wizard for each of the 20 new trades — not a single generic engine.
+- Keep the look-and-feel consistent (colorful icon badges, gradient cards, fade/scale animations, good/better/best style results).
 
-### 1. Edge Functions (3)
+### Step 1 — Restore the original entry flow
+- Revert `src/pages/InstantQuote.tsx` to render `<InstantQuoteWizard />` so the working Property Type → Service Type → Roofing/Windows/etc. → Photos → Results experience returns immediately.
+- No changes to `RoofingWizardSteps.tsx`, the `roofing/` subfolder, `WindowsWizardSteps.tsx`, `EmergencyWizardSteps.tsx`, `LandscapingWizardSteps.tsx`, `CleaningWizardSteps.tsx`, `PhotoAnalysisStep.tsx`, or `ResultsStep.tsx`.
 
-All use `Deno.serve`, CORS headers, and route AI through Lovable AI Gateway with `google/gemini-3-flash-preview`. No client-side AI calls.
+### Step 2 — Expand the Service Type screen to all 25 trades
+- Update `ServiceTypeStep.tsx` to display all 25 services, grouped by category with distinct color accents per category:
+  - Exterior (slate/blue): Roofing, Gutters, Soffit & Fascia, Siding, Stucco, EIFS Bands, Exterior Paint, Pavers, Pressure Washing, Windows, Doors
+  - Interior (amber/emerald): Interior Renovation, Cabinets, Flooring, Drywall, Interior Paint, Texture, Crown Molding
+  - Kitchen & Bath (rose/violet): Kitchens, Bathrooms
+  - MEP (indigo): Electrical, Plumbing
+  - Specialty (teal/green): Tree & Landscaping, Window Cleaning
+  - Emergency (red): Emergency Services
+- Each card keeps the same 3D hover + colored icon badge style as today, with `animate-fade-in` / `hover-scale`.
 
-- **`analyze-property-satellite`** — Input: `{ address }`. Mapbox geocode → lat/lng → static satellite image URL. If trade is roofing, also call Google Solar API (if key present) for roof footprint sqft + pitch. Returns `{ lat, lng, satellite_url, roof_sqft?, pitch?, footprint_sqft? }`.
-- **`analyze-photos-ai`** — Input: `{ trade_slug, photo_urls[] }`. Loads `trade_ai_prompts` row where `prompt_type = 'condition_analysis'`. Sends multimodal request with the trade-specific system prompt + uploaded photo URLs as image content blocks. Uses tool-calling with the row's `output_schema` for structured JSON. Returns `{ condition, severity, observations[], recommended_actions[], confidence }`.
-- **`calculate-estimate`** — Input: `{ trade_slug, measurements, answers, selected_tier_id?, selected_upgrades[] }`. Loads `trade_pricing_options` for the trade. Computes base cost from `base_price_per_unit × measured_quantity`, applies any `price_modifier_pct` from answers, returns `{ low, mid, high, breakdown[] }` with mid ± 15%.
+### Step 3 — Shared "wizard kit" for the 20 new trades
+Create reusable building blocks at `src/components/instant-quote/kit/` (NOT a generic engine — each wizard composes them with its own copy, questions, math, and visuals):
+- `WizardShell.tsx` — colored gradient header, animated step indicator, back/next, fade-in transitions
+- `OptionGrid.tsx` — large 3D selectable cards with icon + title + price modifier
+- `PhotoUploadStep.tsx` — drag-drop with thumbnail grid, calls `iq-analyze-photos`
+- `MeasurementStep.tsx` — variants for sqft / linear ft / count / room count / satellite preview
+- `PackagesResultsStep.tsx` — Standard / Premium / Luxury tier cards with gradient accents and animated price reveal, mirrors the roofing packages style
+- `useTradeConfig(slug)` — loads questions/pricing/AI prompts from `iq_trades`/`iq_trade_questions`/`iq_trade_pricing_options` for that trade
 
-### 2. Frontend Components
+### Step 4 — Custom wizard per trade
+One file per trade in `src/components/instant-quote/trades/`. Each is a small bespoke component composing the kit pieces with its own logic and accents. Phase delivery in 4 batches so we can verify the look between each:
 
-- **`<ServicesGrid />`** — replaces the hardcoded 4-card grid on `/instant-quote`. Queries `trades` where `active = true`, groups by `category` (Exterior, Interior, Specialty, Cleaning), renders icon + name + description cards. Click → `/instant-quote/:tradeSlug`.
-- **`<TradeWizard tradeSlug />`** — single generic component. Steps:
-  1. Address (Mapbox autocomplete, existing `AddressAutocomplete`)
-  2. Measurement — branches on `trade.measurement_method`:
-     - `satellite` → calls `analyze-property-satellite`, shows satellite image
-     - `photo_ai` → photo upload to `quote-photos` bucket, calls `analyze-photos-ai`
-     - `manual_input` → numeric input fields from `trade_questions` of type `number`
-     - `none` → skip
-  3. Dynamic question loop — renders `trade_questions` in `step_number` order, supports `select`, `multiselect`, `number`, `text`, `boolean`, `photo_upload`, with `conditional_logic` evaluation
-  4. Optional condition photos (if not already collected) → `analyze-photos-ai`
-  5. Results via `calculate-estimate`
-- **`<QuoteResults />`** — pricing tier cards from `trade_pricing_options` (Standard / Premium / Luxury), upgrade toggles, low/mid/high range, AI condition summary, persistent legal disclaimer naming the licensed entity (`TBD - Licensed Subcontractor / TBD` until populated). CTA writes to `quote_requests` and navigates to confirmation.
-- **`<AdminTradesPanel />`** at `/admin/trades` — super-admin gated (uses `is_super_admin()`). CRUD for `trades`, `trade_questions`, `trade_pricing_options`, `trade_ai_prompts`. Tabbed UI: Trades list → drill into questions/pricing/prompts editors.
+**Batch A (Exterior add-ons):** Gutters, Soffit & Fascia, Siding, Stucco, Exterior Paint, EIFS Bands, Pavers
+**Batch B (Interior renovations):** Interior Renovation, Cabinets, Flooring, Drywall, Interior Paint, Texture, Crown Molding
+**Batch C (Kitchen/Bath + MEP):** Kitchens, Bathrooms, Electrical, Plumbing
+**Batch D (Specialty):** Doors, Window Cleaning (Tree & Landscaping and Pressure Washing already exist)
 
-### 3. Wiring & Cleanup
+Each wizard step includes:
+- Trade-specific intro screen with a colored hero icon
+- 3–6 trade-specific questions (material choice, scope, finishes, urgency, etc.) sourced from already-seeded `iq_trade_questions`
+- Measurement step appropriate for that trade (sqft, lf, count, rooms, or satellite preview)
+- Optional photos → AI condition analysis using the per-trade prompt already seeded in `iq_trade_ai_prompts`
+- Results screen with 3 tier cards (Standard / Premium / Luxury) using the trade's seeded pricing, plus optional add-on chips
 
-- `/instant-quote` route swapped to render `<ServicesGrid />`.
-- New route `/instant-quote/:tradeSlug` → `<TradeWizard />`.
-- Old hardcoded wizards (`RoofingWizardSteps`, `WindowsWizardSteps`, `TreeWizardSteps`, `RemediationWizardSteps`, etc.) deleted. Their behavior is preserved by mapping to `satellite` (roofing) or `photo_ai` (everything else) measurement modes plus seeded questions.
-- `/admin/trades` route added behind super-admin guard.
-- Breadcrumb / "Return to Dashboard" pattern preserved per project navigation rule.
+### Step 5 — Routing
+- `/instant-quote` → original `<InstantQuoteWizard />`
+- `/instant-quote/:tradeSlug` → loads the matching custom wizard from `src/components/instant-quote/trades/` registry. The new generic `TradeWizard.tsx` is removed once Batch D ships.
 
-### 4. Out of Scope
+### Out of Scope
+- DB schema/migrations (already in place from Phase 1).
+- Edge functions (already deployed).
+- Booking/payment flow after quote — CTA still writes to `iq_quote_requests`.
 
-- Real `licensed_entity_name` / `licensed_entity_number` values — left as `TBD` until you provide them.
-- Google Solar API key wiring (only used if already present; falls back to Mapbox satellite + manual confirmation otherwise).
-- Payment / booking flow after quote — quote results CTA only saves the request and notifies admin.
-
-### Technical Notes
-
-- All AI calls go through edge functions → Lovable AI Gateway. No `@anthropic-ai/sdk` on client (per project memory).
-- `quote-photos` bucket is private; UI uses 1-hour signed URLs to display thumbnails.
-- `quote_requests` RLS: owner read/write only; super-admins read all.
-- Edge functions use native `Deno.serve` only (no stdlib `http/server.ts`) per project memory.
+### Note on scope
+20 hand-tailored wizards is substantial. To keep iteration tight, I'll ship Batch A first so you can confirm the look, then continue Batches B–D. Each batch is a single message that adds 4–7 wizards. Reply between batches with any styling tweaks you want propagated.
