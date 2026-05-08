@@ -96,19 +96,6 @@ export function RoofingWizardSteps({ propertyType, onComplete, onBack }: Props) 
         onBack={() => setSubstep("waste")}
         onComplete={(c) => {
           setCondition(c);
-          // Persist a minimal record into TradeAnswers in case parent reads it later.
-          onComplete({
-            address,
-            lat: coords.lat,
-            lng: coords.lng,
-            stories,
-            roofShape,
-            wasteFactor,
-            measuredSqft: measurement.total_pitched_area_sqft,
-            conditionSeverity: c.severity,
-            propertyType,
-            __skipDefaultResults: true,
-          } as TradeAnswers);
           setSubstep("packages");
         }}
       />
