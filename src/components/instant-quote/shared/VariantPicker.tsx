@@ -4,7 +4,7 @@ import { Card3D } from "@/components/crm-ui/Card3D";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { VariantGroup, Variant } from "./tradeVariants";
+import type { VariantGroup, Variant } from "../tradeVariants";
 
 export type SelectedVariant = {
   variantId: string;
