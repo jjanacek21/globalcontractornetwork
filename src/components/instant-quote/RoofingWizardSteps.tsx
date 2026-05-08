@@ -98,6 +98,20 @@ export function RoofingWizardSteps({ propertyType, onComplete, onBack }: Props) 
     );
   }
 
+  if (substep === "waste" && measurement) {
+    return (
+      <WasteFactorStep
+        measurement={measurement}
+        onBack={() => setSubstep("condition")}
+        onComplete={(shape, waste) => {
+          setRoofShape(shape);
+          setWasteFactor(waste);
+          setSubstep("packages");
+        }}
+      />
+    );
+  }
+
   if (substep === "packages" && measurement && condition) {
     return (
       <RoofPackagesStep
@@ -106,7 +120,7 @@ export function RoofingWizardSteps({ propertyType, onComplete, onBack }: Props) 
         condition={condition}
         stories={stories}
         address={address}
-        onBack={() => setSubstep("condition")}
+        onBack={() => setSubstep("waste")}
       />
     );
   }
