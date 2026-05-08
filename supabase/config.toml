@@ -191,3 +191,12 @@ verify_jwt = false
 
 [functions.send-password-reset]
 verify_jwt = false
+
+[functions.iq-analyze-property]
+verify_jwt = false
+
+[functions.iq-analyze-photos]
+verify_jwt = false
+
+[functions.iq-calculate-estimate]
+verify_jwt = false

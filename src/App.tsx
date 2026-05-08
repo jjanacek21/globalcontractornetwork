@@ -136,6 +136,7 @@ const PropertyIQDashboard = lazy(() => import("./pages/PropertyIQDashboard"));
 const PropertyIQSearch = lazy(() => import("./pages/PropertyIQSearch"));
 const PropertyIQReport = lazy(() => import("./pages/PropertyIQReport"));
 const InstantQuote = lazy(() => import("./pages/InstantQuote"));
+const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"));
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 
@@ -472,6 +473,7 @@ const GCNRoutes = () => (
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
           <Route path="/instant-quote" element={<HomeownerOnlyRoute><Suspense fallback={<div />}><InstantQuote /></Suspense></HomeownerOnlyRoute>} />
+          <Route path="/instant-quote/:tradeSlug" element={<HomeownerOnlyRoute><Suspense fallback={<div />}><TradeWizard /></Suspense></HomeownerOnlyRoute>} />
           <Route path="/homeowner/marketplace" element={
             <ProtectedRoute redirectTo="/network-login">
               <Suspense fallback={<div />}><HomeownerMarketplace /></Suspense>
