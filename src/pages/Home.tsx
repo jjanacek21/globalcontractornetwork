@@ -78,7 +78,12 @@ const SCOPED_CSS = `
 .gcn-home .rating-pill .stars{color:var(--gold-700);letter-spacing:1px}
 .gcn-home .hero h1{margin-top:18px}
 .gcn-home .quoteline{font-style:italic;color:var(--green-800);border-left:3px solid var(--gold-600);padding:8px 0 8px 14px;margin:8px 0 16px;font-size:1.05rem}
-.gcn-home .actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+.gcn-home .actions{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap;align-items:center}
+.gcn-home .actions .btn-lg{padding:18px 30px;font-size:1.05rem;border-radius:14px}
+.gcn-home .actions .btn-link{background:transparent;border:none;box-shadow:none;color:var(--green-800);font-weight:600;padding:10px 6px;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(31,84,54,.35)}
+.gcn-home .actions .btn-link:hover{color:var(--green-900);text-decoration-color:var(--green-700);transform:none}
+.gcn-home .actions-meta{margin-top:12px;font-size:.86rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gcn-home .actions-meta .dot{width:4px;height:4px;border-radius:50%;background:var(--muted);display:inline-block}
 .gcn-home .badge-strip{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,#fff 0%,var(--green-50) 100%);border:1px solid var(--line);box-shadow:var(--shadow-sm)}
 .gcn-home .badge-strip svg{width:18px;height:18px;color:var(--green-700);flex:none}
 .gcn-home .badge-strip strong{color:var(--green-900);font-size:.92rem;letter-spacing:.02em}
