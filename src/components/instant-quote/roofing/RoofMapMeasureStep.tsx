@@ -466,7 +466,7 @@ export function RoofMapMeasureStep({ onBack, onComplete }: Props) {
           </div>
 
           <Button onClick={continueToNext} className="w-full h-12 text-base gap-2">
-            Continue with {Math.round(combined).toLocaleString()} sqft <ArrowRight className="h-4 w-4" />
+            Analyze roof condition ({Math.round(combined).toLocaleString()} sqft) <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       )}
