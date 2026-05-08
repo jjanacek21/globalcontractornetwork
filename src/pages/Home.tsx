@@ -401,8 +401,27 @@ export default function Home() {
         <title>Global Contractor Network — Trusted Contractors. Real Accountability.</title>
         <meta
           name="description"
-          content="Global Contractor Network is a referral-driven network for homeowners and contractors. Free AI estimating, job marketplace, permit expediting, virtual contractor services, and a vetted contractor directory."
+          content="Get a free AI-powered home project quote in 60 seconds and connect with vetted, insured contractors. Referral-based network — no bidding wars, no spam calls."
         />
+        <link rel="canonical" href="https://globalcontractor.network/" />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://globalcontractor.network/" />
+        <meta property="og:site_name" content="Global Contractor Network" />
+        <meta property="og:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta
+          property="og:description"
+          content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
+        />
+        <meta property="og:image" content="https://globalcontractor.network/gcn-logo.png" />
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta
+          name="twitter:description"
+          content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
+        />
+        <meta name="twitter:image" content="https://globalcontractor.network/gcn-logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
