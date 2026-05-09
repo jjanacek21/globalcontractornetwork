@@ -10,6 +10,7 @@ import { AnimatePresence } from "framer-motion";
 
 // Social Coming Soon Page
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
+const ReferralsDashboard = lazy(() => import("./pages/ReferralsDashboard"));
 
 // CRM Pages
 import { CRMLayout } from "./components/crm/CRMLayout";
