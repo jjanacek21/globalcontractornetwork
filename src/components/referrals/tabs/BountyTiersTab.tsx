@@ -12,7 +12,7 @@ export function BountyTiersTab({ contractor }: { contractor: any }) {
   const qc = useQueryClient();
   const [activeTrade, setActiveTrade] = useState<string | null>(null);
 
-  const trades = useMemo(() => Array.from(new Set((tiers ?? []).map((t: any) => t.trade))), [tiers]);
+  const trades = useMemo<string[]>(() => Array.from(new Set((tiers ?? []).map((t: any) => t.trade as string))), [tiers]);
   const current = activeTrade ?? trades[0] ?? null;
   const visible = (tiers ?? []).filter((t: any) => t.trade === current);
 
