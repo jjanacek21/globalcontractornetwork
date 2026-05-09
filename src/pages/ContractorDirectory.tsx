@@ -143,7 +143,7 @@ export default function ContractorDirectory() {
     .filter(c => {
       const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
-      const matchesVerified = !verifiedOnly || c.is_verified;
+      const matchesVerified = !verifiedOnly || isVerifiedListing(c);
       const matchesLocation = selectedLocation === "all" || 
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(selectedLocation.toLowerCase())));
       return matchesSearch && matchesVerified && matchesLocation;
@@ -160,6 +160,9 @@ export default function ContractorDirectory() {
           return 0;
       }
     });
+
+  const verifiedContractors = filteredContractors.filter(isVerifiedListing);
+  const unverifiedContractors = filteredContractors.filter(c => !isVerifiedListing(c));
 
   const renderStars = (rating: number) => {
     const stars = [];
