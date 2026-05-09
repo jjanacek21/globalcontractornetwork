@@ -475,6 +475,7 @@ const GCNRoutes = () => (
 
           <Route path="/instant-quote" element={<HomeownerOnlyRoute><Suspense fallback={<div />}><InstantQuote /></Suspense></HomeownerOnlyRoute>} />
           <Route path="/instant-quote/:tradeSlug" element={<HomeownerOnlyRoute><Suspense fallback={<div />}><TradeWizard /></Suspense></HomeownerOnlyRoute>} />
+          <Route path="/schedule-consultation" element={<Suspense fallback={<div />}><ScheduleConsultation /></Suspense>} />
           <Route path="/homeowner/marketplace" element={
             <ProtectedRoute redirectTo="/network-login">
               <Suspense fallback={<div />}><HomeownerMarketplace /></Suspense>
