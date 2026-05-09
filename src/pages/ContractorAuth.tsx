@@ -156,11 +156,40 @@ export default function ContractorAuth() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="companyName">Company Name</Label>
+                    <Label className="mb-2 block">I am a…</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { v: "independent" as const, icon: Wrench, label: "Independent contractor", desc: "Solo or with a crew" },
+                        { v: "handyman" as const, icon: User, label: "Handyman", desc: "Repairs & small jobs" },
+                      ].map(opt => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setSignupData({ ...signupData, contractorType: opt.v })}
+                          className={`text-left p-3 rounded-lg border transition ${
+                            signupData.contractorType === opt.v
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <opt.icon className="h-4 w-4 mb-1 text-primary" />
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground flex items-start gap-1">
+                      <Building2 className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      Part of a company? Use the invitation link your admin emailed you, or <a className="underline ml-1" href="/register-company">register your company</a>.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="companyName">Business / Crew Name</Label>
                     <Input
                       id="companyName"
                       value={signupData.companyName}
                       onChange={(e) => setSignupData({ ...signupData, companyName: e.target.value })}
+                      placeholder="e.g. Smith Handyman Services"
                       required
                     />
                   </div>
