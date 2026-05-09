@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3, Ruler } from "lucide-react";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3, Ruler, AlertTriangle } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { ReviewSubmissionDialog } from "@/components/contractor-directory/ReviewSubmissionDialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ContractorProfile {
   id: string;
@@ -22,6 +23,9 @@ interface ContractorProfile {
   is_verified: boolean;
   average_rating: number;
   review_count: number;
+  contractor_type?: string;
+  verification_status?: string;
+  is_directory_eligible?: boolean;
 }
 
 const categoryIcons: Record<string, any> = {
@@ -113,17 +117,13 @@ export default function ContractorDirectory() {
 
   const loadContractors = async () => {
     setLoading(true);
-    
-    // Get contractors with directory_listing feature approved
+
+    // Load all contractor profiles. The directory shows BOTH verified pros
+    // (via feature access OR is_directory_eligible) AND unverified independents/handymen.
     let query = supabase
       .from("contractor_profiles")
-      .select(`
-        *,
-        contractor_feature_access!inner(feature_name, is_approved)
-      `)
-      .eq("contractor_feature_access.feature_name", "directory_listing")
-      .eq("contractor_feature_access.is_approved", true);
-    
+      .select("*");
+
     if (selectedCategory !== "all") {
       query = query.eq("category", selectedCategory);
     }
@@ -132,6 +132,12 @@ export default function ContractorDirectory() {
     setContractors((data as ContractorProfile[]) || []);
     setLoading(false);
   };
+
+  const isVerifiedListing = (c: ContractorProfile) =>
+    c.is_directory_eligible === true ||
+    c.verification_status === "approved" ||
+    c.verification_status === "verified" ||
+    c.is_verified === true;
 
   const filteredContractors = contractors
     .filter(c => {
