@@ -1,85 +1,55 @@
-# Animated, Visual Trade Wizards with AI Photo Quoting
+## Goal
 
-Transform the generic measurement step in `TradeWizard.tsx` into rich, animated, **variant-picker** experiences for every trade — and let users either answer guided questions or upload photos that an AI analyzes to draft the quote.
+Replace the home-page **"Get My Free Quote"** button with **"Schedule Consultation"** that opens a lead intake form. Submitting the form saves the lead to the database and pings your Telegram bot in real time.
 
-## What changes for the user
+## What gets built
 
-1. **Combined Windows + Doors wizard** (restored). Single flow handles both at once, like before.
-2. Every trade gets a **visual variant picker** instead of a plain number box:
-   - Animated SVG/3D illustration of each option
-   - Tap a card to select type → quantity stepper for each variant
-   - Optional size buttons where it matters (e.g. 36"x80" door, 6'x4' window)
-3. **"Skip the questions — use photos" toggle** on every wizard. Upload 1–6 pictures, AI analyzes condition/quantity/material and drafts the estimate plus a written scope summary.
-4. Address step stays first. Satellite mapping stays roofing-only.
+### 1. Home page button swap
+`src/pages/Home.tsx` (line 484) — change copy to "Schedule Consultation" and link to `/schedule-consultation`.
 
-## Visual design
+### 2. New page: `/schedule-consultation`
+Single-page intake form, emerald/green theme matching the site, with these sections:
 
-- New shared component `VariantPicker` (cards with `Card3D` tilt, hover glow, `framer-motion` scale-in, animated selection ring).
-- New `QuantityStepper` with +/– buttons, large readout, bounce animation.
-- New `SizeChips` row for size variants (small / standard / large or actual dims).
-- All trade cards use the existing emerald/forest palette + gold accents.
+- **Owner info** — full name, phone, email, best time to call (chips: Morning / Afternoon / Evening / Anytime)
+- **Property info** — address (existing `AddressAutocomplete` component), property type (Residential / Commercial), is this your primary residence (Yes/No)
+- **Project details** — services needed (multi-select chips: Roofing, Windows & Doors, Paint, Siding, Gutters, Stucco, Bathroom, Kitchen, Emergency, Other), short project description (textarea)
+- **Timeline** — when do you want to start (chips: ASAP / Within 30 days / 1–3 months / Just exploring)
+- **Payment method** — three radio cards: **Cash**, **Financing**, **Insurance Claim**
+  - If Insurance → optional carrier + claim # fields
+  - If Financing → "interested in financing options" toggle
+- **Consent checkbox** + Submit
 
-## Per-trade variant catalog (examples — full list lives in `tradeVariants.ts`)
+Validation via `react-hook-form` + `zod` (already in project). Trim, length caps, email regex, phone normalization.
 
-| Trade | Variants user picks (with icon/illustration) | Extra |
-|---|---|---|
-| Windows + Doors (combined) | Single Hung, Double Hung, Sliding, Casement, Picture, Impact-Rated · Entry Door, Sliding Glass, French, Garage, Storm | Size chips per item; impact y/n |
-| Doors only | Entry, Sliding Glass, French, Bifold, Garage, Storm, Interior | Size chip |
-| Siding | Vinyl, Hardie/Fiber Cement, Wood, Stucco-over | Wall sqft + stories |
-| Stucco | New, Re-stucco, Patch/Crack repair, Decorative | Wall sqft + stories |
-| Gutters | 5" K-style, 6" K-style, Half-round, Box, +Guards | LF + stories |
-| Soffit & Fascia | Aluminum, Vinyl, Wood, Combo | LF + stories |
-| Roofing | (untouched — keeps current roofing wizard) | — |
-| Pavers | Driveway, Patio, Pool deck, Walkway · Brick, Travertine, Concrete | Sqft |
-| Pressure Washing | Driveway, Roof soft-wash, House wash, Pool deck, Fence | Sqft |
-| Exterior Paint | Body+trim, Body only, Trim only, Doors+shutters | Sqft + stories |
-| EIFS Bands / Crown Molding | Profile size chips (4"/6"/8") | LF |
-| Drywall / Texture | Patch, Full wall, Ceiling, Knockdown / Orange peel / Smooth | Sqft |
-| Flooring | Tile, LVP, Hardwood, Carpet, Polished Concrete | Sqft |
-| Interior Paint | Walls, Ceiling, Trim, Cabinets | Rooms |
-| Cabinets | Refinish, Reface, New install, Custom | LF |
-| Plumbing | Faucet, Toilet, Water heater, Repipe, Drain | Count per fixture |
-| Electrical | Outlet, Switch, Fixture, Panel upgrade, EV charger | Count |
-| Bathrooms | Powder, Full, Master, Wet-room | Count + finish tier |
-| Kitchens | Refresh, Mid, Full gut | Count + finish tier |
-| Interior Renovation | Living, Bedroom, Office, Whole-home | Rooms + sqft |
-| Tree & Landscaping | Tree removal, Trimming, Sod, Mulch, Hedges | Count + lot sqft |
-| Window Cleaning | Interior+Exterior, Exterior only, Screens | Count + stories |
-| Emergency Services | Water mitigation, Mold, Tarp, Board-up, Fire | Affected sqft |
+### 3. Database — new `consultation_leads` table
+Columns: full_name, phone, email, best_time_to_call, property_address, property_lat/lng, property_type, is_primary_residence, services (text[]), project_description, timeline, payment_method, insurance_carrier, insurance_claim_number, financing_interest, status (default `'new'`), source (default `'Schedule Consultation'`), user_id (nullable), created_at.
 
-## AI Photo Quoting (new path)
+**RLS:**
+- Anyone (including anon) can `INSERT` — public lead form.
+- Only `super_admins` can `SELECT` / `UPDATE` / `DELETE` — admin-only review.
 
-A new "Quote from photos" toggle on the measurement step. When picked:
+### 4. Telegram notification
+On successful insert, the page calls `supabase.functions.invoke("telegram-lead-alert", { body: {...} })`. The existing edge function already formats and sends to your Telegram chat using `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (both already configured). Payload mapping:
 
-1. User uploads up to 6 photos (existing `iq-photos` bucket).
-2. Frontend calls **new edge function `iq-photo-quote`** with `trade_slug` + photo URLs.
-3. Edge function calls **Lovable AI Gateway** (`google/gemini-3-flash-preview` for vision) with a trade-specific system prompt to extract: detected materials, visible damage/condition, recommended scope items, estimated quantities, and a confidence score.
-4. Result feeds straight into the existing `iq-calculate-estimate` flow (so we still produce Good/Better/Best tiers) plus shows an AI scope card on the results screen.
+- `source: "Schedule Consultation"`
+- `name`, `phone`, `email`, `address`, `service` (joined services list), `urgency` (timeline)
+- `notes`: project description + payment method + insurance/financing details
 
-> Per project memory we use the **Lovable AI Gateway**, not direct Anthropic/OpenAI keys. No new secrets needed — `LOVABLE_API_KEY` is already provisioned. If you specifically want raw Anthropic/OpenAI keys instead, say the word and we'll wire them via `add_secret`.
+Insert happens **before** the Telegram call — if Telegram fails, the lead is still saved and the user still gets the success screen (soft toast only).
 
-## Technical scope
+### 5. Success state
+After submit, swap the form for a confirmation card: "Thanks! A consultant will reach out within 1 business day." with a button back to home.
 
-**New files**
-- `src/components/instant-quote/shared/VariantPicker.tsx` — animated card grid (Card3D + framer-motion).
-- `src/components/instant-quote/shared/QuantityStepper.tsx`
-- `src/components/instant-quote/shared/SizeChips.tsx`
-- `src/components/instant-quote/shared/PhotoQuotePanel.tsx` — upload + "analyze with AI" button.
-- `src/components/instant-quote/tradeVariants.ts` — single source of truth for per-trade variants/sizes/icons.
-- `supabase/functions/iq-photo-quote/index.ts` — vision call via Lovable AI Gateway, returns structured JSON via tool-calling.
+### 6. Routing
+Add `/schedule-consultation` to `src/App.tsx`, lazy-loaded inside `<Suspense>` per project rules.
 
-**Edited files**
-- `src/components/instant-quote/TradeWizard.tsx` — replace generic measurement card with `VariantPicker` + `QuantityStepper`; add "Quote from photos" toggle that swaps in `PhotoQuotePanel`. Combine windows+doors when slug is `windows` or `doors` (route both to the same combined view).
-- `src/components/instant-quote/InstantQuoteWizard.tsx` (legacy 5-trade path) — keep current `WindowsWizardSteps` import as the combined entry; remove separate doors entry if any.
-- `src/pages/InstantQuote.tsx` — when slug is `doors`, redirect/route to the combined windows+doors wizard.
-- `supabase/functions/iq-calculate-estimate/index.ts` — accept new `selected_variants` array `[{type, qty, size?}]` and sum quantity by tier unit (already unit-aware from last change).
+## Out of scope
+- Date/time appointment slot picker (just a "when to start" chip — say the word and I'll add a calendar picker later).
+- Admin UI table to browse leads (the data lands in `consultation_leads` ready to wire up).
+- No changes to the other "Get Quote" service-card buttons.
 
-**Out of scope**
-- Roofing wizard (keeps satellite + current flow).
-- Lead-capture/Telegram piece (already done).
-- DB schema changes (variants stored inside existing `answers` JSONB on `iq_quote_requests`).
-
-## Open questions before building
-
-1. For the AI photo path — confirm we use **Lovable AI Gateway** (free, already wired) vs. supplying your own Anthropic/OpenAI keys?
-2. Should the "Quote from photos" path **skip the variant picker entirely**, or still ask 2-3 short follow-up questions after AI analysis to lock in the quote?
+## Files touched
+- `src/pages/Home.tsx` — button copy + route
+- `src/pages/ScheduleConsultation.tsx` — **new**
+- `src/App.tsx` — new route
+- New migration: `consultation_leads` table + RLS policies

@@ -1280,6 +1280,81 @@ export type Database = {
           },
         ]
       }
+      consultation_leads: {
+        Row: {
+          best_time_to_call: string | null
+          created_at: string
+          email: string
+          financing_interest: boolean | null
+          full_name: string
+          id: string
+          insurance_carrier: string | null
+          insurance_claim_number: string | null
+          is_primary_residence: boolean | null
+          payment_method: string | null
+          phone: string
+          project_description: string | null
+          property_address: string
+          property_lat: number | null
+          property_lng: number | null
+          property_type: string | null
+          services: string[]
+          source: string
+          status: string
+          timeline: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          best_time_to_call?: string | null
+          created_at?: string
+          email: string
+          financing_interest?: boolean | null
+          full_name: string
+          id?: string
+          insurance_carrier?: string | null
+          insurance_claim_number?: string | null
+          is_primary_residence?: boolean | null
+          payment_method?: string | null
+          phone: string
+          project_description?: string | null
+          property_address: string
+          property_lat?: number | null
+          property_lng?: number | null
+          property_type?: string | null
+          services?: string[]
+          source?: string
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          best_time_to_call?: string | null
+          created_at?: string
+          email?: string
+          financing_interest?: boolean | null
+          full_name?: string
+          id?: string
+          insurance_carrier?: string | null
+          insurance_claim_number?: string | null
+          is_primary_residence?: boolean | null
+          payment_method?: string | null
+          phone?: string
+          project_description?: string | null
+          property_address?: string
+          property_lat?: number | null
+          property_lng?: number | null
+          property_type?: string | null
+          services?: string[]
+          source?: string
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contact_communications: {
         Row: {
           comm_type: string
