@@ -65,6 +65,44 @@ export type Database = {
           },
         ]
       }
+      activity_log: {
+        Row: {
+          color_token: Database["public"]["Enums"]["activity_color_token"]
+          contractor_id: string
+          created_at: string
+          event_type: string
+          icon_token: Database["public"]["Enums"]["activity_icon_token"]
+          id: string
+          message_html: string
+        }
+        Insert: {
+          color_token?: Database["public"]["Enums"]["activity_color_token"]
+          contractor_id: string
+          created_at?: string
+          event_type: string
+          icon_token?: Database["public"]["Enums"]["activity_icon_token"]
+          id?: string
+          message_html: string
+        }
+        Update: {
+          color_token?: Database["public"]["Enums"]["activity_color_token"]
+          contractor_id?: string
+          created_at?: string
+          event_type?: string
+          icon_token?: Database["public"]["Enums"]["activity_icon_token"]
+          id?: string
+          message_html?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_notifications: {
         Row: {
           company_id: string | null
@@ -756,6 +794,54 @@ export type Database = {
             columns: ["badge_reward_id"]
             isOneToOne: false
             referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_pool: {
+        Row: {
+          accepted_at: string | null
+          churned_at: string | null
+          customer_id: string
+          id: string
+          introducing_contractor_id: string
+          invitation_sent_at: string | null
+          invitation_status: Database["public"]["Enums"]["client_invitation_status"]
+          last_activity_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          churned_at?: string | null
+          customer_id: string
+          id?: string
+          introducing_contractor_id: string
+          invitation_sent_at?: string | null
+          invitation_status?: Database["public"]["Enums"]["client_invitation_status"]
+          last_activity_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          churned_at?: string | null
+          customer_id?: string
+          id?: string
+          introducing_contractor_id?: string
+          invitation_sent_at?: string | null
+          invitation_status?: Database["public"]["Enums"]["client_invitation_status"]
+          last_activity_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_pool_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "gcn_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_pool_introducing_contractor_id_fkey"
+            columns: ["introducing_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2332,6 +2418,56 @@ export type Database = {
           },
         ]
       }
+      contractor_scores: {
+        Row: {
+          computed_at: string
+          contractor_id: string
+          id: string
+          is_provisional: boolean
+          ontime_nps: number
+          quality: number
+          refs_completed: number
+          refs_given: number
+          residual_rate: number
+          score: number
+          tier: Database["public"]["Enums"]["score_tier"]
+        }
+        Insert: {
+          computed_at?: string
+          contractor_id: string
+          id?: string
+          is_provisional?: boolean
+          ontime_nps?: number
+          quality?: number
+          refs_completed?: number
+          refs_given?: number
+          residual_rate?: number
+          score?: number
+          tier?: Database["public"]["Enums"]["score_tier"]
+        }
+        Update: {
+          computed_at?: string
+          contractor_id?: string
+          id?: string
+          is_provisional?: boolean
+          ontime_nps?: number
+          quality?: number
+          refs_completed?: number
+          refs_given?: number
+          residual_rate?: number
+          score?: number
+          tier?: Database["public"]["Enums"]["score_tier"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_scores_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_enrollments: {
         Row: {
           completed_at: string | null
@@ -3842,6 +3978,84 @@ export type Database = {
             columns: ["crawl_job_id"]
             isOneToOne: false
             referencedRelation: "firecrawl_crawl_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gcn_customers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          phone: string | null
+          property_address: Json | null
+          property_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          property_address?: Json | null
+          property_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          property_address?: Json | null
+          property_type?: string | null
+        }
+        Relationships: []
+      }
+      gcn_reviews: {
+        Row: {
+          comment: string | null
+          contractor_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          nps: number | null
+          on_time: boolean | null
+          stars: number
+        }
+        Insert: {
+          comment?: string | null
+          contractor_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          nps?: number | null
+          on_time?: boolean | null
+          stars: number
+        }
+        Update: {
+          comment?: string | null
+          contractor_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          nps?: number | null
+          on_time?: boolean | null
+          stars?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gcn_reviews_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gcn_reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "gcn_customers"
             referencedColumns: ["id"]
           },
         ]
@@ -6044,6 +6258,79 @@ export type Database = {
             columns: ["author_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          contractor_id: string
+          created_at: string
+          description: string | null
+          direction: Database["public"]["Enums"]["payout_direction"]
+          gcn_fee: number
+          gross_amount: number
+          id: string
+          method: string | null
+          net_amount: number
+          referral_id: string | null
+          residual_id: string | null
+          settled_at: string | null
+          status: Database["public"]["Enums"]["payout_status"]
+          type: Database["public"]["Enums"]["payout_type"]
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string
+          description?: string | null
+          direction: Database["public"]["Enums"]["payout_direction"]
+          gcn_fee?: number
+          gross_amount?: number
+          id?: string
+          method?: string | null
+          net_amount?: number
+          referral_id?: string | null
+          residual_id?: string | null
+          settled_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          type: Database["public"]["Enums"]["payout_type"]
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string
+          description?: string | null
+          direction?: Database["public"]["Enums"]["payout_direction"]
+          gcn_fee?: number
+          gross_amount?: number
+          id?: string
+          method?: string | null
+          net_amount?: number
+          referral_id?: string | null
+          residual_id?: string | null
+          settled_at?: string | null
+          status?: Database["public"]["Enums"]["payout_status"]
+          type?: Database["public"]["Enums"]["payout_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_residual_id_fkey"
+            columns: ["residual_id"]
+            isOneToOne: false
+            referencedRelation: "residuals"
             referencedColumns: ["id"]
           },
         ]
@@ -9437,6 +9724,200 @@ export type Database = {
           },
         ]
       }
+      referral_partner_tiers: {
+        Row: {
+          bounty_amount: number
+          bounty_type: Database["public"]["Enums"]["bounty_type"]
+          contractor_id: string
+          created_at: string
+          id: string
+          max_contract_value: number | null
+          min_contract_value: number
+          status: Database["public"]["Enums"]["tier_status"]
+          tier_name: string
+          trade: string
+          updated_at: string
+        }
+        Insert: {
+          bounty_amount?: number
+          bounty_type?: Database["public"]["Enums"]["bounty_type"]
+          contractor_id: string
+          created_at?: string
+          id?: string
+          max_contract_value?: number | null
+          min_contract_value?: number
+          status?: Database["public"]["Enums"]["tier_status"]
+          tier_name: string
+          trade: string
+          updated_at?: string
+        }
+        Update: {
+          bounty_amount?: number
+          bounty_type?: Database["public"]["Enums"]["bounty_type"]
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          max_contract_value?: number | null
+          min_contract_value?: number
+          status?: Database["public"]["Enums"]["tier_status"]
+          tier_name?: string
+          trade?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_partner_tiers_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          bounty_amount: number | null
+          contract_value: number | null
+          created_at: string
+          customer_id: string
+          escrow_release_at: string | null
+          gcn_share: number | null
+          id: string
+          paid_out_at: string | null
+          receiving_contractor_id: string
+          referrer_share: number | null
+          referring_contractor_id: string | null
+          service_description: string | null
+          status: Database["public"]["Enums"]["referral_status"]
+          trade: string
+        }
+        Insert: {
+          bounty_amount?: number | null
+          contract_value?: number | null
+          created_at?: string
+          customer_id: string
+          escrow_release_at?: string | null
+          gcn_share?: number | null
+          id?: string
+          paid_out_at?: string | null
+          receiving_contractor_id: string
+          referrer_share?: number | null
+          referring_contractor_id?: string | null
+          service_description?: string | null
+          status?: Database["public"]["Enums"]["referral_status"]
+          trade: string
+        }
+        Update: {
+          bounty_amount?: number | null
+          contract_value?: number | null
+          created_at?: string
+          customer_id?: string
+          escrow_release_at?: string | null
+          gcn_share?: number | null
+          id?: string
+          paid_out_at?: string | null
+          receiving_contractor_id?: string
+          referrer_share?: number | null
+          referring_contractor_id?: string | null
+          service_description?: string | null
+          status?: Database["public"]["Enums"]["referral_status"]
+          trade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "gcn_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_receiving_contractor_id_fkey"
+            columns: ["receiving_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referring_contractor_id_fkey"
+            columns: ["referring_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      residuals: {
+        Row: {
+          contract_value: number | null
+          created_at: string
+          customer_id: string
+          id: string
+          introducing_contractor_id: string
+          paid_at: string | null
+          residual_amount: number | null
+          residual_rate: number | null
+          status: string | null
+          triggering_contractor_id: string | null
+          triggering_referral_id: string | null
+        }
+        Insert: {
+          contract_value?: number | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          introducing_contractor_id: string
+          paid_at?: string | null
+          residual_amount?: number | null
+          residual_rate?: number | null
+          status?: string | null
+          triggering_contractor_id?: string | null
+          triggering_referral_id?: string | null
+        }
+        Update: {
+          contract_value?: number | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          introducing_contractor_id?: string
+          paid_at?: string | null
+          residual_amount?: number | null
+          residual_rate?: number | null
+          status?: string | null
+          triggering_contractor_id?: string | null
+          triggering_referral_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "residuals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "gcn_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residuals_introducing_contractor_id_fkey"
+            columns: ["introducing_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residuals_triggering_contractor_id_fkey"
+            columns: ["triggering_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "residuals_triggering_referral_id_fkey"
+            columns: ["triggering_referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reward_redemptions: {
         Row: {
           expires_at: string | null
@@ -12106,7 +12587,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      contractor_scores_public: {
+        Row: {
+          company_name: string | null
+          contractor_id: string | null
+          residual_rate: number | null
+          score: number | null
+          service_area: string[] | null
+          tier: Database["public"]["Enums"]["score_tier"] | null
+          trade: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_scores_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_company_tier: { Args: { referrals: number }; Returns: string }
@@ -12145,7 +12645,16 @@ export type Database = {
       normalize_address: { Args: { addr: string }; Returns: string }
     }
     Enums: {
+      activity_color_token: "green" | "gold" | "amber"
+      activity_icon_token:
+        | "check"
+        | "dollar"
+        | "star"
+        | "arrow"
+        | "alert"
+        | "plus"
       app_role: "admin" | "sales_rep" | "teacher" | "student" | "contractor"
+      bounty_type: "flat" | "percent"
       canvassing_disposition:
         | "not_home"
         | "not_interested"
@@ -12153,6 +12662,7 @@ export type Database = {
         | "appointment_set"
         | "sold"
         | "bad_data"
+      client_invitation_status: "pending" | "accepted" | "declined"
       company_role:
         | "company_admin"
         | "manager"
@@ -12217,6 +12727,14 @@ export type Database = {
         | "closed_lost"
         | "no_deal"
       lead_type: "retail" | "insurance"
+      payout_direction: "credit" | "debit"
+      payout_status:
+        | "pending"
+        | "in_escrow"
+        | "available"
+        | "withdrawn"
+        | "disputed"
+      payout_type: "outbound_bounty" | "residual" | "gcn_fee" | "withdrawal"
       permit_payment_status:
         | "unpaid"
         | "pending"
@@ -12256,6 +12774,7 @@ export type Database = {
         | "in_production"
         | "complete"
       property_type: "residential" | "commercial" | "multifamily" | "hoa"
+      referral_status: "in_progress" | "won" | "lost" | "expired"
       roof_type:
         | "shingle"
         | "tile"
@@ -12263,6 +12782,8 @@ export type Database = {
         | "flat"
         | "coating_candidate"
         | "other"
+      score_tier: "bronze" | "silver" | "gold" | "platinum"
+      tier_status: "active" | "paused"
       transaction_type:
         | "purchase"
         | "reward"
@@ -12396,7 +12917,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_color_token: ["green", "gold", "amber"],
+      activity_icon_token: [
+        "check",
+        "dollar",
+        "star",
+        "arrow",
+        "alert",
+        "plus",
+      ],
       app_role: ["admin", "sales_rep", "teacher", "student", "contractor"],
+      bounty_type: ["flat", "percent"],
       canvassing_disposition: [
         "not_home",
         "not_interested",
@@ -12405,6 +12936,7 @@ export const Constants = {
         "sold",
         "bad_data",
       ],
+      client_invitation_status: ["pending", "accepted", "declined"],
       company_role: [
         "company_admin",
         "manager",
@@ -12476,6 +13008,15 @@ export const Constants = {
         "no_deal",
       ],
       lead_type: ["retail", "insurance"],
+      payout_direction: ["credit", "debit"],
+      payout_status: [
+        "pending",
+        "in_escrow",
+        "available",
+        "withdrawn",
+        "disputed",
+      ],
+      payout_type: ["outbound_bounty", "residual", "gcn_fee", "withdrawal"],
       permit_payment_status: [
         "unpaid",
         "pending",
@@ -12519,6 +13060,7 @@ export const Constants = {
         "complete",
       ],
       property_type: ["residential", "commercial", "multifamily", "hoa"],
+      referral_status: ["in_progress", "won", "lost", "expired"],
       roof_type: [
         "shingle",
         "tile",
@@ -12527,6 +13069,8 @@ export const Constants = {
         "coating_candidate",
         "other",
       ],
+      score_tier: ["bronze", "silver", "gold", "platinum"],
+      tier_status: ["active", "paused"],
       transaction_type: [
         "purchase",
         "reward",

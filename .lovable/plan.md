@@ -1,131 +1,121 @@
 ## Goal
 
-Build out the contractor lifecycle — company auto-approval, team invitations, vetting for independent crews/handymen, a public directory that shows both verified and unverified profiles (with a safety disclaimer), and admin tools to manage everything from `/admin/dashboard`.
+Adapt the uploaded GCN Referral Dashboard spec to **this** project. Add a new authenticated route `/dashboard/referrals` with 7 tabs (Overview, Referral Partners, My Bounty Tiers, My Clients, Sent, Received, Payouts), backed by 8 new Supabase tables. Brand follows the cream/green/gold spec exactly. Purely additive — no changes to existing auth, layout, tables, or the existing `/contractor/referrals` page.
 
 ---
 
-## 1. Company registration → auto-approve + invite team
+## 1. Database — one migration, 8 new tables (none exist yet)
 
-**Auto-approve companies on registration**
-- In `CompanyRegistration` submission, set `companies.verification_status = 'verified'` immediately (instead of `pending`) and set `verified_at = now()`.
-- Auto-insert the creator into `company_members` with `role = 'company_admin'`.
-- Update `CompanyAdminDashboard` verification banner to only show when `verification_status != 'verified'` (already does).
+All tables RLS-enabled. The contractor identity is resolved via existing `contractor_profiles.user_id = auth.uid()` (already used app-wide). We'll reuse the existing `get_contractor_profile_id()` SECURITY DEFINER function.
 
-**New: `company_invitations` table** (no table exists today)
-- Fields: `id`, `company_id`, `email`, `role` (company_role enum), `team_id` (nullable), `job_title`, `token` (uuid, unique), `status` (`pending|accepted|expired|revoked`), `invited_by`, `expires_at` (default `now() + 14 days`), `created_at`, `accepted_at`, `accepted_user_id`.
-- RLS: company_admins of the matching company + super_admins can SELECT/INSERT/UPDATE/DELETE; public SELECT only by `token` (used in accept flow via edge function — see below).
-- Index on `token`, `email`, `company_id`.
+- **`gcn_customers`** — `id`, `email` citext unique, `name`, `phone`, `property_address` jsonb, `property_type`, `created_at`. RLS: any authenticated contractor can SELECT/INSERT (needed for the modals); UPDATE/DELETE super_admin only.
+- **`gcn_reviews`** — `id`, `contractor_id` (→ contractor_profiles), `customer_id`, `stars` (1–5 check), `comment`, `on_time` bool, `nps` int, `created_at`. RLS: contractor reads own; super_admin all.
+- **`referral_partner_tiers`** — `id`, `contractor_id`, `trade`, `tier_name`, `min_contract_value`, `max_contract_value`, `bounty_type` enum('flat','percent'), `bounty_amount`, `status` enum('active','paused'). RLS: owner full CRUD; everyone authenticated can SELECT active rows (needed for the directory cards).
+- **`referrals`** — `id`, `referring_contractor_id` (nullable), `receiving_contractor_id`, `customer_id`, `trade`, `service_description`, `contract_value`, `bounty_amount`, `referrer_share`, `gcn_share`, `status` enum('in_progress','won','lost','expired') default 'in_progress', `escrow_release_at`, `paid_out_at`, `created_at`. RLS: SELECT if I am referrer or receiver, or super_admin. INSERT if I am referrer. UPDATE: super_admin only (Mark Won is Phase 3a).
+- **`client_pool`** — `id`, `customer_id` unique, `introducing_contractor_id`, `invitation_status` enum('pending','accepted','declined') default 'pending', `invitation_sent_at`, `accepted_at`, `last_activity_at`, `churned_at`. RLS: introducing contractor full CRUD; super_admin all.
+- **`residuals`** — `id`, `introducing_contractor_id`, `customer_id`, `triggering_contractor_id`, `triggering_referral_id`, `contract_value`, `residual_rate`, `residual_amount`, `status`, `paid_at`, `created_at`. RLS: introducing contractor SELECT; super_admin all writes.
+- **`payouts`** — `id`, `contractor_id`, `type` enum('outbound_bounty','residual','gcn_fee','withdrawal'), `referral_id`, `residual_id`, `gross_amount`, `gcn_fee`, `net_amount`, `direction` enum('credit','debit'), `status` enum('pending','in_escrow','available','withdrawn','disputed'), `method`, `description`, `created_at`, `settled_at`. RLS: contractor SELECT own; super_admin all.
+- **`contractor_scores`** — `id`, `contractor_id`, `score` (0–100), `tier` enum('bronze','silver','gold','platinum'), `residual_rate`, `quality`, `refs_given`, `refs_completed`, `ontime_nps`, `is_provisional`, `computed_at`. RLS: SELECT to anyone authenticated (used in directory); writes super_admin only.
+- **`activity_log`** — `id`, `contractor_id`, `event_type`, `icon_token` enum, `color_token` enum, `message_html`, `created_at`. RLS: contractor SELECT own; INSERT via triggers/edge fn (super_admin).
 
-**Invite flow (replace stub in `UsersSettings.tsx` "Invitation system coming soon")**
-- Company admin enters email + role + optional team/job_title → insert `company_invitations` row.
-- New edge function `send-company-invite`: sends Resend email with link `/contractor/auth?invite=<token>`.
-- `ContractorAuth` reads `?invite=<token>` query param. On successful signup/login:
-  - New edge function `accept-company-invite` validates token (not expired/accepted), inserts `company_members(user_id, company_id, role, team_id, job_title)`, marks invitation `accepted`, and stamps `contractor_profiles.company_id` if a profile exists (or pre-fills it on registration).
-- Token never trusted client-side; all writes happen in the edge function with service role.
+**Helper view** `contractor_scores_public` — latest score row per contractor with company name + trade joined from `contractor_profiles`. SECURITY INVOKER, accessible to authenticated.
 
----
+**Indexes** on every FK and `(contractor_id, created_at DESC)` for the activity feed and payout history.
 
-## 2. Contractor registration: types, vetting, directory eligibility
-
-Three explicit `contractor_type` values already supported in code: `company_admin`, `independent`, `handyman` (we'll formalize).
-
-**`ContractorAuth` updates**
-- Add a "Who are you?" step:
-  1. **Company team member** (joined via invite or selecting an existing verified company)
-  2. **Independent contractor with crew** (vetting required)
-  3. **Handyman / solo** (vetting required)
-- Independent + handyman flows create `contractor_profiles` with `verification_status = 'pending'`, `is_directory_eligible = false`, `social_access_approved = false`, but **can immediately**:
-  - Access Job Marketplace (`/job-board`) — confirm `JobBoardAccessGuard` allows pending contractors (right now it gates on a separate flag — we'll widen it to "any contractor profile exists").
-  - Build their profile (gallery, references, services).
-  - Access door-to-door tools.
-- They are blocked from directory listing visibility (controlled by `is_directory_eligible`) until approved.
+**No demo seeding** — empty states are designed for; user can add seed data later if desired.
 
 ---
 
-## 3. Public directory: show verified + unverified, with disclaimer
+## 2. Routing & shell integration
 
-**`ContractorDirectory` page**
-- Two sections (or filter chips): **Verified Pros** (badge: green check) and **Unverified Crews & Handymen** (badge: amber).
-- Show a persistent disclaimer card above unverified results:
-  > "These contractors have not been fully vetted. We recommend using them only for repairs, handyman work, or alongside a project consultant."
-- Property owners can open any unverified profile. Profile detail page shows the same disclaimer banner inline.
-- Add filter: `contractor_type` (Company / Independent / Handyman) and `verification_status`.
-
-**Directory access request**
-- New table `directory_access_requests`: `id`, `contractor_profile_id`, `request_type` (`directory` | `referral` | `social`), `status` (`pending|approved|denied`), `notes`, `reviewed_by`, `reviewed_at`, `created_at`. RLS: contractor sees own; super_admins see all.
-- Add "Request directory listing" / "Request referral access" buttons on contractor dashboard that insert into this table.
+- Add lazy route `/dashboard/referrals` in `src/App.tsx`, wrapped in `<Suspense>` and the existing `<ProtectedRoute>` (matches Core memory rule).
+- Use the existing `AppLayout` shell so the global header + sidebar render normally. Apply the cream background + 48px grid pattern only inside the dashboard's main container.
+- Add a "Referrals" sidebar link in `AppSidebar` pointing to `/dashboard/referrals`. Leave the legacy `/contractor/referrals` page untouched.
+- Include the persistent "Return to Dashboard" link per Core memory rule.
 
 ---
 
-## 4. Super Admin Dashboard (`/admin/dashboard`) enhancements
+## 3. Brand layer
 
-Existing tabs: Pending Signups, Leads, Contractors, Companies, Property Owners, etc.
-
-**New tab: "Access Requests"** (between Pending Signups and Contractors)
-- Shows rows from `directory_access_requests` with contractor info, request type, age, action buttons.
-- Approve sets `contractor_profiles.verification_status = 'approved'`, `is_directory_eligible = true` (and/or `social_access_approved = true` for social/referral requests).
-
-**Contractors tab — edit + assign**
-- `ContractorsTable`: add an Edit row action that opens `ContractorDialog` in `edit` mode (already exists; ensure it covers all fields).
-- New "Assign" sub-action opens a dialog to set `company_id` + `team_id` (dropdowns of all companies / teams in that company). Writes to both `contractor_profiles` and `company_members`.
-- Bulk filter by `contractor_type`, `verification_status`.
-
-**Companies tab**
-- Add Edit (opens existing `CompanyDialog`/`CompanyManagementDialog` in edit mode).
-- Quick toggle for `verification_status` (since we auto-approve, admins still need to be able to suspend).
-- "Manage team" button → opens a panel that lists `company_members` for that company with role/team editors and an "Invite member" button (reuses the same invitation flow).
-
-**Property Owners tab**
-- Already exists (`PropertyOwnersTable`). Add Edit dialog: name, email, phone, primary address, notes.
-
-**Teams**
-- Add a "Teams" sub-section under each company (uses existing `TeamsTable` + `TeamDialog`) so admins can create/edit teams and assign members.
+- Add the cream/green/gold tokens to `src/index.css` as CSS vars **scoped to `.referrals-dashboard`** so we don't override the global forest-green theme. Tailwind utility classes will reference them via arbitrary values.
+- Load `Fraunces` (serif) and `Inter` (body) via Google Fonts in `index.html`. Use Tailwind `font-serif` / `font-sans` only inside the dashboard scope.
+- Build reusable styled primitives in `src/components/referrals/ui/`:
+  - `GreenButton3D`, `GoldText3D`, `TierBadge` (bronze/silver/gold/platinum), `Pill` (green/gold/amber/rose), `BrandCard`, `KPICard` (with floating gold icon-chip + 3s float animation, staggered delay prop).
+  - Skeleton variants matching cream/green palette.
 
 ---
 
-## 5. Job marketplace + tools access for pending contractors
+## 4. Tabs (all 7)
 
-- `JobBoardAccessGuard`: change `hasAccess` rule to "user has a `contractor_profiles` row" (regardless of verification) so independents and handymen can browse leads while waiting for vetting.
-- Add a small amber banner inside the job board when `verification_status != 'approved'`:
-  > "Your account is pending verification. You can browse and respond to jobs, but homeowners will see an 'unverified' badge until approved."
+Page composition: `src/pages/ReferralsDashboard.tsx` with tab state, hero strip, and tab nav (sticky, horizontal scroll on mobile). Each tab is a component in `src/components/referrals/tabs/`.
+
+- **Tab 1 Overview** (`OverviewTab.tsx`) — 4 KPI cards (Lifetime Earned, Pending Payouts, Client Pool, Contractor Score), Score breakdown card with SVG circular gauge + 4 progress bars + "Next tier" footer chip, Earnings chart (recharts stacked BarChart, 6 months, Bonuses + Residuals), Recent Activity (latest 10 from `activity_log`, render `message_html` via `dangerouslySetInnerHTML` since it's pre-sanitized server-side per spec), Top Earning Partners (top 5).
+- **Tab 2 Referral Partners** (`PartnersTab.tsx`) — header card with search + trade dropdown + "+ Refer Customer" CTA. Card grid from `contractor_profiles WHERE id != me AND is_directory_eligible = true` joined to `contractor_scores_public` and `referral_partner_tiers`. Card shows company, trade, city, score, tier badge, 3 bounty rows, two CTAs.
+- **Tab 3 My Bounty Tiers** (`BountyTiersTab.tsx`) — trade tabs from distinct trades, editable tiers table with inline edit + Active/Paused toggle + ⋯ menu, "How Bounty Splits Work" 3-column info card. Empty state copy as specified.
+- **Tab 4 My Clients** (`MyClientsTab.tsx`) — header with "Your Rate: X%" gold text + "+ Add Client". Reference card showing 4 residual tiers with current tier highlighted. Clients table joining `client_pool` + `gcn_customers` + aggregates from `referrals` and `residuals`.
+- **Tab 5 Sent** (`SentTab.tsx` — scaffold) — 3 stat tiles + table.
+- **Tab 6 Received** (`ReceivedTab.tsx` — scaffold) — 3 stat tiles + table; "Mark Won" button disabled with tooltip "Coming soon — backend logic in progress."
+- **Tab 7 Payouts** (`PayoutsTab.tsx`) — 3 KPI cards (Available, In Escrow, GCN's Lifetime Cut). "Withdraw to Bank" button → toast "Withdrawals will be enabled when ACH integration ships." Payout History table sorted desc with prettified type labels.
 
 ---
 
-## 6. Out of scope (this plan)
+## 5. Modals
 
-- Stripe billing changes for contractor subscriptions.
-- Email template redesign beyond the new invite email.
-- Mobile-app-specific changes.
+- **`ReferCustomerModal.tsx`** — fields per spec, live estimate panel (compute from selected partner's tier schedule). Submit: insert `gcn_customers` (ON CONFLICT email DO NOTHING via upsert), then insert `referrals` with `status='in_progress'`. Toast + close + invalidate Tab 5 / Tab 1 queries.
+- **`AddClientModal.tsx`** — name/email/phone/address, warning chip about acceptance. Submit: upsert `gcn_customers`, insert `client_pool` row pending. Stub the email log (no real send — note for follow-up Phase). Toast success.
+
+Both use react-hook-form + zod, match brand styling.
+
+---
+
+## 6. Data layer
+
+- One hook per tab in `src/hooks/referrals/`: `useReferralOverview`, `usePartners`, `useBountyTiers`, `useClients`, `useSentReferrals`, `useReceivedReferrals`, `usePayouts`. All use TanStack Query (already in project) keyed by current `contractor_profile_id`.
+- A shared `useCurrentContractor()` hook resolves the row via `contractor_profiles.user_id = auth.uid()`.
+- Apply the 1000-row pagination bypass pattern (Core memory) on `payouts` history and `activity_log` if counts exceed 1000.
+
+---
+
+## 7. Out of scope (explicit)
+
+- No "Mark Won" edge function (Phase 3a). Button stays disabled.
+- No real ACH withdrawal. Button toasts only.
+- No `/admin/referrals` super-admin route (Phase 4b).
+- No email actually sent for Add Client invite — logged stub only.
+- No demo seed data; tabs render empty states cleanly until rows exist.
+- No edits to existing `/contractor/referrals` page or any other table.
+
+---
+
+## 8. Acceptance checklist
+
+- `/dashboard/referrals` accessible after contractor login, sidebar link visible.
+- All 7 tabs render against live Supabase data with skeletons + empty states.
+- Cream/green/gold brand applied only inside the dashboard, no global theme regressions.
+- Refer Customer modal creates a `referrals` row visible in Tab 5.
+- Add Client modal creates a `client_pool` row visible in Tab 4.
+- Withdraw + Mark Won both disabled with the spec'd messages.
+- Mobile: tabs scroll horizontally, KPIs collapse to 2 columns at <640px.
+- Existing app, auth, layout, and 49 prior tables unmodified.
 
 ---
 
 ## Technical details
 
-**New tables (one migration)**
-- `company_invitations` (see fields above) + RLS using `is_company_or_super_admin(company_id)`.
-- `directory_access_requests` + RLS.
+**New files**
+- `supabase/migrations/<timestamp>_referral_dashboard_init.sql` (8 tables + enums + view + RLS + indexes)
+- `src/pages/ReferralsDashboard.tsx`
+- `src/components/referrals/ui/{GreenButton3D,GoldText3D,TierBadge,Pill,BrandCard,KPICard,BrandSkeleton}.tsx`
+- `src/components/referrals/tabs/{Overview,Partners,BountyTiers,MyClients,Sent,Received,Payouts}Tab.tsx`
+- `src/components/referrals/modals/{ReferCustomerModal,AddClientModal}.tsx`
+- `src/components/referrals/charts/EarningsBarChart.tsx`
+- `src/components/referrals/charts/ScoreGauge.tsx`
+- `src/hooks/referrals/{useCurrentContractor,useReferralOverview,usePartners,useBountyTiers,useClients,useSentReferrals,useReceivedReferrals,usePayouts}.ts`
 
-**New edge functions**
-- `send-company-invite` — Resend email, validates caller is company_admin via JWT.
-- `accept-company-invite` — service-role insert into `company_members`, marks token consumed.
+**Edited files**
+- `src/App.tsx` — add lazy route under `<ProtectedRoute>` + `<Suspense>`.
+- `src/components/layout/AppSidebar.tsx` — add "Referrals" nav link.
+- `src/index.css` — add `.referrals-dashboard` scoped tokens + grid background utility.
+- `index.html` — add Fraunces + Inter Google Font links.
 
-**Files to add**
-- `supabase/functions/send-company-invite/index.ts`
-- `supabase/functions/accept-company-invite/index.ts`
-- `src/components/admin/AccessRequestsTab.tsx`
-- `src/components/admin/AssignContractorDialog.tsx`
-- `src/components/admin/PropertyOwnerEditDialog.tsx`
-- `src/components/contractor-directory/UnverifiedDisclaimer.tsx`
-
-**Files to edit**
-- `src/pages/CompanyRegistration.tsx` — auto-approve + auto-create company_admin member.
-- `src/components/settings/UsersSettings.tsx` — wire real invitation flow.
-- `src/pages/ContractorAuth.tsx` — type selector + invite token handling.
-- `src/pages/ContractorDirectory.tsx` — verified/unverified sections + disclaimer.
-- `src/components/job-board/JobBoardAccessGuard.tsx` — relax to any contractor.
-- `src/pages/SuperAdminDashboard.tsx` — add Access Requests tab.
-- `src/components/admin/ContractorsTable.tsx` — Edit + Assign actions.
-- `src/components/admin/CompaniesTable.tsx` — Edit + Manage Team.
-- `src/components/admin/PropertyOwnersTable.tsx` — Edit dialog.
-
-Approve to proceed and I'll build this in stages (DB migration → admin UI → contractor flows → directory polish).
+Approve to proceed and I'll execute in order: migration → brand primitives → routing → Overview → Partners + Refer modal → Bounty Tiers → My Clients + Add Client modal → Sent/Received scaffolds → Payouts.
