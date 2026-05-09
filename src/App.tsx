@@ -594,6 +594,13 @@ const GCNRoutes = () => (
               <ContractorReferralsPage />
             </ProtectedRoute>
           } />
+          <Route path="/dashboard/referrals" element={
+            <ProtectedRoute redirectTo="/network-login">
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+                <ReferralsDashboard />
+              </Suspense>
+            </ProtectedRoute>
+          } />
           <Route path="/job-board" element={
             <ProtectedRoute redirectTo="/network-login">
               <JobBoard />
