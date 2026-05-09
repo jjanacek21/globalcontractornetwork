@@ -7,19 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Hammer } from "lucide-react";
+import { Hammer, Building2, User, Wrench } from "lucide-react";
+
+type ContractorKind = "independent" | "handyman";
 
 export default function ContractorAuth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [signupData, setSignupData] = useState({ 
-    email: "", 
-    password: "", 
-    firstName: "", 
+  const [signupData, setSignupData] = useState({
+    email: "",
+    password: "",
+    firstName: "",
     lastName: "",
-    companyName: ""
+    companyName: "",
+    contractorType: "independent" as ContractorKind,
   });
 
   useEffect(() => {
@@ -75,12 +78,22 @@ export default function ContractorAuth() {
     } else if (data.user) {
       await supabase.from("contractor_profiles").insert({
         user_id: data.user.id,
-        company_name: signupData.companyName,
-        category: "general",
+        company_name: signupData.companyName || `${signupData.firstName} ${signupData.lastName}`.trim(),
+        first_name: signupData.firstName,
+        last_name: signupData.lastName,
+        email: signupData.email,
+        category: signupData.contractorType === "handyman" ? "Handyman" : "General Contractor",
+        contractor_type: signupData.contractorType,
+        verification_status: "pending",
         subscription_status: "pending",
+        is_verified: false,
+        is_directory_eligible: false,
       });
-      
-      toast({ title: "Success!", description: "Account created. Please check your email." });
+
+      toast({
+        title: "Welcome aboard!",
+        description: "Your account is created. You can browse the job marketplace and build your profile while we review your credentials.",
+      });
     }
     setLoading(false);
   };
