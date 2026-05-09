@@ -325,8 +325,9 @@ serve(async (req) => {
           certifications: body.certifications ? body.certifications.split(',').map(c => c.trim()) : [],
           client_references: body.references || [],
           job_photos: body.jobPhotos || [],
-          verification_status: "pending",
-          is_active: false,
+          verification_status: "verified",
+          verified_at: new Date().toISOString(),
+          is_active: true,
           created_by: userId
         })
         .select()
@@ -458,9 +459,10 @@ serve(async (req) => {
           website: body.website,
           license_number: firstLicense?.number || null,
           license_state: firstLicense?.state || null,
-          verification_status: "pending",
-          subscription_status: "pending",
-          is_verified: false,
+          verification_status: "approved",
+          subscription_status: "active",
+          is_verified: true,
+          is_directory_eligible: true,
           first_name: body.firstName,
           last_name: body.lastName,
           contractor_type: "company_admin",
