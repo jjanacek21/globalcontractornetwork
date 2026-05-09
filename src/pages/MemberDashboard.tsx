@@ -199,7 +199,7 @@ const MemberDashboard = () => {
     { icon: Briefcase, title: "Job Marketplace", description: "Browse and bid on homeowner job requests", link: "/job-board" },
     { icon: MapPinned, title: "Door to Door World", description: "GPS-tracked canvassing with gamified challenges", link: "/door-to-door" },
     { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", link: "/property-iq" },
-    { icon: Lightbulb, title: "Referrals", description: "Submit and track customer referrals & earnings", link: "/contractor/referrals" },
+    { icon: Lightbulb, title: "Referrals", description: "Earn bounties, manage your client pool, and track residuals.", link: "/dashboard/referrals" },
     { icon: Rocket, title: "GCN Business Suite", description: "Estimating, invoicing, contracts, prospecting, gamification, social & marketplace — all in one.", comingSoon: true },
   ];
 
