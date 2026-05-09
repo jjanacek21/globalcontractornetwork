@@ -335,10 +335,14 @@ export default function ContractorDirectory() {
                             </Badge>
                           </div>
                         </div>
-                        {contractor.is_verified && (
-                          <div className="flex items-center gap-1 text-green-400">
+                        {isVerifiedListing(contractor) ? (
+                          <div className="flex items-center gap-1 text-green-400" title="Verified">
                             <CheckCircle className="h-5 w-5" />
                           </div>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+                            Unverified
+                          </Badge>
                         )}
                       </div>
                       
