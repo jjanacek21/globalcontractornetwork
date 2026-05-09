@@ -481,7 +481,7 @@ export default function Home() {
               <div className="quoteline">A referral-based network for homeowners and contractors — never a lead-bidding marketplace.</div>
               <p className="lead">Get a free AI-powered quote in minutes, then connect with vetted, insured pros in your area. No spam calls, no bidding wars — just trusted work, backed by our network guarantee.</p>
               <div className="actions">
-                <Link to="/join" className="btn btn-green btn-lg">Get My Free Quote <span className="arr">→</span></Link>
+                <Link to="/schedule-consultation" className="btn btn-green btn-lg">Schedule Consultation <span className="arr">→</span></Link>
                 <Link to="/join" className="btn btn-ghost">Join the Network</Link>
                 <Link to="/contractors" className="btn btn-link">I'm a contractor →</Link>
               </div>
