@@ -79,17 +79,10 @@ export function useJobBoard() {
       if (!contractor) return false;
       setContractorProfile(contractor);
 
-      // Check feature access
-      const { data: featureAccess } = await supabase
-        .from('contractor_feature_access')
-        .select('is_approved')
-        .eq('contractor_id', contractor.id)
-        .eq('feature_name', 'job_marketplace')
-        .maybeSingle();
-
-      const approved = featureAccess?.is_approved === true;
-      setHasAccess(approved);
-      return approved;
+      // Any contractor with a profile can browse the marketplace.
+      // Pending/unverified contractors will see an in-page banner indicating their status.
+      setHasAccess(true);
+      return true;
     } catch (err) {
       console.error('Error checking access:', err);
       return false;
