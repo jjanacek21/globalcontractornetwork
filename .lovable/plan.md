@@ -1,55 +1,131 @@
 ## Goal
 
-Replace the home-page **"Get My Free Quote"** button with **"Schedule Consultation"** that opens a lead intake form. Submitting the form saves the lead to the database and pings your Telegram bot in real time.
+Build out the contractor lifecycle — company auto-approval, team invitations, vetting for independent crews/handymen, a public directory that shows both verified and unverified profiles (with a safety disclaimer), and admin tools to manage everything from `/admin/dashboard`.
 
-## What gets built
+---
 
-### 1. Home page button swap
-`src/pages/Home.tsx` (line 484) — change copy to "Schedule Consultation" and link to `/schedule-consultation`.
+## 1. Company registration → auto-approve + invite team
 
-### 2. New page: `/schedule-consultation`
-Single-page intake form, emerald/green theme matching the site, with these sections:
+**Auto-approve companies on registration**
+- In `CompanyRegistration` submission, set `companies.verification_status = 'verified'` immediately (instead of `pending`) and set `verified_at = now()`.
+- Auto-insert the creator into `company_members` with `role = 'company_admin'`.
+- Update `CompanyAdminDashboard` verification banner to only show when `verification_status != 'verified'` (already does).
 
-- **Owner info** — full name, phone, email, best time to call (chips: Morning / Afternoon / Evening / Anytime)
-- **Property info** — address (existing `AddressAutocomplete` component), property type (Residential / Commercial), is this your primary residence (Yes/No)
-- **Project details** — services needed (multi-select chips: Roofing, Windows & Doors, Paint, Siding, Gutters, Stucco, Bathroom, Kitchen, Emergency, Other), short project description (textarea)
-- **Timeline** — when do you want to start (chips: ASAP / Within 30 days / 1–3 months / Just exploring)
-- **Payment method** — three radio cards: **Cash**, **Financing**, **Insurance Claim**
-  - If Insurance → optional carrier + claim # fields
-  - If Financing → "interested in financing options" toggle
-- **Consent checkbox** + Submit
+**New: `company_invitations` table** (no table exists today)
+- Fields: `id`, `company_id`, `email`, `role` (company_role enum), `team_id` (nullable), `job_title`, `token` (uuid, unique), `status` (`pending|accepted|expired|revoked`), `invited_by`, `expires_at` (default `now() + 14 days`), `created_at`, `accepted_at`, `accepted_user_id`.
+- RLS: company_admins of the matching company + super_admins can SELECT/INSERT/UPDATE/DELETE; public SELECT only by `token` (used in accept flow via edge function — see below).
+- Index on `token`, `email`, `company_id`.
 
-Validation via `react-hook-form` + `zod` (already in project). Trim, length caps, email regex, phone normalization.
+**Invite flow (replace stub in `UsersSettings.tsx` "Invitation system coming soon")**
+- Company admin enters email + role + optional team/job_title → insert `company_invitations` row.
+- New edge function `send-company-invite`: sends Resend email with link `/contractor/auth?invite=<token>`.
+- `ContractorAuth` reads `?invite=<token>` query param. On successful signup/login:
+  - New edge function `accept-company-invite` validates token (not expired/accepted), inserts `company_members(user_id, company_id, role, team_id, job_title)`, marks invitation `accepted`, and stamps `contractor_profiles.company_id` if a profile exists (or pre-fills it on registration).
+- Token never trusted client-side; all writes happen in the edge function with service role.
 
-### 3. Database — new `consultation_leads` table
-Columns: full_name, phone, email, best_time_to_call, property_address, property_lat/lng, property_type, is_primary_residence, services (text[]), project_description, timeline, payment_method, insurance_carrier, insurance_claim_number, financing_interest, status (default `'new'`), source (default `'Schedule Consultation'`), user_id (nullable), created_at.
+---
 
-**RLS:**
-- Anyone (including anon) can `INSERT` — public lead form.
-- Only `super_admins` can `SELECT` / `UPDATE` / `DELETE` — admin-only review.
+## 2. Contractor registration: types, vetting, directory eligibility
 
-### 4. Telegram notification
-On successful insert, the page calls `supabase.functions.invoke("telegram-lead-alert", { body: {...} })`. The existing edge function already formats and sends to your Telegram chat using `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (both already configured). Payload mapping:
+Three explicit `contractor_type` values already supported in code: `company_admin`, `independent`, `handyman` (we'll formalize).
 
-- `source: "Schedule Consultation"`
-- `name`, `phone`, `email`, `address`, `service` (joined services list), `urgency` (timeline)
-- `notes`: project description + payment method + insurance/financing details
+**`ContractorAuth` updates**
+- Add a "Who are you?" step:
+  1. **Company team member** (joined via invite or selecting an existing verified company)
+  2. **Independent contractor with crew** (vetting required)
+  3. **Handyman / solo** (vetting required)
+- Independent + handyman flows create `contractor_profiles` with `verification_status = 'pending'`, `is_directory_eligible = false`, `social_access_approved = false`, but **can immediately**:
+  - Access Job Marketplace (`/job-board`) — confirm `JobBoardAccessGuard` allows pending contractors (right now it gates on a separate flag — we'll widen it to "any contractor profile exists").
+  - Build their profile (gallery, references, services).
+  - Access door-to-door tools.
+- They are blocked from directory listing visibility (controlled by `is_directory_eligible`) until approved.
 
-Insert happens **before** the Telegram call — if Telegram fails, the lead is still saved and the user still gets the success screen (soft toast only).
+---
 
-### 5. Success state
-After submit, swap the form for a confirmation card: "Thanks! A consultant will reach out within 1 business day." with a button back to home.
+## 3. Public directory: show verified + unverified, with disclaimer
 
-### 6. Routing
-Add `/schedule-consultation` to `src/App.tsx`, lazy-loaded inside `<Suspense>` per project rules.
+**`ContractorDirectory` page**
+- Two sections (or filter chips): **Verified Pros** (badge: green check) and **Unverified Crews & Handymen** (badge: amber).
+- Show a persistent disclaimer card above unverified results:
+  > "These contractors have not been fully vetted. We recommend using them only for repairs, handyman work, or alongside a project consultant."
+- Property owners can open any unverified profile. Profile detail page shows the same disclaimer banner inline.
+- Add filter: `contractor_type` (Company / Independent / Handyman) and `verification_status`.
 
-## Out of scope
-- Date/time appointment slot picker (just a "when to start" chip — say the word and I'll add a calendar picker later).
-- Admin UI table to browse leads (the data lands in `consultation_leads` ready to wire up).
-- No changes to the other "Get Quote" service-card buttons.
+**Directory access request**
+- New table `directory_access_requests`: `id`, `contractor_profile_id`, `request_type` (`directory` | `referral` | `social`), `status` (`pending|approved|denied`), `notes`, `reviewed_by`, `reviewed_at`, `created_at`. RLS: contractor sees own; super_admins see all.
+- Add "Request directory listing" / "Request referral access" buttons on contractor dashboard that insert into this table.
 
-## Files touched
-- `src/pages/Home.tsx` — button copy + route
-- `src/pages/ScheduleConsultation.tsx` — **new**
-- `src/App.tsx` — new route
-- New migration: `consultation_leads` table + RLS policies
+---
+
+## 4. Super Admin Dashboard (`/admin/dashboard`) enhancements
+
+Existing tabs: Pending Signups, Leads, Contractors, Companies, Property Owners, etc.
+
+**New tab: "Access Requests"** (between Pending Signups and Contractors)
+- Shows rows from `directory_access_requests` with contractor info, request type, age, action buttons.
+- Approve sets `contractor_profiles.verification_status = 'approved'`, `is_directory_eligible = true` (and/or `social_access_approved = true` for social/referral requests).
+
+**Contractors tab — edit + assign**
+- `ContractorsTable`: add an Edit row action that opens `ContractorDialog` in `edit` mode (already exists; ensure it covers all fields).
+- New "Assign" sub-action opens a dialog to set `company_id` + `team_id` (dropdowns of all companies / teams in that company). Writes to both `contractor_profiles` and `company_members`.
+- Bulk filter by `contractor_type`, `verification_status`.
+
+**Companies tab**
+- Add Edit (opens existing `CompanyDialog`/`CompanyManagementDialog` in edit mode).
+- Quick toggle for `verification_status` (since we auto-approve, admins still need to be able to suspend).
+- "Manage team" button → opens a panel that lists `company_members` for that company with role/team editors and an "Invite member" button (reuses the same invitation flow).
+
+**Property Owners tab**
+- Already exists (`PropertyOwnersTable`). Add Edit dialog: name, email, phone, primary address, notes.
+
+**Teams**
+- Add a "Teams" sub-section under each company (uses existing `TeamsTable` + `TeamDialog`) so admins can create/edit teams and assign members.
+
+---
+
+## 5. Job marketplace + tools access for pending contractors
+
+- `JobBoardAccessGuard`: change `hasAccess` rule to "user has a `contractor_profiles` row" (regardless of verification) so independents and handymen can browse leads while waiting for vetting.
+- Add a small amber banner inside the job board when `verification_status != 'approved'`:
+  > "Your account is pending verification. You can browse and respond to jobs, but homeowners will see an 'unverified' badge until approved."
+
+---
+
+## 6. Out of scope (this plan)
+
+- Stripe billing changes for contractor subscriptions.
+- Email template redesign beyond the new invite email.
+- Mobile-app-specific changes.
+
+---
+
+## Technical details
+
+**New tables (one migration)**
+- `company_invitations` (see fields above) + RLS using `is_company_or_super_admin(company_id)`.
+- `directory_access_requests` + RLS.
+
+**New edge functions**
+- `send-company-invite` — Resend email, validates caller is company_admin via JWT.
+- `accept-company-invite` — service-role insert into `company_members`, marks token consumed.
+
+**Files to add**
+- `supabase/functions/send-company-invite/index.ts`
+- `supabase/functions/accept-company-invite/index.ts`
+- `src/components/admin/AccessRequestsTab.tsx`
+- `src/components/admin/AssignContractorDialog.tsx`
+- `src/components/admin/PropertyOwnerEditDialog.tsx`
+- `src/components/contractor-directory/UnverifiedDisclaimer.tsx`
+
+**Files to edit**
+- `src/pages/CompanyRegistration.tsx` — auto-approve + auto-create company_admin member.
+- `src/components/settings/UsersSettings.tsx` — wire real invitation flow.
+- `src/pages/ContractorAuth.tsx` — type selector + invite token handling.
+- `src/pages/ContractorDirectory.tsx` — verified/unverified sections + disclaimer.
+- `src/components/job-board/JobBoardAccessGuard.tsx` — relax to any contractor.
+- `src/pages/SuperAdminDashboard.tsx` — add Access Requests tab.
+- `src/components/admin/ContractorsTable.tsx` — Edit + Assign actions.
+- `src/components/admin/CompaniesTable.tsx` — Edit + Manage Team.
+- `src/components/admin/PropertyOwnersTable.tsx` — Edit dialog.
+
+Approve to proceed and I'll build this in stages (DB migration → admin UI → contractor flows → directory polish).

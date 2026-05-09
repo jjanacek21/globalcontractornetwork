@@ -24,17 +24,29 @@ const ROLE_LABELS: Record<CompanyRole, string> = {
 
 export function UsersSettings() {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: "", role: "sales_rep" as CompanyRole, job_title: "" });
+  const [inviting, setInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", role: "sales_rep" as CompanyRole, job_title: "" });
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["company-members-settings"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      // Resolve current user's company
+      const { data: me } = await supabase
+        .from("company_members")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!me?.company_id) return [];
       const { data, error } = await supabase
         .from("company_members")
         .select(`
-          id, role, job_title, is_active, hire_date, created_at, user_id,
+          id, role, job_title, is_active, hire_date, created_at, user_id, company_id,
           profiles:user_id ( first_name, last_name, email )
         `)
+        .eq("company_id", me.company_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -132,9 +144,19 @@ export function UsersSettings() {
         <DialogContent>
           <DialogHeader><DialogTitle>Invite Team Member</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input value={inviteForm.first_name} onChange={e => setInviteForm(p => ({ ...p, first_name: e.target.value }))} placeholder="Jane" />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Name</Label>
+                <Input value={inviteForm.last_name} onChange={e => setInviteForm(p => ({ ...p, last_name: e.target.value }))} placeholder="Doe" />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Email Address</Label>
-              <Input value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="teammate@company.com" />
+              <Input type="email" value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="teammate@company.com" />
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
@@ -151,9 +173,50 @@ export function UsersSettings() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={() => { toast.info("Invitation system coming soon — user must register first, then be added as a team member."); setInviteOpen(false); }}>
-              Send Invite
+            <Button variant="outline" disabled={inviting} onClick={() => setInviteOpen(false)}>Cancel</Button>
+            <Button disabled={inviting || !inviteForm.email || !inviteForm.first_name} onClick={async () => {
+              setInviting(true);
+              try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("Not signed in");
+                const { data: me } = await supabase
+                  .from("company_members")
+                  .select("company_id, companies:company_id(name)")
+                  .eq("user_id", user.id)
+                  .eq("is_active", true)
+                  .maybeSingle();
+                if (!me?.company_id) throw new Error("No active company found for your account");
+                const { data: profile } = await supabase
+                  .from("profiles")
+                  .select("first_name,last_name")
+                  .eq("id", user.id)
+                  .maybeSingle();
+                const invitedByName = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || "Your teammate";
+                const companyName = (me as any).companies?.name ?? "your company";
+                const { data, error } = await supabase.functions.invoke("invite-company-member", {
+                  body: {
+                    email: inviteForm.email,
+                    firstName: inviteForm.first_name,
+                    lastName: inviteForm.last_name,
+                    companyId: me.company_id,
+                    companyName,
+                    role: inviteForm.role,
+                    jobTitle: inviteForm.job_title || undefined,
+                    invitedByName,
+                  }
+                });
+                if (error) throw error;
+                if (!data?.success) throw new Error(data?.error || "Invite failed");
+                toast.success(data.message || `Invitation sent to ${inviteForm.email}`);
+                setInviteOpen(false);
+                setInviteForm({ email: "", first_name: "", last_name: "", role: "sales_rep", job_title: "" });
+              } catch (err: any) {
+                toast.error(err.message || "Failed to send invite");
+              } finally {
+                setInviting(false);
+              }
+            }}>
+              {inviting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</> : "Send Invite"}
             </Button>
           </DialogFooter>
         </DialogContent>

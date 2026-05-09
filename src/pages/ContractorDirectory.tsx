@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3, Ruler } from "lucide-react";
+import { Search, MapPin, Phone, Mail, Globe, CheckCircle, Star, Home, Zap, Droplets, Wind, Hammer, TreePine, Award, MessageSquare, DoorOpen, Wrench, Sun, Paintbrush, Fence, Grid3X3, Ruler, AlertTriangle } from "lucide-react";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { ReviewSubmissionDialog } from "@/components/contractor-directory/ReviewSubmissionDialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ContractorProfile {
   id: string;
@@ -22,6 +23,9 @@ interface ContractorProfile {
   is_verified: boolean;
   average_rating: number;
   review_count: number;
+  contractor_type?: string;
+  verification_status?: string;
+  is_directory_eligible?: boolean;
 }
 
 const categoryIcons: Record<string, any> = {
@@ -113,17 +117,13 @@ export default function ContractorDirectory() {
 
   const loadContractors = async () => {
     setLoading(true);
-    
-    // Get contractors with directory_listing feature approved
+
+    // Load all contractor profiles. The directory shows BOTH verified pros
+    // (via feature access OR is_directory_eligible) AND unverified independents/handymen.
     let query = supabase
       .from("contractor_profiles")
-      .select(`
-        *,
-        contractor_feature_access!inner(feature_name, is_approved)
-      `)
-      .eq("contractor_feature_access.feature_name", "directory_listing")
-      .eq("contractor_feature_access.is_approved", true);
-    
+      .select("*");
+
     if (selectedCategory !== "all") {
       query = query.eq("category", selectedCategory);
     }
@@ -133,11 +133,17 @@ export default function ContractorDirectory() {
     setLoading(false);
   };
 
+  const isVerifiedListing = (c: ContractorProfile) =>
+    c.is_directory_eligible === true ||
+    c.verification_status === "approved" ||
+    c.verification_status === "verified" ||
+    c.is_verified === true;
+
   const filteredContractors = contractors
     .filter(c => {
       const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
-      const matchesVerified = !verifiedOnly || c.is_verified;
+      const matchesVerified = !verifiedOnly || isVerifiedListing(c);
       const matchesLocation = selectedLocation === "all" || 
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(selectedLocation.toLowerCase())));
       return matchesSearch && matchesVerified && matchesLocation;
@@ -154,6 +160,9 @@ export default function ContractorDirectory() {
           return 0;
       }
     });
+
+  const verifiedContractors = filteredContractors.filter(isVerifiedListing);
+  const unverifiedContractors = filteredContractors.filter(c => !isVerifiedListing(c));
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -256,11 +265,26 @@ export default function ContractorDirectory() {
           </div>
 
           {/* Results Count */}
-          <p className="text-slate-400 mb-6">
+          <p className="text-slate-400 mb-4">
             Showing {filteredContractors.length} contractor{filteredContractors.length !== 1 ? "s" : ""}
+            {verifiedContractors.length > 0 && ` · ${verifiedContractors.length} verified`}
+            {unverifiedContractors.length > 0 && ` · ${unverifiedContractors.length} unverified`}
             {selectedCategory !== "all" && ` in ${selectedCategory}`}
             {selectedLocation !== "all" && ` serving ${selectedLocation}`}
           </p>
+
+          {/* Safety disclaimer for unverified */}
+          {!verifiedOnly && unverifiedContractors.length > 0 && (
+            <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-100">
+                <p className="font-semibold mb-1">Some contractors below are unverified</p>
+                <p className="text-amber-200/80">
+                  Independent crews and handymen marked "Unverified" have not completed our full vetting process. We recommend using them only for repairs, handyman work, or alongside a project consultant. Toggle "Verified Only" above to hide them.
+                </p>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-12 text-slate-400">Loading contractors...</div>
@@ -311,10 +335,14 @@ export default function ContractorDirectory() {
                             </Badge>
                           </div>
                         </div>
-                        {contractor.is_verified && (
-                          <div className="flex items-center gap-1 text-green-400">
+                        {isVerifiedListing(contractor) ? (
+                          <div className="flex items-center gap-1 text-green-400" title="Verified">
                             <CheckCircle className="h-5 w-5" />
                           </div>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+                            Unverified
+                          </Badge>
                         )}
                       </div>
                       
