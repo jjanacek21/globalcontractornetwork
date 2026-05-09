@@ -24,17 +24,29 @@ const ROLE_LABELS: Record<CompanyRole, string> = {
 
 export function UsersSettings() {
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: "", role: "sales_rep" as CompanyRole, job_title: "" });
+  const [inviting, setInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", role: "sales_rep" as CompanyRole, job_title: "" });
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ["company-members-settings"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      // Resolve current user's company
+      const { data: me } = await supabase
+        .from("company_members")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!me?.company_id) return [];
       const { data, error } = await supabase
         .from("company_members")
         .select(`
-          id, role, job_title, is_active, hire_date, created_at, user_id,
+          id, role, job_title, is_active, hire_date, created_at, user_id, company_id,
           profiles:user_id ( first_name, last_name, email )
         `)
+        .eq("company_id", me.company_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
