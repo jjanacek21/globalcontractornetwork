@@ -1135,3 +1135,93 @@ html {
     animation: none;
   }
 }
+/* =====================================================
+   GCN Referral Dashboard — scoped brand layer
+   ===================================================== */
+.referrals-dashboard {
+  --r-cream: #F8F2E3;
+  --r-cream-2: #FBF6EA;
+  --r-cream-3: #F2EAD3;
+  --r-paper: #FFFFFF;
+  --r-green: #1F4D32;
+  --r-green-2: #2A6442;
+  --r-green-deep: #143421;
+  --r-green-line: rgba(31,77,50,0.15);
+  --r-gold: #C9A24A;
+  --r-gold-2: #E0BF6E;
+  --r-gold-deep: #8E6F2A;
+  --r-gold-soft: #F0E2B6;
+  --r-ink: #15301F;
+  --r-muted: #6E7A6A;
+  --r-line: rgba(31,77,50,0.12);
+  --r-rose: #B0413E;
+  --r-amber: #B7831C;
+
+  background-color: var(--r-cream);
+  background-image:
+    linear-gradient(var(--r-green-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--r-green-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  color: var(--r-ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+.referrals-dashboard .font-serif-display { font-family: 'Fraunces', Georgia, serif; }
+.referrals-dashboard .gold-text-3d {
+  background: linear-gradient(180deg, #F4D98A 0%, #C9A24A 50%, #8E6F2A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+.referrals-dashboard .green-3d-btn {
+  background: linear-gradient(180deg, #2F6448 0%, #1F4D32 50%, #143421 100%);
+  color: #F8F2E3;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    inset 0 -2px 0 rgba(0,0,0,0.25),
+    0 1px 2px rgba(20,52,33,0.5),
+    0 4px 12px rgba(20,52,33,0.2);
+  border: 1px solid rgba(20,52,33,0.6);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.referrals-dashboard .green-3d-btn:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.28), 0 2px 4px rgba(20,52,33,0.55), 0 8px 18px rgba(20,52,33,0.28); }
+.referrals-dashboard .green-3d-btn:active { transform: translateY(0); }
+.referrals-dashboard .brand-card {
+  background: var(--r-paper);
+  border: 1px solid var(--r-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(20,52,33,0.04), 0 4px 14px rgba(20,52,33,0.05);
+}
+.referrals-dashboard .brand-card-cream { background: var(--r-cream-2); }
+.referrals-dashboard .pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.referrals-dashboard .pill-green { background: rgba(31,77,50,0.12); color: var(--r-green-deep); }
+.referrals-dashboard .pill-gold  { background: rgba(201,162,74,0.18); color: var(--r-gold-deep); }
+.referrals-dashboard .pill-amber { background: rgba(183,131,28,0.16); color: var(--r-amber); }
+.referrals-dashboard .pill-rose  { background: rgba(176,65,62,0.14); color: var(--r-rose); }
+.referrals-dashboard .pill-muted { background: rgba(110,122,106,0.16); color: var(--r-muted); }
+.referrals-dashboard .tier-badge {
+  display:inline-block; padding: 3px 10px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.18);
+}
+.referrals-dashboard .tier-bronze   { background: linear-gradient(180deg,#D9A271,#8E5A2C); color:#fff; }
+.referrals-dashboard .tier-silver   { background: linear-gradient(180deg,#E2E5E8,#9AA0A6); color:#2a2f33; }
+.referrals-dashboard .tier-gold     { background: linear-gradient(180deg,#F4D98A,#8E6F2A); color:#3a2a08; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 6px rgba(142,111,42,0.4); }
+.referrals-dashboard .tier-platinum { background: linear-gradient(180deg,#D6E0DA,#6B7E72); color:#fff; }
+@keyframes r-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.referrals-dashboard .float-chip { animation: r-float 3s ease-in-out infinite; }
+.referrals-dashboard .gold-shine {
+  background: linear-gradient(90deg,#C9A24A 0%,#F4D98A 25%,#C9A24A 50%,#8E6F2A 75%,#C9A24A 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: r-shine 3.5s linear infinite;
+}
+@keyframes r-shine { 0%{background-position:0% 0%} 100%{background-position:200% 0%} }
+.referrals-dashboard :focus-visible { outline: 2px solid var(--r-gold); outline-offset: 2px; border-radius: 6px; }
