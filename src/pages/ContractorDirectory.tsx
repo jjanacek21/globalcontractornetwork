@@ -265,11 +265,26 @@ export default function ContractorDirectory() {
           </div>
 
           {/* Results Count */}
-          <p className="text-slate-400 mb-6">
+          <p className="text-slate-400 mb-4">
             Showing {filteredContractors.length} contractor{filteredContractors.length !== 1 ? "s" : ""}
+            {verifiedContractors.length > 0 && ` · ${verifiedContractors.length} verified`}
+            {unverifiedContractors.length > 0 && ` · ${unverifiedContractors.length} unverified`}
             {selectedCategory !== "all" && ` in ${selectedCategory}`}
             {selectedLocation !== "all" && ` serving ${selectedLocation}`}
           </p>
+
+          {/* Safety disclaimer for unverified */}
+          {!verifiedOnly && unverifiedContractors.length > 0 && (
+            <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-100">
+                <p className="font-semibold mb-1">Some contractors below are unverified</p>
+                <p className="text-amber-200/80">
+                  Independent crews and handymen marked "Unverified" have not completed our full vetting process. We recommend using them only for repairs, handyman work, or alongside a project consultant. Toggle "Verified Only" above to hide them.
+                </p>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-12 text-slate-400">Loading contractors...</div>
