@@ -139,6 +139,7 @@ const InstantQuote = lazy(() => import("./pages/InstantQuote"));
 const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"));
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
+const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
 
 const queryClient = new QueryClient();
 
