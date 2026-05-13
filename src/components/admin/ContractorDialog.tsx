@@ -293,9 +293,51 @@ export function ContractorDialog({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label>Company Name *</Label>
+          <Label>Profile Type *</Label>
           {isEditable ? (
-            <Input value={formData.company_name || ''} onChange={e => updateField('company_name', e.target.value)} />
+            <Select value={formData.profile_type || 'company'} onValueChange={v => updateField('profile_type', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PROFILE_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm capitalize">{(rawData?.profile_type || 'company').replace('_', ' ')}</p>
+          )}
+        </div>
+        <div>
+          <Label>Verification Status</Label>
+          {isEditable ? (
+            <Select value={formData.verification_status || 'pending'} onValueChange={v => updateField('verification_status', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VERIFICATION_OPTIONS.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge>{rawData?.verification_status || 'pending'}</Badge>
+          )}
+        </div>
+        <div>
+          <Label>First Name</Label>
+          {isEditable ? (
+            <Input value={formData.first_name || ''} onChange={e => updateField('first_name', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.first_name || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>Last Name</Label>
+          {isEditable ? (
+            <Input value={formData.last_name || ''} onChange={e => updateField('last_name', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.last_name || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>Display / Company Name *</Label>
+          {isEditable ? (
+            <Input value={formData.company_name || ''} onChange={e => updateField('company_name', e.target.value)} placeholder="e.g. John's Handyman Services" />
           ) : (
             <p className="mt-1 text-sm font-medium">{rawData?.company_name}</p>
           )}
