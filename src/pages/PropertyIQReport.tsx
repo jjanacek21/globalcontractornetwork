@@ -123,6 +123,10 @@ const PropertyIQReport = () => {
   };
 
   const handleRefreshPermits = () => {
+    if (isDemo) {
+      toast({ title: "Demo mode", description: "Sign up to refresh live permit data." });
+      return;
+    }
     if (!id) return;
     permitMutation.mutate(id, {
       onSuccess: (data) => {
@@ -134,18 +138,27 @@ const PropertyIQReport = () => {
     });
   };
 
+  const handleSave = () => {
+    if (isDemo) {
+      toast({ title: "Demo mode", description: "Sign up to save properties to your account." });
+      return;
+    }
+    toast({ title: "Saved", description: "Added to your saved properties." });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <DemoBanner />
       <PropertyIQHeader />
 
       <div className="container mx-auto max-w-5xl px-4 py-6 flex-1">
         {/* Back + Actions */}
         <div className="flex items-center justify-between mb-6">
-          <Link to="/property-iq/search" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link to={`/property-iq/search${isDemo ? "?demo=1" : ""}`} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to Search
           </Link>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1"><Bookmark className="h-4 w-4" /> Save</Button>
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleSave}><Bookmark className="h-4 w-4" /> Save</Button>
             <Button variant="outline" size="sm" className="gap-1" onClick={handleExportPDF}>
               <Download className="h-4 w-4" /> Export PDF
             </Button>
