@@ -133,15 +133,23 @@ export function ContractorDialog({
         if (selectedSource === 'Directory') {
           insertData = {
             company_name: formData.company_name,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
             category: formData.category || 'Other',
             email: formData.email,
             phone: formData.phone,
             description: formData.description,
+            bio: formData.bio,
             website: formData.website,
+            logo_url: formData.logo_url,
             subscription_status: 'active',
             company_id: formData.company_id || null,
             team_id: formData.team_id || null,
             contractor_type: formData.contractor_type || 'independent',
+            profile_type: formData.profile_type || 'company',
+            verification_status: formData.verification_status || 'pending',
+            license_number: formData.license_number,
+            license_state: formData.license_state,
           };
         } else {
           insertData = {
