@@ -598,6 +598,13 @@ const PendingSignupsTable = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      <ApplicationDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        contractorId={detailContractor?.id || null}
+        companyId={detailContractor?.company_id || null}
+      />
     </div>
   );
 };

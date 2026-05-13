@@ -357,6 +357,9 @@ const GCNRoutes = () => (
     } />
     <Route path="/directory" element={<ContractorDirectory />} />
     <Route path="/contractor-directory" element={<ContractorDirectory />} />
+    <Route path="/company/:companyId" element={<Suspense fallback={<div />}><CompanyProfile /></Suspense>} />
+    <Route path="/contractor/:contractorId" element={<Suspense fallback={<div />}><ContractorPublicProfile /></Suspense>} />
+    <Route path="/register-individual" element={<Suspense fallback={<div />}><IndividualRegistration /></Suspense>} />
     
     {/* Master Admin Hub Routes */}
     <Route path="/admin/auth" element={<SuperAdminAuth />} />
