@@ -1,45 +1,62 @@
 ## Goal
-From the Super Admin dashboard, let an admin manually add (1) full company directory listings and (2) independent contractors (building consultant / handyman / skilled labor), with auto-linking of any contractor profile that points to a company.
+Replace the bare-bones approve/reject controls in `PendingSignupsTable` with a proper admin workflow: clear approve/reject dialogs, structured rejection reasons, persisted audit fields, and email notifications to the applicant for both outcomes.
 
-## 1. Expand "Add Company" in admin (CompanyDialog.tsx)
-Today the dialog only captures name/address/phone/email/website. Expand the `add` (and `edit`) mode to capture every field needed to appear as a verified directory listing:
+## 1. Database — add rejection audit columns
+Single migration on `contractor_profiles`:
+- `rejection_reason text` — short category (e.g. "missing_license", "incomplete_documents", "duplicate_account", "credentials_unverifiable", "other")
+- `rejection_notes text` — free-form admin message included in the email
+- `rejected_at timestamptz`
+- `rejected_by uuid` (admin user id)
 
-- Branding: `logo_url`, `banner_url` (reuse `ProfileImageUpload` + `company-photos` bucket)
-- About: `description`, `years_in_business`, `yearly_revenue_range`, `service_areas[]`, `specialties[]`
-- Credentials: `license_number`, `license_state`, `license_expiry`, `insurance_provider`, `insurance_policy_number`, `insurance_expiry`, `workers_comp_provider`, `workers_comp_policy_number`
-- Proof: `job_photos[]` (GalleryManager), `client_references[]` (name/phone/email/project)
-- Social: `social_links` (reuse `SocialLinksEditor`)
-- Status controls (admin-only): `verification_status` select (`pending | verified | rejected`), `is_active` toggle
-- On save: write to `companies`; trigger already recomputes `verification_score`. If admin sets `verification_status = 'verified'`, also stamp `verified_at = now()` and `verified_by = auth.uid()`.
+Mirror the same four columns on `companies` so company applications carry the same audit trail when they're rejected.
 
-## 2. Auto-link existing contractor profiles
-This already works at the data layer: `contractor_profiles.company_id` is the link, and `calculate_directory_eligibility` flips sub-contractors to eligible the moment their parent company becomes verified. We will:
+No RLS changes — both tables are already admin-writable.
 
-- In the company add/edit dialog, add a "Link existing contractors" multi-select that lists `contractor_profiles WHERE company_id IS NULL` (filterable by email/name) and bulk-updates `company_id` on save.
-- In `ContractorDialog` (add mode), pre-populate the company dropdown from the new company immediately after creation (already fetched on open — we just refresh).
+## 2. Reject dialog (replaces the `confirm()`)
+New `RejectSignupDialog` component opened from the Reject button in `PendingSignupsTable`. Captures:
+- Reason category (Select with the 5 options above)
+- Notes (Textarea, required, ≥ 10 chars) — this is what the applicant will read
+- Confirm checkbox: "I understand this will email the applicant"
 
-## 3. New "Add Independent Contractor" flow
-Reuse the existing `ContractorDialog` add mode, but make the path explicit and richer:
+On submit:
+- Update `contractor_profiles.subscription_status='rejected'` plus the four new columns
+- If `company_id` is set, also update `companies.verification_status='rejected'` plus the four new columns
+- Invoke the new edge function (below) with `{ contractorId, reason, notes }`
+- Toast and refresh
 
-- Add a button "Add Independent Contractor" on the Contractors tab next to the existing add control.
-- Force `source = 'Directory'` (writes to `contractor_profiles`).
-- Show a required "Profile type" select using the existing `profile_type` enum: `building_consultant`, `handyman`, `skilled_labor` (hide `company`). This drives directory categorization and the new filter added previously.
-- Allow optional `company_id` selection. If set, the row is auto-attached to that company in the directory (existing FK + RLS already handles display).
-- Capture: `first_name`, `last_name`, `email`, `phone`, `bio`, `logo_url` (profile pic), `service_areas[]`, `specialties[]`, optional `license_number/state` (only required for `subcontractor` independents — not these three types), `insurance_info` (optional), `social_links`, `verification_status` (admin can mark verified immediately).
-- Trigger `calculate_directory_eligibility` runs automatically on insert; handymen become directory-eligible once `verification_status = 'verified'`. Building consultants and skilled labor are new — see DB note below.
+## 3. Approve flow — keep existing dialog, add explicit email
+The Approve dialog already exists (features picker). We will:
+- Fire `notify-application-approved` for non-company applicants too (currently the company branch sends `notify-company-approved`; independents only get the per-feature email). The new function sends a clean "You're approved" email regardless of whether features were selected, so independents get notified the same way.
+- Stamp `approved_at` and `approved_by` on `contractor_profiles` (use existing column if present; otherwise add to the same migration).
 
-## 4. Database tweak
-`calculate_directory_eligibility` currently only handles `subcontractor` and `handyman`. Extend it (single migration) so `building_consultant` and `skilled_labor` profile types also become directory-eligible when `verification_status = 'verified'`. Logic gates on `profile_type` (not `contractor_type`) for these three new categories so they don't need a contractor license.
+## 4. Edge functions (notifications)
+Two new functions, both using the existing `RESEND_API_KEY` pattern already in use by `notify-company-approved`:
 
-## 5. Directory surface
-No schema changes here — the `ContractorDirectory` profile-type filter already added in the previous round will pick up the new rows. We will just verify the cards render `logo_url`, verified badge, and link to `/contractor/:id`.
+- `notify-signup-rejected` — input `{ contractorId, reason, notes }`. Looks up applicant email + name, sends a respectful rejection email containing the reason category (human-readable label) and the admin's notes. Includes a "Reply to discuss" CTA pointing at the support email.
+- `notify-signup-approved` — input `{ contractorId }`. Generic approval email; called for every approval (companies still also receive the existing `notify-company-approved` branded email for backward compatibility — or we collapse them; see "Decision" below).
 
-## Files touched
-- edit `src/components/admin/CompanyDialog.tsx` — full credential/photo/reference/social form, verification controls, link-existing-contractors picker
-- edit `src/components/admin/ContractorDialog.tsx` — `profile_type` selector, profile picture upload, social links, verified toggle, optional company link
-- edit `src/components/admin/ContractorsTable.tsx` — "Add Independent Contractor" entry point
-- new migration — extend `calculate_directory_eligibility` for `building_consultant` + `skilled_labor`
+Both functions:
+- Native `Deno.serve` + `corsHeaders`
+- `verify_jwt = false` is the project default
+- Validate input with a small zod-like manual check (matches existing function style)
+- Return `{ success, messageId }` or `{ success: false, error }`
+
+## 5. UI changes in `PendingSignupsTable`
+- New "Reject" button opens `RejectSignupDialog` instead of `window.confirm`
+- Show a "Rejected" row state with reason + notes tooltip when status is rejected (so admins can see history while filtering)
+- Add a small status filter at the top: All / Pending / Rejected (so rejected applications don't disappear)
+
+## Decision needed
+Collapse `notify-company-approved` into the new `notify-signup-approved`, or keep both? Default in the plan: **keep both** — `notify-company-approved` is already deployed and includes the features list; `notify-signup-approved` is a thin generic notice for independents. Less churn, no risk of breaking the existing branded email.
+
+## Files
+- new migration — add 4 rejection columns to `contractor_profiles` and `companies`
+- new `supabase/functions/notify-signup-rejected/index.ts`
+- new `supabase/functions/notify-signup-approved/index.ts`
+- new `src/components/admin/RejectSignupDialog.tsx`
+- edit `src/components/admin/PendingSignupsTable.tsx` — wire reject dialog, add status filter, fire approval email for independents
 
 ## Out of scope
-- No changes to `CompanyRegistration.tsx` (public signup) — admin path only.
-- No changes to homeowner-facing directory layout beyond verifying it renders the new rows.
+- No changes to `notify-company-approved` (still used by approve flow for companies).
+- No bulk approve/reject.
+- No changes to homeowner-side notifications.
