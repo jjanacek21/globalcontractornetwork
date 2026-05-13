@@ -21,15 +21,31 @@ const PropertyIQSearch = () => {
   const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [attomTriggered, setAttomTriggered] = useState(false);
   const navigate = useNavigate();
+  const { isDemo } = usePropertyIQDemo();
 
   const { data: results, isLoading } = usePropertyIQSearch(query);
   const attomLookup = useAttomLookup();
   const filtered = results || [];
 
+  // In demo: load the 5 sample properties to show as quick-pick chips
+  const { data: demoSamples } = useQuery({
+    enabled: isDemo,
+    queryKey: ["piq-demo-samples"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("piq_properties")
+        .select("id, address, city, state")
+        .in("id", DEMO_PROPERTY_IDS);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const hasNoMatch = query.trim() !== "" && !isLoading && filtered.length === 0;
 
-  // Auto-trigger ATTOM lookup when no DB results
+  // Auto-trigger ATTOM lookup when no DB results — disabled in demo
   useEffect(() => {
+    if (isDemo) return;
     if (hasNoMatch && !attomTriggered && !attomLookup.isPending) {
       setAttomTriggered(true);
       attomLookup.mutate(query, {
@@ -40,7 +56,7 @@ const PropertyIQSearch = () => {
         },
       });
     }
-  }, [hasNoMatch, attomTriggered, query]);
+  }, [hasNoMatch, attomTriggered, query, isDemo]);
 
   // Reset attom trigger when query changes
   useEffect(() => {
@@ -50,7 +66,8 @@ const PropertyIQSearch = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setAttomTriggered(false);
-    navigate(`/property-iq/search?q=${encodeURIComponent(query)}`);
+    const suffix = isDemo ? "&demo=1" : "";
+    navigate(`/property-iq/search?q=${encodeURIComponent(query)}${suffix}`);
   };
 
   return (
