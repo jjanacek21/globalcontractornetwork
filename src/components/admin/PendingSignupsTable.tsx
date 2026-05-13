@@ -404,6 +404,28 @@ const PendingSignupsTable = () => {
                             Company Admin
                           </Badge>
                         )}
+                        {contractor.subscription_status === "rejected" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="text-xs w-fit cursor-help">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Rejected
+                                  <Info className="h-3 w-3 ml-1 opacity-70" />
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">{contractor.rejection_reason || "No reason recorded"}</p>
+                                <p className="text-xs whitespace-pre-wrap">{contractor.rejection_notes || "—"}</p>
+                                {contractor.rejected_at && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    {format(new Date(contractor.rejected_at), "MMM d, yyyy")}
+                                  </p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
