@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ContractorProfile {
   id: string;
+  company_id?: string | null;
   company_name: string;
   category: string;
   description: string;
@@ -26,6 +28,7 @@ interface ContractorProfile {
   contractor_type?: string;
   verification_status?: string;
   is_directory_eligible?: boolean;
+  profile_type?: string;
 }
 
 const categoryIcons: Record<string, any> = {
@@ -67,6 +70,7 @@ export default function ContractorDirectory() {
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("rating");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [profileTypeFilter, setProfileTypeFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<ContractorProfile | null>(null);
@@ -144,9 +148,10 @@ export default function ContractorDirectory() {
       const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
       const matchesVerified = !verifiedOnly || isVerifiedListing(c);
-      const matchesLocation = selectedLocation === "all" || 
+      const matchesLocation = selectedLocation === "all" ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(selectedLocation.toLowerCase())));
-      return matchesSearch && matchesVerified && matchesLocation;
+      const matchesType = profileTypeFilter === "all" || (c.profile_type || "company") === profileTypeFilter;
+      return matchesSearch && matchesVerified && matchesLocation && matchesType;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -240,6 +245,18 @@ export default function ContractorDirectory() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={profileTypeFilter} onValueChange={setProfileTypeFilter}>
+                <SelectTrigger className="w-[180px] bg-slate-900 border-slate-700 text-white">
+                  <SelectValue placeholder="Profile type" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="all">All Profiles</SelectItem>
+                  <SelectItem value="company">Companies</SelectItem>
+                  <SelectItem value="building_consultant">Building Consultants</SelectItem>
+                  <SelectItem value="handyman">Handymen</SelectItem>
+                  <SelectItem value="skilled_labor">Skilled Labor</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-white">
                   <SelectValue placeholder="Sort by" />
@@ -253,8 +270,8 @@ export default function ContractorDirectory() {
               <Button
                 variant={verifiedOnly ? "default" : "outline"}
                 onClick={() => setVerifiedOnly(!verifiedOnly)}
-                className={verifiedOnly 
-                  ? "bg-green-500/20 border-green-500 text-green-400" 
+                className={verifiedOnly
+                  ? "bg-green-500/20 border-green-500 text-green-400"
                   : "border-slate-700 text-slate-300"
                 }
               >
@@ -329,7 +346,12 @@ export default function ContractorDirectory() {
                             </div>
                           )}
                           <div>
-                            <CardTitle className="text-lg text-white">{contractor.company_name}</CardTitle>
+                            <Link
+                              to={contractor.company_id ? `/company/${contractor.company_id}` : `/contractor/${contractor.id}`}
+                              className="hover:underline"
+                            >
+                              <CardTitle className="text-lg text-white">{contractor.company_name}</CardTitle>
+                            </Link>
                             <Badge className={`mt-1 capitalize ${categoryColors[contractor.category] || "bg-slate-700"}`}>
                               {contractor.category}
                             </Badge>
@@ -392,13 +414,15 @@ export default function ContractorDirectory() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button 
-                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white" 
-                          onClick={() => window.location.href = `mailto:${contractor.email}`}
+                        <Button
+                          asChild
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
                         >
-                          Contact
+                          <Link to={contractor.company_id ? `/company/${contractor.company_id}` : `/contractor/${contractor.id}`}>
+                            View Profile
+                          </Link>
                         </Button>
-                        <Button 
+                        <Button
                           variant="outline"
                           className="border-slate-700 text-slate-300 hover:bg-slate-800"
                           onClick={() => {

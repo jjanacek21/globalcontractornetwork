@@ -2115,6 +2115,7 @@ export type Database = {
           phone: string | null
           price_tier: string | null
           profile_gallery: Json | null
+          profile_type: string | null
           review_count: number | null
           secondary_trades: string[] | null
           service_area: string[] | null
@@ -2161,6 +2162,7 @@ export type Database = {
           phone?: string | null
           price_tier?: string | null
           profile_gallery?: Json | null
+          profile_type?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
@@ -2207,6 +2209,7 @@ export type Database = {
           phone?: string | null
           price_tier?: string | null
           profile_gallery?: Json | null
+          profile_type?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
