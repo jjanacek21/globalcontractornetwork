@@ -12,38 +12,7 @@ import { AnimatePresence } from "framer-motion";
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 const ReferralsDashboard = lazy(() => import("./pages/ReferralsDashboard"));
 
-// CRM Pages
-import { CRMLayout } from "./components/crm/CRMLayout";
-const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
-const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
-const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
-const CRMContactDetail = lazy(() => import("./pages/crm/CRMContactDetail"));
-const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
-const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
-const CRMEstimateBuilder = lazy(() => import("./pages/crm/CRMEstimateBuilder"));
-const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
-const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
-const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
-const CRMStormCanvas = lazy(() => import("./pages/crm/CRMStormCanvas"));
-const CanvassMap = lazy(() => import("./pages/crm/CanvassMap"));
-const CRMSmartDocs = lazy(() => import("./pages/crm/CRMSmartDocs"));
-const CRMPresentations = lazy(() => import("./pages/crm/CRMPresentations"));
-const CRMPermitExpediter = lazy(() => import("./pages/crm/CRMPermitExpediter"));
-const CRMSettings = lazy(() => import("./pages/crm/CRMSettings"));
-const CRMHelp = lazy(() => import("./pages/crm/CRMHelp"));
-const CRMFollowUpInbox = lazy(() => import("./pages/crm/CRMFollowUpInbox"));
-const CRMFollowUpUnmatched = lazy(() => import("./pages/crm/CRMFollowUpUnmatched"));
-const CRMFollowUpAIQueue = lazy(() => import("./pages/crm/CRMFollowUpAIQueue"));
-const CRMFollowUpCallCenter = lazy(() => import("./pages/crm/CRMFollowUpCallCenter"));
-const CRMFollowUpAIAgent = lazy(() => import("./pages/crm/CRMFollowUpAIAgent"));
-const CRMInsuranceClaims = lazy(() => import("./pages/crm/CRMInsuranceClaims"));
-const CRMInsuranceCarriers = lazy(() => import("./pages/crm/CRMInsuranceCarriers"));
-const CRMInsuranceAdjusters = lazy(() => import("./pages/crm/CRMInsuranceAdjusters"));
-const CRMInsuranceSupplements = lazy(() => import("./pages/crm/CRMInsuranceSupplements"));
-const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence"));
-const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
-const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
-const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
+// CRM (GCN internal) was removed — contractors use external Pitch CRM via the dashboard tile.
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
 
 import Home from "./pages/Home";
