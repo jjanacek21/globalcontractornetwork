@@ -389,6 +389,24 @@ export function ContractorDialog({
           <p className="mt-1 text-sm text-muted-foreground">{rawData?.description || 'No description'}</p>
         )}
       </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>License Number (optional)</Label>
+          {isEditable ? (
+            <Input value={formData.license_number || ''} onChange={e => updateField('license_number', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.license_number || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>License State</Label>
+          {isEditable ? (
+            <Input value={formData.license_state || ''} onChange={e => updateField('license_state', e.target.value)} placeholder="FL" />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.license_state || 'N/A'}</p>
+          )}
+        </div>
+      </div>
       {renderCompanyTeamFields()}
       {mode !== 'add' && rawData && (
         <>
