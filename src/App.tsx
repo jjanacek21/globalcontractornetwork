@@ -506,7 +506,7 @@ const GCNRoutes = () => (
           <Route path="/franchise" element={<Franchise />} />
           
           {/* CRM Routes */}
-          <Route path="/crm/auth" element={<Auth />} />
+          <Route path="/crm/auth" element={<Navigate to="/join" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/crm/dashboard" element={
