@@ -209,9 +209,9 @@ const MemberDashboard = () => {
     { icon: Users, title: "Contractor Social Hub", description: "Connect, message and post with the network", link: "/social", badge: "Coming Soon" },
     { icon: Briefcase, title: "Job Marketplace", description: "Browse and bid on homeowner job requests", link: "/job-board" },
     { icon: MapPinned, title: "Door to Door World", description: "GPS-tracked canvassing with gamified challenges", link: "/door-to-door" },
-    { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", link: "/property-iq" },
+    { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", comingSoon: true, demoLink: "/ni/dashboard" },
     { icon: Lightbulb, title: "Referrals", description: "Earn bounties, manage your client pool, and track residuals.", link: "/dashboard/referrals" },
-    { icon: Rocket, title: "GCN Business Suite", description: "Estimating, invoicing, contracts, prospecting, gamification, social & marketplace — all in one.", comingSoon: true },
+    { icon: Rocket, title: "GCN App", description: "Rep card, Measure, Estimate, Analyze, Pre-Cap, Proposals, Contract, Invoice", link: "https://globalcontractor.app", badge: "Premium" },
   ];
 
   const homeownerServices: ServiceCard[] = [
