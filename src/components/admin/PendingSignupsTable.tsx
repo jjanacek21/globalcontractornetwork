@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CheckCircle2, XCircle, Loader2, Building2, Home } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Building2, Home, Eye } from "lucide-react";
 import { AVAILABLE_FEATURES } from "@/hooks/useContractorFeatures";
+import { ApplicationDetailDialog } from "./ApplicationDetailDialog";
 
 interface PendingContractor {
   id: string;
@@ -68,6 +69,8 @@ const PendingSignupsTable = () => {
   const [approving, setApproving] = useState(false);
   
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailContractor, setDetailContractor] = useState<PendingContractor | null>(null);
   const [selectedContractor, setSelectedContractor] = useState<PendingContractor | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("none");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("none");
@@ -372,7 +375,13 @@ const PendingSignupsTable = () => {
                   <TableRow key={contractor.id}>
                     <TableCell className="font-medium">
                       <div className="flex flex-col gap-1">
-                        <span>{contractor.company_name}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setDetailContractor(contractor); setDetailOpen(true); }}
+                          className="text-left hover:text-primary hover:underline"
+                        >
+                          {contractor.company_name}
+                        </button>
                         {contractor.company && (
                           <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 w-fit">
                             <Building2 className="h-3 w-3 mr-1" />
@@ -395,6 +404,14 @@ const PendingSignupsTable = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setDetailContractor(contractor); setDetailOpen(true); }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => handleApproveClick(contractor)}
