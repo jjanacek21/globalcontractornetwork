@@ -388,41 +388,11 @@ const GCNRoutes = () => (
           
           {/* Legacy routes */}
           <Route path="/auth" element={<Auth />} />
-          <Route path="/customers" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Customers />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/field-map" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FieldMap />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/measurements" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Measurements />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/estimates" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Estimates />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/presentations" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Presentations />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/customers" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/field-map" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/measurements" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/estimates" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/presentations" element={<Navigate to="/member/dashboard" replace />} />
           
           {/* Design System */}
           <Route path="/design-system" element={
