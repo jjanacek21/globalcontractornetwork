@@ -414,13 +414,15 @@ export default function ContractorDirectory() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button 
-                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white" 
-                          onClick={() => window.location.href = `mailto:${contractor.email}`}
+                        <Button
+                          asChild
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
                         >
-                          Contact
+                          <Link to={contractor.company_id ? `/company/${contractor.company_id}` : `/contractor/${contractor.id}`}>
+                            View Profile
+                          </Link>
                         </Button>
-                        <Button 
+                        <Button
                           variant="outline"
                           className="border-slate-700 text-slate-300 hover:bg-slate-800"
                           onClick={() => {
