@@ -107,6 +107,20 @@ const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership")
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
 
+// Demo-aware wrapper: if ?demo=1 OR sessionStorage flag set, bypass auth
+const PropertyIQDashboardRoute = () => {
+  const [search] = (require("react-router-dom") as typeof import("react-router-dom")).useSearchParams();
+  const isDemo = search.get("demo") === "1" || (typeof window !== "undefined" && sessionStorage.getItem("piq_demo") === "1");
+  if (isDemo) {
+    return <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>;
+  }
+  return (
+    <ProtectedRoute redirectTo="/property-iq/auth">
+      <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>
+    </ProtectedRoute>
+  );
+};
+
 const queryClient = new QueryClient();
 
 // Coating Kings Domain Routes - Standalone site
