@@ -30,7 +30,7 @@ const features = [
     title: "Proposals",
     description: "Create stunning, customizable proposals that win more jobs. Professional templates with your branding that close deals faster.",
     color: "bg-purple-500/10 text-purple-600",
-    link: "/crm/auth",
+    link: "/join",
   },
   {
     icon: ClipboardCheck,
@@ -51,7 +51,7 @@ const features = [
     title: "Payments",
     description: "Instant, secure payments and professional invoicing. Accept credit cards, ACH, and financing options to get paid faster.",
     color: "bg-cyan-500/10 text-cyan-600",
-    link: "/crm/auth",
+    link: "/join",
   },
 ];
 

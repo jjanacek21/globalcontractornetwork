@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ 
   children, 
   requireRole,
-  redirectTo = "/crm/auth"
+  redirectTo = "/join"
 }: ProtectedRouteProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [hasRole, setHasRole] = useState(false);
