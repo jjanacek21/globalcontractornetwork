@@ -72,6 +72,7 @@ const PropertyIQSearch = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <DemoBanner />
       <PropertyIQHeader />
 
       <div className="container mx-auto max-w-5xl px-4 py-8 flex-1">
@@ -87,13 +88,33 @@ const PropertyIQSearch = () => {
                   setFlyToCoords({ lat: coords.lat, lng: coords.lng });
                   setViewMode("map");
                 }
-                navigate(`/property-iq/search?q=${encodeURIComponent(address)}`);
+                const suffix = isDemo ? "&demo=1" : "";
+                navigate(`/property-iq/search?q=${encodeURIComponent(address)}${suffix}`);
               }}
               placeholder="Search by address, city, county, or owner..."
             />
           </div>
           <Button type="submit">Search</Button>
         </form>
+
+        {isDemo && demoSamples && demoSamples.length > 0 && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200 mb-2">Try a sample property:</p>
+            <div className="flex flex-wrap gap-2">
+              {demoSamples.map(p => (
+                <Button
+                  key={p.id}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => navigate(`/property-iq/property/${p.id}?demo=1`)}
+                >
+                  {p.address}, {p.city}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* View Mode Toggle */}
         <div className="flex items-center justify-between mb-4">
