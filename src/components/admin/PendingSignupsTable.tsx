@@ -647,6 +647,17 @@ const PendingSignupsTable = () => {
         contractorId={detailContractor?.id || null}
         companyId={detailContractor?.company_id || null}
       />
+
+      <RejectSignupDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        contractor={rejectTarget ? {
+          id: rejectTarget.id,
+          company_name: rejectTarget.company_name,
+          company_id: rejectTarget.company_id,
+        } : null}
+        onRejected={fetchData}
+      />
     </div>
   );
 };
