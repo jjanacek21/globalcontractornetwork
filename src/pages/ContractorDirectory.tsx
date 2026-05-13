@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ContractorProfile {
   id: string;
+  company_id?: string | null;
   company_name: string;
   category: string;
   description: string;
@@ -27,6 +28,7 @@ interface ContractorProfile {
   contractor_type?: string;
   verification_status?: string;
   is_directory_eligible?: boolean;
+  profile_type?: string;
 }
 
 const categoryIcons: Record<string, any> = {
