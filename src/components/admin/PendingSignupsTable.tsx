@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CheckCircle2, XCircle, Loader2, Building2, Home, Eye } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Building2, Home, Eye, Info } from "lucide-react";
 import { AVAILABLE_FEATURES } from "@/hooks/useContractorFeatures";
 import { ApplicationDetailDialog } from "./ApplicationDetailDialog";
+import { RejectSignupDialog } from "./RejectSignupDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PendingContractor {
   id: string;
