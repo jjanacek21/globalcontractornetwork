@@ -1051,6 +1051,10 @@ export type Database = {
           payout_rules: Json | null
           phone: string | null
           primary_category: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_notes: string | null
+          rejection_reason: string | null
           services_offered: string[] | null
           social_links: Json | null
           state: string | null
@@ -1098,6 +1102,10 @@ export type Database = {
           payout_rules?: Json | null
           phone?: string | null
           primary_category?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason?: string | null
           services_offered?: string[] | null
           social_links?: Json | null
           state?: string | null
@@ -1145,6 +1153,10 @@ export type Database = {
           payout_rules?: Json | null
           phone?: string | null
           primary_category?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason?: string | null
           services_offered?: string[] | null
           social_links?: Json | null
           state?: string | null
@@ -2088,6 +2100,8 @@ export type Database = {
       }
       contractor_profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           availability_days: number | null
           average_rating: number | null
           banner_image_url: string | null
@@ -2116,6 +2130,10 @@ export type Database = {
           price_tier: string | null
           profile_gallery: Json | null
           profile_type: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_notes: string | null
+          rejection_reason: string | null
           review_count: number | null
           secondary_trades: string[] | null
           service_area: string[] | null
@@ -2135,6 +2153,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           availability_days?: number | null
           average_rating?: number | null
           banner_image_url?: string | null
@@ -2163,6 +2183,10 @@ export type Database = {
           price_tier?: string | null
           profile_gallery?: Json | null
           profile_type?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null
@@ -2182,6 +2206,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           availability_days?: number | null
           average_rating?: number | null
           banner_image_url?: string | null
@@ -2210,6 +2236,10 @@ export type Database = {
           price_tier?: string | null
           profile_gallery?: Json | null
           profile_type?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_notes?: string | null
+          rejection_reason?: string | null
           review_count?: number | null
           secondary_trades?: string[] | null
           service_area?: string[] | null

@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CheckCircle2, XCircle, Loader2, Building2, Home, Eye } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Building2, Home, Eye, Info } from "lucide-react";
 import { AVAILABLE_FEATURES } from "@/hooks/useContractorFeatures";
 import { ApplicationDetailDialog } from "./ApplicationDetailDialog";
+import { RejectSignupDialog } from "./RejectSignupDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PendingContractor {
   id: string;
@@ -24,6 +26,9 @@ interface PendingContractor {
   description: string | null;
   created_at: string | null;
   subscription_status: string | null;
+  rejection_reason?: string | null;
+  rejection_notes?: string | null;
+  rejected_at?: string | null;
   company?: {
     id: string;
     name: string;
@@ -75,18 +80,21 @@ const PendingSignupsTable = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("none");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("none");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<PendingContractor | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"pending" | "rejected" | "all">("pending");
+
   const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [statusFilter]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch pending contractors with company information
-      const { data: contractorsData } = await supabase
+      // Fetch contractors with company information based on filter
+      let query = supabase
         .from("contractor_profiles")
         .select(`
           *,
@@ -96,8 +104,13 @@ const PendingSignupsTable = () => {
             verification_status
           )
         `)
-        .eq("subscription_status", "pending")
         .order("created_at", { ascending: false });
+      if (statusFilter !== "all") {
+        query = query.eq("subscription_status", statusFilter);
+      } else {
+        query = query.in("subscription_status", ["pending", "rejected"]);
+      }
+      const { data: contractorsData } = await query;
 
       setPendingContractors(contractorsData || []);
 
@@ -182,12 +195,15 @@ const PendingSignupsTable = () => {
 
     setApproving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       // Update contractor status
       const { error: updateError } = await supabase
         .from("contractor_profiles")
-        .update({ 
+        .update({
           subscription_status: "active",
-          is_verified: true
+          is_verified: true,
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id ?? null,
         })
         .eq("id", selectedContractor.id);
 
@@ -286,7 +302,18 @@ const PendingSignupsTable = () => {
         }
       }
 
-      const approvalMessage = selectedContractor.company_id 
+      // Generic approval email for non-company applicants (independents/handymen/etc.)
+      if (!selectedContractor.company_id) {
+        try {
+          await supabase.functions.invoke("notify-signup-approved", {
+            body: { contractorId: selectedContractor.id },
+          });
+        } catch (emailError) {
+          console.error("Error sending approval notification:", emailError);
+        }
+      }
+
+      const approvalMessage = selectedContractor.company_id
         ? `${selectedContractor.company_name} company has been approved with ${selectedFeatures.length} feature(s) enabled.`
         : `${selectedContractor.company_name} has been approved with ${selectedFeatures.length} feature(s) enabled.`;
 
@@ -308,30 +335,9 @@ const PendingSignupsTable = () => {
     }
   };
 
-  const handleReject = async (contractor: PendingContractor) => {
-    if (!confirm(`Are you sure you want to reject ${contractor.company_name}?`)) return;
-
-    try {
-      const { error } = await supabase
-        .from("contractor_profiles")
-        .update({ subscription_status: "rejected" })
-        .eq("id", contractor.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Contractor Rejected",
-        description: `${contractor.company_name} has been rejected.`
-      });
-
-      fetchData();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject contractor",
-        variant: "destructive"
-      });
-    }
+  const handleReject = (contractor: PendingContractor) => {
+    setRejectTarget(contractor);
+    setRejectOpen(true);
   };
 
   const filteredTeams = teams.filter(t => t.company_id === selectedCompanyId);
@@ -348,10 +354,20 @@ const PendingSignupsTable = () => {
     <div className="space-y-8">
       {/* Pending Contractors */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Building2 className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Pending Contractor Applications</h3>
+          <h3 className="text-lg font-semibold">Contractor Applications</h3>
           <Badge variant="secondary">{pendingContractors.length}</Badge>
+          <div className="ml-auto">
+            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {pendingContractors.length === 0 ? (
@@ -388,6 +404,28 @@ const PendingSignupsTable = () => {
                             Company Admin
                           </Badge>
                         )}
+                        {contractor.subscription_status === "rejected" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="text-xs w-fit cursor-help">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Rejected
+                                  <Info className="h-3 w-3 ml-1 opacity-70" />
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">{contractor.rejection_reason || "No reason recorded"}</p>
+                                <p className="text-xs whitespace-pre-wrap">{contractor.rejection_notes || "—"}</p>
+                                {contractor.rejected_at && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    {format(new Date(contractor.rejected_at), "MMM d, yyyy")}
+                                  </p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -412,21 +450,25 @@ const PendingSignupsTable = () => {
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleApproveClick(contractor)}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleReject(contractor)}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
+                        {contractor.subscription_status !== "rejected" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveClick(contractor)}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleReject(contractor)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -604,6 +646,17 @@ const PendingSignupsTable = () => {
         onOpenChange={setDetailOpen}
         contractorId={detailContractor?.id || null}
         companyId={detailContractor?.company_id || null}
+      />
+
+      <RejectSignupDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        contractor={rejectTarget ? {
+          id: rejectTarget.id,
+          company_name: rejectTarget.company_name,
+          company_id: rejectTarget.company_id,
+        } : null}
+        onRejected={fetchData}
       />
     </div>
   );
