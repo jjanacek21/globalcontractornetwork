@@ -124,6 +124,10 @@ const PropertyIQAuth = () => {
             </CardContent>
           </Tabs>
         </Card>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Just looking? <Link to="/property-iq/dashboard?demo=1" className="text-primary hover:underline font-medium">Try the demo</Link>
+        </p>
       </div>
     </div>
   );
