@@ -4,6 +4,8 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { ScoreGauge } from "@/components/property-iq/ScoreGauge";
 import { OwnerIntelligenceCard } from "@/components/property-iq/OwnerIntelligenceCard";
+import { DemoBanner } from "@/components/property-iq/DemoBanner";
+import { usePropertyIQDemo } from "@/hooks/usePropertyIQDemo";
 import { exportPropertyPDF } from "@/components/property-iq/ExportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +59,11 @@ const PropertyIQReport = () => {
   const permitMutation = useFetchMiamiDadePermits();
   const enrichTriggered = useRef(false);
   const { toast } = useToast();
+  const { isDemo } = usePropertyIQDemo();
 
-  // Auto-enrich when property loads
+  // Auto-enrich when property loads (skipped in demo to avoid mutating seeded rows)
   useEffect(() => {
+    if (isDemo) return;
     if (property && id && !enrichTriggered.current && !enrichMutation.isPending) {
       enrichTriggered.current = true;
       toast({ title: "Enriching data...", description: "Fetching storm history and recalculating scores." });
@@ -72,7 +76,7 @@ const PropertyIQReport = () => {
         },
       });
     }
-  }, [property, id]);
+  }, [property, id, isDemo]);
 
   if (isLoading) {
     return (
