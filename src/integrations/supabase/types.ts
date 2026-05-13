@@ -9757,6 +9757,105 @@ export type Database = {
           },
         ]
       }
+      referral_broadcast_claims: {
+        Row: {
+          broadcast_id: string
+          claimed_at: string
+          contractor_id: string
+          id: string
+          message_sent_at: string | null
+        }
+        Insert: {
+          broadcast_id: string
+          claimed_at?: string
+          contractor_id: string
+          id?: string
+          message_sent_at?: string | null
+        }
+        Update: {
+          broadcast_id?: string
+          claimed_at?: string
+          contractor_id?: string
+          id?: string
+          message_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_broadcast_claims_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "referral_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_broadcast_claims_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_broadcasts: {
+        Row: {
+          contract_value: number | null
+          created_at: string
+          customer_id: string
+          estimated_bounty: number | null
+          expires_at: string
+          id: string
+          max_claims: number
+          notes: string | null
+          referring_contractor_id: string
+          service_area: string | null
+          status: string
+          trade: string
+        }
+        Insert: {
+          contract_value?: number | null
+          created_at?: string
+          customer_id: string
+          estimated_bounty?: number | null
+          expires_at?: string
+          id?: string
+          max_claims?: number
+          notes?: string | null
+          referring_contractor_id: string
+          service_area?: string | null
+          status?: string
+          trade: string
+        }
+        Update: {
+          contract_value?: number | null
+          created_at?: string
+          customer_id?: string
+          estimated_bounty?: number | null
+          expires_at?: string
+          id?: string
+          max_claims?: number
+          notes?: string | null
+          referring_contractor_id?: string
+          service_area?: string | null
+          status?: string
+          trade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_broadcasts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "gcn_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_broadcasts_referring_contractor_id_fkey"
+            columns: ["referring_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referral_partner_tiers: {
         Row: {
           bounty_amount: number
