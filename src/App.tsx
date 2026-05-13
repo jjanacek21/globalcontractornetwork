@@ -352,66 +352,10 @@ const GCNRoutes = () => (
           <Route path="/digital-marketing" element={<DigitalMarketingServices />} />
           <Route path="/franchise" element={<Franchise />} />
           
-          {/* CRM Routes */}
-          <Route path="/crm/auth" element={<Navigate to="/join" replace />} />
+          {/* CRM (legacy GCN CRM) — disabled. External Pitch CRM is the only CRM. */}
+          <Route path="/crm/*" element={<Navigate to="/member/dashboard" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/crm/dashboard" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/customers" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Customers />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/contacts" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Contacts />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/pipeline" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <LeadPipeline />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/field-map" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FieldMap />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/measurements" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Measurements />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/estimates" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Estimates />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/presentations" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Presentations />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
           
           {/* Training Academy / Resource Library Routes */}
           <Route path="/academy" element={<TrainingAcademy />} />
