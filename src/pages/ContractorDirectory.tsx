@@ -148,9 +148,10 @@ export default function ContractorDirectory() {
       const matchesSearch = c.company_name.toLowerCase().includes(search.toLowerCase()) ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(search.toLowerCase())));
       const matchesVerified = !verifiedOnly || isVerifiedListing(c);
-      const matchesLocation = selectedLocation === "all" || 
+      const matchesLocation = selectedLocation === "all" ||
         (c.service_area && c.service_area.some(area => area.toLowerCase().includes(selectedLocation.toLowerCase())));
-      return matchesSearch && matchesVerified && matchesLocation;
+      const matchesType = profileTypeFilter === "all" || (c.profile_type || "company") === profileTypeFilter;
+      return matchesSearch && matchesVerified && matchesLocation && matchesType;
     })
     .sort((a, b) => {
       switch (sortBy) {
