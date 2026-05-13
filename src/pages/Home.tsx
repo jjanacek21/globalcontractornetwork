@@ -675,21 +675,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* GCN BUILDING CONSULTANT HELP DESK */}
-        <section id="consultant-support">
-          <div className="container">
-            <div className="section-head reveal">
-              <span className="eyebrow">Already a Client?</span>
-              <h2>Working with a <span className="gold-text">GCN Building Consultant?</span></h2>
-              <p>If you're already engaged with a GCN Building Consultant directly, skip the public intake and head straight to our help desk for project updates, document uploads, scheduling, and one-on-one support.</p>
-              <div className="actions" style={{ justifyContent: "center", marginTop: 24 }}>
-                <a href="https://gcn.support" target="_blank" rel="noopener noreferrer" className="btn btn-green btn-lg">
-                  GCN Support <span className="arr">→</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* ABOUT */}
         <section id="about" className="about">
