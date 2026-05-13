@@ -80,12 +80,15 @@ const PendingSignupsTable = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("none");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("none");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<PendingContractor | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"pending" | "rejected" | "all">("pending");
+
   const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [statusFilter]);
 
   const fetchData = async () => {
     setLoading(true);
