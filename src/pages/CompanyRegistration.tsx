@@ -1094,9 +1094,30 @@ const CompanyRegistration = () => {
                    </p>
                  </div>
 
-                 <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                 <label
+                   className="flex flex-col sm:flex-row items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                   onDragOver={(e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     e.currentTarget.classList.add('border-primary', 'bg-primary/10');
+                   }}
+                   onDragLeave={(e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+                   }}
+                   onDrop={(e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+                     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                     if (files.length > 0) handleMultiPhotoAdd(files);
+                   }}
+                 >
                    <Upload className="h-5 w-5 text-primary" />
-                   <span className="text-sm font-medium">Add Multiple Photos</span>
+                   <span className="text-sm font-medium text-center">
+                     Drag &amp; drop photos here, or click to select
+                   </span>
                    <input
                      type="file"
                      accept="image/*"
