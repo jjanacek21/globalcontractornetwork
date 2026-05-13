@@ -459,6 +459,7 @@ export default function Home() {
                 </SheetTrigger>
                 <SheetContent side="right">
                   <nav className="flex flex-col gap-4 mt-8 text-base font-semibold">
+                    <a onClick={() => setOpen(false)} href="https://gcn.support" target="_blank" rel="noopener noreferrer">GCN Support</a>
                     <a onClick={() => setOpen(false)} href="#services">For Homeowners</a>
                     <a onClick={() => setOpen(false)} href="#contractors">For Contractors</a>
                     <a onClick={() => setOpen(false)} href="#about">About</a>
