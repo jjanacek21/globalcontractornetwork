@@ -49,6 +49,7 @@ interface ServiceCard {
   link?: string;
   badge?: string;
   comingSoon?: boolean;
+  demoLink?: string;
 }
 
 const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => void; index: number }) => (
@@ -60,9 +61,9 @@ const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => voi
     style={{ transformStyle: "preserve-3d", perspective: 1000 }}
   >
     <Card
-      onClick={s.comingSoon ? undefined : onClick}
+      onClick={s.comingSoon && !s.demoLink ? undefined : onClick}
       className={`relative overflow-hidden glass-card border-border/40 h-full ${
-        s.comingSoon ? "opacity-70" : "cursor-pointer"
+        s.comingSoon && !s.demoLink ? "opacity-70" : "cursor-pointer"
       }`}
       style={{
         boxShadow: "0 10px 30px -12px hsl(var(--primary) / 0.18), 0 4px 12px -6px hsl(var(--accent) / 0.12), inset 0 1px 0 hsl(0 0% 100% / 0.6)",
@@ -97,6 +98,16 @@ const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => voi
           <div className="flex items-center text-sm font-medium text-primary gap-1.5 transition-all">
             Open <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </div>
+        </CardContent>
+      )}
+      {s.comingSoon && s.demoLink && (
+        <CardContent className="pt-0 relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="inline-flex items-center text-sm font-medium text-primary gap-1.5 hover:underline cursor-pointer"
+          >
+            Try the Demo <ArrowRight className="h-4 w-4" />
+          </button>
         </CardContent>
       )}
     </Card>
@@ -186,6 +197,16 @@ const MemberDashboard = () => {
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
   const profileRoute = (!isContractor && !isSuperAdmin) ? "/homeowner-profile" : "/my-profile";
 
+  const handleTileClick = (s: ServiceCard) => {
+    const target = s.demoLink || s.link;
+    if (!target) return;
+    if (/^https?:\/\//i.test(target)) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    } else {
+      navigate(target);
+    }
+  };
+
   const contractorServices: ServiceCard[] = [
     { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
     { icon: Megaphone, title: "Digital Marketing, Management & Design", description: "Social media, ads, SEO, web design & CRM support", link: "/digital-marketing" },
@@ -198,9 +219,9 @@ const MemberDashboard = () => {
     { icon: Users, title: "Contractor Social Hub", description: "Connect, message and post with the network", link: "/social", badge: "Coming Soon" },
     { icon: Briefcase, title: "Job Marketplace", description: "Browse and bid on homeowner job requests", link: "/job-board" },
     { icon: MapPinned, title: "Door to Door World", description: "GPS-tracked canvassing with gamified challenges", link: "/door-to-door" },
-    { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", link: "/property-iq" },
+    { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", comingSoon: true, demoLink: "/ni/dashboard" },
     { icon: Lightbulb, title: "Referrals", description: "Earn bounties, manage your client pool, and track residuals.", link: "/dashboard/referrals" },
-    { icon: Rocket, title: "GCN Business Suite", description: "Estimating, invoicing, contracts, prospecting, gamification, social & marketplace — all in one.", comingSoon: true },
+    { icon: Rocket, title: "GCN App", description: "Rep card, Measure, Estimate, Analyze, Pre-Cap, Proposals, Contract, Invoice", link: "https://globalcontractor.app", badge: "Premium" },
   ];
 
   const homeownerServices: ServiceCard[] = [
@@ -404,7 +425,7 @@ const MemberDashboard = () => {
                 ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title) && h.title !== "Job Marketplace" && h.title !== "Maintenance Membership")]
                 : isContractor ? contractorServices : homeownerServices
               ).map((s, i) => (
-                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
+                <ServiceTile key={s.title} s={s} index={i} onClick={() => handleTileClick(s)} />
               ))}
             </div>
           </TabsContent>
@@ -424,7 +445,7 @@ const MemberDashboard = () => {
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {contractorApps.map((s, i) => (
-                  <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
+                  <ServiceTile key={s.title} s={s} index={i} onClick={() => handleTileClick(s)} />
                 ))}
               </div>
             </TabsContent>
