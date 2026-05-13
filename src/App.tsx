@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isCoatingKingsDomain } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -109,7 +109,7 @@ const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
 
 // Demo-aware wrapper: if ?demo=1 OR sessionStorage flag set, bypass auth
 const PropertyIQDashboardRoute = () => {
-  const [search] = (require("react-router-dom") as typeof import("react-router-dom")).useSearchParams();
+  const [search] = useSearchParams();
   const isDemo = search.get("demo") === "1" || (typeof window !== "undefined" && sessionStorage.getItem("piq_demo") === "1");
   if (isDemo) {
     return <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>;
