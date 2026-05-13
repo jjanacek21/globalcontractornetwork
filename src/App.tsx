@@ -20,14 +20,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
-import Dashboard from "./pages/Dashboard";
-import Customers from "./pages/Customers";
-import Contacts from "./pages/Contacts";
-import LeadPipeline from "./pages/LeadPipeline";
-import FieldMap from "./pages/FieldMap";
-import Measurements from "./pages/Measurements";
-import Estimates from "./pages/Estimates";
-import Presentations from "./pages/Presentations";
+// Legacy CRM page imports removed.
 import GamificationDashboard from "./pages/GamificationDashboard";
 import ContractorRewards from "./pages/ContractorRewards";
 import NotFound from "./pages/NotFound";
