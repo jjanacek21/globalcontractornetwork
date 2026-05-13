@@ -1069,14 +1069,18 @@ const CompanyRegistration = () => {
                         {photo.previewUrl ? (
                           <img src={photo.previewUrl} alt={`Job ${index + 1}`} className="w-full h-full object-cover" />
                         ) : (
-                          <label className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                          <label className="relative cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-full h-full justify-center">
                             <Upload className="h-8 w-8" />
                             <span className="text-sm">Upload Photo</span>
                             <input
                               type="file"
                               accept="image/*"
-                              className="hidden"
-                              onChange={(e) => e.target.files?.[0] && handlePhotoChange(index, e.target.files[0])}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handlePhotoChange(index, file);
+                                e.target.value = '';
+                              }}
                             />
                           </label>
                         )}
