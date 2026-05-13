@@ -197,6 +197,16 @@ const MemberDashboard = () => {
   const isPendingContractor = isContractor && contractorProfile?.subscription_status === "pending";
   const profileRoute = (!isContractor && !isSuperAdmin) ? "/homeowner-profile" : "/my-profile";
 
+  const handleTileClick = (s: ServiceCard) => {
+    const target = s.demoLink || s.link;
+    if (!target) return;
+    if (/^https?:\/\//i.test(target)) {
+      window.open(target, "_blank", "noopener,noreferrer");
+    } else {
+      navigate(target);
+    }
+  };
+
   const contractorServices: ServiceCard[] = [
     { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
     { icon: Megaphone, title: "Digital Marketing, Management & Design", description: "Social media, ads, SEO, web design & CRM support", link: "/digital-marketing" },
