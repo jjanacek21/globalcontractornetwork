@@ -441,6 +441,7 @@ export default function Home() {
               <img className="logo-img" src="/gcn-logo.png" alt="The Global Contractor Network" />
             </a>
             <nav className="navlinks" aria-label="Primary">
+              <a href="https://gcn.support" target="_blank" rel="noopener noreferrer">GCN Support</a>
               <a href="#services">For Homeowners</a>
               <a href="#contractors">For Contractors</a>
               <a href="#about">About</a>
