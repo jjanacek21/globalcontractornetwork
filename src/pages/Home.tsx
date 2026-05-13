@@ -441,6 +441,7 @@ export default function Home() {
               <img className="logo-img" src="/gcn-logo.png" alt="The Global Contractor Network" />
             </a>
             <nav className="navlinks" aria-label="Primary">
+              <a href="https://gcn.support" target="_blank" rel="noopener noreferrer">GCN Support</a>
               <a href="#services">For Homeowners</a>
               <a href="#contractors">For Contractors</a>
               <a href="#about">About</a>
@@ -458,6 +459,7 @@ export default function Home() {
                 </SheetTrigger>
                 <SheetContent side="right">
                   <nav className="flex flex-col gap-4 mt-8 text-base font-semibold">
+                    <a onClick={() => setOpen(false)} href="https://gcn.support" target="_blank" rel="noopener noreferrer">GCN Support</a>
                     <a onClick={() => setOpen(false)} href="#services">For Homeowners</a>
                     <a onClick={() => setOpen(false)} href="#contractors">For Contractors</a>
                     <a onClick={() => setOpen(false)} href="#about">About</a>
@@ -652,6 +654,22 @@ export default function Home() {
                   <ul>{h.items.map((it, j) => <li key={j}>{it}</li>)}</ul>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* GCN BUILDING CONSULTANT HELP DESK */}
+        <section id="consultant-support">
+          <div className="container">
+            <div className="section-head reveal">
+              <span className="eyebrow">Already a Client?</span>
+              <h2>Working with a <span className="gold-text">GCN Building Consultant?</span></h2>
+              <p>If you're already engaged with a GCN Building Consultant directly, skip the public intake and head straight to our help desk for project updates, document uploads, scheduling, and one-on-one support.</p>
+              <div className="actions" style={{ justifyContent: "center", marginTop: 24 }}>
+                <a href="https://gcn.support" target="_blank" rel="noopener noreferrer" className="btn btn-green btn-lg">
+                  GCN Support <span className="arr">→</span>
+                </a>
+              </div>
             </div>
           </div>
         </section>

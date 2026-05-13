@@ -1,44 +1,36 @@
-# Make the New Referrals Dashboard Reachable
+## Goal
 
-## Why you don't see it
+Add a "GCN Support" entry point in two places on the homepage (`src/pages/Home.tsx`), both linking out to https://gcn.support.
 
-The new dashboard was built and the route `/dashboard/referrals` is registered in `src/App.tsx`, but **nothing on `/member/dashboard` links to it**. The existing "Referrals" tile in `MemberDashboard.tsx` (line 202) still points to the **legacy** page `/contractor/referrals` — that's the screen you're seeing.
+## 1. Nav button before "For Homeowners"
 
-You can confirm right now by visiting the URL directly:
+In the desktop nav (`<nav class="navlinks">`, line ~443) and the mobile sheet nav (line ~460), add a new link as the first item:
 
-```
-/dashboard/referrals
-```
+- Label: `GCN Support`
+- Href: `https://gcn.support`
+- Opens in a new tab (`target="_blank"`, `rel="noopener noreferrer"`)
+- Styled to match the existing nav anchor styling (no extra classes needed beyond what `.navlinks a` already provides). On mobile, calls `setOpen(false)` like the other links.
 
-If that loads the new cream/green/gold dashboard, the build is fine — it's just an entry-point problem.
+## 2. New homepage section: "Working with a GCN Building Consultant?"
 
-## Plan
+Insert a new `<section>` between the existing `#hire-options` section (ends ~line 657) and the `#about` section (starts ~line 660). Keeps it high enough to be visible but after the main service/hire CTAs.
 
-### 1. Repoint the contractor dashboard tile
-In `src/pages/MemberDashboard.tsx` (line 202), change the existing "Referrals" tile in `contractorApps` so its `link` is `/dashboard/referrals` instead of `/contractor/referrals`. Keep the icon, title, and description.
+Content:
+- Eyebrow: `Already a Client?`
+- Heading: `Working with a GCN Building Consultant?`
+- One short paragraph: explains that if they are already engaged with a GCN Building Consultant directly, they can visit the help desk for project updates, document uploads, scheduling, and direct support — instead of going through the public intake flow.
+- Single CTA button: `GCN Support` → https://gcn.support, opens in new tab, styled with existing `btn btn-green btn-lg` classes for visual consistency with the hero CTA.
 
-### 2. Update the description to reflect the new product
-New copy:
-> "Earn bounties, manage your client pool, and track residuals."
-
-### 3. Leave the legacy page in place (safety net)
-Do **not** delete `/contractor/referrals` or `ContractorReferralsPage.tsx`. The old route stays mounted so any deep links / bookmarks still resolve. We can deprecate it in a later pass once you confirm the new dashboard covers everything.
-
-### 4. Optional — add a sidebar link
-The CRM `AppSidebar.tsx` is the only sidebar in the app and it serves the CRM, not the member portal. The member dashboard is tile-based, so there's no global sidebar to add a "Referrals" entry to. **No sidebar change needed** unless you want one added inside the new ReferralsDashboard shell itself.
-
-## Files to edit
-
-- `src/pages/MemberDashboard.tsx` — one-line link + description change on the Referrals tile.
+Layout uses the existing `.container` + `.section-head reveal` pattern so it inherits the scoped CSS, padding, border-top divider, and scroll-reveal animation already in place. No new CSS needed.
 
 ## Out of scope
 
-- No DB changes.
-- No changes to `ReferralsDashboard.tsx` or its tabs/modals.
-- No removal of the legacy referrals page.
+- No changes to `LandingHeader.tsx` / `HomeownerServices.tsx` (not mounted on `/`).
+- No routing, auth, or backend changes.
+- No new assets, design tokens, or dependencies.
 
 ## Verification
 
-1. Reload `/member/dashboard` as a contractor.
-2. Click the **Referrals** tile under "Apps".
-3. You should land on the new cream/green/gold 7-tab dashboard (Overview, Partners, My Bounty Tiers, My Clients, Sent, Received, Payouts).
+Reload `/`, confirm:
+1. "GCN Support" appears as the first link in both desktop and mobile nav and opens gcn.support in a new tab.
+2. The new section renders between the hire-options and about sections with the CTA button working.
