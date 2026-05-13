@@ -50,6 +50,15 @@ const CONTRACTOR_TYPE_OPTIONS = [
   { value: 'handyman', label: 'Handyman' },
 ];
 
+const PROFILE_TYPE_OPTIONS = [
+  { value: 'company', label: 'Company Rep' },
+  { value: 'building_consultant', label: 'Building Consultant' },
+  { value: 'handyman', label: 'Handyman' },
+  { value: 'skilled_labor', label: 'Skilled Labor' },
+];
+
+const VERIFICATION_OPTIONS = ['pending', 'verified', 'rejected'];
+
 interface CompanyOption {
   id: string;
   name: string;
@@ -124,15 +133,23 @@ export function ContractorDialog({
         if (selectedSource === 'Directory') {
           insertData = {
             company_name: formData.company_name,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
             category: formData.category || 'Other',
             email: formData.email,
             phone: formData.phone,
             description: formData.description,
+            bio: formData.bio,
             website: formData.website,
+            logo_url: formData.logo_url,
             subscription_status: 'active',
             company_id: formData.company_id || null,
             team_id: formData.team_id || null,
             contractor_type: formData.contractor_type || 'independent',
+            profile_type: formData.profile_type || 'company',
+            verification_status: formData.verification_status || 'pending',
+            license_number: formData.license_number,
+            license_state: formData.license_state,
           };
         } else {
           insertData = {
@@ -276,9 +293,51 @@ export function ContractorDialog({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label>Company Name *</Label>
+          <Label>Profile Type *</Label>
           {isEditable ? (
-            <Input value={formData.company_name || ''} onChange={e => updateField('company_name', e.target.value)} />
+            <Select value={formData.profile_type || 'company'} onValueChange={v => updateField('profile_type', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PROFILE_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="mt-1 text-sm capitalize">{(rawData?.profile_type || 'company').replace('_', ' ')}</p>
+          )}
+        </div>
+        <div>
+          <Label>Verification Status</Label>
+          {isEditable ? (
+            <Select value={formData.verification_status || 'pending'} onValueChange={v => updateField('verification_status', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VERIFICATION_OPTIONS.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge>{rawData?.verification_status || 'pending'}</Badge>
+          )}
+        </div>
+        <div>
+          <Label>First Name</Label>
+          {isEditable ? (
+            <Input value={formData.first_name || ''} onChange={e => updateField('first_name', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.first_name || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>Last Name</Label>
+          {isEditable ? (
+            <Input value={formData.last_name || ''} onChange={e => updateField('last_name', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.last_name || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>Display / Company Name *</Label>
+          {isEditable ? (
+            <Input value={formData.company_name || ''} onChange={e => updateField('company_name', e.target.value)} placeholder="e.g. John's Handyman Services" />
           ) : (
             <p className="mt-1 text-sm font-medium">{rawData?.company_name}</p>
           )}
@@ -329,6 +388,24 @@ export function ContractorDialog({
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">{rawData?.description || 'No description'}</p>
         )}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>License Number (optional)</Label>
+          {isEditable ? (
+            <Input value={formData.license_number || ''} onChange={e => updateField('license_number', e.target.value)} />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.license_number || 'N/A'}</p>
+          )}
+        </div>
+        <div>
+          <Label>License State</Label>
+          {isEditable ? (
+            <Input value={formData.license_state || ''} onChange={e => updateField('license_state', e.target.value)} placeholder="FL" />
+          ) : (
+            <p className="mt-1 text-sm">{rawData?.license_state || 'N/A'}</p>
+          )}
+        </div>
       </div>
       {renderCompanyTeamFields()}
       {mode !== 'add' && rawData && (
