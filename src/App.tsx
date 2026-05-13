@@ -12,38 +12,7 @@ import { AnimatePresence } from "framer-motion";
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 const ReferralsDashboard = lazy(() => import("./pages/ReferralsDashboard"));
 
-// CRM Pages
-import { CRMLayout } from "./components/crm/CRMLayout";
-const CRMDashboard = lazy(() => import("./pages/crm/CRMDashboard"));
-const CRMPipeline = lazy(() => import("./pages/crm/CRMPipeline"));
-const CRMContacts = lazy(() => import("./pages/crm/CRMContacts"));
-const CRMContactDetail = lazy(() => import("./pages/crm/CRMContactDetail"));
-const CRMJobs = lazy(() => import("./pages/crm/CRMJobs"));
-const CRMEstimates = lazy(() => import("./pages/crm/CRMEstimates"));
-const CRMEstimateBuilder = lazy(() => import("./pages/crm/CRMEstimateBuilder"));
-const CRMProduction = lazy(() => import("./pages/crm/CRMProduction"));
-const CRMCalendar = lazy(() => import("./pages/crm/CRMCalendar"));
-const CRMPlaceholder = lazy(() => import("./pages/crm/CRMPlaceholder"));
-const CRMStormCanvas = lazy(() => import("./pages/crm/CRMStormCanvas"));
-const CanvassMap = lazy(() => import("./pages/crm/CanvassMap"));
-const CRMSmartDocs = lazy(() => import("./pages/crm/CRMSmartDocs"));
-const CRMPresentations = lazy(() => import("./pages/crm/CRMPresentations"));
-const CRMPermitExpediter = lazy(() => import("./pages/crm/CRMPermitExpediter"));
-const CRMSettings = lazy(() => import("./pages/crm/CRMSettings"));
-const CRMHelp = lazy(() => import("./pages/crm/CRMHelp"));
-const CRMFollowUpInbox = lazy(() => import("./pages/crm/CRMFollowUpInbox"));
-const CRMFollowUpUnmatched = lazy(() => import("./pages/crm/CRMFollowUpUnmatched"));
-const CRMFollowUpAIQueue = lazy(() => import("./pages/crm/CRMFollowUpAIQueue"));
-const CRMFollowUpCallCenter = lazy(() => import("./pages/crm/CRMFollowUpCallCenter"));
-const CRMFollowUpAIAgent = lazy(() => import("./pages/crm/CRMFollowUpAIAgent"));
-const CRMInsuranceClaims = lazy(() => import("./pages/crm/CRMInsuranceClaims"));
-const CRMInsuranceCarriers = lazy(() => import("./pages/crm/CRMInsuranceCarriers"));
-const CRMInsuranceAdjusters = lazy(() => import("./pages/crm/CRMInsuranceAdjusters"));
-const CRMInsuranceSupplements = lazy(() => import("./pages/crm/CRMInsuranceSupplements"));
-const CRMScopeIntelligence = lazy(() => import("./pages/crm/CRMScopeIntelligence"));
-const CRMCrewPortal = lazy(() => import("./pages/crm/CRMCrewPortal"));
-const CRMHomeownerPortal = lazy(() => import("./pages/crm/CRMHomeownerPortal"));
-const CRMLeadDetail = lazy(() => import("./pages/crm/CRMLeadDetail"));
+// CRM (GCN internal) was removed — contractors use external Pitch CRM via the dashboard tile.
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
 
 import Home from "./pages/Home";
@@ -51,14 +20,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
-import Dashboard from "./pages/Dashboard";
-import Customers from "./pages/Customers";
-import Contacts from "./pages/Contacts";
-import LeadPipeline from "./pages/LeadPipeline";
-import FieldMap from "./pages/FieldMap";
-import Measurements from "./pages/Measurements";
-import Estimates from "./pages/Estimates";
-import Presentations from "./pages/Presentations";
+// Legacy CRM page imports removed.
 import GamificationDashboard from "./pages/GamificationDashboard";
 import ContractorRewards from "./pages/ContractorRewards";
 import NotFound from "./pages/NotFound";
@@ -127,7 +89,7 @@ import HomeownerDashboard from "./pages/HomeownerDashboard";
 import HomeownerProfile from "./pages/HomeownerProfile";
 import HomeownerMessages from "./pages/HomeownerMessages";
 import QuoteDetail from "./pages/QuoteDetail";
-import { AppLayout } from "./components/layout/AppLayout";
+
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { HomeownerOnlyRoute } from "./components/auth/HomeownerOnlyRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
@@ -198,161 +160,8 @@ const GCNRoutes = () => (
     } />
     <Route path="/member/dashboard" element={<MemberDashboard />} />
     
-    {/* CRM Routes */}
-    <Route path="/member/crm" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout>
-          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
-            <CRMDashboard />
-          </Suspense>
-        </CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/pipeline" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPipeline /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/contacts" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMContacts /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/contacts/:contactId" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMContactDetail /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/leads/:leadId" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMLeadDetail /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/jobs" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMJobs /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/estimates" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMEstimates /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/estimates/new" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMEstimateBuilder /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/measurements" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><Measurements /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/production" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMProduction /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/calendar" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMCalendar /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/storm-canvas" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMStormCanvas /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/storm-canvas/canvass" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CanvassMap /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/presentations" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPresentations /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/smart-docs" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMSmartDocs /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/permit-expediter" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMPermitExpediter /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/follow-up/inbox" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpInbox /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/follow-up/unmatched" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpUnmatched /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/follow-up/ai-queue" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpAIQueue /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/follow-up/call-center" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpCallCenter /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/follow-up/ai-agent" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMFollowUpAIAgent /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/insurance/claims" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceClaims /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/insurance/carriers" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceCarriers /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/insurance/adjusters" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceAdjusters /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/insurance/supplements" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMInsuranceSupplements /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/insurance/scope-intelligence" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMScopeIntelligence /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/crew-portal" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMCrewPortal /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/homeowner-portal" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMHomeownerPortal /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/help" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMHelp /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
-    <Route path="/member/crm/settings" element={
-      <ProtectedRoute redirectTo="/network-login">
-        <CRMLayout><Suspense fallback={<div />}><CRMSettings /></Suspense></CRMLayout>
-      </ProtectedRoute>
-    } />
+    {/* CRM (GCN internal) — disabled. Contractors access CRM via external Pitch CRM tile. */}
+    <Route path="/member/crm/*" element={<Navigate to="/member/dashboard" replace />} />
     <Route path="/my-profile" element={
       <ProtectedRoute redirectTo="/network-login">
         <MyProfile />
@@ -505,66 +314,10 @@ const GCNRoutes = () => (
           <Route path="/digital-marketing" element={<DigitalMarketingServices />} />
           <Route path="/franchise" element={<Franchise />} />
           
-          {/* CRM Routes */}
-          <Route path="/crm/auth" element={<Navigate to="/join" replace />} />
+          {/* CRM (legacy GCN CRM) — disabled. External Pitch CRM is the only CRM. */}
+          <Route path="/crm/*" element={<Navigate to="/member/dashboard" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/crm/dashboard" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/customers" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Customers />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/contacts" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Contacts />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/pipeline" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <LeadPipeline />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/field-map" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FieldMap />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/measurements" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Measurements />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/estimates" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Estimates />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/crm/presentations" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Presentations />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
           
           {/* Training Academy / Resource Library Routes */}
           <Route path="/academy" element={<TrainingAcademy />} />
@@ -628,41 +381,11 @@ const GCNRoutes = () => (
           
           {/* Legacy routes */}
           <Route path="/auth" element={<Auth />} />
-          <Route path="/customers" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Customers />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/field-map" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <FieldMap />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/measurements" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Measurements />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/estimates" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Estimates />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/presentations" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Presentations />
-              </AppLayout>
-            </ProtectedRoute>
-          } />
+          <Route path="/customers" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/field-map" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/measurements" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/estimates" element={<Navigate to="/member/dashboard" replace />} />
+          <Route path="/presentations" element={<Navigate to="/member/dashboard" replace />} />
           
           {/* Design System */}
           <Route path="/design-system" element={
