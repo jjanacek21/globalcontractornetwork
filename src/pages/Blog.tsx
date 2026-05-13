@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,15 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Construction Industry News &amp; Guides | GCN Blog</title>
+        <meta name="description" content="Insights, guides, and industry news for homeowners and contractors — roofing, mitigation, permits, marketing, and more." />
+        <link rel="canonical" href="https://globalcontractor.network/blog" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Construction Industry News &amp; Guides | GCN Blog" />
+        <meta property="og:description" content="Insights, guides, and industry news for homeowners and contractors." />
+        <meta property="og:url" content="https://globalcontractor.network/blog" />
+      </Helmet>
       <PublicHeader />
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
