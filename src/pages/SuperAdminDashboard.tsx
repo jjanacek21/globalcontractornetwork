@@ -527,6 +527,12 @@ const SuperAdminDashboard = () => {
               </TabsContent>
 
               <TabsContent value="contractors">
+                <div className="flex justify-end mb-4">
+                  <Button onClick={handleAddContractor} className="gap-2">
+                    <Users className="h-4 w-4" />
+                    Add Independent Contractor
+                  </Button>
+                </div>
                 <ContractorsTable />
               </TabsContent>
 
