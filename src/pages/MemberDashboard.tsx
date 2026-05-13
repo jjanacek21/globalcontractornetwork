@@ -49,6 +49,7 @@ interface ServiceCard {
   link?: string;
   badge?: string;
   comingSoon?: boolean;
+  demoLink?: string;
 }
 
 const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => void; index: number }) => (
