@@ -415,7 +415,7 @@ const MemberDashboard = () => {
                 ? [...contractorServices, ...homeownerServices.filter(h => !contractorServices.some(c => c.title === h.title) && h.title !== "Job Marketplace" && h.title !== "Maintenance Membership")]
                 : isContractor ? contractorServices : homeownerServices
               ).map((s, i) => (
-                <ServiceTile key={s.title} s={s} index={i} onClick={() => s.link && navigate(s.link)} />
+                <ServiceTile key={s.title} s={s} index={i} onClick={() => handleTileClick(s)} />
               ))}
             </div>
           </TabsContent>
