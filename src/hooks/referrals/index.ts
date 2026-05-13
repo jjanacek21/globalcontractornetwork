@@ -113,11 +113,13 @@ export function usePartners(contractorId: string | null | undefined) {
     enabled: !!contractorId,
     queryKey: ["referrals", "partners", contractorId],
     queryFn: async () => {
+      // Eligibility relaxed: include directory-eligible OR verified contractors
+      // so the partner picker is not gated to zero while onboarding ramps up.
       const { data: profiles, error } = await supabase
         .from("contractor_profiles")
-        .select("id, company_name, category, service_area, is_directory_eligible")
+        .select("id, company_name, category, service_area, is_directory_eligible, verification_status")
         .neq("id", contractorId!)
-        .eq("is_directory_eligible", true);
+        .or("is_directory_eligible.eq.true,verification_status.eq.verified,verification_status.eq.pending");
       if (error) throw error;
       const ids = (profiles ?? []).map(p => p.id);
       if (ids.length === 0) return [];
