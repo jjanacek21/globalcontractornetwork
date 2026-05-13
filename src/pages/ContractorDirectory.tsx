@@ -70,6 +70,7 @@ export default function ContractorDirectory() {
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("rating");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [profileTypeFilter, setProfileTypeFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<ContractorProfile | null>(null);
