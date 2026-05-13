@@ -26,6 +26,9 @@ interface PendingContractor {
   description: string | null;
   created_at: string | null;
   subscription_status: string | null;
+  rejection_reason?: string | null;
+  rejection_notes?: string | null;
+  rejected_at?: string | null;
   company?: {
     id: string;
     name: string;
