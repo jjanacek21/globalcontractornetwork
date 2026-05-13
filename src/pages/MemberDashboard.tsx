@@ -61,9 +61,9 @@ const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => voi
     style={{ transformStyle: "preserve-3d", perspective: 1000 }}
   >
     <Card
-      onClick={s.comingSoon ? undefined : onClick}
+      onClick={s.comingSoon && !s.demoLink ? undefined : onClick}
       className={`relative overflow-hidden glass-card border-border/40 h-full ${
-        s.comingSoon ? "opacity-70" : "cursor-pointer"
+        s.comingSoon && !s.demoLink ? "opacity-70" : "cursor-pointer"
       }`}
       style={{
         boxShadow: "0 10px 30px -12px hsl(var(--primary) / 0.18), 0 4px 12px -6px hsl(var(--accent) / 0.12), inset 0 1px 0 hsl(0 0% 100% / 0.6)",
