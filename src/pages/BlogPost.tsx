@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,26 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${post.title} | GCN Blog`}</title>
+        <meta name="description" content={(DOMPurify.sanitize(post.content, { ALLOWED_TAGS: [] }) || post.title).slice(0, 155)} />
+        <link rel="canonical" href={`https://globalcontractor.network/blog/${slug}`} />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={post.title} />
+        <meta property="og:url" content={`https://globalcontractor.network/blog/${slug}`} />
+        {post.image_url && <meta property="og:image" content={post.image_url} />}
+        <meta property="article:published_time" content={post.published_at} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          datePublished: post.published_at,
+          image: post.image_url || undefined,
+          author: { "@type": "Organization", name: "Global Contractor Network" },
+          publisher: { "@type": "Organization", name: "Global Contractor Network", logo: { "@type": "ImageObject", url: "https://globalcontractor.network/gcn-logo.png" } },
+          mainEntityOfPage: `https://globalcontractor.network/blog/${slug}`,
+        })}</script>
+      </Helmet>
       <PublicHeader />
       <main className="container mx-auto px-4 py-12">
         <article className="max-w-4xl mx-auto">

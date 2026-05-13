@@ -1,0 +1,33 @@
+# Global Contractor Network
+
+> A referral-based network connecting homeowners with vetted, insured contractors — no bidding wars, no spam calls. Free AI-powered project quotes plus tools for contractors to run their business.
+
+Global Contractor Network (GCN) helps homeowners hire trusted pros for roofing, coatings, windows & doors, mold/water mitigation, landscaping, and more. Contractors get a CRM, permit expediting, training academy, marketing services, and a verified directory listing.
+
+## Pages
+
+- [Home](/): Overview, AI quote intake, and how the network works.
+- [Contractor Directory](/directory): Search vetted, insured contractors by trade and location.
+- [Instant Quote](/instant-quote): Free AI-powered project quote in 60 seconds.
+- [Schedule Consultation](/schedule-consultation): Book time with a GCN Building Consultant.
+- [Maintenance Membership](/maintenance-membership): Annual home maintenance plans.
+- [Prep Your Property](/prep-property): Pre-storm and pre-sale property prep.
+- [Roofing](/roofing): Roof replacement, repair, and inspections.
+- [Coating Kings](/coating-kings): Roof coatings and protective finishes.
+- [Green Home Solutions](/green-home-solutions): Energy-efficient windows and doors.
+- [Emergency Mitigation](/emergency-mitigation): 24/7 mold, water, and storm response.
+- [Northern Landscaping](/northern-landscaping): Tree removal and landscaping services.
+- [Supplement Kings](/supplement-kings): Insurance claim supplementing for contractors.
+- [Property IQ](/property-iq): Property intelligence and lead-scoring tool.
+- [Blog](/blog): Industry news, guides, and homeowner tips.
+- [Store](/store): Branded merchandise.
+- [Academy](/academy): Contractor training, courses, and resources.
+- [Job Board](/job-board): Open contractor and trade jobs.
+- [Digital Marketing](/digital-marketing): Marketing services for contractors.
+- [Marketing Consulting](/consulting): One-on-one marketing strategy.
+- [Franchise](/franchise): GCN franchise opportunities.
+- [Join the Network](/join): Apply to become a verified GCN contractor.
+
+## Optional
+
+- [GCN Support](https://gcn.support): Help desk for active GCN Building Consultant clients.
