@@ -195,12 +195,15 @@ const PendingSignupsTable = () => {
 
     setApproving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       // Update contractor status
       const { error: updateError } = await supabase
         .from("contractor_profiles")
-        .update({ 
+        .update({
           subscription_status: "active",
-          is_verified: true
+          is_verified: true,
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id ?? null,
         })
         .eq("id", selectedContractor.id);
 
