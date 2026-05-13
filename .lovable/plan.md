@@ -1,36 +1,32 @@
-## Changes to `src/pages/MemberDashboard.tsx` — `contractorApps` grid
+## Goal
+Make every CRM auth surface unreachable. The user said "CRM auth routes and pages (like `/crm/auth`)" — I'm interpreting this strictly as the **auth-gateway** to the CRM, not the entire CRM module (the `/member/crm/*` portal stays since it's still wired up and gated by Lovable Cloud auth elsewhere). If you also want the full `/member/crm/*` and `/crm/*` CRM portal removed, say the word and I'll do that as a follow-up.
 
-### 1. Remove the GCN Business Suite tile
-Delete the existing entry:
-```
-{ icon: Rocket, title: "GCN Business Suite", description: "...", comingSoon: true }
-```
+## Changes
 
-### 2. PropertyIQ → "Coming Soon" with a demo path
-Currently PropertyIQ links straight to `/property-iq`. Change it to:
-- Show the "Coming Soon" badge (visually gated like other coming-soon tiles).
-- Expose a secondary "Try the Demo" action on the tile that routes to the existing PropertyIQ demo data (`/ni/dashboard` — the demo properties seeded under the `a0000001-…` UUID pattern documented in project memory are already loaded there).
-
-Implementation note: `ServiceTile` today hides its CTA when `comingSoon` is true. I'll extend the `ServiceCard` type with an optional `demoLink?: string`, and when present render a small "Try the Demo →" link inside the card body even while the main tile stays in the Coming Soon state. No other tiles are affected.
-
-### 3. Add the new GCN App tile
-Append to `contractorApps`:
-```
-{
-  icon: Rocket,
-  title: "GCN App",
-  description: "Rep card, Measure, Estimate, Analyze, Pre-Cap, Proposals, Contract, Invoice",
-  link: "https://globalcontractor.app",
-  badge: "Premium",
-}
+### 1. Remove the `/crm/auth` route
+`src/App.tsx` line 509 — delete:
+```tsx
+<Route path="/crm/auth" element={<Auth />} />
 ```
 
-Because this is an external URL, `ServiceTile`'s onClick (which uses `navigate`) needs to handle absolute URLs by doing `window.open(link, "_blank", "noopener,noreferrer")` instead. I'll add that branch in the tile click handler — purely presentational change, no other tiles affected.
+### 2. Stop linking to `/crm/auth`
+- `src/components/landing/LandingFeatureCards.tsx` lines 33 & 54 — replace `link: "/crm/auth"` with `link: "/join"` (the network signup) so the landing CTAs still resolve.
+- `src/pages/ResetPassword.tsx` lines 105 & 163 — replace the two `navigate("/crm/auth")` calls with `navigate("/join")`.
 
-### Out of scope (called out for follow-up)
-The user mentioned "super admins can give access to the app if they pay for that tier in the network." That requires a real entitlement model (subscription tier table + admin grant UI + per-user gating on the GCN App tile). It is **not** included in this plan — this change only adds the tile and the external link. I'll flag it after implementation so you can scope the entitlement work as its own task.
+### 3. Update `ProtectedRoute` default redirect
+`src/components/auth/ProtectedRoute.tsx` line 15 — change the default `redirectTo` from `"/crm/auth"` to `"/join"` so any orphaned protected route falls back to the network signup instead of a dead URL.
+
+### 4. Add a hard redirect for any direct hits
+At the bottom of the route table (just above the `*` catch-all in `src/App.tsx`), add:
+```tsx
+<Route path="/crm/auth" element={<Navigate to="/join" replace />} />
+```
+This guarantees any bookmarked or external link to `/crm/auth` lands on a valid page instead of the 404.
 
 ### Files touched
-- `src/pages/MemberDashboard.tsx` (only)
+- `src/App.tsx`
+- `src/components/landing/LandingFeatureCards.tsx`
+- `src/components/auth/ProtectedRoute.tsx`
+- `src/pages/ResetPassword.tsx`
 
-No DB, routing, or backend changes.
+No DB or backend changes. The `Auth` page component itself stays in the codebase (it's also mounted at `/auth` for the legacy admin/CRM combined login) — only the `/crm/auth` URL is killed.
