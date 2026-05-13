@@ -346,7 +346,12 @@ export default function ContractorDirectory() {
                             </div>
                           )}
                           <div>
-                            <CardTitle className="text-lg text-white">{contractor.company_name}</CardTitle>
+                            <Link
+                              to={contractor.company_id ? `/company/${contractor.company_id}` : `/contractor/${contractor.id}`}
+                              className="hover:underline"
+                            >
+                              <CardTitle className="text-lg text-white">{contractor.company_name}</CardTitle>
+                            </Link>
                             <Badge className={`mt-1 capitalize ${categoryColors[contractor.category] || "bg-slate-700"}`}>
                               {contractor.category}
                             </Badge>
