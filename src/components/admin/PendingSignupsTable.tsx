@@ -93,8 +93,8 @@ const PendingSignupsTable = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch pending contractors with company information
-      const { data: contractorsData } = await supabase
+      // Fetch contractors with company information based on filter
+      let query = supabase
         .from("contractor_profiles")
         .select(`
           *,
@@ -104,8 +104,13 @@ const PendingSignupsTable = () => {
             verification_status
           )
         `)
-        .eq("subscription_status", "pending")
         .order("created_at", { ascending: false });
+      if (statusFilter !== "all") {
+        query = query.eq("subscription_status", statusFilter);
+      } else {
+        query = query.in("subscription_status", ["pending", "rejected"]);
+      }
+      const { data: contractorsData } = await query;
 
       setPendingContractors(contractorsData || []);
 
