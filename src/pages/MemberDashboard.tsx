@@ -221,6 +221,7 @@ const MemberDashboard = () => {
     { icon: MapPinned, title: "Door to Door World", description: "GPS-tracked canvassing with gamified challenges", link: "/door-to-door" },
     { icon: Building2, title: "PropertyIQ", description: "Property intel reports, owner data & roof analysis", comingSoon: true, demoLink: "/ni/dashboard" },
     { icon: Lightbulb, title: "Referrals", description: "Earn bounties, manage your client pool, and track residuals.", link: "/dashboard/referrals" },
+    { icon: LayoutDashboard, title: "CRM", description: "Pipeline, contacts, jobs and follow-ups — powered by Pitch CRM", link: "https://pitch-crm.ai/" },
     { icon: Rocket, title: "GCN App", description: "Rep card, Measure, Estimate, Analyze, Pre-Cap, Proposals, Contract, Invoice", link: "https://globalcontractor.app", badge: "Premium" },
   ];
 
