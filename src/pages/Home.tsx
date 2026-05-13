@@ -474,6 +474,7 @@ export default function Home() {
           </div>
         </header>
 
+        <main>
         {/* HERO */}
         <section className="hero" id="top" style={{ borderTop: "none" }}>
           <div className="container">
@@ -901,6 +902,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        </main>
 
         {/* FOOTER */}
         <footer>
