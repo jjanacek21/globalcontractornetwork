@@ -50,6 +50,15 @@ const CONTRACTOR_TYPE_OPTIONS = [
   { value: 'handyman', label: 'Handyman' },
 ];
 
+const PROFILE_TYPE_OPTIONS = [
+  { value: 'company', label: 'Company Rep' },
+  { value: 'building_consultant', label: 'Building Consultant' },
+  { value: 'handyman', label: 'Handyman' },
+  { value: 'skilled_labor', label: 'Skilled Labor' },
+];
+
+const VERIFICATION_OPTIONS = ['pending', 'verified', 'rejected'];
+
 interface CompanyOption {
   id: string;
   name: string;
