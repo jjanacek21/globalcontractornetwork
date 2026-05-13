@@ -6,6 +6,10 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
 import { PropertyIQMap } from "@/components/property-iq/PropertyIQMap";
+import { DemoBanner } from "@/components/property-iq/DemoBanner";
+import { usePropertyIQDemo, DEMO_PROPERTY_IDS } from "@/hooks/usePropertyIQDemo";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { usePropertyIQSearch, useAttomLookup } from "@/hooks/usePropertyIQ";
 import { Search, Loader2, Database, Users, CloudRain, Building2, List, Map } from "lucide-react";
 
@@ -17,15 +21,31 @@ const PropertyIQSearch = () => {
   const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [attomTriggered, setAttomTriggered] = useState(false);
   const navigate = useNavigate();
+  const { isDemo } = usePropertyIQDemo();
 
   const { data: results, isLoading } = usePropertyIQSearch(query);
   const attomLookup = useAttomLookup();
   const filtered = results || [];
 
+  // In demo: load the 5 sample properties to show as quick-pick chips
+  const { data: demoSamples } = useQuery({
+    enabled: isDemo,
+    queryKey: ["piq-demo-samples"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("piq_properties")
+        .select("id, address, city, state")
+        .in("id", DEMO_PROPERTY_IDS);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const hasNoMatch = query.trim() !== "" && !isLoading && filtered.length === 0;
 
-  // Auto-trigger ATTOM lookup when no DB results
+  // Auto-trigger ATTOM lookup when no DB results — disabled in demo
   useEffect(() => {
+    if (isDemo) return;
     if (hasNoMatch && !attomTriggered && !attomLookup.isPending) {
       setAttomTriggered(true);
       attomLookup.mutate(query, {
@@ -36,7 +56,7 @@ const PropertyIQSearch = () => {
         },
       });
     }
-  }, [hasNoMatch, attomTriggered, query]);
+  }, [hasNoMatch, attomTriggered, query, isDemo]);
 
   // Reset attom trigger when query changes
   useEffect(() => {
@@ -46,11 +66,13 @@ const PropertyIQSearch = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setAttomTriggered(false);
-    navigate(`/property-iq/search?q=${encodeURIComponent(query)}`);
+    const suffix = isDemo ? "&demo=1" : "";
+    navigate(`/property-iq/search?q=${encodeURIComponent(query)}${suffix}`);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <DemoBanner />
       <PropertyIQHeader />
 
       <div className="container mx-auto max-w-5xl px-4 py-8 flex-1">
@@ -66,13 +88,33 @@ const PropertyIQSearch = () => {
                   setFlyToCoords({ lat: coords.lat, lng: coords.lng });
                   setViewMode("map");
                 }
-                navigate(`/property-iq/search?q=${encodeURIComponent(address)}`);
+                const suffix = isDemo ? "&demo=1" : "";
+                navigate(`/property-iq/search?q=${encodeURIComponent(address)}${suffix}`);
               }}
               placeholder="Search by address, city, county, or owner..."
             />
           </div>
           <Button type="submit">Search</Button>
         </form>
+
+        {isDemo && demoSamples && demoSamples.length > 0 && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200 mb-2">Try a sample property:</p>
+            <div className="flex flex-wrap gap-2">
+              {demoSamples.map(p => (
+                <Button
+                  key={p.id}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => navigate(`/property-iq/property/${p.id}?demo=1`)}
+                >
+                  {p.address}, {p.city}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* View Mode Toggle */}
         <div className="flex items-center justify-between mb-4">
@@ -130,7 +172,14 @@ const PropertyIQSearch = () => {
           </div>
         )}
 
-        {!isLoading && !attomLookup.isPending && hasNoMatch && attomTriggered && (
+        {!isLoading && !attomLookup.isPending && hasNoMatch && isDemo && (
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-lg font-medium">No match in the demo dataset</p>
+            <p className="text-sm">The demo only includes 5 sample properties — try one of the chips above, or sign up to search live data.</p>
+          </div>
+        )}
+
+        {!isLoading && !attomLookup.isPending && hasNoMatch && attomTriggered && !isDemo && (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium">No property found</p>
             <p className="text-sm">ATTOM returned no results for this address. Try a different search.</p>

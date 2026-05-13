@@ -4,6 +4,8 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { ScoreGauge } from "@/components/property-iq/ScoreGauge";
 import { OwnerIntelligenceCard } from "@/components/property-iq/OwnerIntelligenceCard";
+import { DemoBanner } from "@/components/property-iq/DemoBanner";
+import { usePropertyIQDemo } from "@/hooks/usePropertyIQDemo";
 import { exportPropertyPDF } from "@/components/property-iq/ExportUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +59,11 @@ const PropertyIQReport = () => {
   const permitMutation = useFetchMiamiDadePermits();
   const enrichTriggered = useRef(false);
   const { toast } = useToast();
+  const { isDemo } = usePropertyIQDemo();
 
-  // Auto-enrich when property loads
+  // Auto-enrich when property loads (skipped in demo to avoid mutating seeded rows)
   useEffect(() => {
+    if (isDemo) return;
     if (property && id && !enrichTriggered.current && !enrichMutation.isPending) {
       enrichTriggered.current = true;
       toast({ title: "Enriching data...", description: "Fetching storm history and recalculating scores." });
@@ -72,7 +76,7 @@ const PropertyIQReport = () => {
         },
       });
     }
-  }, [property, id]);
+  }, [property, id, isDemo]);
 
   if (isLoading) {
     return (
@@ -119,6 +123,10 @@ const PropertyIQReport = () => {
   };
 
   const handleRefreshPermits = () => {
+    if (isDemo) {
+      toast({ title: "Demo mode", description: "Sign up to refresh live permit data." });
+      return;
+    }
     if (!id) return;
     permitMutation.mutate(id, {
       onSuccess: (data) => {
@@ -130,18 +138,27 @@ const PropertyIQReport = () => {
     });
   };
 
+  const handleSave = () => {
+    if (isDemo) {
+      toast({ title: "Demo mode", description: "Sign up to save properties to your account." });
+      return;
+    }
+    toast({ title: "Saved", description: "Added to your saved properties." });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <DemoBanner />
       <PropertyIQHeader />
 
       <div className="container mx-auto max-w-5xl px-4 py-6 flex-1">
         {/* Back + Actions */}
         <div className="flex items-center justify-between mb-6">
-          <Link to="/property-iq/search" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link to={`/property-iq/search${isDemo ? "?demo=1" : ""}`} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to Search
           </Link>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1"><Bookmark className="h-4 w-4" /> Save</Button>
+            <Button variant="outline" size="sm" className="gap-1" onClick={handleSave}><Bookmark className="h-4 w-4" /> Save</Button>
             <Button variant="outline" size="sm" className="gap-1" onClick={handleExportPDF}>
               <Download className="h-4 w-4" /> Export PDF
             </Button>

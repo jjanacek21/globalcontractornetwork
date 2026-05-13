@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { isCoatingKingsDomain } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -106,6 +106,20 @@ const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"))
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
+
+// Demo-aware wrapper: if ?demo=1 OR sessionStorage flag set, bypass auth
+const PropertyIQDashboardRoute = () => {
+  const [search] = useSearchParams();
+  const isDemo = search.get("demo") === "1" || (typeof window !== "undefined" && sessionStorage.getItem("piq_demo") === "1");
+  if (isDemo) {
+    return <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>;
+  }
+  return (
+    <ProtectedRoute redirectTo="/property-iq/auth">
+      <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>
+    </ProtectedRoute>
+  );
+};
 
 const queryClient = new QueryClient();
 
@@ -281,11 +295,7 @@ const GCNRoutes = () => (
           {/* PropertyIQ Routes */}
           <Route path="/property-iq" element={<Suspense fallback={<div />}><PropertyIQ /></Suspense>} />
           <Route path="/property-iq/auth" element={<Suspense fallback={<div />}><PropertyIQAuth /></Suspense>} />
-          <Route path="/property-iq/dashboard" element={
-            <ProtectedRoute redirectTo="/property-iq/auth">
-              <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>
-            </ProtectedRoute>
-          } />
+          <Route path="/property-iq/dashboard" element={<PropertyIQDashboardRoute />} />
           <Route path="/property-iq/search" element={<Suspense fallback={<div />}><PropertyIQSearch /></Suspense>} />
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
