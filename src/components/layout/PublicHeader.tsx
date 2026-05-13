@@ -42,9 +42,6 @@ export const PublicHeader = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
-            <Link to="/crm/auth">CRM Login</Link>
-          </Button>
           <Button asChild>
             <Link to="/learning">Get Started</Link>
           </Button>
