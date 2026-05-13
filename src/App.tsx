@@ -281,11 +281,7 @@ const GCNRoutes = () => (
           {/* PropertyIQ Routes */}
           <Route path="/property-iq" element={<Suspense fallback={<div />}><PropertyIQ /></Suspense>} />
           <Route path="/property-iq/auth" element={<Suspense fallback={<div />}><PropertyIQAuth /></Suspense>} />
-          <Route path="/property-iq/dashboard" element={
-            <ProtectedRoute redirectTo="/property-iq/auth">
-              <Suspense fallback={<div />}><PropertyIQDashboard /></Suspense>
-            </ProtectedRoute>
-          } />
+          <Route path="/property-iq/dashboard" element={<PropertyIQDashboardRoute />} />
           <Route path="/property-iq/search" element={<Suspense fallback={<div />}><PropertyIQSearch /></Suspense>} />
           <Route path="/property-iq/property/:id" element={<Suspense fallback={<div />}><PropertyIQReport /></Suspense>} />
 
