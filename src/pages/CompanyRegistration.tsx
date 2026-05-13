@@ -256,6 +256,38 @@ const CompanyRegistration = () => {
     });
   };
 
+  const handleMultiPhotoAdd = (files: FileList | File[]) => {
+    const incoming = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (incoming.length === 0) return;
+    setJobPhotos(prev => {
+      const updated = [...prev];
+      const queue = [...incoming];
+      for (let i = 0; i < updated.length && queue.length > 0; i++) {
+        if (!updated[i].file) {
+          const file = queue.shift()!;
+          updated[i] = { ...updated[i], file, previewUrl: URL.createObjectURL(file) };
+        }
+      }
+      queue.forEach(file => {
+        updated.push({ file, caption: "", projectType: "", previewUrl: URL.createObjectURL(file) });
+      });
+      return updated;
+    });
+    toast({ title: "Photos added", description: `${incoming.length} photo${incoming.length > 1 ? 's' : ''} attached` });
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setJobPhotos(prev => {
+      const updated = [...prev];
+      if (index < 5) {
+        updated[index] = { file: null, caption: "", projectType: "" };
+      } else {
+        updated.splice(index, 1);
+      }
+      return updated;
+    });
+  };
+
   const handlePhotoCaptionChange = (index: number, field: 'caption' | 'projectType', value: string) => {
     setJobPhotos(prev => {
       const updated = [...prev];
