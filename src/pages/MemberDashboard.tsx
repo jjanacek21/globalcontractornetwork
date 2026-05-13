@@ -100,6 +100,16 @@ const ServiceTile = ({ s, onClick, index }: { s: ServiceCard; onClick: () => voi
           </div>
         </CardContent>
       )}
+      {s.comingSoon && s.demoLink && (
+        <CardContent className="pt-0 relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="inline-flex items-center text-sm font-medium text-primary gap-1.5 hover:underline cursor-pointer"
+          >
+            Try the Demo <ArrowRight className="h-4 w-4" />
+          </button>
+        </CardContent>
+      )}
     </Card>
   </motion.div>
 );
