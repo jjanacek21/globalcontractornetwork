@@ -138,6 +138,7 @@ const PropertyIQDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <DemoBanner />
       <PropertyIQHeader />
 
       <div className="container mx-auto max-w-6xl px-4 py-8 flex-1 space-y-8">
@@ -156,7 +157,7 @@ const PropertyIQDashboard = () => {
                 <Map className="h-4 w-4" /> Map Explorer
               </Button>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>Log Out</Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>{isDemo ? "Exit Demo" : "Log Out"}</Button>
           </div>
         </div>
 
@@ -214,7 +215,7 @@ const PropertyIQDashboard = () => {
                       const ownerName = p.piq_property_ownership?.[0]?.piq_owners?.name;
                       const roofScore = scores?.roof_replacement_score ?? 0;
                       return (
-                        <Card key={sp.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}`)}>
+                        <Card key={sp.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/property-iq/property/${p.id}${isDemo ? "?demo=1" : ""}`)}>
                           <CardContent className="pt-4 space-y-2">
                             <p className="font-medium text-sm leading-tight">{p.address}</p>
                             <p className="text-xs text-muted-foreground">{p.city}, {p.state} {p.zip}</p>
