@@ -102,7 +102,7 @@ const ResetPassword = () => {
       
       // Redirect to login after a short delay
       setTimeout(() => {
-        navigate("/crm/auth");
+        navigate("/join");
       }, 2000);
     } catch (error: any) {
       toast.error(error.message || "Failed to reset password");
@@ -160,7 +160,7 @@ const ResetPassword = () => {
             <CardDescription>{recoveryError}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button type="button" className="w-full" onClick={() => navigate("/crm/auth")}>
+            <Button type="button" className="w-full" onClick={() => navigate("/join")}>
               Request New Reset Link
             </Button>
           </CardContent>
