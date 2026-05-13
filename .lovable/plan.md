@@ -1,62 +1,36 @@
-## Goal
-Replace the bare-bones approve/reject controls in `PendingSignupsTable` with a proper admin workflow: clear approve/reject dialogs, structured rejection reasons, persisted audit fields, and email notifications to the applicant for both outcomes.
+## Changes to `src/pages/MemberDashboard.tsx` — `contractorApps` grid
 
-## 1. Database — add rejection audit columns
-Single migration on `contractor_profiles`:
-- `rejection_reason text` — short category (e.g. "missing_license", "incomplete_documents", "duplicate_account", "credentials_unverifiable", "other")
-- `rejection_notes text` — free-form admin message included in the email
-- `rejected_at timestamptz`
-- `rejected_by uuid` (admin user id)
+### 1. Remove the GCN Business Suite tile
+Delete the existing entry:
+```
+{ icon: Rocket, title: "GCN Business Suite", description: "...", comingSoon: true }
+```
 
-Mirror the same four columns on `companies` so company applications carry the same audit trail when they're rejected.
+### 2. PropertyIQ → "Coming Soon" with a demo path
+Currently PropertyIQ links straight to `/property-iq`. Change it to:
+- Show the "Coming Soon" badge (visually gated like other coming-soon tiles).
+- Expose a secondary "Try the Demo" action on the tile that routes to the existing PropertyIQ demo data (`/ni/dashboard` — the demo properties seeded under the `a0000001-…` UUID pattern documented in project memory are already loaded there).
 
-No RLS changes — both tables are already admin-writable.
+Implementation note: `ServiceTile` today hides its CTA when `comingSoon` is true. I'll extend the `ServiceCard` type with an optional `demoLink?: string`, and when present render a small "Try the Demo →" link inside the card body even while the main tile stays in the Coming Soon state. No other tiles are affected.
 
-## 2. Reject dialog (replaces the `confirm()`)
-New `RejectSignupDialog` component opened from the Reject button in `PendingSignupsTable`. Captures:
-- Reason category (Select with the 5 options above)
-- Notes (Textarea, required, ≥ 10 chars) — this is what the applicant will read
-- Confirm checkbox: "I understand this will email the applicant"
+### 3. Add the new GCN App tile
+Append to `contractorApps`:
+```
+{
+  icon: Rocket,
+  title: "GCN App",
+  description: "Rep card, Measure, Estimate, Analyze, Pre-Cap, Proposals, Contract, Invoice",
+  link: "https://globalcontractor.app",
+  badge: "Premium",
+}
+```
 
-On submit:
-- Update `contractor_profiles.subscription_status='rejected'` plus the four new columns
-- If `company_id` is set, also update `companies.verification_status='rejected'` plus the four new columns
-- Invoke the new edge function (below) with `{ contractorId, reason, notes }`
-- Toast and refresh
+Because this is an external URL, `ServiceTile`'s onClick (which uses `navigate`) needs to handle absolute URLs by doing `window.open(link, "_blank", "noopener,noreferrer")` instead. I'll add that branch in the tile click handler — purely presentational change, no other tiles affected.
 
-## 3. Approve flow — keep existing dialog, add explicit email
-The Approve dialog already exists (features picker). We will:
-- Fire `notify-application-approved` for non-company applicants too (currently the company branch sends `notify-company-approved`; independents only get the per-feature email). The new function sends a clean "You're approved" email regardless of whether features were selected, so independents get notified the same way.
-- Stamp `approved_at` and `approved_by` on `contractor_profiles` (use existing column if present; otherwise add to the same migration).
+### Out of scope (called out for follow-up)
+The user mentioned "super admins can give access to the app if they pay for that tier in the network." That requires a real entitlement model (subscription tier table + admin grant UI + per-user gating on the GCN App tile). It is **not** included in this plan — this change only adds the tile and the external link. I'll flag it after implementation so you can scope the entitlement work as its own task.
 
-## 4. Edge functions (notifications)
-Two new functions, both using the existing `RESEND_API_KEY` pattern already in use by `notify-company-approved`:
+### Files touched
+- `src/pages/MemberDashboard.tsx` (only)
 
-- `notify-signup-rejected` — input `{ contractorId, reason, notes }`. Looks up applicant email + name, sends a respectful rejection email containing the reason category (human-readable label) and the admin's notes. Includes a "Reply to discuss" CTA pointing at the support email.
-- `notify-signup-approved` — input `{ contractorId }`. Generic approval email; called for every approval (companies still also receive the existing `notify-company-approved` branded email for backward compatibility — or we collapse them; see "Decision" below).
-
-Both functions:
-- Native `Deno.serve` + `corsHeaders`
-- `verify_jwt = false` is the project default
-- Validate input with a small zod-like manual check (matches existing function style)
-- Return `{ success, messageId }` or `{ success: false, error }`
-
-## 5. UI changes in `PendingSignupsTable`
-- New "Reject" button opens `RejectSignupDialog` instead of `window.confirm`
-- Show a "Rejected" row state with reason + notes tooltip when status is rejected (so admins can see history while filtering)
-- Add a small status filter at the top: All / Pending / Rejected (so rejected applications don't disappear)
-
-## Decision needed
-Collapse `notify-company-approved` into the new `notify-signup-approved`, or keep both? Default in the plan: **keep both** — `notify-company-approved` is already deployed and includes the features list; `notify-signup-approved` is a thin generic notice for independents. Less churn, no risk of breaking the existing branded email.
-
-## Files
-- new migration — add 4 rejection columns to `contractor_profiles` and `companies`
-- new `supabase/functions/notify-signup-rejected/index.ts`
-- new `supabase/functions/notify-signup-approved/index.ts`
-- new `src/components/admin/RejectSignupDialog.tsx`
-- edit `src/components/admin/PendingSignupsTable.tsx` — wire reject dialog, add status filter, fire approval email for independents
-
-## Out of scope
-- No changes to `notify-company-approved` (still used by approve flow for companies).
-- No bulk approve/reject.
-- No changes to homeowner-side notifications.
+No DB, routing, or backend changes.
