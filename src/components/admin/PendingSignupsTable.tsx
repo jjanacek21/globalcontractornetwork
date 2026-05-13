@@ -354,10 +354,20 @@ const PendingSignupsTable = () => {
     <div className="space-y-8">
       {/* Pending Contractors */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Building2 className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Pending Contractor Applications</h3>
+          <h3 className="text-lg font-semibold">Contractor Applications</h3>
           <Badge variant="secondary">{pendingContractors.length}</Badge>
+          <div className="ml-auto">
+            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {pendingContractors.length === 0 ? (
