@@ -245,6 +245,18 @@ export default function ContractorDirectory() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={profileTypeFilter} onValueChange={setProfileTypeFilter}>
+                <SelectTrigger className="w-[180px] bg-slate-900 border-slate-700 text-white">
+                  <SelectValue placeholder="Profile type" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="all">All Profiles</SelectItem>
+                  <SelectItem value="company">Companies</SelectItem>
+                  <SelectItem value="building_consultant">Building Consultants</SelectItem>
+                  <SelectItem value="handyman">Handymen</SelectItem>
+                  <SelectItem value="skilled_labor">Skilled Labor</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-white">
                   <SelectValue placeholder="Sort by" />
@@ -258,8 +270,8 @@ export default function ContractorDirectory() {
               <Button
                 variant={verifiedOnly ? "default" : "outline"}
                 onClick={() => setVerifiedOnly(!verifiedOnly)}
-                className={verifiedOnly 
-                  ? "bg-green-500/20 border-green-500 text-green-400" 
+                className={verifiedOnly
+                  ? "bg-green-500/20 border-green-500 text-green-400"
                   : "border-slate-700 text-slate-300"
                 }
               >
