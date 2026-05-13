@@ -6,6 +6,10 @@ import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { PropertyCard } from "@/components/property-iq/PropertyCard";
 import { PropertyIQMap } from "@/components/property-iq/PropertyIQMap";
+import { DemoBanner } from "@/components/property-iq/DemoBanner";
+import { usePropertyIQDemo, DEMO_PROPERTY_IDS } from "@/hooks/usePropertyIQDemo";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { usePropertyIQSearch, useAttomLookup } from "@/hooks/usePropertyIQ";
 import { Search, Loader2, Database, Users, CloudRain, Building2, List, Map } from "lucide-react";
 
