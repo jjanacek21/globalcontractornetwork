@@ -302,7 +302,18 @@ const PendingSignupsTable = () => {
         }
       }
 
-      const approvalMessage = selectedContractor.company_id 
+      // Generic approval email for non-company applicants (independents/handymen/etc.)
+      if (!selectedContractor.company_id) {
+        try {
+          await supabase.functions.invoke("notify-signup-approved", {
+            body: { contractorId: selectedContractor.id },
+          });
+        } catch (emailError) {
+          console.error("Error sending approval notification:", emailError);
+        }
+      }
+
+      const approvalMessage = selectedContractor.company_id
         ? `${selectedContractor.company_name} company has been approved with ${selectedFeatures.length} feature(s) enabled.`
         : `${selectedContractor.company_name} has been approved with ${selectedFeatures.length} feature(s) enabled.`;
 
@@ -324,30 +335,9 @@ const PendingSignupsTable = () => {
     }
   };
 
-  const handleReject = async (contractor: PendingContractor) => {
-    if (!confirm(`Are you sure you want to reject ${contractor.company_name}?`)) return;
-
-    try {
-      const { error } = await supabase
-        .from("contractor_profiles")
-        .update({ subscription_status: "rejected" })
-        .eq("id", contractor.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Contractor Rejected",
-        description: `${contractor.company_name} has been rejected.`
-      });
-
-      fetchData();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject contractor",
-        variant: "destructive"
-      });
-    }
+  const handleReject = (contractor: PendingContractor) => {
+    setRejectTarget(contractor);
+    setRejectOpen(true);
   };
 
   const filteredTeams = teams.filter(t => t.company_id === selectedCompanyId);
