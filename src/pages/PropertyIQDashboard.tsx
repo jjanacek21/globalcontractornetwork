@@ -4,13 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { PropertyIQHeader } from "@/components/property-iq/PropertyIQHeader";
 import { PropertyIQFooter } from "@/components/property-iq/PropertyIQFooter";
 import { MapExplorer } from "@/components/property-iq/MapExplorer";
+import { DemoBanner } from "@/components/property-iq/DemoBanner";
+import { usePropertyIQDemo, DEMO_PROPERTY_IDS } from "@/hooks/usePropertyIQDemo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 import { usePropertyIQDashboard } from "@/hooks/usePropertyIQ";
 import { exportSavedPropertiesCSV } from "@/components/property-iq/ExportUtils";
+import { toast } from "sonner";
 import {
   Search, FileText, Bookmark, Bell, BarChart3,
   Building2, AlertTriangle, CloudRain, Wifi,
@@ -66,9 +70,42 @@ const PropertyIQDashboard = () => {
   const [userEmail, setUserEmail] = useState("");
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const navigate = useNavigate();
-  const { data: dashboardData, isLoading } = usePropertyIQDashboard();
+  const { isDemo } = usePropertyIQDemo();
+
+  // Real saved properties for authenticated users
+  const { data: dashboardData, isLoading: realLoading } = usePropertyIQDashboard();
+
+  // Demo: fetch the seeded properties to populate "Saved Properties"
+  const { data: demoData, isLoading: demoLoading } = useQuery({
+    enabled: isDemo,
+    queryKey: ["piq-demo-saved"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("piq_properties")
+        .select(`
+          id, address, city, state, zip,
+          piq_property_scores ( roof_replacement_score, renovation_score, investment_score ),
+          piq_property_ownership ( piq_owners ( name, owner_type ) )
+        `)
+        .in("id", DEMO_PROPERTY_IDS);
+      if (error) throw error;
+      return {
+        savedProperties: (data || []).map((p, i) => ({
+          id: `demo-${p.id}`,
+          created_at: new Date(Date.now() - i * 86400000).toISOString(),
+          piq_properties: p,
+        })),
+      };
+    },
+  });
+
+  const isLoading = isDemo ? demoLoading : realLoading;
 
   useEffect(() => {
+    if (isDemo) {
+      setUserEmail("Demo User");
+      return;
+    }
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -78,19 +115,26 @@ const PropertyIQDashboard = () => {
       setUserEmail(session.user.email || "");
     };
     getUser();
-  }, [navigate]);
+  }, [navigate, isDemo]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) navigate(`/property-iq/search?q=${encodeURIComponent(searchQuery)}`);
+    if (!searchQuery.trim()) return;
+    const suffix = isDemo ? "&demo=1" : "";
+    navigate(`/property-iq/search?q=${encodeURIComponent(searchQuery)}${suffix}`);
   };
 
   const handleLogout = async () => {
+    if (isDemo) {
+      sessionStorage.removeItem("piq_demo");
+      navigate("/property-iq");
+      return;
+    }
     await supabase.auth.signOut();
     navigate("/property-iq");
   };
 
-  const savedProperties = dashboardData?.savedProperties || [];
+  const savedProperties = (isDemo ? demoData?.savedProperties : dashboardData?.savedProperties) || [];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
