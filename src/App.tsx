@@ -89,7 +89,7 @@ import HomeownerDashboard from "./pages/HomeownerDashboard";
 import HomeownerProfile from "./pages/HomeownerProfile";
 import HomeownerMessages from "./pages/HomeownerMessages";
 import QuoteDetail from "./pages/QuoteDetail";
-import { AppLayout } from "./components/layout/AppLayout";
+
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { HomeownerOnlyRoute } from "./components/auth/HomeownerOnlyRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
