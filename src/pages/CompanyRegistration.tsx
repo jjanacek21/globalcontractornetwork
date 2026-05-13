@@ -256,6 +256,38 @@ const CompanyRegistration = () => {
     });
   };
 
+  const handleMultiPhotoAdd = (files: FileList | File[]) => {
+    const incoming = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (incoming.length === 0) return;
+    setJobPhotos(prev => {
+      const updated = [...prev];
+      const queue = [...incoming];
+      for (let i = 0; i < updated.length && queue.length > 0; i++) {
+        if (!updated[i].file) {
+          const file = queue.shift()!;
+          updated[i] = { ...updated[i], file, previewUrl: URL.createObjectURL(file) };
+        }
+      }
+      queue.forEach(file => {
+        updated.push({ file, caption: "", projectType: "", previewUrl: URL.createObjectURL(file) });
+      });
+      return updated;
+    });
+    toast({ title: "Photos added", description: `${incoming.length} photo${incoming.length > 1 ? 's' : ''} attached` });
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setJobPhotos(prev => {
+      const updated = [...prev];
+      if (index < 5) {
+        updated[index] = { file: null, caption: "", projectType: "" };
+      } else {
+        updated.splice(index, 1);
+      }
+      return updated;
+    });
+  };
+
   const handlePhotoCaptionChange = (index: number, field: 'caption' | 'projectType', value: string) => {
     setJobPhotos(prev => {
       const updated = [...prev];
@@ -1055,36 +1087,67 @@ const CompanyRegistration = () => {
             {/* Step 4: Portfolio */}
             {currentStep === 4 && (
               <div className="space-y-6">
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  <p className="font-medium mb-1">Job Photos (5 recommended)</p>
-                  <p className="text-muted-foreground">
-                    Upload photos of your completed work to showcase your quality. This helps build trust with property owners.
-                  </p>
-                </div>
+                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                   <p className="font-medium mb-1">Job Photos (5 recommended)</p>
+                   <p className="text-muted-foreground">
+                     Upload photos of your completed work to showcase your quality. You can select multiple photos at once.
+                   </p>
+                 </div>
 
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {jobPhotos.map((photo, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
-                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                        {photo.previewUrl ? (
-                          <img src={photo.previewUrl} alt={`Job ${index + 1}`} className="w-full h-full object-cover" />
-                        ) : (
-                          <label className="relative cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-full h-full justify-center">
-                            <Upload className="h-8 w-8" />
-                            <span className="text-sm">Upload Photo</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handlePhotoChange(index, file);
-                                e.target.value = '';
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
+                 <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                   <Upload className="h-5 w-5 text-primary" />
+                   <span className="text-sm font-medium">Add Multiple Photos</span>
+                   <input
+                     type="file"
+                     accept="image/*"
+                     multiple
+                     className="hidden"
+                     onChange={(e) => {
+                       if (e.target.files && e.target.files.length > 0) handleMultiPhotoAdd(e.target.files);
+                       e.target.value = '';
+                     }}
+                   />
+                 </label>
+
+                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                   {jobPhotos.map((photo, index) => (
+                     <div key={index} className="border rounded-lg p-4 space-y-3 relative">
+                       {photo.file && (
+                         <button
+                           type="button"
+                           onClick={() => handleRemovePhoto(index)}
+                           className="absolute top-2 right-2 z-10 bg-background/90 hover:bg-destructive hover:text-destructive-foreground rounded-full p-1 shadow"
+                           aria-label="Remove photo"
+                         >
+                           <X className="h-4 w-4" />
+                         </button>
+                       )}
+                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                         {photo.previewUrl ? (
+                           <img src={photo.previewUrl} alt={`Job ${index + 1}`} className="w-full h-full object-cover" />
+                         ) : (
+                           <label className="relative cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-full h-full justify-center">
+                             <Upload className="h-8 w-8" />
+                             <span className="text-sm">Upload Photo(s)</span>
+                             <input
+                               type="file"
+                               accept="image/*"
+                               multiple
+                               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                               onChange={(e) => {
+                                 const files = e.target.files;
+                                 if (!files || files.length === 0) return;
+                                 if (files.length === 1) {
+                                   handlePhotoChange(index, files[0]);
+                                 } else {
+                                   handleMultiPhotoAdd(files);
+                                 }
+                                 e.target.value = '';
+                               }}
+                             />
+                           </label>
+                         )}
+                       </div>
                       <Input
                         placeholder="Caption"
                         value={photo.caption}
