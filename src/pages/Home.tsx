@@ -399,7 +399,7 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>Global Contractor Network — Trusted Contractors. Real Accountability.</title>
+        <title>Global Contractor Network | Trusted Contractors</title>
         <meta
           name="description"
           content="Get a free AI-powered home project quote in 60 seconds and connect with vetted, insured contractors. Referral-based network — no bidding wars, no spam calls."
@@ -409,7 +409,7 @@ export default function Home() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://globalcontractor.network/" />
         <meta property="og:site_name" content="Global Contractor Network" />
-        <meta property="og:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta property="og:title" content="Global Contractor Network | Trusted Contractors" />
         <meta
           property="og:description"
           content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
@@ -417,7 +417,7 @@ export default function Home() {
         <meta property="og:image" content="https://globalcontractor.network/gcn-logo.png" />
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Global Contractor Network — Trusted Contractors. Real Accountability." />
+        <meta name="twitter:title" content="Global Contractor Network | Trusted Contractors" />
         <meta
           name="twitter:description"
           content="Free AI quotes, vetted contractors, and a referral network built on accountability — not bidding wars."
