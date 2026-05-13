@@ -172,7 +172,14 @@ const PropertyIQSearch = () => {
           </div>
         )}
 
-        {!isLoading && !attomLookup.isPending && hasNoMatch && attomTriggered && (
+        {!isLoading && !attomLookup.isPending && hasNoMatch && isDemo && (
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-lg font-medium">No match in the demo dataset</p>
+            <p className="text-sm">The demo only includes 5 sample properties — try one of the chips above, or sign up to search live data.</p>
+          </div>
+        )}
+
+        {!isLoading && !attomLookup.isPending && hasNoMatch && attomTriggered && !isDemo && (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium">No property found</p>
             <p className="text-sm">ATTOM returned no results for this address. Try a different search.</p>
