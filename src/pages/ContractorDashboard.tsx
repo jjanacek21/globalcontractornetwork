@@ -362,7 +362,17 @@ export default function ContractorDashboard() {
             />
           </TabsContent>
 
-          {/* Settings Tab */}
+          <TabsContent value="landing">
+            {profile?.id && userId && (
+              <LandingPageBuilder
+                profileId={profile.id}
+                userId={userId}
+                initialCompanyName={profile.company_name}
+                existingWebsite={(profile as any).website}
+              />
+            )}
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             {/* Contact Info */}
             <Card>
