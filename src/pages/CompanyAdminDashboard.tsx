@@ -20,6 +20,7 @@ import { CompanyReferralsTab } from "@/components/company-admin/CompanyReferrals
 import { CompanyAnalyticsTab } from "@/components/company-admin/CompanyAnalyticsTab";
 import { CompanyProfileTab } from "@/components/company-admin/CompanyProfileTab";
 import { CompanyResourcesTab } from "@/components/company-admin/CompanyResourcesTab";
+import { CompanyPendingUsersTab } from "@/components/company-admin/CompanyPendingUsersTab";
 
 interface Company {
   id: string;
