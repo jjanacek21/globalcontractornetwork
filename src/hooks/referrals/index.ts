@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const startOfMonthAgo = (months: number) => {
@@ -113,11 +113,13 @@ export function usePartners(contractorId: string | null | undefined) {
     enabled: !!contractorId,
     queryKey: ["referrals", "partners", contractorId],
     queryFn: async () => {
+      // Eligibility relaxed: include directory-eligible OR verified contractors
+      // so the partner picker is not gated to zero while onboarding ramps up.
       const { data: profiles, error } = await supabase
         .from("contractor_profiles")
-        .select("id, company_name, category, service_area, is_directory_eligible")
+        .select("id, company_name, category, service_area, is_directory_eligible, verification_status")
         .neq("id", contractorId!)
-        .eq("is_directory_eligible", true);
+        .or("is_directory_eligible.eq.true,verification_status.eq.verified,verification_status.eq.pending");
       if (error) throw error;
       const ids = (profiles ?? []).map(p => p.id);
       if (ids.length === 0) return [];
@@ -239,6 +241,62 @@ export function usePayouts(contractorId: string | null | undefined) {
       const escrow = rows.filter(p => p.direction === "credit" && p.status === "in_escrow").reduce((s, p) => s + Number(p.net_amount), 0);
       const gcnCut = rows.reduce((s, p) => s + Number(p.gcn_fee), 0);
       return { rows, available, escrow, gcnCut };
+    },
+  });
+}
+
+// ============= Available broadcasts (open referrals first 3 to claim) =============
+
+
+export function useAvailableBroadcasts(contractorId: string | null | undefined, trade?: string) {
+  return useQuery({
+    enabled: !!contractorId,
+    queryKey: ["referrals", "availableBroadcasts", contractorId, trade ?? "all"],
+    queryFn: async () => {
+      let q = supabase
+        .from("referral_broadcasts")
+        .select("*, gcn_customers(name, property_address), referrer:contractor_profiles!referral_broadcasts_referring_contractor_id_fkey(company_name)")
+        .eq("status", "open")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+      if (trade && trade !== "all") q = q.eq("trade", trade);
+      const { data, error } = await q;
+      if (error) throw error;
+      const ids = (data ?? []).map((b: any) => b.id);
+      if (ids.length === 0) return [];
+      const { data: claims } = await supabase
+        .from("referral_broadcast_claims")
+        .select("broadcast_id, contractor_id")
+        .in("broadcast_id", ids);
+      const counts = new Map<string, { count: number; mine: boolean }>();
+      (claims ?? []).forEach((c: any) => {
+        const cur = counts.get(c.broadcast_id) ?? { count: 0, mine: false };
+        cur.count += 1;
+        if (c.contractor_id === contractorId) cur.mine = true;
+        counts.set(c.broadcast_id, cur);
+      });
+      return (data ?? [])
+        .map((b: any) => {
+          const c = counts.get(b.id) ?? { count: 0, mine: false };
+          return { ...b, claim_count: c.count, claimed_by_me: c.mine, claims_remaining: Math.max(0, b.max_claims - c.count) };
+        })
+        .filter((b: any) => b.referring_contractor_id !== contractorId)
+        .filter((b: any) => b.claims_remaining > 0 || b.claimed_by_me);
+    },
+  });
+}
+
+export function useClaimBroadcast() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ broadcastId, contractorId }: { broadcastId: string; contractorId: string }) => {
+      const { error } = await supabase
+        .from("referral_broadcast_claims")
+        .insert({ broadcast_id: broadcastId, contractor_id: contractorId, message_sent_at: new Date().toISOString() });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["referrals", "availableBroadcasts"] });
     },
   });
 }

@@ -9,9 +9,11 @@ import { MyClientsTab } from "@/components/referrals/tabs/MyClientsTab";
 import { SentTab } from "@/components/referrals/tabs/SentTab";
 import { ReceivedTab } from "@/components/referrals/tabs/ReceivedTab";
 import { PayoutsTab } from "@/components/referrals/tabs/PayoutsTab";
+import { AvailableReferralsTab } from "@/components/referrals/tabs/AvailableReferralsTab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "available", label: "Available Referrals" },
   { id: "partners", label: "Referral Partners" },
   { id: "tiers", label: "My Bounty Tiers" },
   { id: "clients", label: "My Clients" },
@@ -86,6 +88,7 @@ export default function ReferralsDashboard() {
         ) : (
           <>
             {tab === "overview" && <OverviewTab contractor={contractor} />}
+            {tab === "available" && <AvailableReferralsTab contractor={contractor} />}
             {tab === "partners" && <PartnersTab contractor={contractor} />}
             {tab === "tiers" && <BountyTiersTab contractor={contractor} />}
             {tab === "clients" && <MyClientsTab contractor={contractor} />}

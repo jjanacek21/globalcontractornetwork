@@ -1,49 +1,79 @@
-# PropertyIQ Demo Mode
+# Referrals upgrade — picker, broadcasts, lifetime binding, 30% GCN
 
-Goal: when a user clicks the "Try the Demo" button on the dashboard tile, PropertyIQ opens and behaves exactly like the real app — search, dashboard, and property reports — but reads from the seeded demo data already in the database (5 demo properties under the `a0000001-…` UUID pattern), with no login required and a clear banner stating it's a demo.
+## Why the partner list is empty today
+`ReferCustomerModal` loads `usePartners()`, which only returns contractors where `is_directory_eligible = true`. Right now **all 4 contractors in the system are `pending` and `is_directory_eligible = false`**, so the dropdown is empty. We also don't filter by the trade the customer needs.
 
-## What the user sees
+## What we'll build
 
-1. From `/member/dashboard`, the PropertyIQ tile keeps its "Coming Soon" badge but the "Try the Demo" button now links to `/property-iq/dashboard?demo=1`.
-2. Anywhere the `?demo=1` flag is present (or the `piq_demo` flag is set in sessionStorage), PropertyIQ:
-   - Skips the auth gate and loads straight into the dashboard.
-   - Shows a sticky amber banner across the top: **"Demo Mode — you're exploring PropertyIQ with sample data. Sign up to use it on your own properties."** with a "Sign Up" button linking to `/property-iq/auth`.
-   - Loads dashboard stats, recent searches, and saved properties from the seeded demo rows so the screens look real, not empty.
-   - Lets the user click into the seeded demo properties and see a full report (ATTOM data, AI score, storms, permits, owner info — all already in the DB for those 5 rows).
-   - Lets them run searches; if the searched address doesn't match a seeded property, show a friendly "This is a demo — try one of the sample properties below" and list the 5 demo addresses as quick-pick chips.
-3. Any write action (Save Property, edit notes, change API config, etc.) is intercepted and shows a toast: **"Demo mode — sign up to save changes."** No DB writes happen.
-4. An "Exit Demo" link in the banner clears the flag and sends them to `/property-iq` (the marketing page).
+### 1. Smart trade-matched partner picker (in Refer Customer modal)
+- Customer fills: name, email, phone, address, **trade needed** (dropdown of available trades, picked first).
+- Once a trade is selected, the "Refer To" list re-queries and shows **only contractors that perform that trade**, sorted by:
+  1. GCN rating/score (high → low)
+  2. Bounty offered for the estimated contract value (high → low)
+- Each row shows: company name, rating + tier badge, service area, and the bounty they'll pay at the entered contract value (e.g. "Pays $450 — you keep $315").
+- Eligibility relaxed: include contractors that are `verification_status = 'verified'` OR `is_directory_eligible = true` so the network isn't gated to zero while contractors are being onboarded.
+
+### 2. Two referral modes
+Inside the modal, a toggle:
+- **"Send to one partner"** — current behavior, pick one company.
+- **"Broadcast to top 3"** — customer is offered to up to 3 contractors. First 3 to message the customer can engage. After 3 have claimed, the broadcast is closed.
+
+### 3. New "Available Referrals" tab
+- New top-level tab in `ReferralsDashboard.tsx` between "Received" and "Payouts".
+- Lists **open broadcasts** that match the contractor's trade and service area.
+- Each card shows: trade, area, estimated value, expected bounty, time left, **claims remaining (3 of 3 / 2 of 3 / 1 of 3)**.
+- "Message Customer" button claims a slot (atomic — race-safe via DB unique constraint) and opens the messaging thread. Once 3 contractors claim, the card disappears for everyone else.
+- The customer sees up to 3 contractor messages and picks who to work with.
+
+### 4. Lifetime client binding (forever residuals)
+- Every customer added through a referral is **bound to the original referring contractor** in `client_pool` (already a unique `customer_id` table — perfect).
+- A DB trigger on `referrals` insert ensures: if no `client_pool` row exists for that customer, one is created pointing to the referring contractor. If one already exists, it is **never overwritten**.
+- Whenever any future referral for that customer reaches `status = 'won'`, a row is auto-inserted into `residuals` paying the original introducing contractor — even if a different contractor now sends the customer.
+
+### 5. GCN 30% cut on every payout
+- All bounty math switches from 75/25 to **70/30** (70% to the referrer/introducer, 30% to GCN).
+- Updated in `ReferCustomerModal`, `BountyTiersTab` copy ("GCN takes 30%"), and the trigger that creates payout rows.
+
+## Database changes (one migration)
+
+```text
+new table: referral_broadcasts
+  id, customer_id, referring_contractor_id, trade,
+  service_area, contract_value, bounty_amount, status (open|filled|expired),
+  expires_at, created_at
+  RLS: referrer + claimers + admin can read; insert via referrer
+
+new table: referral_broadcast_claims
+  id, broadcast_id, contractor_id, claimed_at, message_sent_at
+  UNIQUE(broadcast_id, contractor_id)
+  + trigger that rejects insert when broadcast already has 3 claims
+  (atomic count-check inside SECURITY DEFINER function)
+  RLS: contractor sees own claims; broadcast referrer sees all
+
+trigger: bind_customer_to_introducer
+  AFTER INSERT ON referrals
+  upserts client_pool(customer_id, introducing_contractor_id)
+  ON CONFLICT (customer_id) DO NOTHING  -- never reassigns
+
+trigger: pay_introducer_residual
+  AFTER UPDATE ON referrals  WHEN NEW.status='won'
+  inserts residuals row paying client_pool.introducing_contractor_id
+
+migration also: rewrites existing 25% gcn_share / 75% referrer_share defaults to 30 / 70 across functions and seed copy
+```
 
 ## Files to change
 
-- `src/pages/MemberDashboard.tsx` — change the PropertyIQ tile's `demoLink` from `/ni/dashboard` to `/property-iq/dashboard?demo=1`.
-- `src/App.tsx` — wrap the `/property-iq/dashboard` route so the `ProtectedRoute` guard is bypassed when `?demo=1` is present (a small `DemoOrProtected` wrapper). Search and report routes already public — no change needed there.
-- New `src/hooks/usePropertyIQDemo.ts` — reads `?demo=1` from URL on mount, persists `piq_demo=1` in `sessionStorage`, exposes `{ isDemo, exitDemo }`. Survives client-side navigation within `/property-iq/*`.
-- New `src/components/property-iq/DemoBanner.tsx` — sticky top banner, amber theme, with Sign Up + Exit Demo actions. Mounted inside the PropertyIQ pages when `isDemo` is true.
-- `src/pages/PropertyIQDashboard.tsx` — when `isDemo`:
-  - Skip the `supabase.auth.getSession()` redirect.
-  - Set `userEmail` to "Demo User".
-  - Replace the user-scoped queries (saved properties, recent activity, stats) with queries scoped to the seeded demo property IDs (`id LIKE 'a0000001-%'`).
-  - Render `<DemoBanner />` at the top.
-- `src/pages/PropertyIQSearch.tsx` — when `isDemo`:
-  - Render `<DemoBanner />`.
-  - If the search query doesn't resolve to one of the 5 seeded properties, show a "Demo data only" empty state with the 5 sample addresses as clickable chips.
-- `src/pages/PropertyIQReport.tsx` — when `isDemo`:
-  - Render `<DemoBanner />`.
-  - Allow viewing any of the 5 seeded property IDs; for non-seeded IDs, redirect back to `/property-iq/search?demo=1` with a toast.
-  - Disable Save / Notes / Enrichment buttons (or show a toast on click).
-- `src/pages/PropertyIQAuth.tsx` — add a small "Just looking? Try the demo" link below the auth form pointing to `/property-iq/dashboard?demo=1`.
+- `src/components/referrals/modals/ReferCustomerModal.tsx` — trade-first flow, mode toggle (single vs broadcast), 70/30 math, partner cards w/ rating + bounty preview, broadcast insert path
+- `src/hooks/referrals/index.ts` — `usePartners` accepts `trade` filter and sorts by score+bounty; new `useAvailableBroadcasts(contractorId)` and `useClaimBroadcast()` mutation; eligibility filter relaxed
+- `src/pages/ReferralsDashboard.tsx` — add `"available"` tab "Available Referrals"
+- `src/components/referrals/tabs/AvailableReferralsTab.tsx` (new) — list + claim UI
+- `src/components/referrals/tabs/BountyTiersTab.tsx` — copy: "GCN takes 30%"
+- `supabase/migrations/<ts>_referral_broadcasts_and_lifetime_binding.sql` — schema above
 
-## Demo data
+## Out of scope (ask before adding)
+- Actual messaging UI — we'll wire the "Message Customer" button to the existing messaging route if one exists, otherwise stub it with a toast for now.
+- Notifications/SMS to customers when broadcast goes out.
+- Admin UI to release escrow / mark referrals `won` (already exists in admin).
 
-No new DB rows or seed scripts needed — the 5 seeded rows under `id LIKE 'a0000001-%'` in `piq_properties` (and their related rows in `piq_property_scores`, `piq_storm_events`, `piq_permits`, `piq_owners`, `piq_property_ownership`) already exist and are protected per project memory. The dashboard's "stats" tiles in demo mode are computed from these rows so the UI looks populated.
-
-## Write-protection pattern
-
-A single helper `guardDemoWrite(isDemo, action)` wraps every mutation handler in the affected pages. In demo it shows the toast and returns early; otherwise it runs the original action. This keeps the change surgical and easy to audit.
-
-## Out of scope
-
-- No changes to RLS policies (the seeded rows are already readable by anon for the public report flow; if not, we'll add a single read-only RLS policy `id LIKE 'a0000001-%'` on the relevant `piq_*` tables — flag this once we wire it up if reads fail).
-- No per-visitor sandboxed demo data — everyone sees the same 5 sample properties. This matches the simplest demo UX and avoids per-session provisioning complexity.
-- The CRM removal work and other tiles are untouched.
+Approve and I'll implement.

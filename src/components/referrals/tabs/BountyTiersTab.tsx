@@ -42,7 +42,7 @@ export function BountyTiersTab({ contractor }: { contractor: any }) {
       <BrandCard cream className="flex flex-col md:flex-row gap-4 items-start md:items-center">
         <div className="flex-1">
           <div className="font-serif-display text-2xl font-semibold" style={{ color: "var(--r-green-deep)" }}>My Referral Bounty Tiers</div>
-          <div className="text-sm" style={{ color: "var(--r-muted)" }}>Set what YOU pay other contractors when they refer customers to {contractor?.company_name ?? "you"}. <strong>GCN takes 25%</strong> off the top of every bounty paid out.</div>
+          <div className="text-sm" style={{ color: "var(--r-muted)" }}>Set what YOU pay other contractors when they refer customers to {contractor?.company_name ?? "you"}. <strong>GCN takes 30%</strong> off the top of every bounty paid out.</div>
         </div>
         <GreenButton3D onClick={addTier}><Plus className="w-4 h-4" /> Add Tier</GreenButton3D>
       </BrandCard>
@@ -75,7 +75,7 @@ export function BountyTiersTab({ contractor }: { contractor: any }) {
               <tr className="text-xs uppercase tracking-wider text-left" style={{ color: "var(--r-muted)" }}>
                 <th className="py-2 pr-3">Tier</th><th className="py-2 pr-3">Min</th><th className="py-2 pr-3">Max</th>
                 <th className="py-2 pr-3">Type</th><th className="py-2 pr-3">Bounty</th>
-                <th className="py-2 pr-3">Referrer 75%</th><th className="py-2 pr-3">GCN 25%</th>
+                <th className="py-2 pr-3">Referrer 70%</th><th className="py-2 pr-3">GCN 30%</th>
                 <th className="py-2 pr-3">Status</th><th></th>
               </tr>
             </thead>
@@ -114,7 +114,7 @@ export function BountyTiersTab({ contractor }: { contractor: any }) {
         <div className="font-serif-display text-lg font-semibold mb-4" style={{ color: "var(--r-green-deep)" }}>How Bounty Splits Work</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { title: "Contractor → Contractor", body: "75% to the referring contractor, 25% to GCN.", chip: "75 / 25" },
+            { title: "Contractor → Contractor", body: "70% to the referring contractor, 30% to GCN.", chip: "70 / 30" },
             { title: "Customer → GCN Direct", body: "Walk-in customers routed by GCN — 100% of the finder's fee goes to GCN.", chip: "100% GCN" },
             { title: "Client Pool Residuals", body: "Earn a % of every contract your introduced clients sign with anyone in the network.", chip: "1.5–5%" },
           ].map(c => (
