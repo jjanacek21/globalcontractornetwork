@@ -1,79 +1,88 @@
-# Referrals upgrade — picker, broadcasts, lifetime binding, 30% GCN
+# Contractor access overhaul + retire Supplement Kings & Green Home Solutions + admin approval review
 
-## Why the partner list is empty today
-`ReferCustomerModal` loads `usePartners()`, which only returns contractors where `is_directory_eligible = true`. Right now **all 4 contractors in the system are `pending` and `is_directory_eligible = false`**, so the dropdown is empty. We also don't filter by the trade the customer needs.
+## What changes for contractors
 
-## What we'll build
+**Auto-granted on signup (always on, no admin approval):**
+1. Permit Expediter (Permit Queens)
+2. GCN App / Member Dashboard
+3. Job Marketplace
+4. Contractor Directory listing
+5. PropertyIQ
+6. Referral Platform
 
-### 1. Smart trade-matched partner picker (in Refer Customer modal)
-- Customer fills: name, email, phone, address, **trade needed** (dropdown of available trades, picked first).
-- Once a trade is selected, the "Refer To" list re-queries and shows **only contractors that perform that trade**, sorted by:
-  1. GCN rating/score (high → low)
-  2. Bounty offered for the estimated contract value (high → low)
-- Each row shows: company name, rating + tier badge, service area, and the bounty they'll pay at the entered contract value (e.g. "Pays $450 — you keep $315").
-- Eligibility relaxed: include contractors that are `verification_status = 'verified'` OR `is_directory_eligible = true` so the network isn't gated to zero while contractors are being onboarded.
+**Plus auto-granted contractor services:**
+7. Estimating & Supplementing tools
+8. Digital Marketing services
+9. Training Academy
 
-### 2. Two referral modes
-Inside the modal, a toggle:
-- **"Send to one partner"** — current behavior, pick one company.
-- **"Broadcast to top 3"** — customer is offered to up to 3 contractors. First 3 to message the customer can engage. After 3 have claimed, the broadcast is closed.
+Everything else (CRM-style internal tools etc.) stays gated as today. Admin still approves the **public directory listing visibility** because that requires verified credentials.
 
-### 3. New "Available Referrals" tab
-- New top-level tab in `ReferralsDashboard.tsx` between "Received" and "Payouts".
-- Lists **open broadcasts** that match the contractor's trade and service area.
-- Each card shows: trade, area, estimated value, expected bounty, time left, **claims remaining (3 of 3 / 2 of 3 / 1 of 3)**.
-- "Message Customer" button claims a slot (atomic — race-safe via DB unique constraint) and opens the messaging thread. Once 3 contractors claim, the card disappears for everyone else.
-- The customer sees up to 3 contractor messages and picks who to work with.
+## What goes away
+- Supplement Kings — pages, routes, feature key, dashboard cards.
+- Green Home Solutions — pages, routes, feature key, dashboard cards.
+- Existing landing/marketing references in `LandingFeatureCards`, `LandingTestimonials`, `LandingHeader`, `LandingFooter`, `HomeownerServices`, `ContractorTools`, `CategoryGrid`, `Index`, `Login`, `MemberDashboard`, `GlobalAIChat`, `SuperAdminDashboard`.
+- The "Estimating / Supplementing" workflow that previously lived under Supplement Kings becomes a generic **Estimating & Supplementing** card under Contractor Services (no separate sub-brand).
 
-### 4. Lifetime client binding (forever residuals)
-- Every customer added through a referral is **bound to the original referring contractor** in `client_pool` (already a unique `customer_id` table — perfect).
-- A DB trigger on `referrals` insert ensures: if no `client_pool` row exists for that customer, one is created pointing to the referring contractor. If one already exists, it is **never overwritten**.
-- Whenever any future referral for that customer reaches `status = 'won'`, a row is auto-inserted into `residuals` paying the original introducing contractor — even if a different contractor now sends the customer.
+## What admins get
 
-### 5. GCN 30% cut on every payout
-- All bounty math switches from 75/25 to **70/30** (70% to the referrer/introducer, 30% to GCN).
-- Updated in `ReferCustomerModal`, `BountyTiersTab` copy ("GCN takes 30%"), and the trigger that creates payout rows.
+A new **Pending Approvals** review screen (one per contractor + one per company) that shows, before the approve/reject buttons, **everything the applicant submitted**:
+
+- Profile basics (name, company, category, secondary trades, service area, bio)
+- Contact info (phone, email, website, social links)
+- License details + license document(s)
+- Insurance provider, policy #, expiration + insurance document
+- Workers comp provider + document
+- Profile gallery / banner / logo
+- Job photos (gallery, click to enlarge)
+- Client references (name, phone, email, project — clickable to call/email)
+- Years in business, revenue range, verification score (auto-calculated)
+- Any uploaded miscellaneous documents
+
+Reject flow keeps existing `rejection_reason` + `rejection_notes` fields; approve flow stamps `approved_at` / `approved_by` and (for companies) flips `is_directory_eligible` per the existing trigger.
 
 ## Database changes (one migration)
 
 ```text
-new table: referral_broadcasts
-  id, customer_id, referring_contractor_id, trade,
-  service_area, contract_value, bounty_amount, status (open|filled|expired),
-  expires_at, created_at
-  RLS: referrer + claimers + admin can read; insert via referrer
+1. Update default contractor onboarding (handle_new_user / new RPC):
+   - On contractor signup, auto-insert contractor_feature_access rows with is_approved=true for:
+     permit_queens, gcn_app, job_marketplace, directory_listing,
+     property_iq, referral_network, estimating_supplementing,
+     digital_marketing, academy_access
+   - Do this via a new SECURITY DEFINER function grant_default_contractor_features(contractor_id)
+     called from contractor profile insert trigger.
 
-new table: referral_broadcast_claims
-  id, broadcast_id, contractor_id, claimed_at, message_sent_at
-  UNIQUE(broadcast_id, contractor_id)
-  + trigger that rejects insert when broadcast already has 3 claims
-  (atomic count-check inside SECURITY DEFINER function)
-  RLS: contractor sees own claims; broadcast referrer sees all
+2. Backfill existing contractor profiles with the same default features.
 
-trigger: bind_customer_to_introducer
-  AFTER INSERT ON referrals
-  upserts client_pool(customer_id, introducing_contractor_id)
-  ON CONFLICT (customer_id) DO NOTHING  -- never reassigns
+3. Remove deprecated feature keys: supplement_kings, green_home_solutions
+   (delete rows from contractor_feature_access).
 
-trigger: pay_introducer_residual
-  AFTER UPDATE ON referrals  WHEN NEW.status='won'
-  inserts residuals row paying client_pool.introducing_contractor_id
+4. Add table contractor_documents:
+   id, contractor_id (or company_id), doc_type
+   ('license' | 'insurance' | 'workers_comp' | 'w9' | 'other'),
+   file_url, file_name, uploaded_at
+   RLS: contractor manages own; admins read all.
 
-migration also: rewrites existing 25% gcn_share / 75% referrer_share defaults to 30 / 70 across functions and seed copy
+5. Add storage bucket 'contractor-credentials' (private)
+   with RLS: contractor reads/writes {contractor_id}/* path; admins read all.
 ```
 
-## Files to change
+## Frontend files to change
 
-- `src/components/referrals/modals/ReferCustomerModal.tsx` — trade-first flow, mode toggle (single vs broadcast), 70/30 math, partner cards w/ rating + bounty preview, broadcast insert path
-- `src/hooks/referrals/index.ts` — `usePartners` accepts `trade` filter and sorts by score+bounty; new `useAvailableBroadcasts(contractorId)` and `useClaimBroadcast()` mutation; eligibility filter relaxed
-- `src/pages/ReferralsDashboard.tsx` — add `"available"` tab "Available Referrals"
-- `src/components/referrals/tabs/AvailableReferralsTab.tsx` (new) — list + claim UI
-- `src/components/referrals/tabs/BountyTiersTab.tsx` — copy: "GCN takes 30%"
-- `supabase/migrations/<ts>_referral_broadcasts_and_lifetime_binding.sql` — schema above
+- `src/hooks/useContractorFeatures.ts` — replace `AVAILABLE_FEATURES` with the 9 auto-granted set; remove supplement_kings/green_home_solutions; default `hasFeature` to true if feature is in the auto-granted list (defensive, in case DB row missing).
+- `src/components/admin/ContractorsTable.tsx` — same feature list cleanup; remove deprecated keys.
+- `src/components/admin/ContractorFeatureAccess.tsx` — same.
+- `src/App.tsx` — delete the 6 routes for `/supplement-kings/*` and `/green-home-solutions/*`.
+- Delete pages: `SupplementKings.tsx`, `SupplementKingsContractorAuth.tsx`, `SupplementKingsContractorDashboard.tsx`, `SupplementKingsAdminAuth.tsx`, `SupplementKingsAdminDashboard.tsx`, `GreenHomeSolutions.tsx`, `GreenHomeSolutionsAdminAuth.tsx`, `GreenHomeSolutionsAdminDashboard.tsx`.
+- Delete `src/components/green-home/` and `src/components/supplement-kings/` directories (after confirming nothing references them outside the removed pages).
+- Strip references in `LandingFeatureCards`, `LandingTestimonials`, `LandingHeader`, `LandingFooter`, `HomeownerServices`, `ContractorTools`, `CategoryGrid`, `Index`, `Login`, `MemberDashboard`, `GlobalAIChat`, `SuperAdminDashboard`. Replace any "Supplement Kings" tile in MemberDashboard with a generic **Estimating & Supplementing** tile linking to a new `/contractor/estimating` route (lightweight placeholder page wired to the new feature key).
+- New page `src/pages/ContractorEstimating.tsx` — minimal landing for the unified Estimating & Supplementing service (we can flesh it out later; today it's a hub linking to existing estimate-builder utilities).
+- New admin component `src/components/admin/ContractorReviewDialog.tsx` — replaces the current edit dialog for contractors that are still `verification_status = 'pending'`. Shows everything listed above in a read-only review layout with Approve/Reject buttons at the bottom.
+- Enhance `src/components/admin/CompanyDialog.tsx` — when in `view` mode and `verification_status = 'pending'`, surface job photos, references, license/insurance docs and uploaded credential files at the top with **Approve** / **Reject** primary buttons (today these are buried in form mode).
+- New tab in `SuperAdminDashboard` (and `CompanyAdminDashboard` for that company's own pending team members) called **"Pending Approvals"** that lists pending contractors and companies and opens the review dialogs.
 
-## Out of scope (ask before adding)
-- Actual messaging UI — we'll wire the "Message Customer" button to the existing messaging route if one exists, otherwise stub it with a toast for now.
-- Notifications/SMS to customers when broadcast goes out.
-- Admin UI to release escrow / mark referrals `won` (already exists in admin).
+## Out of scope (will ask before adding)
+- Building out the actual Estimating & Supplementing app behind the new tile (today it'll be a hub page).
+- Email notifications when admin approves/rejects (existing notification system can be wired separately).
+- Migrating any historical Supplement Kings / Green Home Solutions lead data (we'll leave the tables intact; only the UI/routes go away).
 
 Approve and I'll implement.
