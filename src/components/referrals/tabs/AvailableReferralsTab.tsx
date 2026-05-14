@@ -137,20 +137,20 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
                     </span>
                   </div>
                   {b.claimed_by_me ? (
-                    <button
-                      disabled
-                      className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-[10px]"
-                      style={{ background: "var(--r-cream-2)", color: "var(--r-green-deep)", border: "1px solid var(--r-line)" }}
+                    <GreenButton3D
+                      className="text-xs"
+                      onClick={() => onOpenExisting(b)}
+                      disabled={claim.isPending}
                     >
-                      <CheckCircle2 className="w-4 h-4" /> Claimed
-                    </button>
+                      <CheckCircle2 className="w-4 h-4" /> Open Conversation
+                    </GreenButton3D>
                   ) : (
                     <GreenButton3D
                       className="text-xs"
-                      onClick={() => onClaim(b)}
+                      onClick={() => onClaimAndMessage(b)}
                       disabled={claim.isPending || b.claims_remaining === 0}
                     >
-                      <MessageSquare className="w-4 h-4" /> Message Customer
+                      <MessageSquare className="w-4 h-4" /> Claim & Message
                     </GreenButton3D>
                   )}
                 </div>
@@ -158,6 +158,16 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
             );
           })}
         </div>
+      )}
+
+      {active && contractor?.id && (
+        <MessageClientDialog
+          open={!!active}
+          onOpenChange={(v) => !v && setActive(null)}
+          broadcast={active.broadcast}
+          claimId={active.claimId}
+          contractorId={contractor.id}
+        />
       )}
     </div>
   );
