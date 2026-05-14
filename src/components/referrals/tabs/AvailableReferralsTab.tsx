@@ -3,6 +3,7 @@ import { useAvailableBroadcasts, useClaimBroadcast } from "@/hooks/referrals";
 import { BrandCard, GreenButton3D, Pill, BrandSkeleton, fmtMoney } from "@/components/referrals/ui/primitives";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, Users, MapPin, MessageSquare, CheckCircle2 } from "lucide-react";
+import { MessageClientDialog } from "@/components/referrals/modals/MessageClientDialog";
 
 function timeLeft(iso: string) {
   const ms = new Date(iso).getTime() - Date.now();
