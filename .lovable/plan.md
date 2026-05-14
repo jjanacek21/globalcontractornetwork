@@ -1,88 +1,98 @@
-# Contractor access overhaul + retire Supplement Kings & Green Home Solutions + admin approval review
+# Lead-to-Contractor Messaging Flow (Broadcast Claims)
 
-## What changes for contractors
+Today the Available Referrals tab lets a contractor claim a broadcast and shows a "Claimed" pill, but there is no actual way to message the client. This plan wires the full path: **Claim → Consent gate → Message Client → live conversation → customer notification**.
 
-**Auto-granted on signup (always on, no admin approval):**
-1. Permit Expediter (Permit Queens)
-2. GCN App / Member Dashboard
-3. Job Marketplace
-4. Contractor Directory listing
-5. PropertyIQ
-6. Referral Platform
+## Goals
 
-**Plus auto-granted contractor services:**
-7. Estimating & Supplementing tools
-8. Digital Marketing services
-9. Training Academy
+1. After a contractor claims a broadcast, give them a clear **Message Client** CTA that opens a real conversation thread.
+2. Respect customer privacy: customer contact info (phone/email/full address) is **masked** until the customer consents to be contacted by that specific contractor.
+3. Notify the customer (email + in-app if they have an account) the moment a claimed contractor sends their first message, with a one-click consent link.
+4. Track engagement for the existing 3-claim cap rule (first 3 to actually message win the seat) and for residual/payout attribution.
 
-Everything else (CRM-style internal tools etc.) stays gated as today. Admin still approves the **public directory listing visibility** because that requires verified credentials.
+## UX Flow
 
-## What goes away
-- Supplement Kings — pages, routes, feature key, dashboard cards.
-- Green Home Solutions — pages, routes, feature key, dashboard cards.
-- Existing landing/marketing references in `LandingFeatureCards`, `LandingTestimonials`, `LandingHeader`, `LandingFooter`, `HomeownerServices`, `ContractorTools`, `CategoryGrid`, `Index`, `Login`, `MemberDashboard`, `GlobalAIChat`, `SuperAdminDashboard`.
-- The "Estimating / Supplementing" workflow that previously lived under Supplement Kings becomes a generic **Estimating & Supplementing** card under Contractor Services (no separate sub-brand).
-
-## What admins get
-
-A new **Pending Approvals** review screen (one per contractor + one per company) that shows, before the approve/reject buttons, **everything the applicant submitted**:
-
-- Profile basics (name, company, category, secondary trades, service area, bio)
-- Contact info (phone, email, website, social links)
-- License details + license document(s)
-- Insurance provider, policy #, expiration + insurance document
-- Workers comp provider + document
-- Profile gallery / banner / logo
-- Job photos (gallery, click to enlarge)
-- Client references (name, phone, email, project — clickable to call/email)
-- Years in business, revenue range, verification score (auto-calculated)
-- Any uploaded miscellaneous documents
-
-Reject flow keeps existing `rejection_reason` + `rejection_notes` fields; approve flow stamps `approved_at` / `approved_by` and (for companies) flips `is_directory_eligible` per the existing trigger.
-
-## Database changes (one migration)
-
-```text
-1. Update default contractor onboarding (handle_new_user / new RPC):
-   - On contractor signup, auto-insert contractor_feature_access rows with is_approved=true for:
-     permit_queens, gcn_app, job_marketplace, directory_listing,
-     property_iq, referral_network, estimating_supplementing,
-     digital_marketing, academy_access
-   - Do this via a new SECURITY DEFINER function grant_default_contractor_features(contractor_id)
-     called from contractor profile insert trigger.
-
-2. Backfill existing contractor profiles with the same default features.
-
-3. Remove deprecated feature keys: supplement_kings, green_home_solutions
-   (delete rows from contractor_feature_access).
-
-4. Add table contractor_documents:
-   id, contractor_id (or company_id), doc_type
-   ('license' | 'insurance' | 'workers_comp' | 'w9' | 'other'),
-   file_url, file_name, uploaded_at
-   RLS: contractor manages own; admins read all.
-
-5. Add storage bucket 'contractor-credentials' (private)
-   with RLS: contractor reads/writes {contractor_id}/* path; admins read all.
+```
+Available Referrals card
+  └─ [Claim & Message] button
+       ├─ creates referral_broadcast_claims row (existing trigger enforces cap of 3)
+       ├─ opens MessageClientDialog
+       │     ├─ shows masked customer (first name, city, trade, notes)
+       │     ├─ shows pre-filled intro template the contractor can edit
+       │     ├─ requires contractor to agree to GCN messaging rules
+       │     └─ [Send first message]
+       │           ├─ inserts broadcast_conversation + broadcast_message
+       │           ├─ stamps referral_broadcast_claims.message_sent_at
+       │           └─ triggers send-broadcast-claim-notification edge function
+       │                 ├─ emails customer with contractor card + Accept/Decline links
+       │                 └─ if customer has auth account, also drops a homeowner_notification
+       └─ after first message, card shows [Open Conversation] instead
 ```
 
-## Frontend files to change
+Customer side:
+- Email contains 3 buttons per contractor: **Accept & Reply**, **Save for later**, **Not interested**.
+- Accept flips `broadcast_conversations.customer_consent = true`, unmasks contact info for that contractor only, and (if customer has an account) routes them into the existing homeowner messaging UI for replies.
 
-- `src/hooks/useContractorFeatures.ts` — replace `AVAILABLE_FEATURES` with the 9 auto-granted set; remove supplement_kings/green_home_solutions; default `hasFeature` to true if feature is in the auto-granted list (defensive, in case DB row missing).
-- `src/components/admin/ContractorsTable.tsx` — same feature list cleanup; remove deprecated keys.
-- `src/components/admin/ContractorFeatureAccess.tsx` — same.
-- `src/App.tsx` — delete the 6 routes for `/supplement-kings/*` and `/green-home-solutions/*`.
-- Delete pages: `SupplementKings.tsx`, `SupplementKingsContractorAuth.tsx`, `SupplementKingsContractorDashboard.tsx`, `SupplementKingsAdminAuth.tsx`, `SupplementKingsAdminDashboard.tsx`, `GreenHomeSolutions.tsx`, `GreenHomeSolutionsAdminAuth.tsx`, `GreenHomeSolutionsAdminDashboard.tsx`.
-- Delete `src/components/green-home/` and `src/components/supplement-kings/` directories (after confirming nothing references them outside the removed pages).
-- Strip references in `LandingFeatureCards`, `LandingTestimonials`, `LandingHeader`, `LandingFooter`, `HomeownerServices`, `ContractorTools`, `CategoryGrid`, `Index`, `Login`, `MemberDashboard`, `GlobalAIChat`, `SuperAdminDashboard`. Replace any "Supplement Kings" tile in MemberDashboard with a generic **Estimating & Supplementing** tile linking to a new `/contractor/estimating` route (lightweight placeholder page wired to the new feature key).
-- New page `src/pages/ContractorEstimating.tsx` — minimal landing for the unified Estimating & Supplementing service (we can flesh it out later; today it's a hub linking to existing estimate-builder utilities).
-- New admin component `src/components/admin/ContractorReviewDialog.tsx` — replaces the current edit dialog for contractors that are still `verification_status = 'pending'`. Shows everything listed above in a read-only review layout with Approve/Reject buttons at the bottom.
-- Enhance `src/components/admin/CompanyDialog.tsx` — when in `view` mode and `verification_status = 'pending'`, surface job photos, references, license/insurance docs and uploaded credential files at the top with **Approve** / **Reject** primary buttons (today these are buried in form mode).
-- New tab in `SuperAdminDashboard` (and `CompanyAdminDashboard` for that company's own pending team members) called **"Pending Approvals"** that lists pending contractors and companies and opens the review dialogs.
+## Database Changes (one migration)
 
-## Out of scope (will ask before adding)
-- Building out the actual Estimating & Supplementing app behind the new tile (today it'll be a hub page).
-- Email notifications when admin approves/rejects (existing notification system can be wired separately).
-- Migrating any historical Supplement Kings / Green Home Solutions lead data (we'll leave the tables intact; only the UI/routes go away).
+New tables:
+- `broadcast_conversations` — `id`, `broadcast_id`, `claim_id`, `customer_id`, `contractor_id`, `customer_consent` (bool, default false), `consent_at`, `customer_declined` (bool), `last_message_at`, `contractor_unread_count`, `customer_unread_count`. Unique on (broadcast_id, contractor_id).
+- `broadcast_messages` — `id`, `conversation_id`, `sender_type` ('contractor'|'customer'|'system'), `sender_id` (nullable for system), `content`, `is_read`, `created_at`.
+- `broadcast_consent_tokens` — `token` (uuid pk), `conversation_id`, `action` ('accept'|'decline'), `expires_at`, `used_at`. Used by the email links so the customer doesn't need to log in.
 
-Approve and I'll implement.
+Triggers/functions:
+- After insert on `broadcast_messages` where sender_type='contractor' and it's the **first** contractor message in that conversation: set `referral_broadcast_claims.message_sent_at = now()` for the matching claim. (Reinforces the "first 3 to message" rule already documented.)
+- Standard `update_updated_at` and `last_message_at` triggers.
+
+RLS:
+- `broadcast_conversations`: contractor can SELECT/UPDATE rows where `contractor_id = get_contractor_profile_id()`. Super admin all. Customer access only via signed token (handled in edge function with service role) or via their authenticated user matching `gcn_customers.user_id` if/when linked.
+- `broadcast_messages`: contractor can SELECT/INSERT in their own conversations. Customer messages flow in via the consent edge function.
+- `broadcast_consent_tokens`: no client access; service-role only.
+
+## Edge Functions
+
+1. `send-broadcast-claim-notification` (POST, JWT-verified)
+   - Input: `conversation_id`.
+   - Loads conversation + contractor profile + customer contact.
+   - Generates two `broadcast_consent_tokens` (accept, decline).
+   - Sends a Resend email to the customer with contractor card, intro message, and the two tokenized links pointing at `/r/consent?token=...`.
+   - Inserts a `homeowner_notifications` row if `gcn_customers.user_id` is set.
+
+2. `process-broadcast-consent` (GET/POST, public, no JWT)
+   - Validates token, marks `used_at`, sets `customer_consent` or `customer_declined` on the conversation.
+   - Returns a small success page that links the customer into the in-app reply view (or a public reply form if they don't have an account).
+
+## Frontend Changes
+
+- `src/components/referrals/tabs/AvailableReferralsTab.tsx`
+  - Replace the existing "Claim" button with **Claim & Message**. On click: claim, then open `MessageClientDialog`.
+  - Replace the disabled "Claimed" pill with **Open Conversation** that opens the same dialog in thread mode.
+
+- `src/components/referrals/modals/MessageClientDialog.tsx` (new)
+  - Two states: `compose` (no message sent yet, shows masked customer + template + send) and `thread` (shows full conversation, message composer, masked-vs-unmasked contact based on `customer_consent`).
+  - Uses Supabase Realtime on `broadcast_messages` filtered by `conversation_id`.
+
+- `src/hooks/referrals/messaging.ts` (new)
+  - `useOrCreateBroadcastConversation(broadcastId, claimId, contractorId)`
+  - `useBroadcastMessages(conversationId)` with realtime subscription
+  - `useSendBroadcastMessage()` — inserts message, calls `send-broadcast-claim-notification` on first send
+  - `useMyBroadcastConversations(contractorId)` for an inbox view
+
+- `src/pages/ReferralsDashboard.tsx`
+  - Add a small **Inbox** badge next to the Available Referrals tab showing total contractor unread count.
+
+- `src/pages/BroadcastConsent.tsx` + route `/r/consent` (new)
+  - Calls `process-broadcast-consent`, displays a friendly "You're connected with {Contractor}" page or "We'll let them know you're not interested" page.
+
+## Out of Scope
+
+- SMS notifications (email + in-app only for v1).
+- Group/3-way conversations — each contractor↔customer pair gets its own thread.
+- Customer-initiated outreach to contractors who didn't claim.
+- Payment/escrow — existing referral/residual logic untouched.
+
+## Technical Notes
+
+- The 3-claim cap is already enforced atomically by `enforce_broadcast_claim_cap`; no change needed there.
+- `message_sent_at` already exists on `referral_broadcast_claims` and is being set optimistically at claim time today — this plan moves it to the actual first-message trigger so the "first 3 to message wins" rule documented in earlier work is truthfully enforced.
+- All consent links use single-use tokens with 14-day expiry; signed URLs are not used because the customer may not have a Supabase session.
+- Resend key already configured (`RESEND_API_KEY`); no new secrets required.

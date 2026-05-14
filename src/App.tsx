@@ -11,6 +11,7 @@ import { AnimatePresence } from "framer-motion";
 // Social Coming Soon Page
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 const ReferralsDashboard = lazy(() => import("./pages/ReferralsDashboard"));
+const BroadcastConsent = lazy(() => import("./pages/BroadcastConsent"));
 
 // CRM (GCN internal) was removed — contractors use external Pitch CRM via the dashboard tile.
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
@@ -352,6 +353,11 @@ const GCNRoutes = () => (
                 <ReferralsDashboard />
               </Suspense>
             </ProtectedRoute>
+          } />
+          <Route path="/r/consent" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <BroadcastConsent />
+            </Suspense>
           } />
           <Route path="/job-board" element={
             <ProtectedRoute redirectTo="/network-login">

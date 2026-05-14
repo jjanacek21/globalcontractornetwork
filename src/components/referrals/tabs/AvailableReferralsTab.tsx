@@ -3,6 +3,7 @@ import { useAvailableBroadcasts, useClaimBroadcast } from "@/hooks/referrals";
 import { BrandCard, GreenButton3D, Pill, BrandSkeleton, fmtMoney } from "@/components/referrals/ui/primitives";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, Users, MapPin, MessageSquare, CheckCircle2 } from "lucide-react";
+import { MessageClientDialog } from "@/components/referrals/modals/MessageClientDialog";
 
 function timeLeft(iso: string) {
   const ms = new Date(iso).getTime() - Date.now();
@@ -17,6 +18,7 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
   const { data: broadcasts, isLoading } = useAvailableBroadcasts(contractor?.id);
   const claim = useClaimBroadcast();
   const { toast } = useToast();
+  const [active, setActive] = useState<{ broadcast: any; claimId: string } | null>(null);
 
   const trades = useMemo(() => {
     const set = new Set<string>();
@@ -29,19 +31,26 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
     return (broadcasts ?? []).filter((b: any) => b.trade === trade);
   }, [broadcasts, trade]);
 
-  const onClaim = async (b: any) => {
+  const onClaimAndMessage = async (b: any) => {
     try {
-      await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
-      toast({
-        title: "Claimed!",
-        description: `You're one of the first ${b.max_claims} contractors. Message the customer now to win the job.`,
-      });
+      const { claimId } = await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
+      setActive({ broadcast: b, claimId });
     } catch (err: any) {
       toast({
         title: "Couldn't claim",
         description: err.message ?? "This broadcast may already be full.",
         variant: "destructive",
       });
+    }
+  };
+
+  const onOpenExisting = async (b: any) => {
+    // Already claimed — just look up our claim id and open the dialog
+    try {
+      const { claimId } = await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
+      setActive({ broadcast: b, claimId });
+    } catch (err: any) {
+      toast({ title: "Couldn't open conversation", description: err.message, variant: "destructive" });
     }
   };
 
@@ -128,20 +137,20 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
                     </span>
                   </div>
                   {b.claimed_by_me ? (
-                    <button
-                      disabled
-                      className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-[10px]"
-                      style={{ background: "var(--r-cream-2)", color: "var(--r-green-deep)", border: "1px solid var(--r-line)" }}
+                    <GreenButton3D
+                      className="text-xs"
+                      onClick={() => onOpenExisting(b)}
+                      disabled={claim.isPending}
                     >
-                      <CheckCircle2 className="w-4 h-4" /> Claimed
-                    </button>
+                      <CheckCircle2 className="w-4 h-4" /> Open Conversation
+                    </GreenButton3D>
                   ) : (
                     <GreenButton3D
                       className="text-xs"
-                      onClick={() => onClaim(b)}
+                      onClick={() => onClaimAndMessage(b)}
                       disabled={claim.isPending || b.claims_remaining === 0}
                     >
-                      <MessageSquare className="w-4 h-4" /> Message Customer
+                      <MessageSquare className="w-4 h-4" /> Claim & Message
                     </GreenButton3D>
                   )}
                 </div>
@@ -149,6 +158,16 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
             );
           })}
         </div>
+      )}
+
+      {active && contractor?.id && (
+        <MessageClientDialog
+          open={!!active}
+          onOpenChange={(v) => !v && setActive(null)}
+          broadcast={active.broadcast}
+          claimId={active.claimId}
+          contractorId={contractor.id}
+        />
       )}
     </div>
   );
