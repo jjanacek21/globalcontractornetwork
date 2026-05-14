@@ -38,7 +38,7 @@ interface LeadDetailsDialogProps {
 const SOURCE_TABLE_MAP: Record<string, string> = {
   'Coating Kings': 'coating_leads',
   'Green Home Improvements': 'window_leads',
-  'Supplement Kings': 'supplement_leads',
+  'Estimating & Supplementing': 'supplement_leads',
   'Permit Queens': 'permit_projects',
   'Roofing Services': 'roofing_consultations',
   'Contact Request': 'contact_requests',
@@ -48,7 +48,7 @@ const SOURCE_TABLE_MAP: Record<string, string> = {
 const STATUS_OPTIONS: Record<string, string[]> = {
   'Coating Kings': ['new', 'contacted', 'scheduled', 'completed', 'cancelled'],
   'Green Home Improvements': ['new', 'contacted', 'scheduled', 'completed', 'cancelled'],
-  'Supplement Kings': ['new', 'in_review', 'negotiating', 'settled', 'closed'],
+  'Estimating & Supplementing': ['new', 'in_review', 'negotiating', 'settled', 'closed'],
   'Permit Queens': ['pending', 'in_progress', 'approved', 'completed', 'rejected'],
   'Roofing Services': ['new', 'contacted', 'scheduled', 'completed', 'cancelled'],
   'Contact Request': ['new', 'contacted', 'resolved'],
@@ -626,7 +626,7 @@ export function LeadDetailsDialog({
         return renderCoatingKingsFields();
       case 'Green Home Improvements':
         return renderWindowLeadsFields();
-      case 'Supplement Kings':
+      case 'Estimating & Supplementing':
         return renderSupplementLeadsFields();
       case 'Permit Queens':
         return renderPermitProjectsFields();

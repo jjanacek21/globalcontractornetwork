@@ -69,7 +69,7 @@ interface Stats {
 const SOURCE_TABLE_MAP: Record<string, string> = {
   'Coating Kings': 'coating_leads',
   'Green Home Improvements': 'window_leads',
-  'Supplement Kings': 'supplement_leads',
+  'Estimating & Supplementing': 'supplement_leads',
   'Permit Queens': 'permit_projects',
   'Roofing Services': 'roofing_consultations',
   'Contact Request': 'contact_requests',
@@ -78,7 +78,7 @@ const SOURCE_TABLE_MAP: Record<string, string> = {
 
 const CONTRACTOR_TABLE_MAP: Record<string, string> = {
   'Directory': 'contractor_profiles',
-  'Supplement Kings': 'supplement_contractors',
+  'Estimating & Supplementing': 'supplement_contractors',
   'Permit Queens': 'permit_contractors',
 };
 
@@ -262,7 +262,7 @@ const SuperAdminDashboard = () => {
       });
 
       (supplementLeads.data || []).forEach(lead => {
-        unifiedLeads.push({ id: lead.id, source: "Supplement Kings", customerName: lead.customer_name, email: lead.customer_email, phone: lead.customer_phone, status: lead.status, createdAt: lead.created_at || "", details: `${lead.claim_type} - ${lead.property_city}` });
+        unifiedLeads.push({ id: lead.id, source: "Estimating & Supplementing", customerName: lead.customer_name, email: lead.customer_email, phone: lead.customer_phone, status: lead.status, createdAt: lead.created_at || "", details: `${lead.claim_type} - ${lead.property_city}` });
       });
 
       (permitProjects.data || []).forEach(lead => {
@@ -291,7 +291,7 @@ const SuperAdminDashboard = () => {
       });
 
       (supplementContractors.data || []).forEach(c => {
-        allContractors.push({ id: c.id, source: "Supplement Kings", companyName: c.company_name, contactName: c.contact_name, email: c.email, phone: c.phone, createdAt: c.created_at || "" });
+        allContractors.push({ id: c.id, source: "Estimating & Supplementing", companyName: c.company_name, contactName: c.contact_name, email: c.email, phone: c.phone, createdAt: c.created_at || "" });
       });
 
       (permitContractors.data || []).forEach(c => {

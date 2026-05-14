@@ -55,17 +55,17 @@ const CategoryGrid = () => {
     },
     {
       icon: DollarSign,
-      title: "Supplement Kings",
+      title: "Estimating & Supplementing",
       description:
         "Insurance supplementing, Xactimate estimates, claim management, and maximum settlement recovery.",
-      link: "/supplement-kings",
+      link: "/contractor/estimating",
     },
     {
       icon: SquareAsterisk,
       title: "Windows & Doors",
       description:
         "Impact windows, hurricane doors, energy-efficient options, and expert installation services.",
-      link: "/green-home-solutions",
+      link: "/services",
     },
     {
       icon: AlertTriangle,

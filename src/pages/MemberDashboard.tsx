@@ -208,7 +208,7 @@ const MemberDashboard = () => {
   };
 
   const contractorServices: ServiceCard[] = [
-    { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/supplement-kings" },
+    { icon: DollarSign, title: "Estimating / Supplementing", description: "Professional estimates & insurance claim supplements", link: "/contractor/estimating" },
     { icon: Megaphone, title: "Digital Marketing, Management & Design", description: "Social media, ads, SEO, web design & CRM support", link: "/digital-marketing" },
     { icon: Crown, title: "Permit Expediting", description: "Fast-track Florida building permits", link: "/permit-queens/dashboard" },
     { icon: GraduationCap, title: "Training Academy", description: "Certifications & business courses for pros", link: "/learning" },

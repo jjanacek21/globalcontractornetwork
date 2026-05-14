@@ -54,16 +54,23 @@ interface TeamOption {
 }
 
 const AVAILABLE_FEATURES = [
-  "coating_kings",
-  "green_home_solutions",
-  "supplement_kings",
+  // Auto-granted on signup
   "permit_queens",
+  "gcn_app",
+  "job_marketplace",
+  "directory_listing",
+  "property_iq",
+  "referral_network",
+  "estimating_supplementing",
+  "digital_marketing",
+  "academy_access",
+  // Opt-in / legacy
+  "coating_kings",
   "prep_your_property",
   "social_network",
   "gamification",
-  "referral_network",
   "crm_access",
-  "academy_access"
+  "rewards_dashboard",
 ];
 
 export function ContractorsTable() {

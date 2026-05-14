@@ -27,7 +27,7 @@ interface UnifiedLead {
 const WORK_TYPE_MAP: Record<string, string> = {
   'Coating Kings': 'Roof Coating',
   'Green Home Improvements': 'Windows & Doors',
-  'Supplement Kings': 'Insurance Claims',
+  'Estimating & Supplementing': 'Insurance Claims',
   'Permit Queens': 'Permits',
   'Roofing Services': 'Roofing',
   'Contact Request': 'General Inquiry',
@@ -38,7 +38,7 @@ const WORK_TYPE_MAP: Record<string, string> = {
 const SOURCE_TABLE_MAP: Record<string, string> = {
   'Coating Kings': 'coating_leads',
   'Green Home Improvements': 'window_leads',
-  'Supplement Kings': 'supplement_leads',
+  'Estimating & Supplementing': 'supplement_leads',
   'Permit Queens': 'permit_projects',
   'Roofing Services': 'roofing_consultations',
   'Contact Request': 'contact_requests',
@@ -119,7 +119,7 @@ export default function EnhancedLeadsTable() {
       (supplementLeads.data || []).forEach(lead => {
         unifiedLeads.push({ 
           id: lead.id, 
-          source: "Supplement Kings", 
+          source: "Estimating & Supplementing", 
           customerName: lead.customer_name, 
           email: lead.customer_email, 
           phone: lead.customer_phone, 

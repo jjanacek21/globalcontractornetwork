@@ -39,17 +39,17 @@ const SERVICE_LABELS: Record<string, string> = {
   'presentations': 'Presentations',
   'learning_platform': 'Learning Platform',
   'crm_access': 'CRM Portal',
-  'supplement_kings': 'Supplement Kings',
-  'permit_queens': 'Permit Queens',
+  'estimating_supplementing': 'Estimating & Supplementing',
+  'permit_queens': 'Permit Expediter',
 };
 
-const PREMIUM_SERVICES = ['crm_access', 'supplement_kings', 'permit_queens', 'learning_platform'];
+const PREMIUM_SERVICES = ['crm_access', 'estimating_supplementing', 'permit_queens', 'learning_platform'];
 
 // Service categories for organizing requests
 const SERVICE_CATEGORIES: Record<string, string[]> = {
   'all': [],
   'crm': ['crm_access'],
-  'supplements': ['supplement_kings'],
+  'supplements': ['estimating_supplementing'],
   'permits': ['permit_queens'],
   'directory': ['directory_listing'],
   'learning': ['learning_platform'],

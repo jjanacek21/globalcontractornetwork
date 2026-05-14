@@ -24,21 +24,28 @@ export function ApplicationDetailDialog({
   const [loading, setLoading] = useState(true);
   const [contractor, setContractor] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
+  const [docs, setDocs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open || !contractorId) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [{ data: cp }, { data: co }] = await Promise.all([
+      const [{ data: cp }, { data: co }, { data: dList }] = await Promise.all([
         supabase.from("contractor_profiles").select("*").eq("id", contractorId).maybeSingle(),
         companyId
           ? supabase.from("companies").select("*").eq("id", companyId).maybeSingle()
           : Promise.resolve({ data: null }),
+        supabase
+          .from("contractor_documents")
+          .select("*")
+          .or(`contractor_id.eq.${contractorId}${companyId ? `,company_id.eq.${companyId}` : ""}`)
+          .order("uploaded_at", { ascending: false }),
       ]);
       if (cancelled) return;
       setContractor(cp);
       setCompany(co);
+      setDocs(dList || []);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -97,12 +104,13 @@ export function ApplicationDetailDialog({
           </div>
         ) : (
           <Tabs defaultValue="overview" className="mt-2">
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsTrigger value="documents">Docs ({docs.length})</TabsTrigger>
               <TabsTrigger value="photos">Photos ({photos.length})</TabsTrigger>
-              <TabsTrigger value="references">References ({refs.length})</TabsTrigger>
-              <TabsTrigger value="social">Social & Links</TabsTrigger>
+              <TabsTrigger value="references">Refs ({refs.length})</TabsTrigger>
+              <TabsTrigger value="social">Links</TabsTrigger>
             </TabsList>
 
             {/* Overview */}
@@ -193,6 +201,28 @@ export function ApplicationDetailDialog({
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            {/* Documents */}
+            <TabsContent value="documents" className="mt-4 space-y-3">
+              {docs.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">No additional documents uploaded.</p>
+              ) : docs.map((d: any) => (
+                <Card key={d.id}>
+                  <CardContent className="pt-4 text-sm flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{d.file_name || d.doc_type}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{d.doc_type.replace('_', ' ')} · {new Date(d.uploaded_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <a href={d.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline shrink-0">
+                      <ExternalLink className="h-3 w-3" /> Open
+                    </a>
+                  </CardContent>
+                </Card>
+              ))}
             </TabsContent>
 
             {/* Photos */}

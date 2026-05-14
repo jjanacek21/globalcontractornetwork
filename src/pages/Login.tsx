@@ -148,7 +148,7 @@ const Login = () => {
         if (lookupPhone) query = query.ilike("phone", `%${lookupPhone}%`);
         const { data } = await query.order("created_at", { ascending: false }).limit(10);
         if (data) {
-          results.push(...data.map(d => ({ ...d, type: "Window Quote", source: "Green Home Solutions" })));
+          results.push(...data.map(d => ({ ...d, type: "Window Quote", source: "Windows & Doors" })));
         }
       }
 

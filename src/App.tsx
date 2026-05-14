@@ -58,11 +58,6 @@ import PermitPacketAssembly from "./pages/PermitPacketAssembly";
 import PermitQueensRequestDetail from "./pages/PermitQueensRequestDetail";
 import PermitQueensAdminBuildingDepts from "./pages/PermitQueensAdminBuildingDepts";
 import PermitQueensAIIntelligence from "./pages/PermitQueensAIIntelligence";
-import SupplementKings from "./pages/SupplementKings";
-import SupplementKingsContractorAuth from "./pages/SupplementKingsContractorAuth";
-import SupplementKingsContractorDashboard from "./pages/SupplementKingsContractorDashboard";
-import SupplementKingsAdminAuth from "./pages/SupplementKingsAdminAuth";
-import SupplementKingsAdminDashboard from "./pages/SupplementKingsAdminDashboard";
 import PermitQueensAdminAuth from "./pages/PermitQueensAdminAuth";
 import PermitQueensAdminDashboard from "./pages/PermitQueensAdminDashboard";
 import PermitQueensAdminTemplates from "./pages/PermitQueensAdminTemplates";
@@ -70,10 +65,8 @@ import RoofingAdminAuth from "./pages/RoofingAdminAuth";
 import RoofingAdminDashboard from "./pages/RoofingAdminDashboard";
 import SuperAdminAuth from "./pages/SuperAdminAuth";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
-import GreenHomeSolutions from "./pages/GreenHomeSolutions";
-import GreenHomeSolutionsAdminAuth from "./pages/GreenHomeSolutionsAdminAuth";
-import GreenHomeSolutionsAdminDashboard from "./pages/GreenHomeSolutionsAdminDashboard";
 import EmergencyMitigation from "./pages/EmergencyMitigation";
+const ContractorEstimating = lazy(() => import("./pages/ContractorEstimating"));
 import NorthernLandscaping from "./pages/NorthernLandscaping";
 import JoinNetwork from "./pages/JoinNetwork";
 import MemberDashboard from "./pages/MemberDashboard";
@@ -209,15 +202,10 @@ const GCNRoutes = () => (
       </ProtectedRoute>
     } />
           
-          {/* Green Home Solutions Routes */}
-          <Route path="/green-home-solutions" element={<GreenHomeSolutions />} />
-          <Route path="/green-home-solutions/admin/auth" element={<GreenHomeSolutionsAdminAuth />} />
-          <Route path="/green-home-solutions/admin/dashboard" element={
-            <ProtectedRoute redirectTo="/green-home-solutions/admin/auth">
-              <GreenHomeSolutionsAdminDashboard />
-            </ProtectedRoute>
-          } />
-          
+          {/* Retired: Windows & Doors */}
+          <Route path="/services" element={<Navigate to="/services" replace />} />
+          <Route path="/services/*" element={<Navigate to="/services" replace />} />
+
           {/* Emergency Mitigation Routes */}
           <Route path="/emergency-mitigation" element={<EmergencyMitigation />} />
           
@@ -277,18 +265,12 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
-          {/* Supplement Kings Routes */}
-          <Route path="/supplement-kings" element={<SupplementKings />} />
-          <Route path="/supplement-kings/contractor/auth" element={<SupplementKingsContractorAuth />} />
-          <Route path="/supplement-kings/contractor/dashboard" element={
-            <ProtectedRoute redirectTo="/supplement-kings/contractor/auth">
-              <SupplementKingsContractorDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/supplement-kings/admin/auth" element={<SupplementKingsAdminAuth />} />
-          <Route path="/supplement-kings/admin/dashboard" element={
-            <ProtectedRoute redirectTo="/supplement-kings/admin/auth">
-              <SupplementKingsAdminDashboard />
+          {/* Retired: Estimating & Supplementing - replaced by unified Estimating & Supplementing */}
+          <Route path="/contractor/estimating" element={<Navigate to="/contractor/estimating" replace />} />
+          <Route path="/contractor/estimating/*" element={<Navigate to="/contractor/estimating" replace />} />
+          <Route path="/contractor/estimating" element={
+            <ProtectedRoute>
+              <Suspense fallback={<div />}><ContractorEstimating /></Suspense>
             </ProtectedRoute>
           } />
           

@@ -1845,6 +1845,57 @@ export type Database = {
           },
         ]
       }
+      contractor_documents: {
+        Row: {
+          company_id: string | null
+          contractor_id: string | null
+          doc_type: string
+          file_name: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          contractor_id?: string | null
+          doc_type: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          contractor_id?: string | null
+          doc_type?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_documents_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_feature_access: {
         Row: {
           approved_at: string | null
@@ -12755,6 +12806,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["company_role"]
       }
       get_contractor_profile_id: { Args: never; Returns: string }
+      grant_default_contractor_features: {
+        Args: { _contractor_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

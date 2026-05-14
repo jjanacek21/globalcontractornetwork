@@ -46,9 +46,9 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
       questions: ['What permits do I need for roofing?', 'How long does permit approval take?', 'Do you handle inspections?']
     };
   }
-  if (pathname.includes('supplement-kings')) {
+  if (pathname.includes('contractor/estimating')) {
     return {
-      name: 'Supplement Kings',
+      name: 'Estimating & Supplementing',
       description: 'Insurance claim supplements',
       questions: ['What is a supplement?', 'How much can you recover?', 'How does the process work?']
     };

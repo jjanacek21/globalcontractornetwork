@@ -35,7 +35,7 @@ interface ContractorDialogProps {
 
 const SOURCE_TABLE_MAP: Record<string, string> = {
   'Directory': 'contractor_profiles',
-  'Supplement Kings': 'supplement_contractors',
+  'Estimating & Supplementing': 'supplement_contractors',
   'Permit Queens': 'permit_contractors',
 };
 
@@ -523,7 +523,7 @@ export function ContractorDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Directory">Directory</SelectItem>
-                  <SelectItem value="Supplement Kings">Supplement Kings</SelectItem>
+                  <SelectItem value="Estimating & Supplementing">Estimating & Supplementing</SelectItem>
                   <SelectItem value="Permit Queens">Permit Queens</SelectItem>
                 </SelectContent>
               </Select>
