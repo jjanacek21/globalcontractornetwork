@@ -11,6 +11,7 @@ import { AnimatePresence } from "framer-motion";
 // Social Coming Soon Page
 const SocialComingSoon = lazy(() => import("./pages/social/SocialComingSoon"));
 const ReferralsDashboard = lazy(() => import("./pages/ReferralsDashboard"));
+const BroadcastConsent = lazy(() => import("./pages/BroadcastConsent"));
 
 // CRM (GCN internal) was removed — contractors use external Pitch CRM via the dashboard tile.
 const SharedMeasurementReport = lazy(() => import("./pages/SharedMeasurementReport"));
