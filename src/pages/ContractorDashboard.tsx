@@ -37,6 +37,7 @@ import { ServicesEditor } from '@/components/contractor/ServicesEditor';
 import { ReferencesEditor } from '@/components/contractor/ReferencesEditor';
 import { ReferralEarningsCard } from '@/components/contractor/ReferralEarningsCard';
 import { GamificationSummaryCard } from '@/components/gamification/GamificationSummaryCard';
+import { LandingPageBuilder } from '@/components/contractor/LandingPageBuilder';
 
 export default function ContractorDashboard() {
   const navigate = useNavigate();
