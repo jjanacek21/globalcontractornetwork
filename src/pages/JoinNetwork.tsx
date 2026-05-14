@@ -248,7 +248,7 @@ const JoinNetwork = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
-                  <span>Our team will review your application within 24-48 hours</span>
+                  <span>The company admin will review your application from their dashboard</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
