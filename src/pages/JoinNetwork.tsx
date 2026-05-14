@@ -13,6 +13,7 @@ import { Home, Building2, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react"
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
 type UserType = "property_owner" | "contractor" | "company" | null;
+type ContractorMode = "join_company" | null;
 
 const JoinNetwork = () => {
   const [userType, setUserType] = useState<UserType>(null);
