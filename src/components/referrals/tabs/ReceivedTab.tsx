@@ -25,7 +25,7 @@ export function ReceivedTab({ contractor }: { contractor: any }) {
               <thead><tr className="text-xs uppercase tracking-wider text-left" style={{ color: "var(--r-muted)" }}>
                 <th className="py-2 pr-3">Date</th><th className="py-2 pr-3">Customer</th><th className="py-2 pr-3">From</th>
                 <th className="py-2 pr-3">Trade</th><th className="py-2 pr-3 text-right">Contract</th>
-                <th className="py-2 pr-3 text-right">Bounty</th><th className="py-2 pr-3 text-right">GCN 25%</th>
+                <th className="py-2 pr-3 text-right">Bounty</th><th className="py-2 pr-3 text-right">GCN 30%</th>
                 <th className="py-2 pr-3">Status</th><th className="py-2 pr-3">Actions</th>
               </tr></thead>
               <tbody className="divide-y" style={{ borderColor: "var(--r-line)" }}>

@@ -30,7 +30,7 @@ export function PayoutsTab({ contractor }: { contractor: any }) {
           sublabel="Released when receiving contractor marks job complete + 7-day review window."
           icon={<Lock className="w-5 h-5" />} delay={0.5} />
         <KPICard label="GCN's Lifetime Cut" value={fmtMoney(data?.gcnCut ?? 0)}
-          sublabel="25% of every bounty + 100% of unattributed leads routed to you."
+          sublabel="30% of every bounty + 100% of unattributed leads routed to you."
           icon={<TrendingUp className="w-5 h-5" />} delay={1} />
       </div>
 
