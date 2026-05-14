@@ -455,6 +455,10 @@ const SuperAdminDashboard = () => {
               </PopoverContent>
             </Popover>
             
+            <Button variant="outline" onClick={() => navigate("/member/dashboard")}>
+              <Home className="h-4 w-4 mr-2" />
+              Return to Dashboard
+            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
