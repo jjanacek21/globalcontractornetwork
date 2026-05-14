@@ -23,7 +23,19 @@ export const AVAILABLE_FEATURES = [
   { key: 'academy_access', label: 'Training Academy', description: 'Courses, certifications, and resources', path: '/academy' },
 ] as const;
 
-export type FeatureKey = typeof AVAILABLE_FEATURES[number]['key'];
+export type FeatureKey =
+  | typeof AVAILABLE_FEATURES[number]['key']
+  // Legacy / opt-in feature keys still referenced in code (not auto-granted)
+  | 'rewards_dashboard'
+  | 'field_map'
+  | 'presentations'
+  | 'learning_platform'
+  | 'crm_access'
+  | 'social_network'
+  | 'gamification'
+  | 'store_discounts'
+  | 'coating_kings'
+  | 'prep_your_property';
 
 const DEFAULT_KEYS = AVAILABLE_FEATURES.map(f => f.key) as readonly string[];
 
