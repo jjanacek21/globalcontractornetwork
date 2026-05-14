@@ -44,7 +44,7 @@ const JoinNetwork = () => {
     phone: "",
     category: "",
     description: "",
-    contractorType: "independent" as "independent" | "subcontractor" | "handyman",
+    contractorType: "subcontractor" as "independent" | "subcontractor" | "handyman",
     selectedCompanyId: "",
     selectedTeamId: "",
     licenseNumber: "",
