@@ -486,6 +486,153 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_consent_tokens: {
+        Row: {
+          action: string
+          conversation_id: string
+          created_at: string
+          expires_at: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          action: string
+          conversation_id: string
+          created_at?: string
+          expires_at?: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          action?: string
+          conversation_id?: string
+          created_at?: string
+          expires_at?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_consent_tokens_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcast_conversations: {
+        Row: {
+          broadcast_id: string
+          claim_id: string
+          consent_at: string | null
+          contractor_id: string
+          contractor_unread_count: number
+          created_at: string
+          customer_consent: boolean
+          customer_declined: boolean
+          customer_id: string
+          customer_unread_count: number
+          id: string
+          last_message_at: string | null
+        }
+        Insert: {
+          broadcast_id: string
+          claim_id: string
+          consent_at?: string | null
+          contractor_id: string
+          contractor_unread_count?: number
+          created_at?: string
+          customer_consent?: boolean
+          customer_declined?: boolean
+          customer_id: string
+          customer_unread_count?: number
+          id?: string
+          last_message_at?: string | null
+        }
+        Update: {
+          broadcast_id?: string
+          claim_id?: string
+          consent_at?: string | null
+          contractor_id?: string
+          contractor_unread_count?: number
+          created_at?: string
+          customer_consent?: boolean
+          customer_declined?: boolean
+          customer_id?: string
+          customer_unread_count?: number
+          id?: string
+          last_message_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_conversations_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "referral_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_conversations_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "referral_broadcast_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_conversations_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_conversations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "gcn_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broadcast_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id?: string | null
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_department_rules: {
         Row: {
           building_department_id: string | null
