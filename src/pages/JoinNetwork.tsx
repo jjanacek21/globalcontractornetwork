@@ -314,7 +314,7 @@ const JoinNetwork = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card 
                 className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
                 onClick={() => setUserType("property_owner")}
@@ -323,25 +323,13 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-primary/20 transition-colors">
                     <Home className="h-8 w-8 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold">I'm a Property Owner</h2>
-                  <p className="text-muted-foreground">
-                    Looking for contractors and services
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Access verified contractors
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get instant quotes
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Track your projects
-                    </li>
+                  <h2 className="text-xl font-bold">Property Owner</h2>
+                  <p className="text-sm text-muted-foreground">Looking for verified contractors</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Get instant quotes</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Track your projects</li>
                   </ul>
-                  <Button className="w-full mt-4">Get Started</Button>
+                  <Button className="w-full mt-2">Get Started</Button>
                 </CardContent>
               </Card>
 
@@ -353,25 +341,13 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-accent/20 transition-colors">
                     <Building2 className="h-8 w-8 text-accent-foreground" />
                   </div>
-                  <h2 className="text-2xl font-bold">I'm a Contractor</h2>
-                  <p className="text-muted-foreground">
-                    Looking to grow my business
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get listed in our directory
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Access CRM tools
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Receive leads directly
-                    </li>
+                  <h2 className="text-xl font-bold">Join an Existing Company</h2>
+                  <p className="text-sm text-muted-foreground">Sub-contractors & sales reps</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Pick your company & team</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Approved by company admin</li>
                   </ul>
-                  <Button variant="secondary" className="w-full mt-4">Apply Now</Button>
+                  <Button variant="secondary" className="w-full mt-2">Apply</Button>
                 </CardContent>
               </Card>
 
@@ -383,25 +359,31 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-yellow-500/20 transition-colors">
                     <Building2 className="h-8 w-8 text-yellow-600" />
                   </div>
-                  <h2 className="text-2xl font-bold">Register a Company</h2>
-                  <p className="text-muted-foreground">
-                    Business owners seeking verification
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get verified on the network
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Manage teams & territories
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Track referrals & earnings
-                    </li>
+                  <h2 className="text-xl font-bold">Register a Company</h2>
+                  <p className="text-sm text-muted-foreground">Owners & company admins</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Create teams & offices</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Invite & approve reps</li>
                   </ul>
-                  <Button variant="outline" className="w-full mt-4 border-yellow-500 text-yellow-700 hover:bg-yellow-50">Register Company</Button>
+                  <Button variant="outline" className="w-full mt-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50">Register Company</Button>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer transition-all hover:shadow-lg hover:border-emerald-500/50 group"
+                onClick={() => navigate("/register-individual")}
+              >
+                <CardContent className="pt-8 pb-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-emerald-500/20 transition-colors">
+                    <Building2 className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <h2 className="text-xl font-bold">Independent Pro</h2>
+                  <p className="text-sm text-muted-foreground">Handyman, consultant, skilled labor</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Personal directory profile</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Free landing page builder</li>
+                  </ul>
+                  <Button variant="outline" className="w-full mt-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50">Apply</Button>
                 </CardContent>
               </Card>
             </div>
