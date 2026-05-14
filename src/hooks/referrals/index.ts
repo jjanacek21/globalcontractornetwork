@@ -247,8 +247,6 @@ export function usePayouts(contractorId: string | null | undefined) {
 
 // ============= Available broadcasts (open referrals first 3 to claim) =============
 
-import { useMutation } from "@tanstack/react-query";
-import { useQueryClient } from "@tanstack/react-query";
 
 export function useAvailableBroadcasts(contractorId: string | null | undefined, trade?: string) {
   return useQuery({
