@@ -290,10 +290,21 @@ export function useClaimBroadcast() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ broadcastId, contractorId }: { broadcastId: string; contractorId: string }) => {
-      const { error } = await supabase
+      // Try to find an existing claim first (idempotent re-open)
+      const { data: existing } = await supabase
         .from("referral_broadcast_claims")
-        .insert({ broadcast_id: broadcastId, contractor_id: contractorId, message_sent_at: new Date().toISOString() });
+        .select("id")
+        .eq("broadcast_id", broadcastId)
+        .eq("contractor_id", contractorId)
+        .maybeSingle();
+      if (existing?.id) return { claimId: existing.id };
+      const { data, error } = await supabase
+        .from("referral_broadcast_claims")
+        .insert({ broadcast_id: broadcastId, contractor_id: contractorId })
+        .select("id")
+        .single();
       if (error) throw error;
+      return { claimId: data.id };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["referrals", "availableBroadcasts"] });
