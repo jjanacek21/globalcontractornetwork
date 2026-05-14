@@ -31,6 +31,7 @@ import ContractorDirectory from "./pages/ContractorDirectory";
 const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
 const ContractorPublicProfile = lazy(() => import("./pages/ContractorPublicProfile"));
 const IndividualRegistration = lazy(() => import("./pages/IndividualRegistration"));
+const ContractorLanding = lazy(() => import("./pages/ContractorLanding"));
 import PrepYourProperty from "./pages/PrepYourProperty";
 import Roofing from "./pages/Roofing";
 import RoofingServices from "./pages/RoofingServices";
