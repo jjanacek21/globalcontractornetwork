@@ -44,7 +44,7 @@ const JoinNetwork = () => {
     phone: "",
     category: "",
     description: "",
-    contractorType: "independent" as "independent" | "subcontractor" | "handyman",
+    contractorType: "subcontractor" as "independent" | "subcontractor" | "handyman",
     selectedCompanyId: "",
     selectedTeamId: "",
     licenseNumber: "",
@@ -156,6 +156,10 @@ const JoinNetwork = () => {
 
   const handleContractorSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!contractorForm.selectedCompanyId) {
+      toast({ title: "Pick a company", description: "Select the company you'll be working with.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
 
     try {
@@ -244,7 +248,7 @@ const JoinNetwork = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
-                  <span>Our team will review your application within 24-48 hours</span>
+                  <span>The company admin will review your application from their dashboard</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
@@ -314,7 +318,7 @@ const JoinNetwork = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card 
                 className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
                 onClick={() => setUserType("property_owner")}
@@ -323,25 +327,13 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-primary/20 transition-colors">
                     <Home className="h-8 w-8 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold">I'm a Property Owner</h2>
-                  <p className="text-muted-foreground">
-                    Looking for contractors and services
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Access verified contractors
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get instant quotes
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Track your projects
-                    </li>
+                  <h2 className="text-xl font-bold">Property Owner</h2>
+                  <p className="text-sm text-muted-foreground">Looking for verified contractors</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Get instant quotes</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Track your projects</li>
                   </ul>
-                  <Button className="w-full mt-4">Get Started</Button>
+                  <Button className="w-full mt-2">Get Started</Button>
                 </CardContent>
               </Card>
 
@@ -353,25 +345,13 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-accent/20 transition-colors">
                     <Building2 className="h-8 w-8 text-accent-foreground" />
                   </div>
-                  <h2 className="text-2xl font-bold">I'm a Contractor</h2>
-                  <p className="text-muted-foreground">
-                    Looking to grow my business
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get listed in our directory
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Access CRM tools
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Receive leads directly
-                    </li>
+                  <h2 className="text-xl font-bold">Join an Existing Company</h2>
+                  <p className="text-sm text-muted-foreground">Sub-contractors & sales reps</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Pick your company & team</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Approved by company admin</li>
                   </ul>
-                  <Button variant="secondary" className="w-full mt-4">Apply Now</Button>
+                  <Button variant="secondary" className="w-full mt-2">Apply</Button>
                 </CardContent>
               </Card>
 
@@ -383,25 +363,31 @@ const JoinNetwork = () => {
                   <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-yellow-500/20 transition-colors">
                     <Building2 className="h-8 w-8 text-yellow-600" />
                   </div>
-                  <h2 className="text-2xl font-bold">Register a Company</h2>
-                  <p className="text-muted-foreground">
-                    Business owners seeking verification
-                  </p>
-                  <ul className="text-sm text-left space-y-2 pt-4">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Get verified on the network
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Manage teams & territories
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      Track referrals & earnings
-                    </li>
+                  <h2 className="text-xl font-bold">Register a Company</h2>
+                  <p className="text-sm text-muted-foreground">Owners & company admins</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Create teams & offices</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Invite & approve reps</li>
                   </ul>
-                  <Button variant="outline" className="w-full mt-4 border-yellow-500 text-yellow-700 hover:bg-yellow-50">Register Company</Button>
+                  <Button variant="outline" className="w-full mt-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50">Register Company</Button>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="cursor-pointer transition-all hover:shadow-lg hover:border-emerald-500/50 group"
+                onClick={() => navigate("/register-individual")}
+              >
+                <CardContent className="pt-8 pb-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto group-hover:bg-emerald-500/20 transition-colors">
+                    <Building2 className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <h2 className="text-xl font-bold">Independent Pro</h2>
+                  <p className="text-sm text-muted-foreground">Handyman, consultant, skilled labor</p>
+                  <ul className="text-sm text-left space-y-2 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Personal directory profile</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-600" />Free landing page builder</li>
+                  </ul>
+                  <Button variant="outline" className="w-full mt-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50">Apply</Button>
                 </CardContent>
               </Card>
             </div>
@@ -621,88 +607,49 @@ const JoinNetwork = () => {
                     />
                   </div>
 
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                    You're applying to join an existing company. The company admin will review and approve your application.
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="contractorType">Contractor Type *</Label>
+                    <Label htmlFor="company">Select Company *</Label>
                     <Select 
-                      value={contractorForm.contractorType} 
-                      onValueChange={(value: "independent" | "subcontractor" | "handyman") => setContractorForm({ ...contractorForm, contractorType: value, selectedCompanyId: "", selectedTeamId: "" })}
+                      value={contractorForm.selectedCompanyId} 
+                      onValueChange={(value) => setContractorForm({ ...contractorForm, contractorType: 'subcontractor', selectedCompanyId: value, selectedTeamId: "" })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select your contractor type" />
+                        <SelectValue placeholder="Choose the company you'll work for" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="independent">Independent Contractor (Solo, Gamification Access)</SelectItem>
-                        <SelectItem value="subcontractor">Sub-Contractor (Work with Companies)</SelectItem>
-                        <SelectItem value="handyman">Independent Handyman</SelectItem>
+                        {companies.map(company => (
+                          <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {contractorForm.contractorType === 'independent' && "Access gamification & referrals. Not listed in directory."}
-                      {contractorForm.contractorType === 'subcontractor' && "Can join a company/team or work independently with license."}
-                      {contractorForm.contractorType === 'handyman' && "Listed as handyman in directory when verified."}
+                      Don't see your company? Ask them to register first, or{" "}
+                      <Link to="/register-individual" className="text-primary underline">apply as an independent pro</Link>.
                     </p>
                   </div>
 
-                  {contractorForm.contractorType === 'subcontractor' && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="company">Company (Optional)</Label>
-                        <Select 
-                          value={contractorForm.selectedCompanyId} 
-                          onValueChange={(value) => setContractorForm({ ...contractorForm, selectedCompanyId: value, selectedTeamId: "" })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a company or leave empty" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Stay Independent</SelectItem>
-                            {companies.map(company => (
-                              <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {contractorForm.selectedCompanyId && teams.length > 0 && (
-                        <div className="space-y-2">
-                          <Label htmlFor="team">Team (Optional)</Label>
-                          <Select 
-                            value={contractorForm.selectedTeamId} 
-                            onValueChange={(value) => setContractorForm({ ...contractorForm, selectedTeamId: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a team" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="">No Team</SelectItem>
-                              {teams.map(team => (
-                                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      {!contractorForm.selectedCompanyId && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseNumber">License Number</Label>
-                            <Input
-                              id="licenseNumber"
-                              value={contractorForm.licenseNumber}
-                              onChange={(e) => setContractorForm({ ...contractorForm, licenseNumber: e.target.value })}
-                              placeholder="Required for directory listing"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseState">License State</Label>
-                            <Input
-                              id="licenseState"
-                              value={contractorForm.licenseState}
-                              onChange={(e) => setContractorForm({ ...contractorForm, licenseState: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </>
+                  {contractorForm.selectedCompanyId && teams.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="team">Team / Office (Optional)</Label>
+                      <Select 
+                        value={contractorForm.selectedTeamId} 
+                        onValueChange={(value) => setContractorForm({ ...contractorForm, selectedTeamId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a team" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No specific team</SelectItem>
+                          {teams.map(team => (
+                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
 
                   <div className="space-y-2">

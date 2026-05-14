@@ -31,6 +31,7 @@ import ContractorDirectory from "./pages/ContractorDirectory";
 const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
 const ContractorPublicProfile = lazy(() => import("./pages/ContractorPublicProfile"));
 const IndividualRegistration = lazy(() => import("./pages/IndividualRegistration"));
+const ContractorLanding = lazy(() => import("./pages/ContractorLanding"));
 import PrepYourProperty from "./pages/PrepYourProperty";
 import Roofing from "./pages/Roofing";
 import RoofingServices from "./pages/RoofingServices";
@@ -180,6 +181,7 @@ const GCNRoutes = () => (
     <Route path="/company/:companyId" element={<Suspense fallback={<div />}><CompanyProfile /></Suspense>} />
     <Route path="/contractor/:contractorId" element={<Suspense fallback={<div />}><ContractorPublicProfile /></Suspense>} />
     <Route path="/register-individual" element={<Suspense fallback={<div />}><IndividualRegistration /></Suspense>} />
+    <Route path="/c/:slug" element={<Suspense fallback={<div />}><ContractorLanding /></Suspense>} />
     
     {/* Master Admin Hub Routes */}
     <Route path="/admin/auth" element={<SuperAdminAuth />} />

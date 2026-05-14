@@ -37,6 +37,7 @@ import { ServicesEditor } from '@/components/contractor/ServicesEditor';
 import { ReferencesEditor } from '@/components/contractor/ReferencesEditor';
 import { ReferralEarningsCard } from '@/components/contractor/ReferralEarningsCard';
 import { GamificationSummaryCard } from '@/components/gamification/GamificationSummaryCard';
+import { LandingPageBuilder } from '@/components/contractor/LandingPageBuilder';
 
 export default function ContractorDashboard() {
   const navigate = useNavigate();
@@ -212,7 +213,7 @@ export default function ContractorDashboard() {
 
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
+          <TabsList className="grid grid-cols-3 lg:grid-cols-7 w-full">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
@@ -232,6 +233,10 @@ export default function ContractorDashboard() {
             <TabsTrigger value="references" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">References</span>
+            </TabsTrigger>
+            <TabsTrigger value="landing" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              <span className="hidden sm:inline">Landing</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
@@ -357,7 +362,17 @@ export default function ContractorDashboard() {
             />
           </TabsContent>
 
-          {/* Settings Tab */}
+          <TabsContent value="landing">
+            {profile?.id && userId && (
+              <LandingPageBuilder
+                profileId={profile.id}
+                userId={userId}
+                initialCompanyName={profile.company_name}
+                existingWebsite={(profile as any).website}
+              />
+            )}
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             {/* Contact Info */}
             <Card>

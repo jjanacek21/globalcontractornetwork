@@ -20,6 +20,7 @@ import { CompanyReferralsTab } from "@/components/company-admin/CompanyReferrals
 import { CompanyAnalyticsTab } from "@/components/company-admin/CompanyAnalyticsTab";
 import { CompanyProfileTab } from "@/components/company-admin/CompanyProfileTab";
 import { CompanyResourcesTab } from "@/components/company-admin/CompanyResourcesTab";
+import { CompanyPendingUsersTab } from "@/components/company-admin/CompanyPendingUsersTab";
 
 interface Company {
   id: string;
@@ -184,7 +185,7 @@ const CompanyAdminDashboard = () => {
 
       <main className="container py-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-8 gap-2">
+          <TabsList className="grid grid-cols-3 lg:grid-cols-9 gap-2">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -200,6 +201,10 @@ const CompanyAdminDashboard = () => {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Pending</span>
             </TabsTrigger>
             <TabsTrigger value="referrals" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -233,6 +238,10 @@ const CompanyAdminDashboard = () => {
 
           <TabsContent value="users">
             <CompanyUsersTab companyId={company.id} />
+          </TabsContent>
+
+          <TabsContent value="pending">
+            <CompanyPendingUsersTab companyId={company.id} />
           </TabsContent>
 
           <TabsContent value="referrals">

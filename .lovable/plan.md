@@ -1,98 +1,63 @@
-# Lead-to-Contractor Messaging Flow (Broadcast Claims)
+## Goal
 
-Today the Available Referrals tab lets a contractor claim a broadcast and shows a "Claimed" pill, but there is no actual way to message the client. This plan wires the full path: **Claim → Consent gate → Message Client → live conversation → customer notification**.
+Restructure contractor signup so the path is clear, route subcontractor applications to the right company admin for approval, and let any contractor without a website spin up a simple landing page tied to their directory listing.
 
-## Goals
+## 1. Restructure Join Network entry
 
-1. After a contractor claims a broadcast, give them a clear **Message Client** CTA that opens a real conversation thread.
-2. Respect customer privacy: customer contact info (phone/email/full address) is **masked** until the customer consents to be contacted by that specific contractor.
-3. Notify the customer (email + in-app if they have an account) the moment a claimed contractor sends their first message, with a one-click consent link.
-4. Track engagement for the existing 3-claim cap rule (first 3 to actually message win the seat) and for residual/payout attribution.
+Update `src/pages/JoinNetwork.tsx` so the contractor card opens a sub-chooser with three paths:
 
-## UX Flow
+- **Join an existing company** → company selector + team selector → submits to that company's approval queue
+- **Register a new company (owner/admin)** → existing `/register-company` flow
+- **Independent: building consultant / handyman / skilled labor** → existing `/register-individual` flow
 
-```
-Available Referrals card
-  └─ [Claim & Message] button
-       ├─ creates referral_broadcast_claims row (existing trigger enforces cap of 3)
-       ├─ opens MessageClientDialog
-       │     ├─ shows masked customer (first name, city, trade, notes)
-       │     ├─ shows pre-filled intro template the contractor can edit
-       │     ├─ requires contractor to agree to GCN messaging rules
-       │     └─ [Send first message]
-       │           ├─ inserts broadcast_conversation + broadcast_message
-       │           ├─ stamps referral_broadcast_claims.message_sent_at
-       │           └─ triggers send-broadcast-claim-notification edge function
-       │                 ├─ emails customer with contractor card + Accept/Decline links
-       │                 └─ if customer has auth account, also drops a homeowner_notification
-       └─ after first message, card shows [Open Conversation] instead
-```
+The existing single contractor form is split: "subcontractor → must pick a company" becomes the only company-attached path, and the legacy "independent contractor" option is removed in favor of `/register-individual`.
 
-Customer side:
-- Email contains 3 buttons per contractor: **Accept & Reply**, **Save for later**, **Not interested**.
-- Accept flips `broadcast_conversations.customer_consent = true`, unmasks contact info for that contractor only, and (if customer has an account) routes them into the existing homeowner messaging UI for replies.
+## 2. Company-admin approval queue for new sub-contractors
 
-## Database Changes (one migration)
+When a sub-contractor signs up and selects a company, their `contractor_profiles` row already gets `company_id` set with `verification_status='pending'`. Add a new tab in `CompanyAdminDashboard` called **"Pending Users"** that lists those rows and lets the company admin:
 
-New tables:
-- `broadcast_conversations` — `id`, `broadcast_id`, `claim_id`, `customer_id`, `contractor_id`, `customer_consent` (bool, default false), `consent_at`, `customer_declined` (bool), `last_message_at`, `contractor_unread_count`, `customer_unread_count`. Unique on (broadcast_id, contractor_id).
-- `broadcast_messages` — `id`, `conversation_id`, `sender_type` ('contractor'|'customer'|'system'), `sender_id` (nullable for system), `content`, `is_read`, `created_at`.
-- `broadcast_consent_tokens` — `token` (uuid pk), `conversation_id`, `action` ('accept'|'decline'), `expires_at`, `used_at`. Used by the email links so the customer doesn't need to log in.
+- View the contractor's profile (name, email, phone, license, bio, photos/docs uploaded)
+- Approve → sets `verification_status='approved'`, creates a `company_members` row at the chosen role/team, calls `grant_default_contractor_features`
+- Reject → sets `verification_status='rejected'` with a reason
 
-Triggers/functions:
-- After insert on `broadcast_messages` where sender_type='contractor' and it's the **first** contractor message in that conversation: set `referral_broadcast_claims.message_sent_at = now()` for the matching claim. (Reinforces the "first 3 to message" rule already documented.)
-- Standard `update_updated_at` and `last_message_at` triggers.
+New file: `src/components/company-admin/CompanyPendingUsersTab.tsx`. Add the tab in `CompanyAdminDashboard.tsx`.
 
-RLS:
-- `broadcast_conversations`: contractor can SELECT/UPDATE rows where `contractor_id = get_contractor_profile_id()`. Super admin all. Customer access only via signed token (handled in edge function with service role) or via their authenticated user matching `gcn_customers.user_id` if/when linked.
-- `broadcast_messages`: contractor can SELECT/INSERT in their own conversations. Customer messages flow in via the consent edge function.
-- `broadcast_consent_tokens`: no client access; service-role only.
+The existing "Add User" button in `CompanyUsersTab` already covers admin-initiated invites (no change needed there); existing `CompanyTeamsTab` already supports multiple teams/offices and assigning reps.
 
-## Edge Functions
+## 3. Optional landing page for contractors without a website
 
-1. `send-broadcast-claim-notification` (POST, JWT-verified)
-   - Input: `conversation_id`.
-   - Loads conversation + contractor profile + customer contact.
-   - Generates two `broadcast_consent_tokens` (accept, decline).
-   - Sends a Resend email to the customer with contractor card, intro message, and the two tokenized links pointing at `/r/consent?token=...`.
-   - Inserts a `homeowner_notifications` row if `gcn_customers.user_id` is set.
+For contractors whose `contractor_profiles.website` is empty, offer a one-click landing page generator. The page is hosted at `/c/:slug` and is auto-linked from the directory and the public profile.
 
-2. `process-broadcast-consent` (GET/POST, public, no JWT)
-   - Validates token, marks `used_at`, sets `customer_consent` or `customer_declined` on the conversation.
-   - Returns a small success page that links the customer into the in-app reply view (or a public reply form if they don't have an account).
+### Schema (one migration)
 
-## Frontend Changes
+Add to `contractor_profiles`:
+- `landing_slug text unique` (lowercase, kebab-case)
+- `landing_enabled boolean default false`
+- `landing_headline text`
+- `landing_subheadline text`
+- `landing_about text`
+- `landing_cta_label text default 'Request a Quote'`
+- `landing_theme text default 'forest'` (forest | navy | charcoal)
+- `landing_hero_image_url text`
+- `landing_published_at timestamptz`
 
-- `src/components/referrals/tabs/AvailableReferralsTab.tsx`
-  - Replace the existing "Claim" button with **Claim & Message**. On click: claim, then open `MessageClientDialog`.
-  - Replace the disabled "Claimed" pill with **Open Conversation** that opens the same dialog in thread mode.
+Public read policy: `landing_enabled = true`. Owner can update their own row.
 
-- `src/components/referrals/modals/MessageClientDialog.tsx` (new)
-  - Two states: `compose` (no message sent yet, shows masked customer + template + send) and `thread` (shows full conversation, message composer, masked-vs-unmasked contact based on `customer_consent`).
-  - Uses Supabase Realtime on `broadcast_messages` filtered by `conversation_id`.
+### UI
 
-- `src/hooks/referrals/messaging.ts` (new)
-  - `useOrCreateBroadcastConversation(broadcastId, claimId, contractorId)`
-  - `useBroadcastMessages(conversationId)` with realtime subscription
-  - `useSendBroadcastMessage()` — inserts message, calls `send-broadcast-claim-notification` on first send
-  - `useMyBroadcastConversations(contractorId)` for an inbox view
+- New tab in the contractor dashboard: **"Landing Page"** (`src/components/contractor/LandingPageBuilder.tsx`) — only visible when `website` is empty (or when they explicitly toggle "I want a GCN landing page anyway"). Form fields map to the new columns. "Publish" sets `landing_enabled=true` and `landing_published_at=now()`.
+- New public page: `src/pages/ContractorLanding.tsx` route `/c/:slug` — hero, about, services, gallery, reviews, CTA → opens an inline lead form that writes to `contact_requests` with `referral_contractor_id = contractor.id`.
+- Directory card and `ContractorPublicProfile`: when `landing_enabled` is true and `website` is empty, show a "View Site" button → `/c/:slug`.
 
-- `src/pages/ReferralsDashboard.tsx`
-  - Add a small **Inbox** badge next to the Available Referrals tab showing total contractor unread count.
+### Implementation notes (technical)
 
-- `src/pages/BroadcastConsent.tsx` + route `/r/consent` (new)
-  - Calls `process-broadcast-consent`, displays a friendly "You're connected with {Contractor}" page or "We'll let them know you're not interested" page.
+- Generate slug from `company_name` + short suffix; validate uniqueness.
+- Reuse existing `profile_gallery` and `client_references` JSONB for landing gallery/testimonials — no duplicate columns.
+- All landing-page edits stay frontend (form + RLS-protected updates); no edge functions required.
 
-## Out of Scope
+## Out of scope
 
-- SMS notifications (email + in-app only for v1).
-- Group/3-way conversations — each contractor↔customer pair gets its own thread.
-- Customer-initiated outreach to contractors who didn't claim.
-- Payment/escrow — existing referral/residual logic untouched.
-
-## Technical Notes
-
-- The 3-claim cap is already enforced atomically by `enforce_broadcast_claim_cap`; no change needed there.
-- `message_sent_at` already exists on `referral_broadcast_claims` and is being set optimistically at claim time today — this plan moves it to the actual first-message trigger so the "first 3 to message wins" rule documented in earlier work is truthfully enforced.
-- All consent links use single-use tokens with 14-day expiry; signed URLs are not used because the customer may not have a Supabase session.
-- Resend key already configured (`RESEND_API_KEY`); no new secrets required.
+- Custom domains for landing pages (use `/c/:slug` only)
+- Drag-and-drop builder (form-based for v1)
+- Stripe / billing for landing pages
+- Migrating any existing references to Supplement Kings or Green Home Solutions (already removed earlier)
