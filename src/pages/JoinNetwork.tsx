@@ -603,88 +603,49 @@ const JoinNetwork = () => {
                     />
                   </div>
 
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                    You're applying to join an existing company. The company admin will review and approve your application.
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="contractorType">Contractor Type *</Label>
+                    <Label htmlFor="company">Select Company *</Label>
                     <Select 
-                      value={contractorForm.contractorType} 
-                      onValueChange={(value: "independent" | "subcontractor" | "handyman") => setContractorForm({ ...contractorForm, contractorType: value, selectedCompanyId: "", selectedTeamId: "" })}
+                      value={contractorForm.selectedCompanyId} 
+                      onValueChange={(value) => setContractorForm({ ...contractorForm, contractorType: 'subcontractor', selectedCompanyId: value, selectedTeamId: "" })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select your contractor type" />
+                        <SelectValue placeholder="Choose the company you'll work for" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="independent">Independent Contractor (Solo, Gamification Access)</SelectItem>
-                        <SelectItem value="subcontractor">Sub-Contractor (Work with Companies)</SelectItem>
-                        <SelectItem value="handyman">Independent Handyman</SelectItem>
+                        {companies.map(company => (
+                          <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {contractorForm.contractorType === 'independent' && "Access gamification & referrals. Not listed in directory."}
-                      {contractorForm.contractorType === 'subcontractor' && "Can join a company/team or work independently with license."}
-                      {contractorForm.contractorType === 'handyman' && "Listed as handyman in directory when verified."}
+                      Don't see your company? Ask them to register first, or{" "}
+                      <Link to="/register-individual" className="text-primary underline">apply as an independent pro</Link>.
                     </p>
                   </div>
 
-                  {contractorForm.contractorType === 'subcontractor' && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="company">Company (Optional)</Label>
-                        <Select 
-                          value={contractorForm.selectedCompanyId} 
-                          onValueChange={(value) => setContractorForm({ ...contractorForm, selectedCompanyId: value, selectedTeamId: "" })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a company or leave empty" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Stay Independent</SelectItem>
-                            {companies.map(company => (
-                              <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {contractorForm.selectedCompanyId && teams.length > 0 && (
-                        <div className="space-y-2">
-                          <Label htmlFor="team">Team (Optional)</Label>
-                          <Select 
-                            value={contractorForm.selectedTeamId} 
-                            onValueChange={(value) => setContractorForm({ ...contractorForm, selectedTeamId: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a team" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="">No Team</SelectItem>
-                              {teams.map(team => (
-                                <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      {!contractorForm.selectedCompanyId && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseNumber">License Number</Label>
-                            <Input
-                              id="licenseNumber"
-                              value={contractorForm.licenseNumber}
-                              onChange={(e) => setContractorForm({ ...contractorForm, licenseNumber: e.target.value })}
-                              placeholder="Required for directory listing"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="licenseState">License State</Label>
-                            <Input
-                              id="licenseState"
-                              value={contractorForm.licenseState}
-                              onChange={(e) => setContractorForm({ ...contractorForm, licenseState: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </>
+                  {contractorForm.selectedCompanyId && teams.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="team">Team / Office (Optional)</Label>
+                      <Select 
+                        value={contractorForm.selectedTeamId} 
+                        onValueChange={(value) => setContractorForm({ ...contractorForm, selectedTeamId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a team" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No specific team</SelectItem>
+                          {teams.map(team => (
+                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
 
                   <div className="space-y-2">
