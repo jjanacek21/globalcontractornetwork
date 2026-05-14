@@ -354,6 +354,11 @@ const GCNRoutes = () => (
               </Suspense>
             </ProtectedRoute>
           } />
+          <Route path="/r/consent" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>}>
+              <BroadcastConsent />
+            </Suspense>
+          } />
           <Route path="/job-board" element={
             <ProtectedRoute redirectTo="/network-login">
               <JobBoard />
