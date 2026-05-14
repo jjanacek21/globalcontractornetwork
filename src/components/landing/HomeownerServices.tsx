@@ -39,7 +39,7 @@ const services = [
     icon: Wrench,
     title: "Windows & Doors",
     description: "Impact-rated windows and doors. Energy-efficient installations with professional service.",
-    link: "/green-home-solutions",
+    link: "/services",
     color: "from-green-500 to-green-600"
   },
   {

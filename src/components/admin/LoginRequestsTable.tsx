@@ -39,7 +39,7 @@ const SERVICE_LABELS: Record<string, string> = {
   'presentations': 'Presentations',
   'learning_platform': 'Learning Platform',
   'crm_access': 'CRM Portal',
-  'supplement_kings': 'Supplement Kings',
+  'supplement_kings': 'Estimating & Supplementing',
   'permit_queens': 'Permit Queens',
 };
 

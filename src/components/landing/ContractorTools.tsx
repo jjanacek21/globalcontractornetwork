@@ -46,7 +46,7 @@ const tools = [
     icon: TrendingUp,
     title: "Supplements & Estimating",
     description: "Maximize insurance claims with Xactimate-ready supplements. Professional estimating services.",
-    link: "/supplement-kings",
+    link: "/contractor/estimating",
     color: "from-green-500 to-green-600",
     badge: null
   },

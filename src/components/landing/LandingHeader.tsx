@@ -47,7 +47,7 @@ const LandingHeader = () => {
     { label: "Contractor Directory", href: "/directory" },
     { label: "Roofing Services", href: "/roofing" },
     { label: "Roof Coatings", href: "/coating-kings" },
-    { label: "Windows & Doors", href: "/green-home-solutions" },
+    { label: "Windows & Doors", href: "/services" },
     { label: "Emergency Mitigation", href: "/emergency-mitigation" },
     { label: "Landscaping", href: "/northern-landscaping" },
     { label: "Property Prep", href: "/prep-property" },
@@ -55,7 +55,7 @@ const LandingHeader = () => {
 
   const contractorLinks = [
     { label: "Permit Expediting", href: "/permit-queens" },
-    { label: "Supplements", href: "/supplement-kings" },
+    { label: "Supplements", href: "/contractor/estimating" },
     { label: "Digital Marketing", href: "/digital-marketing" },
     { label: "Training Academy & Resources", href: "/academy" },
   ];

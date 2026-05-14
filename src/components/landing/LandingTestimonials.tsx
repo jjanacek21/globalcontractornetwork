@@ -22,7 +22,7 @@ const testimonials = [
     company: "Wilson Construction",
     location: "Tampa, FL",
     rating: 5,
-    text: "Supplement Kings helped us recover an additional $85,000 on insurance claims last year. The ROI on GCN is incredible. Best investment we've made.",
+    text: "Estimating & Supplementing helped us recover an additional $85,000 on insurance claims last year. The ROI on GCN is incredible. Best investment we've made.",
     image: null,
   },
 ];

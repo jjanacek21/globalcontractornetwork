@@ -20,7 +20,7 @@ const MarketingFooter = () => {
   const serviceLinks = [
     { label: "Roofing Services", href: "/roofing" },
     { label: "Coating Kingz", href: "/coating-kings" },
-    { label: "Windows & Doors", href: "/green-home-solutions" },
+    { label: "Windows & Doors", href: "/services" },
     { label: "Emergency Services", href: "/emergency-mitigation" },
     { label: "Landscaping", href: "/northern-landscaping" },
     { label: "Property Prep", href: "/prep-property" },
@@ -28,7 +28,7 @@ const MarketingFooter = () => {
 
   const businessLinks = [
     { label: "Permit Queens", href: "/permit-queens" },
-    { label: "Supplement Kings", href: "/supplement-kings" },
+    { label: "Estimating & Supplementing", href: "/contractor/estimating" },
     { label: "Contractor Directory", href: "/directory" },
     { label: "Marketing & Consulting", href: "/consulting" },
     { label: "Franchise Opportunities", href: "/franchise" },

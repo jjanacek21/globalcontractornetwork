@@ -42,9 +42,9 @@ const features = [
   {
     icon: DollarSign,
     title: "Supplements",
-    description: "Insurance claim support and Xactimate estimates through Supplement Kings. Maximize your recoveries with expert negotiation.",
+    description: "Insurance claim support and Xactimate estimates through Estimating & Supplementing. Maximize your recoveries with expert negotiation.",
     color: "bg-red-500/10 text-red-600",
-    link: "/supplement-kings",
+    link: "/contractor/estimating",
   },
   {
     icon: CreditCard,

@@ -15,10 +15,10 @@ const footerLinks = {
   services: [
     { name: "Roofing Services", href: "/roofing" },
     { name: "Coating Kings", href: "/coating-kings" },
-    { name: "Windows & Doors", href: "/green-home-solutions" },
+    { name: "Windows & Doors", href: "/services" },
     { name: "Emergency Mitigation", href: "/emergency-mitigation" },
     { name: "Permit Queens", href: "/permit-queens" },
-    { name: "Supplement Kings", href: "/supplement-kings" },
+    { name: "Estimating & Supplementing", href: "/contractor/estimating" },
   ],
   resources: [
     { name: "Contractor Directory", href: "/directory" },

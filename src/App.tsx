@@ -202,9 +202,9 @@ const GCNRoutes = () => (
       </ProtectedRoute>
     } />
           
-          {/* Retired: Green Home Solutions */}
-          <Route path="/green-home-solutions" element={<Navigate to="/services" replace />} />
-          <Route path="/green-home-solutions/*" element={<Navigate to="/services" replace />} />
+          {/* Retired: Windows & Doors */}
+          <Route path="/services" element={<Navigate to="/services" replace />} />
+          <Route path="/services/*" element={<Navigate to="/services" replace />} />
 
           {/* Emergency Mitigation Routes */}
           <Route path="/emergency-mitigation" element={<EmergencyMitigation />} />
@@ -265,9 +265,9 @@ const GCNRoutes = () => (
             </ProtectedRoute>
           } />
           
-          {/* Retired: Supplement Kings - replaced by unified Estimating & Supplementing */}
-          <Route path="/supplement-kings" element={<Navigate to="/contractor/estimating" replace />} />
-          <Route path="/supplement-kings/*" element={<Navigate to="/contractor/estimating" replace />} />
+          {/* Retired: Estimating & Supplementing - replaced by unified Estimating & Supplementing */}
+          <Route path="/contractor/estimating" element={<Navigate to="/contractor/estimating" replace />} />
+          <Route path="/contractor/estimating/*" element={<Navigate to="/contractor/estimating" replace />} />
           <Route path="/contractor/estimating" element={
             <ProtectedRoute>
               <Suspense fallback={<div />}><ContractorEstimating /></Suspense>

@@ -9,7 +9,7 @@ export interface ContractorFeature {
 
 export const AVAILABLE_FEATURES = [
   { key: 'directory_listing', label: 'Directory Listing', description: 'Get listed in the public contractor directory', path: '/directory' },
-  { key: 'supplement_kings', label: 'Supplement Kings', description: 'Access insurance supplement tools', path: '/supplement-kings/contractor' },
+  { key: 'supplement_kings', label: 'Estimating & Supplementing', description: 'Access insurance supplement tools', path: '/contractor/estimating/contractor' },
   { key: 'permit_queens', label: 'Permit Queens', description: 'Access permit expediting dashboard', path: '/permit-queens/dashboard' },
   { key: 'presentations', label: 'Presentations', description: 'Sales presentation tools', path: '/presentations' },
   { key: 'field_map', label: 'Field Map', description: 'Satellite measurement tools', path: '/field-map' },

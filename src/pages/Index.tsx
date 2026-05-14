@@ -45,7 +45,7 @@ const Index = () => {
   const homeownerServices = [
     { icon: Home, title: "Roofing", description: "Full replacements, repairs, and inspections", link: "/roofing" },
     { icon: Shield, title: "Roof Coatings", description: "Extend your roof's life by 15+ years", link: "/coating-kings" },
-    { icon: PanelTop, title: "Windows & Doors", description: "Impact-rated installations", link: "/green-home-solutions" },
+    { icon: PanelTop, title: "Windows & Doors", description: "Impact-rated installations", link: "/services" },
     { icon: Trees, title: "Tree & Landscaping", description: "Removal, trimming, and design", link: "/northern-landscaping" },
     { icon: Droplets, title: "Mold & Emergency", description: "24/7 water damage & remediation", link: "/emergency-mitigation" },
     { icon: Wind, title: "Siding", description: "Vinyl, fiber cement, and more", link: "/prep-property" },
@@ -58,7 +58,7 @@ const Index = () => {
   const contractorFeatures = [
     { icon: Search, title: "Directory Listings", description: "Get found by local property owners", link: "/directory" },
     { icon: Crown, title: "Permit Marketplace", description: "Qualifiers & expediters on demand", link: "/permit-queens" },
-    { icon: DollarSign, title: "Supplement Support", description: "Xactimate-ready claim maximization", link: "/supplement-kings" },
+    { icon: DollarSign, title: "Supplement Support", description: "Xactimate-ready claim maximization", link: "/contractor/estimating" },
     { icon: GraduationCap, title: "Training Library", description: "Certifications and skill courses", link: "/learning" },
     { icon: Bot, title: "AI Assistant", description: "White-label virtual contractor", link: "/roofing" },
     { icon: Users, title: "Subcontractor Hub", description: "Find and vet subs fast", link: "/directory" },

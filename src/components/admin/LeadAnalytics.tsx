@@ -85,7 +85,7 @@ export function LeadAnalytics({ leads, rawLeadsData }: LeadAnalyticsProps) {
   // Customer Type Analysis
   const customerTypeAnalysis = useMemo(() => {
     const homeownerSources = ['Coating Kings', 'Green Home Improvements', 'Roofing Services', 'Contact Request', 'Prep Your Property'];
-    const contractorSources = ['Supplement Kings', 'Permit Queens'];
+    const contractorSources = ['Estimating & Supplementing', 'Permit Queens'];
     
     let homeowners = 0;
     let contractors = 0;

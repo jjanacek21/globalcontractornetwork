@@ -48,7 +48,7 @@ const getContextFromPath = (pathname: string): { name: string; description: stri
   }
   if (pathname.includes('supplement-kings')) {
     return {
-      name: 'Supplement Kings',
+      name: 'Estimating & Supplementing',
       description: 'Insurance claim supplements',
       questions: ['What is a supplement?', 'How much can you recover?', 'How does the process work?']
     };
