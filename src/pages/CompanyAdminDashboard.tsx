@@ -240,6 +240,10 @@ const CompanyAdminDashboard = () => {
             <CompanyUsersTab companyId={company.id} />
           </TabsContent>
 
+          <TabsContent value="pending">
+            <CompanyPendingUsersTab companyId={company.id} />
+          </TabsContent>
+
           <TabsContent value="referrals">
             <CompanyReferralsTab companyId={company.id} />
           </TabsContent>
