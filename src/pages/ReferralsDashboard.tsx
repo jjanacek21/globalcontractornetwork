@@ -88,6 +88,7 @@ export default function ReferralsDashboard() {
         ) : (
           <>
             {tab === "overview" && <OverviewTab contractor={contractor} />}
+            {tab === "available" && <AvailableReferralsTab contractor={contractor} />}
             {tab === "partners" && <PartnersTab contractor={contractor} />}
             {tab === "tiers" && <BountyTiersTab contractor={contractor} />}
             {tab === "clients" && <MyClientsTab contractor={contractor} />}
