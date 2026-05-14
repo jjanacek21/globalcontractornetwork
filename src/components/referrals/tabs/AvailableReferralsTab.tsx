@@ -18,6 +18,7 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
   const { data: broadcasts, isLoading } = useAvailableBroadcasts(contractor?.id);
   const claim = useClaimBroadcast();
   const { toast } = useToast();
+  const [active, setActive] = useState<{ broadcast: any; claimId: string } | null>(null);
 
   const trades = useMemo(() => {
     const set = new Set<string>();
@@ -30,19 +31,26 @@ export function AvailableReferralsTab({ contractor }: { contractor: any }) {
     return (broadcasts ?? []).filter((b: any) => b.trade === trade);
   }, [broadcasts, trade]);
 
-  const onClaim = async (b: any) => {
+  const onClaimAndMessage = async (b: any) => {
     try {
-      await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
-      toast({
-        title: "Claimed!",
-        description: `You're one of the first ${b.max_claims} contractors. Message the customer now to win the job.`,
-      });
+      const { claimId } = await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
+      setActive({ broadcast: b, claimId });
     } catch (err: any) {
       toast({
         title: "Couldn't claim",
         description: err.message ?? "This broadcast may already be full.",
         variant: "destructive",
       });
+    }
+  };
+
+  const onOpenExisting = async (b: any) => {
+    // Already claimed — just look up our claim id and open the dialog
+    try {
+      const { claimId } = await claim.mutateAsync({ broadcastId: b.id, contractorId: contractor.id });
+      setActive({ broadcast: b, claimId });
+    } catch (err: any) {
+      toast({ title: "Couldn't open conversation", description: err.message, variant: "destructive" });
     }
   };
 
