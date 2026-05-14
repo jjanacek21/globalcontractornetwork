@@ -156,6 +156,10 @@ const JoinNetwork = () => {
 
   const handleContractorSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!contractorForm.selectedCompanyId) {
+      toast({ title: "Pick a company", description: "Select the company you'll be working with.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
 
     try {
