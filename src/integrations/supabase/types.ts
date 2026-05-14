@@ -2319,6 +2319,15 @@ export type Database = {
           insurance_info: Json | null
           is_directory_eligible: boolean | null
           is_verified: boolean | null
+          landing_about: string | null
+          landing_cta_label: string | null
+          landing_enabled: boolean
+          landing_headline: string | null
+          landing_hero_image_url: string | null
+          landing_published_at: string | null
+          landing_slug: string | null
+          landing_subheadline: string | null
+          landing_theme: string | null
           last_name: string | null
           license_expiration: string | null
           license_number: string | null
@@ -2372,6 +2381,15 @@ export type Database = {
           insurance_info?: Json | null
           is_directory_eligible?: boolean | null
           is_verified?: boolean | null
+          landing_about?: string | null
+          landing_cta_label?: string | null
+          landing_enabled?: boolean
+          landing_headline?: string | null
+          landing_hero_image_url?: string | null
+          landing_published_at?: string | null
+          landing_slug?: string | null
+          landing_subheadline?: string | null
+          landing_theme?: string | null
           last_name?: string | null
           license_expiration?: string | null
           license_number?: string | null
@@ -2425,6 +2443,15 @@ export type Database = {
           insurance_info?: Json | null
           is_directory_eligible?: boolean | null
           is_verified?: boolean | null
+          landing_about?: string | null
+          landing_cta_label?: string | null
+          landing_enabled?: boolean
+          landing_headline?: string | null
+          landing_hero_image_url?: string | null
+          landing_published_at?: string | null
+          landing_slug?: string | null
+          landing_subheadline?: string | null
+          landing_theme?: string | null
           last_name?: string | null
           license_expiration?: string | null
           license_number?: string | null
