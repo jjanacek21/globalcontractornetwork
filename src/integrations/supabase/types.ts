@@ -3498,6 +3498,169 @@ export type Database = {
           },
         ]
       }
+      equipment_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string
+          qty: number
+          unit_price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id: string
+          qty: number
+          unit_price_cents: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string
+          qty?: number
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_products_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_orders: {
+        Row: {
+          address: string | null
+          balance_cents: number
+          company: string | null
+          created_at: string
+          deposit_due_cents: number
+          email: string
+          id: string
+          name: string
+          notes: string | null
+          order_no: string
+          pay_mode: string
+          payment_method: string
+          phone: string
+          status: string
+          subtotal_cents: number
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          balance_cents: number
+          company?: string | null
+          created_at?: string
+          deposit_due_cents: number
+          email: string
+          id?: string
+          name: string
+          notes?: string | null
+          order_no?: string
+          pay_mode: string
+          payment_method: string
+          phone: string
+          status?: string
+          subtotal_cents: number
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          balance_cents?: number
+          company?: string | null
+          created_at?: string
+          deposit_due_cents?: number
+          email?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          order_no?: string
+          pay_mode?: string
+          payment_method?: string
+          phone?: string
+          status?: string
+          subtotal_cents?: number
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: []
+      }
+      equipment_products: {
+        Row: {
+          active: boolean
+          blurb: string | null
+          bto: boolean
+          compare_cents: number | null
+          cost_cents: number
+          created_at: string
+          cross_ref: string | null
+          id: string
+          name: string
+          price_cents: number
+          slug: string
+          sort_order: number
+          specs: Json
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          blurb?: string | null
+          bto?: boolean
+          compare_cents?: number | null
+          cost_cents?: number
+          created_at?: string
+          cross_ref?: string | null
+          id?: string
+          name: string
+          price_cents: number
+          slug: string
+          sort_order?: number
+          specs?: Json
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          blurb?: string | null
+          bto?: boolean
+          compare_cents?: number | null
+          cost_cents?: number
+          created_at?: string
+          cross_ref?: string | null
+          id?: string
+          name?: string
+          price_cents?: number
+          slug?: string
+          sort_order?: number
+          specs?: Json
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       estimate_line_items: {
         Row: {
           category: string | null
@@ -4114,6 +4277,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      financing_leads: {
+        Row: {
+          amount_cents: number
+          company: string | null
+          created_at: string
+          email: string
+          equipment: string | null
+          id: string
+          name: string
+          phone: string
+          source: string | null
+          status: string
+          time_in_business: string | null
+        }
+        Insert: {
+          amount_cents: number
+          company?: string | null
+          created_at?: string
+          email: string
+          equipment?: string | null
+          id?: string
+          name: string
+          phone: string
+          source?: string | null
+          status?: string
+          time_in_business?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          company?: string | null
+          created_at?: string
+          email?: string
+          equipment?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          source?: string | null
+          status?: string
+          time_in_business?: string | null
+        }
+        Relationships: []
       }
       firecrawl_crawl_jobs: {
         Row: {
@@ -12964,6 +13169,57 @@ export type Database = {
           },
         ]
       }
+      equipment_products_public: {
+        Row: {
+          active: boolean | null
+          blurb: string | null
+          bto: boolean | null
+          compare_cents: number | null
+          created_at: string | null
+          cross_ref: string | null
+          id: string | null
+          name: string | null
+          price_cents: number | null
+          slug: string | null
+          sort_order: number | null
+          specs: Json | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          blurb?: string | null
+          bto?: boolean | null
+          compare_cents?: number | null
+          created_at?: string | null
+          cross_ref?: string | null
+          id?: string | null
+          name?: string | null
+          price_cents?: number | null
+          slug?: string | null
+          sort_order?: number | null
+          specs?: Json | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          blurb?: string | null
+          bto?: boolean | null
+          compare_cents?: number | null
+          created_at?: string | null
+          cross_ref?: string | null
+          id?: string | null
+          name?: string | null
+          price_cents?: number | null
+          slug?: string | null
+          sort_order?: number | null
+          specs?: Json | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_company_tier: { Args: { referrals: number }; Returns: string }
@@ -12975,6 +13231,7 @@ export type Database = {
       cleanup_stuck_form_templates: { Args: never; Returns: number }
       cleanup_stuck_training_books: { Args: never; Returns: number }
       cleanup_stuck_training_records: { Args: never; Returns: number }
+      generate_equipment_order_no: { Args: never; Returns: string }
       get_company_role: {
         Args: { _company_id: string }
         Returns: Database["public"]["Enums"]["company_role"]
