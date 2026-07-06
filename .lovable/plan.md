@@ -1,59 +1,89 @@
+# GCN Equipment Store — Implementation Plan
 
-# Export Door-to-Door Feature as a Drop-In Doc
+Additive feature at `/equipment`. No existing routes, pages, or tables are modified. Uses current Supabase project.
 
-Goal: produce **one markdown file** at `/mnt/documents/door-to-door-export.md` that you paste into the Lovable chat on `globalcontractor.app`. It will contain every file's full source + a SQL migration + setup instructions, so the other project's agent can recreate the feature exactly.
+## 1. Database (new tables only)
 
-## What goes in the document
+New migration creates 4 tables with RLS:
 
-**1. Overview & setup checklist** (for the other project's agent)
-- Required deps: `mapbox-gl`, `@tanstack/react-query`, `lucide-react`, `date-fns`, existing shadcn/ui components
-- Required secrets: `MAPBOX_PUBLIC_TOKEN` (or equivalent), confirm Lovable Cloud is enabled
-- Required storage buckets: `session-videos`, `property-photos` (with RLS)
-- Route to register in `App.tsx`: `/door-to-door` → `<DoorToDoor />`
-- Link from member dashboard
+- `equipment_products` — catalog (rigs + parts), `cost_cents` restricted to admins via column-aware policy (split into a public view exposing everything except cost, plus a table-level admin SELECT). Public SELECT where `active = true`.
+- `equipment_orders` — order_no auto-generated `GCN-######`. Public INSERT, admin SELECT.
+- `equipment_order_items` — line items. Public INSERT tied to order, admin SELECT.
+- `financing_leads` — public INSERT, admin SELECT.
 
-**2. Database migration** (single SQL block)
-Tables to recreate with RLS:
-- `field_sessions` — active rep sessions, GPS path, stats
-- `door_knocks` — every knock event with disposition + points
-- `property_dispositions` — per-address status persistence
-- `door_session_goals` — pre-session goal videos
-- `door_to_door_stats` — aggregated leaderboard stats
-- `session_feed_posts`, `session_feed_comments`, `session_feed_reactions` — live feed
-- `session_progress_videos` — milestone celebration videos
-- Storage buckets + policies for video/photo uploads
+Admin gate: reuse existing `has_role(auth.uid(), 'admin')` from `user_roles`. No changes to existing tables.
 
-**3. Edge function**
-- `log-training-session/index.ts` (full source)
+Seed data inserted for the 5 rigs and 6 parts exactly as specified (prices in cents).
 
-**4. Frontend source — full files, copy-paste ready**
-- `src/pages/DoorToDoor.tsx` (520 lines)
-- `src/hooks/useDoorToDoorSession.ts` (483 lines)
-- All 22 files in `src/components/door-to-door/`:
-  - Map / session: `DoorToDoorMap`, `SessionControls`, `SessionStats`, `SessionFeed`, `DwellTimeIndicator`
-  - Knock flow: `DoorKnockPanel`, `DispositionQuickBar`, `CustomerInfoForm`, `NotesHistory`
-  - Property panel: `PropertySidePanel`, `PropertyPhotos`, `PropertyResidents`, `PropertyTags`, `InstantQuoteSection`, `GoodBetterBestCards`
-  - Video/gamification: `VideoVerificationModal`, `DispositionVideoModal`, `ProgressVideoModal`, `PreSessionGoalVideo`
-  - Feed: `FeedSidebar`, `FeedPostComposer`, `FeedComments`
+## 2. Design system (scoped to /equipment)
 
-**5. Integration snippets**
-- Diff snippet to add lazy route in target `App.tsx`
-- Optional dashboard tile snippet (from `ContractorTools.tsx`)
+Industrial jobsite / data-plate aesthetic implemented as CSS variables and utility classes scoped under a `.equipment-scope` wrapper so it does NOT leak into the rest of the app:
 
-**6. Adaptation notes**
-- Any references to this app's specific tables (`profiles`, `super_admins`, `gcn_*`) flagged inline with a `// PORT NOTE:` comment so the other agent knows what to wire up
-- Mapbox token env var name to confirm
-- Anything pointing at `/member/dashboard` or other GCN-specific routes flagged for update
+- Carbon `#0E1216`, cards `#171E26`, panels `#1F2833`, hairlines `#2B3644`, text `#F2F5F7` / `#93A1B0`, safety orange `#FF5A1F`/`#FF7A45`, green `#2FBF71`, amber `#FFB020`.
+- Google Fonts loaded in `index.html`: Barlow Condensed 700/800, Barlow 400–700, IBM Plex Mono.
+- Utility classes: `.eq-heading` (Barlow Condensed uppercase), `.eq-mono` (IBM Plex Mono for prices/specs/SKUs), `.eq-btn-primary` (safety orange), `.eq-btn-ghost` (steel outline), `.eq-plate` (12px radius card with 2px orange top border).
 
-## Process
+## 3. Pages & components
 
-1. Read every file listed above in full
-2. Dump current schema for the 10 tables + storage buckets/policies via `supabase--read_query` and convert to a portable `CREATE TABLE ... CREATE POLICY ...` migration
-3. Concatenate everything into `/mnt/documents/door-to-door-export.md` with clear section headers and fenced code blocks tagged with file paths
-4. Emit a `<presentation-artifact>` tag so you can download it
+New folder `src/pages/equipment/` and `src/components/equipment/`:
 
-## Out of scope
+- `pages/equipment/EquipmentStore.tsx` — full landing page: announcement bar → header → hero + spec ticker → rigs grid → parts grid → How It Works → financing section w/ calculator → FAQ accordion → footer.
+- `pages/equipment/EquipmentAdmin.tsx` — `/equipment/admin`, admin-gated, orders + financing leads tables with status dropdown.
+- `components/equipment/ProductCard.tsx` — data-plate card (name, cross-ref, spec table, price, compare-at strikethrough, launch-sale badge, `$X/mo financed*` for rigs ≥ $3k, admin-only dashed cost/margin line).
+- `components/equipment/CartDrawer.tsx` — right-side drawer, qty steppers, BTO badge, pay-mode toggle (Deposit 50% vs Pay-in-Full −3%), freight-quoted-by-ZIP line, checkout button.
+- `components/equipment/CheckoutDialog.tsx` — form (name, company, phone, email, address, ZIP, payment method), submits order, routes to Stripe / ACH message / financing lead.
+- `components/equipment/FinancingModal.tsx` — application form; inserts to `financing_leads`; if `FINANCING_PARTNER_URL` constant is set, redirects with `?amount=` query.
+- `components/equipment/PaymentCalculator.tsx` — amount input + term pills (24/36/48/60), formula `m = amount × (r/12) / (1 − (1+r/12)^-months)` at r=0.129, footnote.
+- `components/equipment/FAQ.tsx` — 5-item accordion (exact copy from spec).
+- `hooks/useEquipmentCart.ts` — Zustand-free lightweight React context + localStorage persistence; exposes items, add/remove/qty, subtotals, deposit/full mode math.
 
-- No changes to this project (the feature stays live here)
-- No actual porting in the other project — that's done by pasting the doc into its Lovable chat
-- I won't migrate historical data (rep sessions, knocks) — schema only
+Routing: add lazy routes in `src/App.tsx`:
+- `/equipment` → `EquipmentStore`
+- `/equipment/admin` → admin-guarded `EquipmentAdmin` (wrap in existing `ProtectedRoute` + admin role check).
+
+Wrap both in `<Suspense>`.
+
+## 4. Edge functions
+
+Two new functions in `supabase/functions/`:
+
+- `create-equipment-checkout` — accepts `{ order_id, amount_cents, success_url, cancel_url }`, creates Stripe Checkout Session (mode `payment`), returns URL. Uses `STRIPE_SECRET_KEY` (to be added via secrets flow).
+- `stripe-equipment-webhook` — verifies signature with `STRIPE_WEBHOOK_SECRET`, on `checkout.session.completed` updates order status to `deposit_paid` or `paid_full` based on metadata.
+- `notify-equipment-order` — sends email to `sales@globalcontractor.network` via existing Resend connector on new order and new financing lead. Called from client after successful insert (or via DB trigger → not needed; simpler to invoke from client).
+
+Both configured with `verify_jwt = false` in `supabase/config.toml`. CORS via `npm:@supabase/supabase-js@2/cors`.
+
+Secrets required (I'll request via `add_secret` in build mode): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. `RESEND_API_KEY` already exists.
+
+## 5. Cart & checkout math
+
+- Subtotal = sum(line unit_price × qty).
+- Deposit mode: `due_today = 0.5 × BTO_subtotal + parts_subtotal`; `balance = subtotal − due_today`.
+- Pay-in-full mode: `due_today = subtotal × 0.97`; `balance = 0`; show "−3% discount applied".
+- Freight line always reads "Quoted by ZIP at confirmation" (no numeric add).
+- Order rows record `pay_mode`, `subtotal_cents`, `deposit_due_cents`, `balance_cents`.
+
+## 6. Admin surface
+
+- Product cards render dashed orange `COST $X · MARGIN $Y (Z%)` line when `has_role(user,'admin')`.
+- `/equipment/admin`: two tables (orders, financing leads) with status dropdown on orders (`pending_payment`, `deposit_paid`, `paid_full`, `in_production`, `shipped`, `delivered`, `cancelled`).
+
+## 7. Quality
+
+Mobile-first (375px+), semantic HTML, Escape closes drawer/dialogs (Radix defaults), sonner toasts on add-to-cart, `Intl.NumberFormat` for prices, `font-display: swap` to prevent CLS, focus-visible rings on all interactive elements.
+
+## Technical Notes
+
+- All new UI scoped under `.equipment-scope` — no impact on global theme.
+- Cart persisted in `localStorage` under key `gcn-equipment-cart-v1`.
+- Product images: use a placeholder gradient data-plate look for v1 (no image assets required); spec table is the visual anchor.
+- No changes to `src/integrations/supabase/client.ts` or existing hooks.
+- Zod schemas validate checkout + financing forms.
+
+## Deliverables order in build mode
+
+1. Migration (tables + RLS + seed) — pause for approval.
+2. Request `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` via `add_secret`.
+3. Edge functions.
+4. Frontend (scoped styles → components → pages → routes).
+5. Verify build + smoke test /equipment renders.
