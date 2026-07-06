@@ -8,6 +8,7 @@ import { FAQ } from "@/components/equipment/FAQ";
 import { FinancingModal } from "@/components/equipment/FinancingModal";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
+import { StoreAuthBar } from "@/components/equipment/StoreAuthBar";
 import "@/styles/equipment.css";
 
 const TICKER = [
