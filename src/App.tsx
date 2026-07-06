@@ -395,7 +395,19 @@ const GCNRoutes = () => (
               <DesignSystem />
             </Suspense>
           } />
-          
+
+          {/* GCN Equipment Store */}
+          <Route path="/equipment" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0E1216]"><div className="animate-spin h-8 w-8 border-4 border-[#FF5A1F] border-t-transparent rounded-full" /></div>}>
+              <EquipmentStore />
+            </Suspense>
+          } />
+          <Route path="/equipment/admin" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0E1216]"><div className="animate-spin h-8 w-8 border-4 border-[#FF5A1F] border-t-transparent rounded-full" /></div>}>
+              <EquipmentAdmin />
+            </Suspense>
+          } />
+
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
