@@ -13236,10 +13236,14 @@ export type Database = {
           active: boolean | null
           blurb: string | null
           bto: boolean | null
+          category_id: string | null
           compare_cents: number | null
           created_at: string | null
           cross_ref: string | null
+          gallery: Json | null
           id: string | null
+          image_url: string | null
+          long_description: string | null
           name: string | null
           price_cents: number | null
           slug: string | null
@@ -13247,15 +13251,20 @@ export type Database = {
           specs: Json | null
           type: string | null
           updated_at: string | null
+          video_url: string | null
         }
         Insert: {
           active?: boolean | null
           blurb?: string | null
           bto?: boolean | null
+          category_id?: string | null
           compare_cents?: number | null
           created_at?: string | null
           cross_ref?: string | null
+          gallery?: Json | null
           id?: string | null
+          image_url?: string | null
+          long_description?: string | null
           name?: string | null
           price_cents?: number | null
           slug?: string | null
@@ -13263,15 +13272,20 @@ export type Database = {
           specs?: Json | null
           type?: string | null
           updated_at?: string | null
+          video_url?: string | null
         }
         Update: {
           active?: boolean | null
           blurb?: string | null
           bto?: boolean | null
+          category_id?: string | null
           compare_cents?: number | null
           created_at?: string | null
           cross_ref?: string | null
+          gallery?: Json | null
           id?: string | null
+          image_url?: string | null
+          long_description?: string | null
           name?: string | null
           price_cents?: number | null
           slug?: string | null
@@ -13279,8 +13293,17 @@ export type Database = {
           specs?: Json | null
           type?: string | null
           updated_at?: string | null
+          video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "equipment_products_category_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
