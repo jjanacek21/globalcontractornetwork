@@ -84,7 +84,7 @@ export default function EquipmentAdmin() {
           <h2 className="eq-heading text-2xl mb-4">Orders ({orders.length})</h2>
           <div className="eq-plate overflow-x-auto">
             <table className="min-w-full eq-mono text-xs">
-              <thead className="bg-black/30 eq-text-2 uppercase text-[0.65rem]">
+              <thead className="bg-muted eq-text-2 uppercase text-[0.65rem]">
                 <tr>
                   <th className="text-left p-3">Order</th>
                   <th className="text-left p-3">Customer</th>
@@ -130,7 +130,7 @@ export default function EquipmentAdmin() {
           <h2 className="eq-heading text-2xl mb-4">Financing Leads ({leads.length})</h2>
           <div className="eq-plate overflow-x-auto">
             <table className="min-w-full eq-mono text-xs">
-              <thead className="bg-black/30 eq-text-2 uppercase text-[0.65rem]">
+              <thead className="bg-muted eq-text-2 uppercase text-[0.65rem]">
                 <tr>
                   <th className="text-left p-3">Name</th>
                   <th className="text-left p-3">Contact</th>
