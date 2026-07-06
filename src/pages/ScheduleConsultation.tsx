@@ -45,7 +45,7 @@ const schema = z.object({
   insurance_carrier: z.string().trim().max(120).optional(),
   insurance_claim_number: z.string().trim().max(60).optional(),
   financing_interest: z.boolean().optional(),
-  consent: z.literal(true, { errorMap: () => ({ message: "Please agree to be contacted" }) }),
+  consent: z.literal(true, { message: "Please agree to be contacted" }),
 });
 
 type FormValues = z.infer<typeof schema>;
