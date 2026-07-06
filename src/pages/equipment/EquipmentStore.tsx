@@ -98,8 +98,9 @@ function EquipmentStoreInner() {
           </p>
           <h1 className="eq-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl mt-4 max-w-5xl">
             Graco-class output.<br />
-            <span className="eq-orange">Half the invoice.</span>
+            <span className="bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">Half the invoice.</span>
           </h1>
+
           <p className="mt-6 max-w-2xl text-base md:text-lg eq-text-2 leading-relaxed">
             Honda GX power. Graco/Titan-interchangeable wear parts. Deposit-funded builds shipped in 6–8 weeks with US parts stock backing every serial number.
           </p>
