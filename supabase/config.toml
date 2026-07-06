@@ -1,4 +1,4 @@
 project_id = "ujalvgknnbsxqpujxvwk"
 
-[functions.process-broadcast-consent]
+[functions.bootstrap-store-admin]
 verify_jwt = false
