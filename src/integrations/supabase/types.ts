@@ -3498,6 +3498,45 @@ export type Database = {
           },
         ]
       }
+      equipment_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       equipment_order_items: {
         Row: {
           created_at: string
@@ -3612,11 +3651,15 @@ export type Database = {
           active: boolean
           blurb: string | null
           bto: boolean
+          category_id: string | null
           compare_cents: number | null
           cost_cents: number
           created_at: string
           cross_ref: string | null
+          gallery: Json
           id: string
+          image_url: string | null
+          long_description: string | null
           name: string
           price_cents: number
           slug: string
@@ -3624,16 +3667,21 @@ export type Database = {
           specs: Json
           type: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           active?: boolean
           blurb?: string | null
           bto?: boolean
+          category_id?: string | null
           compare_cents?: number | null
           cost_cents?: number
           created_at?: string
           cross_ref?: string | null
+          gallery?: Json
           id?: string
+          image_url?: string | null
+          long_description?: string | null
           name: string
           price_cents: number
           slug: string
@@ -3641,16 +3689,21 @@ export type Database = {
           specs?: Json
           type: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           active?: boolean
           blurb?: string | null
           bto?: boolean
+          category_id?: string | null
           compare_cents?: number | null
           cost_cents?: number
           created_at?: string
           cross_ref?: string | null
+          gallery?: Json
           id?: string
+          image_url?: string | null
+          long_description?: string | null
           name?: string
           price_cents?: number
           slug?: string
@@ -3658,8 +3711,17 @@ export type Database = {
           specs?: Json
           type?: string
           updated_at?: string
+          video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "equipment_products_category_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       estimate_line_items: {
         Row: {
