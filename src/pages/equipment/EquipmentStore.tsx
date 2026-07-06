@@ -239,7 +239,7 @@ function EquipmentStoreInner() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="border-t eq-hairline bg-black/30">
+      <section id="faq" className="border-t eq-hairline bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 py-16">
           <h2 className="eq-heading text-4xl md:text-5xl mb-10 text-center">FAQ</h2>
           <FAQ />
