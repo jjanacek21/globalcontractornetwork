@@ -31,10 +31,10 @@ export function MediaUploader({ label, accept, value, onChange, folder = "misc" 
   const [preview, setPreview] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // resolve preview when value changes
-  useState(() => {
+  useEffect(() => {
     if (value) resolveMediaUrl(value).then(setPreview);
-  });
+    else setPreview("");
+  }, [value]);
 
   const handleFile = async (file: File) => {
     setUploading(true);
