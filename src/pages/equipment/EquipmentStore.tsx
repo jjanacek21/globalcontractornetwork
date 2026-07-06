@@ -115,7 +115,7 @@ function EquipmentStoreInner() {
         </div>
 
         {/* Ticker */}
-        <div className="border-t eq-hairline bg-black/30 overflow-x-auto">
+        <div className="border-t eq-hairline bg-muted/40 overflow-x-auto">
           <div className="max-w-7xl mx-auto flex">
             {TICKER.map((t, i) => (
               <div key={i} className="eq-ticker-cell flex-1 min-w-[160px]">
