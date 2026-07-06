@@ -253,8 +253,8 @@ function EquipmentStoreInner() {
             <div className="eq-heading text-lg eq-text">The GCN Store</div>
             <div className="mt-1">Global Contractor Network · Pompano Beach, FL</div>
           </div>
-          <a href="mailto:sales@globalcontractor.network" className="hover:text-primary transition-colors">
-            sales@globalcontractor.network
+          <a href="mailto:Admin@gcn.support" className="hover:text-primary transition-colors">
+            Admin@gcn.support
           </a>
         </div>
 
