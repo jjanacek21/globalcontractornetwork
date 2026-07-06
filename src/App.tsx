@@ -101,6 +101,8 @@ const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"))
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
+const EquipmentStore = lazy(() => import("./pages/equipment/EquipmentStore"));
+const EquipmentAdmin = lazy(() => import("./pages/equipment/EquipmentAdmin"));
 
 // Demo-aware wrapper: if ?demo=1 OR sessionStorage flag set, bypass auth
 const PropertyIQDashboardRoute = () => {
