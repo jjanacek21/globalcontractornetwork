@@ -101,6 +101,8 @@ const TradeWizard = lazy(() => import("./components/instant-quote/TradeWizard"))
 const MaintenanceMembership = lazy(() => import("./pages/MaintenanceMembership"));
 const HomeownerMarketplace = lazy(() => import("./pages/HomeownerMarketplace"));
 const ScheduleConsultation = lazy(() => import("./pages/ScheduleConsultation"));
+const EquipmentStore = lazy(() => import("./pages/equipment/EquipmentStore"));
+const EquipmentAdmin = lazy(() => import("./pages/equipment/EquipmentAdmin"));
 
 // Demo-aware wrapper: if ?demo=1 OR sessionStorage flag set, bypass auth
 const PropertyIQDashboardRoute = () => {
@@ -393,7 +395,19 @@ const GCNRoutes = () => (
               <DesignSystem />
             </Suspense>
           } />
-          
+
+          {/* GCN Equipment Store */}
+          <Route path="/equipment" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0E1216]"><div className="animate-spin h-8 w-8 border-4 border-[#FF5A1F] border-t-transparent rounded-full" /></div>}>
+              <EquipmentStore />
+            </Suspense>
+          } />
+          <Route path="/equipment/admin" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0E1216]"><div className="animate-spin h-8 w-8 border-4 border-[#FF5A1F] border-t-transparent rounded-full" /></div>}>
+              <EquipmentAdmin />
+            </Suspense>
+          } />
+
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>

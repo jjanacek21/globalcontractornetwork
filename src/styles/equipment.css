@@ -1,0 +1,184 @@
+/* GCN Equipment — scoped industrial data-plate design system.
+   All rules gated under .equipment-scope so the rest of the app is untouched. */
+
+.equipment-scope {
+  --eq-carbon: #0E1216;
+  --eq-card: #171E26;
+  --eq-panel: #1F2833;
+  --eq-line: #2B3644;
+  --eq-text: #F2F5F7;
+  --eq-text-2: #93A1B0;
+  --eq-orange: #FF5A1F;
+  --eq-orange-hi: #FF7A45;
+  --eq-green: #2FBF71;
+  --eq-amber: #FFB020;
+
+  background: var(--eq-carbon);
+  color: var(--eq-text);
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.equipment-scope * {
+  border-color: var(--eq-line);
+}
+
+.equipment-scope .eq-heading {
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+  color: var(--eq-text);
+}
+
+.equipment-scope .eq-mono {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.equipment-scope .eq-hairline { border-color: var(--eq-line); }
+.equipment-scope .eq-text-2 { color: var(--eq-text-2); }
+.equipment-scope .eq-orange { color: var(--eq-orange); }
+.equipment-scope .eq-green { color: var(--eq-green); }
+.equipment-scope .eq-amber { color: var(--eq-amber); }
+
+.equipment-scope .eq-plate {
+  background: var(--eq-card);
+  border: 1px solid var(--eq-line);
+  border-top: 2px solid var(--eq-orange);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.equipment-scope .eq-panel {
+  background: var(--eq-panel);
+  border: 1px solid var(--eq-line);
+  border-radius: 8px;
+}
+
+.equipment-scope .eq-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.equipment-scope .eq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.equipment-scope .eq-btn:focus-visible {
+  outline: 2px solid var(--eq-orange);
+  outline-offset: 2px;
+}
+
+.equipment-scope .eq-btn-primary {
+  background: var(--eq-orange);
+  color: #0E1216;
+}
+.equipment-scope .eq-btn-primary:hover:not(:disabled) { background: var(--eq-orange-hi); }
+
+.equipment-scope .eq-btn-ghost {
+  background: transparent;
+  color: var(--eq-text);
+  border-color: var(--eq-line);
+}
+.equipment-scope .eq-btn-ghost:hover:not(:disabled) {
+  border-color: var(--eq-text-2);
+  background: rgba(255,255,255,0.02);
+}
+
+.equipment-scope .eq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+.equipment-scope .eq-badge-green { color: var(--eq-green); background: rgba(47,191,113,0.08); }
+.equipment-scope .eq-badge-amber { color: var(--eq-amber); background: rgba(255,176,32,0.08); }
+.equipment-scope .eq-badge-orange { color: var(--eq-orange); background: rgba(255,90,31,0.08); }
+
+.equipment-scope .eq-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--eq-line);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+}
+.equipment-scope .eq-spec-table td {
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid var(--eq-line);
+}
+.equipment-scope .eq-spec-table tr:last-child td { border-bottom: none; }
+.equipment-scope .eq-spec-table td:first-child {
+  color: var(--eq-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  width: 40%;
+  background: rgba(0,0,0,0.15);
+}
+.equipment-scope .eq-spec-table td:last-child {
+  color: var(--eq-text);
+  text-align: right;
+  font-weight: 500;
+}
+
+.equipment-scope .eq-input {
+  background: var(--eq-panel);
+  border: 1px solid var(--eq-line);
+  color: var(--eq-text);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9rem;
+  width: 100%;
+}
+.equipment-scope .eq-input:focus {
+  outline: 2px solid var(--eq-orange);
+  outline-offset: 0;
+  border-color: var(--eq-orange);
+}
+.equipment-scope .eq-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  color: var(--eq-text-2);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.equipment-scope .eq-ticker-cell {
+  padding: 0.85rem 1rem;
+  border-right: 1px solid var(--eq-line);
+  min-width: 180px;
+}
+.equipment-scope .eq-ticker-cell:last-child { border-right: none; }
+
+.equipment-scope .eq-admin-cost {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--eq-orange);
+  border: 1px dashed var(--eq-orange);
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
