@@ -63,31 +63,32 @@ function EquipmentStoreInner() {
   return (
     <div className="equipment-scope">
       {/* Announcement bar */}
-      <div className="bg-[var(--eq-orange)] text-black">
+      <div style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(152 45% 22%))" }} className="text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 py-2 eq-mono text-[0.72rem] md:text-xs font-semibold uppercase text-center leading-tight">
           Financing available — rigs from $149/mo · US parts stock ships same day · Built-to-order rigs 6–8 weeks
         </div>
       </div>
 
       {/* Header */}
-      <header className="border-b eq-hairline sticky top-0 z-30 bg-[var(--eq-carbon)]/95 backdrop-blur">
+      <header className="border-b eq-hairline sticky top-0 z-30 bg-background/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <a href="#top" className="flex items-baseline gap-2">
-            <span className="eq-heading text-2xl md:text-3xl">GCN Equipment</span>
+            <span className="eq-heading text-2xl md:text-3xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">The GCN Store</span>
             <span className="eq-mono text-[0.6rem] eq-text-2 uppercase hidden sm:inline">
               Global Contractor Network
             </span>
           </a>
           <nav className="hidden md:flex items-center gap-6 eq-mono text-xs uppercase eq-text-2">
-            <a href="#rigs" className="hover:eq-orange">Spray Rigs</a>
-            <a href="#parts" className="hover:eq-orange">Parts & Guns</a>
-            <a href="#how" className="hover:eq-orange">How It Works</a>
-            <a href="#financing" className="hover:eq-orange">Financing</a>
-            <a href="#faq" className="hover:eq-orange">FAQ</a>
+            <a href="#rigs" className="hover:text-primary transition-colors">Spray Rigs</a>
+            <a href="#parts" className="hover:text-primary transition-colors">Parts & Guns</a>
+            <a href="#how" className="hover:text-primary transition-colors">How It Works</a>
+            <a href="#financing" className="hover:text-primary transition-colors">Financing</a>
+            <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </nav>
           <CartButton />
         </div>
       </header>
+
 
       {/* Hero */}
       <section id="top" className="border-b eq-hairline">
