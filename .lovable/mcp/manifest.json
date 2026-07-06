@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "gcn-mcp",
+      "version": "0.1.0",
+      "title": "Global Contractor Network"
+    },
+    "tools": [
+      {
+        "name": "list_services",
+        "title": "List services",
+        "description": "List all contractor services offered by Global Contractor Network with their quote page URLs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_contractors",
+        "title": "Search contractors",
+        "description": "Search verified contractors in the Global Contractor Network directory by service category and optional location.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": [
+                "Roofing",
+                "Windows & Doors",
+                "Tree Service",
+                "Landscaping",
+                "General Contractor",
+                "Electrical",
+                "Plumbing",
+                "HVAC",
+                "Painting",
+                "Flooring"
+              ],
+              "description": "Service category to search for."
+            },
+            "location": {
+              "description": "City, area, or ZIP code to filter results.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Max results to return (default 5).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "category"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_service_areas",
+        "title": "Get service areas",
+        "description": "Return the geographic service areas covered by the Global Contractor Network.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
