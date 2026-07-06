@@ -99,11 +99,6 @@ export function ProductCard({ product }: { product: EquipmentProduct }) {
           </p>
         )}
 
-        {isAdmin && product.cost_cents != null && margin != null && (
-          <div className="eq-admin-cost">
-            COST {fmtUSD(product.cost_cents)} · MARGIN {fmtUSD(margin)} ({marginPct}%)
-          </div>
-        )}
 
         <button
           className="eq-btn eq-btn-primary w-full mt-4"
