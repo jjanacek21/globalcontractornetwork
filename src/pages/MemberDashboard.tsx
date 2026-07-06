@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   LogOut, User, ArrowRight, Crown, DollarSign, Search, ClipboardCheck,
   GraduationCap, Megaphone, Settings, Users, Sparkles, Briefcase, MapPinned,
-  Building2, Rocket, Construction, Lightbulb, LayoutDashboard
+  Building2, Rocket, Construction, Lightbulb, LayoutDashboard, Wrench
 } from "lucide-react";
 import gcnLogo from "@/assets/gcn-logo.jpg";
 
@@ -213,6 +213,7 @@ const MemberDashboard = () => {
     { icon: Crown, title: "Permit Expediting", description: "Fast-track Florida building permits", link: "/permit-queens/dashboard" },
     { icon: GraduationCap, title: "Training Academy", description: "Certifications & business courses for pros", link: "/learning" },
     { icon: Search, title: "Directory", description: "Browse 500+ verified local contractors", link: "/directory" },
+    { icon: Wrench, title: "GCN Equipment", description: "Spray rigs, guns, tips & parts — built for pros", link: "/equipment", badge: "New" },
   ];
 
   const contractorApps: ServiceCard[] = [
