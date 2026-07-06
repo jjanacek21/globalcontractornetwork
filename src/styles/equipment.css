@@ -1,28 +1,29 @@
-/* GCN Equipment — scoped industrial data-plate design system.
-   All rules gated under .equipment-scope so the rest of the app is untouched. */
+/* The GCN Store — scoped to .equipment-scope.
+   Retheme to match the GCN network: light forest-green + gold accent,
+   glassmorphic surfaces. Class names preserved so components stay untouched. */
 
 .equipment-scope {
-  --eq-carbon: #0E1216;
-  --eq-card: #171E26;
-  --eq-panel: #1F2833;
-  --eq-line: #2B3644;
-  --eq-text: #F2F5F7;
-  --eq-text-2: #93A1B0;
-  --eq-orange: #FF5A1F;
-  --eq-orange-hi: #FF7A45;
-  --eq-green: #2FBF71;
-  --eq-amber: #FFB020;
+  /* Semantic tokens (map onto the GCN palette) */
+  --eq-carbon: hsl(var(--background));
+  --eq-card: hsl(0 0% 100% / 0.72);
+  --eq-panel: hsl(var(--muted));
+  --eq-line: hsl(var(--border));
+  --eq-text: hsl(var(--foreground));
+  --eq-text-2: hsl(var(--muted-foreground));
+  --eq-orange: hsl(var(--primary));         /* forest green — primary actions */
+  --eq-orange-hi: hsl(152 45% 22%);
+  --eq-green: hsl(152 55% 35%);             /* in-stock emerald */
+  --eq-amber: hsl(var(--accent));           /* GCN gold — BTO / highlights */
 
-  background: var(--eq-carbon);
+  background:
+    radial-gradient(ellipse at top, hsl(var(--primary) / 0.06), transparent 60%),
+    radial-gradient(ellipse at bottom right, hsl(var(--accent) / 0.05), transparent 55%),
+    hsl(var(--background));
   color: var(--eq-text);
   font-family: 'Barlow', system-ui, sans-serif;
   font-weight: 400;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-}
-
-.equipment-scope * {
-  border-color: var(--eq-line);
 }
 
 .equipment-scope .eq-heading {
@@ -43,20 +44,29 @@
 .equipment-scope .eq-text-2 { color: var(--eq-text-2); }
 .equipment-scope .eq-orange { color: var(--eq-orange); }
 .equipment-scope .eq-green { color: var(--eq-green); }
-.equipment-scope .eq-amber { color: var(--eq-amber); }
+.equipment-scope .eq-amber { color: hsl(43 85% 40%); }
 
+/* Glassmorphic card, gold top accent stripe */
 .equipment-scope .eq-plate {
   background: var(--eq-card);
-  border: 1px solid var(--eq-line);
-  border-top: 2px solid var(--eq-orange);
-  border-radius: 12px;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-top: 2px solid hsl(var(--accent));
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow:
+    0 10px 30px -14px hsl(var(--primary) / 0.18),
+    0 4px 12px -6px hsl(var(--accent) / 0.12),
+    inset 0 1px 0 hsl(0 0% 100% / 0.7);
 }
 
 .equipment-scope .eq-panel {
-  background: var(--eq-panel);
-  border: 1px solid var(--eq-line);
-  border-radius: 8px;
+  background: hsl(0 0% 100% / 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 12px;
 }
 
 .equipment-scope .eq-btn {
@@ -68,33 +78,38 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.75rem 1.25rem;
   font-size: 0.95rem;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
   cursor: pointer;
   border: 1px solid transparent;
 }
 .equipment-scope .eq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .equipment-scope .eq-btn:focus-visible {
-  outline: 2px solid var(--eq-orange);
+  outline: 2px solid hsl(var(--accent));
   outline-offset: 2px;
 }
 
 .equipment-scope .eq-btn-primary {
-  background: var(--eq-orange);
-  color: #0E1216;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(152 45% 22%));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 8px 20px -8px hsl(var(--primary) / 0.5), inset 0 1px 0 hsl(45 100% 80% / 0.35);
 }
-.equipment-scope .eq-btn-primary:hover:not(:disabled) { background: var(--eq-orange-hi); }
+.equipment-scope .eq-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -8px hsl(var(--primary) / 0.6), inset 0 1px 0 hsl(45 100% 80% / 0.45);
+}
 
 .equipment-scope .eq-btn-ghost {
-  background: transparent;
+  background: hsl(0 0% 100% / 0.6);
+  backdrop-filter: blur(8px);
   color: var(--eq-text);
-  border-color: var(--eq-line);
+  border-color: hsl(var(--border));
 }
 .equipment-scope .eq-btn-ghost:hover:not(:disabled) {
-  border-color: var(--eq-text-2);
-  background: rgba(255,255,255,0.02);
+  border-color: hsl(var(--accent));
+  background: hsl(0 0% 100% / 0.85);
 }
 
 .equipment-scope .eq-badge {
@@ -106,24 +121,29 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.25rem 0.55rem;
-  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
   border: 1px solid currentColor;
 }
-.equipment-scope .eq-badge-green { color: var(--eq-green); background: rgba(47,191,113,0.08); }
-.equipment-scope .eq-badge-amber { color: var(--eq-amber); background: rgba(255,176,32,0.08); }
-.equipment-scope .eq-badge-orange { color: var(--eq-orange); background: rgba(255,90,31,0.08); }
+.equipment-scope .eq-badge-green { color: hsl(152 55% 30%); background: hsl(152 55% 35% / 0.1); }
+.equipment-scope .eq-badge-amber { color: hsl(43 85% 35%); background: hsl(var(--accent) / 0.15); }
+.equipment-scope .eq-badge-orange {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+}
 
 .equipment-scope .eq-spec-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid var(--eq-line);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 8px;
+  overflow: hidden;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.78rem;
 }
 .equipment-scope .eq-spec-table td {
-  padding: 0.4rem 0.65rem;
-  border-bottom: 1px solid var(--eq-line);
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.7);
 }
 .equipment-scope .eq-spec-table tr:last-child td { border-bottom: none; }
 .equipment-scope .eq-spec-table td:first-child {
@@ -132,7 +152,7 @@
   letter-spacing: 0.04em;
   font-size: 0.7rem;
   width: 40%;
-  background: rgba(0,0,0,0.15);
+  background: hsl(var(--muted) / 0.6);
 }
 .equipment-scope .eq-spec-table td:last-child {
   color: var(--eq-text);
@@ -141,19 +161,19 @@
 }
 
 .equipment-scope .eq-input {
-  background: var(--eq-panel);
-  border: 1px solid var(--eq-line);
+  background: hsl(0 0% 100% / 0.8);
+  border: 1px solid hsl(var(--border));
   color: var(--eq-text);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.65rem 0.85rem;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.9rem;
   width: 100%;
 }
 .equipment-scope .eq-input:focus {
-  outline: 2px solid var(--eq-orange);
+  outline: 2px solid hsl(var(--accent));
   outline-offset: 0;
-  border-color: var(--eq-orange);
+  border-color: hsl(var(--accent));
 }
 .equipment-scope .eq-label {
   font-family: 'Barlow Condensed', sans-serif;
@@ -167,8 +187,8 @@
 }
 
 .equipment-scope .eq-ticker-cell {
-  padding: 0.85rem 1rem;
-  border-right: 1px solid var(--eq-line);
+  padding: 0.9rem 1rem;
+  border-right: 1px solid hsl(var(--border) / 0.7);
   min-width: 180px;
 }
 .equipment-scope .eq-ticker-cell:last-child { border-right: none; }
@@ -176,9 +196,10 @@
 .equipment-scope .eq-admin-cost {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.72rem;
-  color: var(--eq-orange);
-  border: 1px dashed var(--eq-orange);
+  color: hsl(var(--primary));
+  border: 1px dashed hsl(var(--primary) / 0.6);
   padding: 0.35rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-top: 0.5rem;
+  background: hsl(var(--primary) / 0.04);
 }

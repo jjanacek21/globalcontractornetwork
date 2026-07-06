@@ -76,7 +76,7 @@ export function ProductCard({ product }: { product: EquipmentProduct }) {
       </div>
 
       {/* Price plate */}
-      <div className="mt-auto px-5 pt-3 pb-5 border-t eq-hairline bg-black/20">
+      <div className="mt-auto px-5 pt-3 pb-5 border-t eq-hairline bg-muted/40">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="eq-mono text-3xl font-bold eq-text">{fmtUSD(product.price_cents)}</span>
           {product.compare_cents && product.compare_cents > product.price_cents && (

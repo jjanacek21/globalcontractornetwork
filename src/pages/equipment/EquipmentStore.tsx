@@ -30,7 +30,7 @@ function CartButton() {
       <ShoppingCart className="h-5 w-5" />
       <span className="eq-mono text-sm">Cart</span>
       {itemCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-[var(--eq-orange)] text-black eq-mono text-[0.65rem] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground eq-mono text-[0.65rem] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
           {itemCount}
         </span>
       )}
@@ -63,31 +63,32 @@ function EquipmentStoreInner() {
   return (
     <div className="equipment-scope">
       {/* Announcement bar */}
-      <div className="bg-[var(--eq-orange)] text-black">
+      <div style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(152 45% 22%))" }} className="text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 py-2 eq-mono text-[0.72rem] md:text-xs font-semibold uppercase text-center leading-tight">
           Financing available — rigs from $149/mo · US parts stock ships same day · Built-to-order rigs 6–8 weeks
         </div>
       </div>
 
       {/* Header */}
-      <header className="border-b eq-hairline sticky top-0 z-30 bg-[var(--eq-carbon)]/95 backdrop-blur">
+      <header className="border-b eq-hairline sticky top-0 z-30 bg-background/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <a href="#top" className="flex items-baseline gap-2">
-            <span className="eq-heading text-2xl md:text-3xl">GCN Equipment</span>
+            <span className="eq-heading text-2xl md:text-3xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">The GCN Store</span>
             <span className="eq-mono text-[0.6rem] eq-text-2 uppercase hidden sm:inline">
               Global Contractor Network
             </span>
           </a>
           <nav className="hidden md:flex items-center gap-6 eq-mono text-xs uppercase eq-text-2">
-            <a href="#rigs" className="hover:eq-orange">Spray Rigs</a>
-            <a href="#parts" className="hover:eq-orange">Parts & Guns</a>
-            <a href="#how" className="hover:eq-orange">How It Works</a>
-            <a href="#financing" className="hover:eq-orange">Financing</a>
-            <a href="#faq" className="hover:eq-orange">FAQ</a>
+            <a href="#rigs" className="hover:text-primary transition-colors">Spray Rigs</a>
+            <a href="#parts" className="hover:text-primary transition-colors">Parts & Guns</a>
+            <a href="#how" className="hover:text-primary transition-colors">How It Works</a>
+            <a href="#financing" className="hover:text-primary transition-colors">Financing</a>
+            <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </nav>
           <CartButton />
         </div>
       </header>
+
 
       {/* Hero */}
       <section id="top" className="border-b eq-hairline">
@@ -97,8 +98,9 @@ function EquipmentStoreInner() {
           </p>
           <h1 className="eq-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl mt-4 max-w-5xl">
             Graco-class output.<br />
-            <span className="eq-orange">Half the invoice.</span>
+            <span className="bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">Half the invoice.</span>
           </h1>
+
           <p className="mt-6 max-w-2xl text-base md:text-lg eq-text-2 leading-relaxed">
             Honda GX power. Graco/Titan-interchangeable wear parts. Deposit-funded builds shipped in 6–8 weeks with US parts stock backing every serial number.
           </p>
@@ -113,7 +115,7 @@ function EquipmentStoreInner() {
         </div>
 
         {/* Ticker */}
-        <div className="border-t eq-hairline bg-black/30 overflow-x-auto">
+        <div className="border-t eq-hairline bg-muted/40 overflow-x-auto">
           <div className="max-w-7xl mx-auto flex">
             {TICKER.map((t, i) => (
               <div key={i} className="eq-ticker-cell flex-1 min-w-[160px]">
@@ -168,7 +170,7 @@ function EquipmentStoreInner() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="border-t eq-hairline bg-black/30">
+      <section id="how" className="border-t eq-hairline bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 py-16">
           <h2 className="eq-heading text-4xl md:text-5xl mb-10">
             How Built-to-Order Works
@@ -192,7 +194,8 @@ function EquipmentStoreInner() {
               },
             ].map((s) => (
               <div key={s.n} className="eq-plate p-6">
-                <div className="eq-mono text-4xl eq-orange font-bold">{s.n}</div>
+                <div className="eq-mono text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">{s.n}</div>
+
                 <div className="eq-heading text-xl mt-3">{s.t}</div>
                 <p className="eq-text-2 text-sm mt-3 leading-relaxed">{s.d}</p>
               </div>
@@ -236,7 +239,7 @@ function EquipmentStoreInner() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="border-t eq-hairline bg-black/30">
+      <section id="faq" className="border-t eq-hairline bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 py-16">
           <h2 className="eq-heading text-4xl md:text-5xl mb-10 text-center">FAQ</h2>
           <FAQ />
@@ -247,13 +250,14 @@ function EquipmentStoreInner() {
       <footer className="border-t eq-hairline">
         <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 eq-mono text-xs eq-text-2 uppercase">
           <div>
-            <div className="eq-heading text-lg eq-text">GCN Equipment</div>
+            <div className="eq-heading text-lg eq-text">The GCN Store</div>
             <div className="mt-1">Global Contractor Network · Pompano Beach, FL</div>
           </div>
-          <a href="mailto:sales@globalcontractor.network" className="hover:eq-orange">
+          <a href="mailto:sales@globalcontractor.network" className="hover:text-primary transition-colors">
             sales@globalcontractor.network
           </a>
         </div>
+
       </footer>
 
       <CartDrawer />
