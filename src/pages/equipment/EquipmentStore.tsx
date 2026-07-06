@@ -250,13 +250,14 @@ function EquipmentStoreInner() {
       <footer className="border-t eq-hairline">
         <div className="max-w-7xl mx-auto px-4 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 eq-mono text-xs eq-text-2 uppercase">
           <div>
-            <div className="eq-heading text-lg eq-text">GCN Equipment</div>
+            <div className="eq-heading text-lg eq-text">The GCN Store</div>
             <div className="mt-1">Global Contractor Network · Pompano Beach, FL</div>
           </div>
-          <a href="mailto:sales@globalcontractor.network" className="hover:eq-orange">
+          <a href="mailto:sales@globalcontractor.network" className="hover:text-primary transition-colors">
             sales@globalcontractor.network
           </a>
         </div>
+
       </footer>
 
       <CartDrawer />
