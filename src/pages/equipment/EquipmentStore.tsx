@@ -86,7 +86,10 @@ function EquipmentStoreInner() {
             <a href="#financing" className="hover:text-primary transition-colors">Financing</a>
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </nav>
-          <CartButton />
+          <div className="flex items-center gap-3">
+            <StoreAuthBar />
+            <CartButton />
+          </div>
         </div>
       </header>
 
