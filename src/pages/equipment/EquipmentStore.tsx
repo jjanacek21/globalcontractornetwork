@@ -30,7 +30,7 @@ function CartButton() {
       <ShoppingCart className="h-5 w-5" />
       <span className="eq-mono text-sm">Cart</span>
       {itemCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-[var(--eq-orange)] text-black eq-mono text-[0.65rem] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground eq-mono text-[0.65rem] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
           {itemCount}
         </span>
       )}
