@@ -127,11 +127,11 @@ export function GalleryUploader({ value, onChange }: GalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [urls, setUrls] = useState<Record<string, string>>({});
 
-  useState(() => {
+  useEffect(() => {
     Promise.all(value.map(async (p) => [p, await resolveMediaUrl(p)] as const)).then((pairs) => {
       setUrls(Object.fromEntries(pairs));
     });
-  });
+  }, [value]);
 
   const addFiles = async (files: FileList) => {
     setUploading(true);
