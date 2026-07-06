@@ -8,6 +8,7 @@ import { FAQ } from "@/components/equipment/FAQ";
 import { FinancingModal } from "@/components/equipment/FinancingModal";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
+import { StoreAuthBar } from "@/components/equipment/StoreAuthBar";
 import "@/styles/equipment.css";
 
 const TICKER = [
@@ -85,7 +86,10 @@ function EquipmentStoreInner() {
             <a href="#financing" className="hover:text-primary transition-colors">Financing</a>
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </nav>
-          <CartButton />
+          <div className="flex items-center gap-3">
+            <StoreAuthBar />
+            <CartButton />
+          </div>
         </div>
       </header>
 
