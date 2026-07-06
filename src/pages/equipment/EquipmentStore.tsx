@@ -194,7 +194,8 @@ function EquipmentStoreInner() {
               },
             ].map((s) => (
               <div key={s.n} className="eq-plate p-6">
-                <div className="eq-mono text-4xl eq-orange font-bold">{s.n}</div>
+                <div className="eq-mono text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">{s.n}</div>
+
                 <div className="eq-heading text-xl mt-3">{s.t}</div>
                 <p className="eq-text-2 text-sm mt-3 leading-relaxed">{s.d}</p>
               </div>
