@@ -63,8 +63,49 @@ function EquipmentStoreInner() {
   const rigs = products.filter((p) => p.type === "rig");
   const parts = products.filter((p) => p.type === "part");
 
+  const canonical = getStoreCanonicalUrl();
+  const title = "The GCN Store — Commercial Spray Rigs, Guns & Coating Equipment";
+  const description =
+    "Graco-class spray rigs at half the invoice. Honda GX power, Graco/Titan-interchangeable wear parts, financing from $149/mo, US parts stock ships same day.";
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: "The GCN Store",
+    url: canonical,
+    description,
+    email: "Admin@gcn.support",
+    parentOrganization: { "@type": "Organization", name: "Global Contractor Network" },
+    address: { "@type": "PostalAddress", addressLocality: "Pompano Beach", addressRegion: "FL", addressCountry: "US" },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Spray Rigs & Parts",
+      itemListElement: products.slice(0, 20).map((p) => ({
+        "@type": "Offer",
+        itemOffered: { "@type": "Product", name: p.name, sku: p.sku ?? undefined },
+        price: (p.price_cents / 100).toFixed(2),
+        priceCurrency: "USD",
+        availability: p.type === "part" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+      })),
+    },
+  };
+
   return (
     <div className="equipment-scope">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:site_name" content="The GCN Store" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <script type="application/ld+json">{JSON.stringify(productLd)}</script>
+      </Helmet>
+
       {/* Announcement bar */}
       <div style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(152 45% 22%))" }} className="text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 py-2 eq-mono text-[0.72rem] md:text-xs font-semibold uppercase text-center leading-tight">
