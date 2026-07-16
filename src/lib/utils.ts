@@ -13,13 +13,15 @@ export function isCoatingKingsDomain(): boolean {
 
 /**
  * True when the app is being served from a dedicated store host.
- * Matches: store.globalcontractor.network, gcnstore.*, thegcnstore.*
- * Add additional hostnames here once the custom domain is connected.
+ * Matches: globalcontractor.store, store.globalcontractor.network, gcnstore.*, thegcnstore.*
  */
 export function isStoreDomain(): boolean {
   if (typeof window === "undefined") return false;
   const hostname = window.location.hostname.toLowerCase();
   return (
+    hostname === "globalcontractor.store" ||
+    hostname === "www.globalcontractor.store" ||
+    hostname.endsWith(".globalcontractor.store") ||
     hostname.startsWith("store.") ||
     hostname.includes("gcnstore") ||
     hostname.includes("thegcnstore")
@@ -28,7 +30,7 @@ export function isStoreDomain(): boolean {
 
 /** Canonical public URL for the store, used in SEO tags. */
 export function getStoreCanonicalUrl(): string {
-  return "https://globalcontractor.network/equipment";
+  return "https://globalcontractor.store/";
 }
 
 export function getMainSiteUrl(): string {
