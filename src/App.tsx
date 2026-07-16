@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import { isCoatingKingsDomain } from "@/lib/utils";
+import { isCoatingKingsDomain, isStoreDomain } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AnimatePresence } from "framer-motion";
 
@@ -132,6 +132,25 @@ const CoatingKingsRoutes = () => (
     } />
     {/* Catch-all: redirect to home for this domain */}
     <Route path="*" element={<CoatingKings />} />
+  </Routes>
+);
+
+// Store Domain Routes - dedicated storefront host (e.g. store.globalcontractor.network)
+const StoreRoutes = () => (
+  <Routes>
+    <Route path="/" element={
+      <Suspense fallback={<div className="min-h-screen" />}>
+        <EquipmentStore />
+      </Suspense>
+    } />
+    <Route path="/admin" element={
+      <Suspense fallback={<div className="min-h-screen" />}>
+        <EquipmentAdmin />
+      </Suspense>
+    } />
+    <Route path="/auth" element={<Auth />} />
+    {/* Everything else on the store host falls back to the storefront */}
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
 
@@ -423,7 +442,11 @@ const App = () => (
           <ScrollToTop />
           <GlobalAIChat />
           <AnimatePresence mode="wait">
-            {isCoatingKingsDomain() ? <CoatingKingsRoutes /> : <GCNRoutes />}
+            {isCoatingKingsDomain()
+              ? <CoatingKingsRoutes />
+              : isStoreDomain()
+                ? <StoreRoutes />
+                : <GCNRoutes />}
           </AnimatePresence>
         </BrowserRouter>
       </TooltipProvider>
