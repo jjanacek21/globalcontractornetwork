@@ -81,7 +81,7 @@ function EquipmentStoreInner() {
       name: "Spray Rigs & Parts",
       itemListElement: products.slice(0, 20).map((p) => ({
         "@type": "Offer",
-        itemOffered: { "@type": "Product", name: p.name, sku: p.sku ?? undefined },
+        itemOffered: { "@type": "Product", name: p.name },
         price: (p.price_cents / 100).toFixed(2),
         priceCurrency: "USD",
         availability: p.type === "part" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
