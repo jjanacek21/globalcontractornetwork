@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
 import { EquipmentCartProvider, useEquipmentCart } from "@/hooks/useEquipmentCart";
 import { ProductCard, EquipmentProduct } from "@/components/equipment/ProductCard";
@@ -9,6 +10,7 @@ import { FinancingModal } from "@/components/equipment/FinancingModal";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
 import { StoreAuthBar } from "@/components/equipment/StoreAuthBar";
+import { getStoreCanonicalUrl } from "@/lib/utils";
 import "@/styles/equipment.css";
 
 const TICKER = [
