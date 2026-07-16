@@ -172,7 +172,21 @@ export default function EquipmentAdmin() {
             <h1 className="eq-heading text-4xl">Store Admin</h1>
             <p className="eq-mono text-xs eq-text-2 uppercase mt-1">The GCN Store · Full control</p>
           </div>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to={isStoreDomain() ? "/" : "/equipment"}>
+                <Store className="h-4 w-4 mr-2" /> Store Home
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/member/dashboard">
+                <Home className="h-4 w-4 mr-2" /> Main Dashboard
+              </Link>
+            </Button>
+          </div>
         </div>
+
+
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
