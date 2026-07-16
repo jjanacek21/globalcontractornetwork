@@ -14,7 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Package, FolderTree, ShoppingBag, DollarSign, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, FolderTree, ShoppingBag, DollarSign, TrendingUp, Home, Store } from "lucide-react";
+import { Link } from "react-router-dom";
+import { isStoreDomain } from "@/lib/utils";
 import { MediaUploader, GalleryUploader, resolveMediaUrl } from "@/components/equipment/admin/MediaUploader";
 import "@/styles/equipment.css";
 
