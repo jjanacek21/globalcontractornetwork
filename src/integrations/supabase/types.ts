@@ -3595,6 +3595,8 @@ export type Database = {
           deposit_due_cents: number
           email: string
           id: string
+          is_member_order: boolean
+          member_discount_cents: number
           name: string
           notes: string | null
           order_no: string
@@ -3614,6 +3616,8 @@ export type Database = {
           deposit_due_cents: number
           email: string
           id?: string
+          is_member_order?: boolean
+          member_discount_cents?: number
           name: string
           notes?: string | null
           order_no?: string
@@ -3633,6 +3637,8 @@ export type Database = {
           deposit_due_cents?: number
           email?: string
           id?: string
+          is_member_order?: boolean
+          member_discount_cents?: number
           name?: string
           notes?: string | null
           order_no?: string
