@@ -19,6 +19,14 @@ const FAQS = [
     a: "You get a written sales order with your build spec, serial numbers, and ship window before we start. Miss the window by 15+ business days and you get a full refund, no argument.",
   },
   {
+    q: "What is the 30-day money-back guarantee?",
+    a: "You have 30 days from delivery. If build quality or the published specs don't hold up — or the machine doesn't perform against its Graco/Titan counterpart as described — email Admin@gcn.support with your order number for a full refund. We arrange return freight, and there's no restocking fee.",
+  },
+  {
+    q: "How do I get member pricing?",
+    a: "Global Contractor Network members get 15% off everything in the store. Join the network, or open the store from your contractor dashboard while signed in and the discount applies automatically at checkout.",
+  },
+  {
     q: "Do you ship nationwide?",
     a: "LTL liftgate to all 48 states. Freight is quoted by ZIP at order confirmation.",
   },
