@@ -5,7 +5,7 @@ import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { CheckoutDialog } from "./CheckoutDialog";
 
 export function CartDrawer() {
-  const { items, isOpen, close, setQty, remove, subtotalCents, dueTodayCents, balanceCents, btoSubtotalCents } = useEquipmentCart();
+  const { items, isOpen, close, setQty, remove, subtotalCents, listSubtotalCents, memberDiscountCents, isMember, dueTodayCents, balanceCents, btoSubtotalCents } = useEquipmentCart();
   const [payMode, setPayMode] = useState<PayMode>("deposit");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
