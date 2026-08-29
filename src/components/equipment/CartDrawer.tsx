@@ -165,8 +165,12 @@ export function CartDrawer() {
             >
               Checkout
             </button>
+            <p className="eq-mono text-[0.65rem] eq-text-2 text-center uppercase">
+              30-day money-back guarantee
+            </p>
           </footer>
         )}
+
       </aside>
 
       <CheckoutDialog
