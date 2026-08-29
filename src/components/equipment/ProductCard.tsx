@@ -2,6 +2,8 @@ import { fmtUSD, monthlyPayment } from "@/lib/equipment/finance";
 import { useEquipmentCart } from "@/hooks/useEquipmentCart";
 import { toast } from "sonner";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
+import { useMemberPricing } from "@/hooks/useMemberPricing";
+
 
 export interface EquipmentProduct {
   id: string;
