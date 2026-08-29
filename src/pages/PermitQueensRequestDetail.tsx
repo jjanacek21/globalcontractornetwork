@@ -18,6 +18,7 @@ import { usePermitRequest, PermitDocument } from '@/hooks/usePermitRequest';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatScopeOfWork } from '@/lib/scopeFormatter';
+import { analyzePermitPacket, type PacketAnalysis } from '@/lib/permitRequirements';
 import {
   SidebarProvider,
   Sidebar,
@@ -72,6 +73,7 @@ function PermitQueensRequestDetailInner() {
   const [missingDocuments, setMissingDocuments] = useState<MissingDocument[]>([]);
   const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [packetAnalysis, setPacketAnalysis] = useState<PacketAnalysis | null>(null);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
   
   // Packet state
@@ -187,34 +189,27 @@ function PermitQueensRequestDetailInner() {
     
     setAnalyzingGaps(true);
     try {
-      const { data, error } = await supabase.functions.invoke('permit-gap-detector-ai', {
-        body: {
-          permitRequest: {
-            permit_type: permit.permit_type,
-            jurisdiction_county: permit.jurisdiction_county,
-            scope_description: permit.scope_description,
-            valuation: permit.valuation,
-            property_address: permit.property_address,
-            owner_name: permit.owner_name,
-          },
-          uploadedDocuments: documents.map(d => ({
-            type: d.document_type,
-            name: d.file_name,
-          })),
-          jurisdictionRules: [],
-        },
-      });
-
-      if (error) throw error;
-      if (data) {
-        setMissingFields(data.missingFields || []);
-        setMissingDocuments(data.missingDocuments || []);
-        setComplianceIssues(data.complianceIssues || []);
-        setCompletionPercentage(data.completionPercentage || 50);
-      }
+      /* The checklist comes from the building department's own published list,
+         not from a model, so this is a read and a count rather than a guess.
+         That makes it cheap enough to run in the browser. */
+      const analysis = await analyzePermitPacket(permit.id);
+      setPacketAnalysis(analysis);
+      setMissingFields(analysis.missingFields);
+      setMissingDocuments(
+        analysis.actionsForUser.map((a) => ({
+          docType: a.docType,
+          reason: a.instruction,
+          priority: 'high' as const,
+        })),
+      );
+      /* Nothing here is a compliance opinion — the department either asks for a
+         document or it does not — so this list stays empty on purpose. */
+      setComplianceIssues([]);
+      setCompletionPercentage(analysis.completionPercentage);
     } catch (error) {
       console.error('Gap analysis error:', error);
-      setCompletionPercentage(permit.completion_percentage || 50);
+      toast.error('Could not read the requirement list for this jurisdiction');
+      setCompletionPercentage(permit.completion_percentage || 0);
     } finally {
       setAnalyzingGaps(false);
     }
@@ -620,7 +615,37 @@ function PermitQueensRequestDetailInner() {
                 onFieldClick={() => setQuestionnaireOpen(true)}
                 className="shadow-none border-0 p-0"
               />
-              
+
+              {/* What we take care of, so they stop chasing it. */}
+              {packetAnalysis && packetAnalysis.autoHandled.length > 0 && (
+                <div className="mt-4 rounded-lg border bg-muted/40 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    We handle these
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {packetAnalysis.autoHandled.map((a) => (
+                      <li key={a.docType} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" />
+                        <span>
+                          {a.name}
+                          <span className="block text-xs text-muted-foreground">
+                            {a.how === 'generated' ? 'Generated from this job' : 'Sourced from the product approval library'}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {packetAnalysis && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {packetAnalysis.requirementSource === 'jurisdiction'
+                    ? `Checklist published by ${packetAnalysis.jurisdiction}.`
+                    : 'No published checklist for this jurisdiction yet — using the Florida baseline.'}
+                </p>
+              )}
+
               {/* AI Questionnaire Button */}
               {missingFields.length > 0 && (
                 <Button 
