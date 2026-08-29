@@ -124,12 +124,25 @@ export function CartDrawer() {
             <div className="eq-panel p-4 space-y-2 eq-mono text-sm">
               <div className="flex justify-between">
                 <span className="eq-text-2 uppercase text-xs">Subtotal</span>
-                <span>{fmtUSD(subtotalCents)}</span>
+                <span>{fmtUSD(listSubtotalCents)}</span>
               </div>
+              {isMember && memberDiscountCents > 0 && (
+                <div className="flex justify-between text-primary">
+                  <span className="uppercase text-xs">Member discount −15%</span>
+                  <span>−{fmtUSD(memberDiscountCents)}</span>
+                </div>
+              )}
+              {isMember && (
+                <div className="flex justify-between">
+                  <span className="eq-text-2 uppercase text-xs">Member total</span>
+                  <span>{fmtUSD(subtotalCents)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="eq-text-2 uppercase text-xs">Freight</span>
                 <span className="text-xs eq-text-2">Quoted by ZIP at confirmation</span>
               </div>
+
               <div className="border-t eq-hairline my-2" />
               <div className="flex justify-between">
                 <span className="eq-heading text-sm">Due today</span>
