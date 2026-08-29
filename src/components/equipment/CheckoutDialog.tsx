@@ -90,7 +90,8 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
           order_id: order.id,
           product_id: it.id,
           qty: it.qty,
-  unit_price_cents: isMember
+          unit_price_cents: isMember
+
             ? Math.round(it.unit_price_cents * 0.85)
             : it.unit_price_cents,
         }))
