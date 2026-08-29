@@ -23,7 +23,7 @@ interface Props {
 }
 
 export function CheckoutDialog({ open, onClose, payMode }: Props) {
-  const { items, subtotalCents, dueTodayCents, balanceCents, clear } = useEquipmentCart();
+  const { items, subtotalCents, memberDiscountCents, isMember, dueTodayCents, balanceCents, clear } = useEquipmentCart();
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ orderNo: string; due: number } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,6 +75,8 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
           pay_mode: payMode,
           payment_method: parsed.data.payment_method,
           subtotal_cents: subtotalCents,
+          is_member_order: isMember,
+          member_discount_cents: memberDiscountCents,
           deposit_due_cents: due,
           balance_cents: balance,
         })
@@ -88,7 +90,9 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
           order_id: order.id,
           product_id: it.id,
           qty: it.qty,
-          unit_price_cents: it.unit_price_cents,
+  unit_price_cents: isMember
+            ? Math.round(it.unit_price_cents * 0.85)
+            : it.unit_price_cents,
         }))
       );
       if (itemsErr) throw itemsErr;
@@ -147,7 +151,9 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
             </div>
             <div className="eq-panel p-4 text-sm eq-text-2 leading-relaxed">
               A written sales order with build spec, serials, and ship window follows within 24 hours.
-              Payment and freight quote instructions will be emailed shortly.
+              Payment and freight quote instructions will be emailed shortly. Covered by our 30-day
+              money-back guarantee: if quality or specs don't match what we published or the Graco/Titan
+              counterpart, return it for a full refund.
             </div>
             <button className="eq-btn eq-btn-primary w-full" onClick={onClose}>Done</button>
           </div>
@@ -176,6 +182,12 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
               </select>
             </div>
 
+            {isMember && memberDiscountCents > 0 && (
+              <div className="eq-panel p-3 flex justify-between eq-mono text-sm text-primary">
+                <span className="uppercase text-xs">Member discount −15%</span>
+                <span className="font-bold">−{fmtUSD(memberDiscountCents)}</span>
+              </div>
+            )}
             <div className="eq-panel p-3 flex justify-between eq-mono text-sm">
               <span className="eq-text-2 uppercase text-xs">Due today</span>
               <span className="font-bold eq-orange">{fmtUSD(dueTodayCents(payMode))}</span>
@@ -184,6 +196,9 @@ export function CheckoutDialog({ open, onClose, payMode }: Props) {
             <button type="submit" className="eq-btn eq-btn-primary w-full" disabled={submitting}>
               {submitting ? "Submitting…" : "Place Order"}
             </button>
+            <p className="eq-mono text-[0.65rem] text-primary text-center uppercase">
+              30-day money-back guarantee — full refund if quality or specs don't match
+            </p>
             <p className="eq-mono text-[0.65rem] eq-text-2 text-center uppercase">
               Written sales order with build spec, serials & ship window follows within 24 hrs.
             </p>
