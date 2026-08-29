@@ -18,6 +18,8 @@ interface CartCtx {
   setQty: (id: string, qty: number) => void;
   clear: () => void;
   itemCount: number;
+  listSubtotalCents: number;
+  memberDiscountCents: number;
   subtotalCents: number;
   btoSubtotalCents: number;
   partsSubtotalCents: number;
@@ -25,10 +27,14 @@ interface CartCtx {
   fullDueCents: number;
   balanceCents: (mode: PayMode) => number;
   dueTodayCents: (mode: PayMode) => number;
+  isMember: boolean;
+  memberDiscountPct: number;
+  setMemberDiscountPct: (pct: number) => void;
   isOpen: boolean;
   open: () => void;
   close: () => void;
 }
+
 
 const Ctx = createContext<CartCtx | null>(null);
 const STORAGE_KEY = "gcn-equipment-cart-v1";
