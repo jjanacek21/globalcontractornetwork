@@ -20,6 +20,9 @@ export interface EquipmentProduct {
 export function ProductCard({ product }: { product: EquipmentProduct }) {
   const { add, open } = useEquipmentCart();
   const { isAdmin } = useIsEquipmentAdmin();
+  const { isMember, memberPriceCents } = useMemberPricing();
+  const memberPrice = Math.round(product.price_cents * 0.85);
+
 
   const isRig = product.type === "rig";
   const savings =
