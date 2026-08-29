@@ -33,6 +33,14 @@ export function getStoreCanonicalUrl(): string {
   return "https://globalcontractor.store/";
 }
 
+/** Link to the network join flow — absolute when browsing from the store host. */
+export function getJoinNetworkUrl(): string {
+  return isStoreDomain()
+    ? "https://globalcontractor.network/join-network"
+    : "/join-network";
+}
+
+
 export function getMainSiteUrl(): string {
   return isCoatingKingsDomain() ? 'https://gcn.lovable.app' : '/';
 }
