@@ -24,16 +24,23 @@ export const ProtectedRoute = ({
       setUser(session?.user ?? null);
 
       if (session?.user && requireRole) {
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-        
-        setHasRole(data?.role === requireRole);
+        const [{ data: roles }, { data: superAdmin }] = await Promise.all([
+          supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id),
+          supabase
+            .from('super_admins')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle(),
+        ]);
+
+        setHasRole(!!superAdmin || (roles ?? []).some(r => r.role === requireRole));
       } else {
         setHasRole(true);
       }
+
       
       setLoading(false);
     };

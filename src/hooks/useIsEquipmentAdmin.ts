@@ -13,16 +13,23 @@ export function useIsEquipmentAdmin() {
         if (mounted) { setIsAdmin(false); setLoading(false); }
         return;
       }
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      const [{ data: roles }, { data: superAdmin }] = await Promise.all([
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin"),
+        supabase
+          .from("super_admins")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle(),
+      ]);
       if (mounted) {
-        setIsAdmin(!!data);
+        setIsAdmin(!!superAdmin || (roles ?? []).length > 0);
         setLoading(false);
       }
+
     })();
     return () => { mounted = false; };
   }, []);
