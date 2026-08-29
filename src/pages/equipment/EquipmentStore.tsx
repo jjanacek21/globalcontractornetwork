@@ -10,7 +10,9 @@ import { FinancingModal } from "@/components/equipment/FinancingModal";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
 import { StoreAuthBar } from "@/components/equipment/StoreAuthBar";
-import { getStoreCanonicalUrl } from "@/lib/utils";
+import { getStoreCanonicalUrl, getJoinNetworkUrl } from "@/lib/utils";
+import { useMemberPricing } from "@/hooks/useMemberPricing";
+import { ShieldCheck } from "lucide-react";
 import "@/styles/equipment.css";
 
 const TICKER = [
@@ -46,6 +48,12 @@ function EquipmentStoreInner() {
   const [loading, setLoading] = useState(true);
   const [financingOpen, setFinancingOpen] = useState(false);
   const { isAdmin } = useIsEquipmentAdmin();
+  const { isMember, discountPct } = useMemberPricing();
+  const { setMemberDiscountPct } = useEquipmentCart();
+
+  useEffect(() => {
+    setMemberDiscountPct(discountPct);
+  }, [discountPct, setMemberDiscountPct]);
 
   useEffect(() => {
     (async () => {
@@ -130,6 +138,13 @@ function EquipmentStoreInner() {
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
+            {isMember ? (
+              <span className="eq-badge eq-badge-green hidden sm:inline-flex">Member pricing active · 15% off</span>
+            ) : (
+              <a href={getJoinNetworkUrl()} className="eq-btn eq-btn-ghost !py-2 !px-3 hidden sm:inline-flex">
+                Join for 15% off
+              </a>
+            )}
             <StoreAuthBar />
             <CartButton />
           </div>
@@ -159,6 +174,18 @@ function EquipmentStoreInner() {
               Get Monthly Pricing
             </button>
           </div>
+          {isMember ? (
+            <p className="mt-5 eq-mono text-xs text-primary uppercase tracking-wide">
+              Member pricing active — 15% off every item, applied at checkout.
+            </p>
+          ) : (
+            <p className="mt-5 eq-mono text-xs eq-text-2 uppercase tracking-wide">
+              Buy with no account needed ·{" "}
+              <a href={getJoinNetworkUrl()} className="text-primary font-semibold hover:underline">
+                Join the network for member pricing — 15% off
+              </a>
+            </p>
+          )}
         </div>
 
         {/* Ticker */}
@@ -285,6 +312,30 @@ function EquipmentStoreInner() {
         </div>
       </section>
 
+      {/* Guarantee */}
+      <section id="guarantee" className="border-t eq-hairline">
+        <div className="max-w-7xl mx-auto px-4 py-16 grid gap-8 lg:grid-cols-[auto,1fr] items-start">
+          <ShieldCheck className="h-14 w-14 text-primary" aria-hidden="true" />
+          <div>
+            <span className="eq-badge eq-badge-green">30-Day Money-Back Guarantee</span>
+            <h2 className="eq-heading text-4xl md:text-5xl mt-3">
+              If it doesn't perform, send it back.
+            </h2>
+            <p className="mt-5 max-w-3xl eq-text-2 leading-relaxed">
+              You have 30 days from delivery. If the build quality or the published specs don't hold up —
+              or the machine doesn't perform against its Graco or Titan counterpart the way we said it
+              would — we refund you in full. Contact Admin@gcn.support with your order number and we'll
+              arrange return freight.
+            </p>
+            <ul className="mt-6 grid gap-3 sm:grid-cols-3 eq-mono text-xs eq-text-2 uppercase">
+              <li className="eq-plate p-4">30 days from delivery</li>
+              <li className="eq-plate p-4">Full refund — no restocking fee</li>
+              <li className="eq-plate p-4">Return freight arranged by us</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className="border-t eq-hairline bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 py-16">
@@ -292,6 +343,25 @@ function EquipmentStoreInner() {
           <FAQ />
         </div>
       </section>
+
+      {/* Join band */}
+      {!isMember && (
+        <section className="border-t eq-hairline bg-muted/40">
+          <div className="max-w-7xl mx-auto px-4 py-14 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h2 className="eq-heading text-3xl md:text-4xl">Contractors save 15%</h2>
+              <p className="eq-text-2 text-sm mt-2 max-w-xl">
+                Join the Global Contractor Network for member pricing on every rig and part. Already a
+                member? Sign in — or open the store from your dashboard and the discount applies
+                automatically.
+              </p>
+            </div>
+            <a href={getJoinNetworkUrl()} className="eq-btn eq-btn-primary whitespace-nowrap">
+              Join Network — 15% Off <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="border-t eq-hairline">

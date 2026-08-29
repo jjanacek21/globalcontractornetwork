@@ -2,6 +2,8 @@ import { fmtUSD, monthlyPayment } from "@/lib/equipment/finance";
 import { useEquipmentCart } from "@/hooks/useEquipmentCart";
 import { toast } from "sonner";
 import { useIsEquipmentAdmin } from "@/hooks/useIsEquipmentAdmin";
+import { useMemberPricing } from "@/hooks/useMemberPricing";
+
 
 export interface EquipmentProduct {
   id: string;
@@ -20,6 +22,9 @@ export interface EquipmentProduct {
 export function ProductCard({ product }: { product: EquipmentProduct }) {
   const { add, open } = useEquipmentCart();
   const { isAdmin } = useIsEquipmentAdmin();
+  const { isMember, memberPriceCents } = useMemberPricing();
+  const memberPrice = Math.round(product.price_cents * 0.85);
+
 
   const isRig = product.type === "rig";
   const savings =
@@ -78,21 +83,39 @@ export function ProductCard({ product }: { product: EquipmentProduct }) {
       {/* Price plate */}
       <div className="mt-auto px-5 pt-3 pb-5 border-t eq-hairline bg-muted/40">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="eq-mono text-3xl font-bold eq-text">{fmtUSD(product.price_cents)}</span>
-          {product.compare_cents && product.compare_cents > product.price_cents && (
+          <span className="eq-mono text-3xl font-bold eq-text">
+            {fmtUSD(isMember ? memberPriceCents(product.price_cents) : product.price_cents)}
+          </span>
+          {isMember ? (
             <span className="eq-mono text-sm eq-text-2 line-through">
-              {fmtUSD(product.compare_cents)}
+              {fmtUSD(product.price_cents)}
             </span>
+          ) : (
+            product.compare_cents && product.compare_cents > product.price_cents && (
+              <span className="eq-mono text-sm eq-text-2 line-through">
+                {fmtUSD(product.compare_cents)}
+              </span>
+            )
           )}
         </div>
+        {isMember ? (
+          <p className="eq-mono text-xs mt-1 text-primary font-semibold">
+            Member price — 15% off applied
+          </p>
+        ) : (
+          <p className="eq-mono text-xs mt-1 eq-text-2">
+            Members pay {fmtUSD(memberPrice)} — 15% off
+          </p>
+        )}
         {isLaunchSale && (
           <div className="mt-2">
             <span className="eq-badge eq-badge-orange">Launch sale — $3,000 off</span>
           </div>
         )}
-        {savings > 0 && !isLaunchSale && (
+        {savings > 0 && !isLaunchSale && !isMember && (
           <p className="eq-mono text-xs eq-orange mt-1">You save {fmtUSD(savings)}</p>
         )}
+
         {monthly60 != null && (
           <p className="eq-mono text-xs eq-text-2 mt-2">
             or <span className="eq-orange font-semibold">${monthly60.toLocaleString("en-US")}/mo</span> financed<span className="align-super">*</span>

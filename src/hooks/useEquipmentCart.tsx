@@ -18,6 +18,8 @@ interface CartCtx {
   setQty: (id: string, qty: number) => void;
   clear: () => void;
   itemCount: number;
+  listSubtotalCents: number;
+  memberDiscountCents: number;
   subtotalCents: number;
   btoSubtotalCents: number;
   partsSubtotalCents: number;
@@ -25,10 +27,14 @@ interface CartCtx {
   fullDueCents: number;
   balanceCents: (mode: PayMode) => number;
   dueTodayCents: (mode: PayMode) => number;
+  isMember: boolean;
+  memberDiscountPct: number;
+  setMemberDiscountPct: (pct: number) => void;
   isOpen: boolean;
   open: () => void;
   close: () => void;
 }
+
 
 const Ctx = createContext<CartCtx | null>(null);
 const STORAGE_KEY = "gcn-equipment-cart-v1";
@@ -36,6 +42,8 @@ const STORAGE_KEY = "gcn-equipment-cart-v1";
 export const EquipmentCartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [memberDiscountPct, setMemberDiscountPct] = useState(0);
+
 
   useEffect(() => {
     try {
@@ -73,11 +81,18 @@ export const EquipmentCartProvider = ({ children }: { children: ReactNode }) => 
   const clear = useCallback(() => setItems([]), []);
 
   const value = useMemo<CartCtx>(() => {
-    const subtotalCents = items.reduce((s, i) => s + i.unit_price_cents * i.qty, 0);
-    const btoSubtotalCents = items
+    const pct = Math.min(Math.max(memberDiscountPct, 0), 0.5);
+    const disc = (cents: number) => Math.round(cents * (1 - pct));
+
+    const listSubtotalCents = items.reduce((s, i) => s + i.unit_price_cents * i.qty, 0);
+    const listBtoCents = items
       .filter((i) => i.bto)
       .reduce((s, i) => s + i.unit_price_cents * i.qty, 0);
+
+    const subtotalCents = disc(listSubtotalCents);
+    const btoSubtotalCents = disc(listBtoCents);
     const partsSubtotalCents = subtotalCents - btoSubtotalCents;
+    const memberDiscountCents = listSubtotalCents - subtotalCents;
     const depositDueCents = Math.round(btoSubtotalCents * 0.5) + partsSubtotalCents;
     const fullDueCents = Math.round(subtotalCents * 0.97);
 
@@ -88,6 +103,8 @@ export const EquipmentCartProvider = ({ children }: { children: ReactNode }) => 
       setQty,
       clear,
       itemCount: items.reduce((s, i) => s + i.qty, 0),
+      listSubtotalCents,
+      memberDiscountCents,
       subtotalCents,
       btoSubtotalCents,
       partsSubtotalCents,
@@ -95,11 +112,15 @@ export const EquipmentCartProvider = ({ children }: { children: ReactNode }) => 
       fullDueCents,
       balanceCents: (mode) => (mode === "deposit" ? subtotalCents - depositDueCents : 0),
       dueTodayCents: (mode) => (mode === "deposit" ? depositDueCents : fullDueCents),
+      isMember: pct > 0,
+      memberDiscountPct: pct,
+      setMemberDiscountPct,
       isOpen,
       open: () => setIsOpen(true),
       close: () => setIsOpen(false),
     };
-  }, [items, add, remove, setQty, clear, isOpen]);
+  }, [items, add, remove, setQty, clear, isOpen, memberDiscountPct]);
+
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
