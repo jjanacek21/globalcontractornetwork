@@ -42,6 +42,8 @@ const STORAGE_KEY = "gcn-equipment-cart-v1";
 export const EquipmentCartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [memberDiscountPct, setMemberDiscountPct] = useState(0);
+
 
   useEffect(() => {
     try {
