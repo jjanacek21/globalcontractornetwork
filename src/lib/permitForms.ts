@@ -65,6 +65,12 @@ interface FieldMapping {
   version?: number;
   text?: Record<string, SourceKey>;
   checks?: Record<string, FlagKey>;
+  /**
+   * Forms that print a long answer across two ruled lines. Maps the first field
+   * to the second; anything past what the first line holds continues there
+   * instead of running off the edge of the printed page.
+   */
+  overflow?: Record<string, { into: string; chars: number }>;
 }
 
 export interface FormTemplate {
@@ -286,7 +292,20 @@ export async function fillPermitApplication(projectId: string): Promise<FilledFo
       continue;
     }
     try {
-      form.getTextField(pdfField).setText(value);
+      const spill = template.field_mapping.overflow?.[pdfField];
+      if (spill && value.length > spill.chars) {
+        /* Break on a space so a word is not cut in half on the printed form. */
+        let cut = value.lastIndexOf(" ", spill.chars);
+        if (cut < spill.chars * 0.6) cut = spill.chars;
+        form.getTextField(pdfField).setText(value.slice(0, cut).trim());
+        try {
+          form.getTextField(spill.into).setText(value.slice(cut).trim());
+        } catch {
+          console.warn(`permit form: no overflow field "${spill.into}"`);
+        }
+      } else {
+        form.getTextField(pdfField).setText(value);
+      }
     } catch {
       /* A field named in the map is not in this build of the PDF. The county
          reissues these forms, so skip it rather than failing the whole packet. */
