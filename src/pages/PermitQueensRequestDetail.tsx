@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatScopeOfWork } from '@/lib/scopeFormatter';
 import { analyzePermitPacket, type PacketAnalysis } from '@/lib/permitRequirements';
+import { fillPermitApplication, downloadFilledForm, saveFilledForm } from '@/lib/permitForms';
 import {
   SidebarProvider,
   Sidebar,
@@ -74,6 +75,7 @@ function PermitQueensRequestDetailInner() {
   const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [packetAnalysis, setPacketAnalysis] = useState<PacketAnalysis | null>(null);
+  const [fillingForm, setFillingForm] = useState(false);
   const [analyzingGaps, setAnalyzingGaps] = useState(false);
   
   // Packet state
@@ -212,6 +214,33 @@ function PermitQueensRequestDetailInner() {
       setCompletionPercentage(permit.completion_percentage || 0);
     } finally {
       setAnalyzingGaps(false);
+    }
+  };
+
+  /* Fill the jurisdiction's own application PDF from the project, keep a copy on
+     the packet, and hand it to the contractor to print and sign. */
+  const handleFillApplication = async () => {
+    if (!permit?.id) return;
+    setFillingForm(true);
+    try {
+      const filled = await fillPermitApplication(permit.id);
+      downloadFilledForm(filled);
+      await saveFilledForm(permit.id, filled);
+      await refetchDocuments();
+      if (filled.blanks.length) {
+        toast.warning(
+          `Filled ${filled.template.form_name}. Still blank: ${filled.blanks
+            .map((b) => b.needs)
+            .join(', ')}`,
+        );
+      } else {
+        toast.success(`${filled.template.form_name} filled — print, sign, and upload it.`);
+      }
+    } catch (error) {
+      console.error('Form fill error:', error);
+      toast.error(error instanceof Error ? error.message : 'Could not fill the permit application');
+    } finally {
+      setFillingForm(false);
     }
   };
 
@@ -615,6 +644,30 @@ function PermitQueensRequestDetailInner() {
                 onFieldClick={() => setQuestionnaireOpen(true)}
                 className="shadow-none border-0 p-0"
               />
+
+              {/* The application is the one document we can hand back ready to sign. */}
+              <Button
+                onClick={handleFillApplication}
+                disabled={fillingForm}
+                variant="default"
+                className="mt-4 w-full"
+              >
+                {fillingForm ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Filling application…
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Fill permit application
+                  </>
+                )}
+              </Button>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Downloads the jurisdiction's own form filled from this job. Print it, get the
+                signatures, then upload the executed copy.
+              </p>
 
               {/* What we take care of, so they stop chasing it. */}
               {packetAnalysis && packetAnalysis.autoHandled.length > 0 && (
