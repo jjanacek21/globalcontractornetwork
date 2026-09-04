@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ["class"],
+  darkMode: ["class", '[data-theme="dark"]'],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -57,17 +57,7 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // GCN Premium Marketing Colors
-        gcn: {
-          black: "hsl(var(--gcn-black))",
-          charcoal: "hsl(var(--gcn-charcoal))",
-          "charcoal-light": "hsl(var(--gcn-charcoal-light))",
-          gold: "hsl(var(--gcn-gold))",
-          "gold-dark": "hsl(var(--gcn-gold-dark))",
-          "gold-light": "hsl(var(--gcn-gold-light))",
-          white: "hsl(var(--gcn-white))",
-          "white-muted": "hsl(var(--gcn-white-muted))",
-        },
+      },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -246,8 +236,8 @@ export default {
         "pop-in": "pop-in 0.3s ease-out forwards",
       },
       fontFamily: {
-        display: ["Inter", "system-ui", "sans-serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
+        display: ["var(--gcn-display)"],
+        body: ["var(--gcn-body)"],
       },
     },
   },
