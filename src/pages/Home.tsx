@@ -26,7 +26,7 @@ const SCOPED_CSS = `
 .gcn-home header.site{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--gcn-ground-2) 82%,transparent);backdrop-filter:saturate(150%) blur(16px);border-bottom:1px solid var(--gcn-line-soft);box-shadow:0 8px 30px -26px rgba(15,27,56,.45)}
 .gcn-home .nav{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:76px}.gcn-home .brand{display:flex;align-items:center}.gcn-home .logo-img{height:72px;width:auto;max-width:300px;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(15,27,56,.18));transition:transform .3s ease}.gcn-home .brand:hover .logo-img{transform:scale(1.025)}
 .gcn-home .navlinks{display:flex;gap:22px;align-items:center}.gcn-home .navlinks a{font-weight:650;color:var(--gcn-ink-2);font-size:.91rem}.gcn-home .navlinks a:hover{color:var(--gcn-ink-teal)}.gcn-home .nav-cta{display:flex;gap:9px;align-items:center}.gcn-home .theme-toggle,.gcn-home .mobile-trigger{width:42px;height:42px;display:inline-grid;place-items:center;border:1px solid var(--gcn-line);border-radius:12px;color:var(--gcn-ink);background:var(--gcn-panel-2);cursor:pointer;transition:background .18s ease,transform .18s ease}.gcn-home .theme-toggle:hover,.gcn-home .mobile-trigger:hover{background:var(--gcn-panel-3);transform:translateY(-1px)}.gcn-home .theme-toggle svg,.gcn-home .mobile-trigger svg{width:19px;height:19px}.gcn-home .mobile-trigger{display:none}
-.gcn-home .hero{position:relative;overflow:hidden;padding:94px 0 104px;background-color:var(--gcn-ground);border-top:0}.gcn-home .hero::before{content:"";position:absolute;inset:-20%;pointer-events:none;background:radial-gradient(circle at 22% 38%,rgba(60,224,138,.14),transparent 30%),radial-gradient(circle at 82% 30%,rgba(35,216,200,.14),transparent 32%);filter:blur(46px)}.gcn-home .hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,var(--gcn-grid) 1px,transparent 1px),linear-gradient(to bottom,var(--gcn-grid) 1px,transparent 1px);background-size:44px 44px;animation:gcn-gridmove 9s linear infinite;mask-image:linear-gradient(to bottom,black 20%,transparent 96%)}
+.gcn-home .hero{position:relative;overflow:hidden;padding:94px 0 104px;background-color:var(--gcn-ground);border-top:0}.gcn-home .hero::before{content:"";position:absolute;inset:-20%;pointer-events:none;background:radial-gradient(circle at 22% 38%,rgba(60,224,138,.14),transparent 30%),radial-gradient(circle at 82% 30%,rgba(35,216,200,.14),transparent 32%);filter:blur(46px)}
 .gcn-home .hero .container{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}.gcn-home .rating-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:var(--gcn-panel-2);border:1px solid var(--gcn-line);box-shadow:var(--gcn-shadow);font-size:.84rem;font-weight:650;color:var(--gcn-ink-2)}.gcn-home .rating-pill .stars,.gcn-home .stars{color:var(--gcn-ink-amber);letter-spacing:1px}.gcn-home .hero h1{margin-top:20px}.gcn-home .quoteline{color:var(--gcn-ink-teal);border-left:3px solid var(--gcn-teal);padding:7px 0 7px 14px;margin:12px 0 16px;font-size:1.02rem}.gcn-home .actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap;align-items:center}.gcn-home .actions .btn-lg{padding:17px 29px;font-size:1.02rem}.gcn-home .actions-meta{margin-top:13px;font-size:.85rem;color:var(--gcn-ink-3);display:flex;gap:8px;flex-wrap:wrap}.gcn-home .actions-meta .dot{width:4px;height:4px;border-radius:50%;background:var(--gcn-ink-4);align-self:center}.gcn-home .badge-strip{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:10px 15px;border-radius:12px;background:var(--gcn-fill-grass);border:1px solid var(--gcn-line);box-shadow:var(--gcn-shadow)}.gcn-home .badge-strip svg{width:18px;color:var(--gcn-ink-grass)}.gcn-home .badge-strip strong{color:var(--gcn-ink-grass);font-size:.9rem}.gcn-home .hero-stats{display:flex;gap:30px;margin-top:29px;flex-wrap:wrap}.gcn-home .hstat .num{font:800 1.65rem var(--gcn-display);color:var(--gcn-ink)}.gcn-home .hstat .lbl{color:var(--gcn-ink-3);font-size:.76rem;text-transform:uppercase;letter-spacing:.08em}
 .gcn-home .hero-card-wrap{perspective:1100px}.gcn-home .hero-card{padding:26px;transform-style:preserve-3d;will-change:transform;transition:transform .38s cubic-bezier(.2,.7,.2,1),box-shadow .22s cubic-bezier(.2,.7,.2,1);border-radius:var(--gcn-r-lg);border:1px solid var(--gcn-line);background:linear-gradient(180deg,var(--gcn-panel-2),var(--gcn-panel));box-shadow:var(--gcn-shadow),0 30px 80px -50px rgba(23,194,122,.75);position:relative}.gcn-home .hero-card::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(60,224,138,.09),transparent 38%,rgba(35,216,200,.08));pointer-events:none}.gcn-home .hero-card .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.gcn-home .hero-card .head .pulse{width:9px;height:9px;border-radius:50%;background:var(--gcn-grass-2);box-shadow:0 0 0 6px var(--gcn-fill-grass)}.gcn-home .hero-card h3{margin:0;color:var(--gcn-ink)}.gcn-home .hero-card .perk{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--gcn-line-soft)}.gcn-home .hero-card .perk:last-child{border-bottom:0}.gcn-home .perk .pico,.gcn-home .tile-ico,.gcn-home .ctile-ico,.gcn-home .why-card .ico{width:42px;height:42px;border-radius:11px;flex:none;display:grid;place-items:center;background:var(--gcn-fill-grass);color:var(--gcn-ink-grass);border:1px solid color-mix(in srgb,var(--gcn-grass-2) 20%,transparent)}.gcn-home .perk .pico svg{width:18px;height:18px}.gcn-home .perk .txt strong{display:block;color:var(--gcn-ink);font-size:.94rem}.gcn-home .perk .txt span{display:block;font-size:.83rem;color:var(--gcn-ink-3)}.gcn-home .hero-card .cta-block{margin-top:16px;display:grid;gap:8px}.gcn-home .hero-card .free-line{font-size:.77rem;color:var(--gcn-ink-grass);font-weight:750;text-align:center;text-transform:uppercase;letter-spacing:.05em}
 .gcn-home section{padding:88px 0;border-top:1px solid var(--gcn-line-soft);background:var(--gcn-ground)}.gcn-home section:nth-of-type(even){background:var(--gcn-ground-2)}.gcn-home .section-head{max-width:780px;margin:0 auto 48px;text-align:center}.gcn-home .section-head .eyebrow{margin-bottom:14px}.gcn-home .section-head p{color:var(--gcn-ink-3);font-size:1.03rem}.gcn-home .reveal{opacity:1;transform:none}.gcn-home .gcn-enter{animation-delay:var(--reveal-delay,0ms)}
@@ -197,8 +197,8 @@ export default function Home() {
               <Button type="button" variant="ghost" size="icon" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>
                 {theme === "light" ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
               </Button>
-              <Link className="btn btn-ghost" to="/login">Login</Link>
-              <Link className="btn btn-green" to="/join">Join the Network</Link>
+              <Link className="btn btn-ghost gcn-btn-ghost" to="/login">Login</Link>
+              <Link className="btn btn-green gcn-btn" to="/join">Join the Network</Link>
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
                   <button className="mobile-trigger" aria-label="Open menu">
@@ -213,8 +213,8 @@ export default function Home() {
                     <a onClick={() => setOpen(false)} href="#about">About</a>
                     <a onClick={() => setOpen(false)} href="#process">How It Works</a>
                     <a onClick={() => setOpen(false)} href="#faq">FAQ</a>
-                    <Link onClick={() => setOpen(false)} to="/login" className="btn btn-ghost mt-2">Login</Link>
-                    <Link onClick={() => setOpen(false)} to="/join" className="btn btn-green">Join the Network</Link>
+                    <Link onClick={() => setOpen(false)} to="/login" className="btn btn-ghost gcn-btn-ghost mt-2">Login</Link>
+                    <Link onClick={() => setOpen(false)} to="/join" className="btn btn-green gcn-btn">Join the Network</Link>
                   </nav>
                 </SheetContent>
               </Sheet>
@@ -224,16 +224,16 @@ export default function Home() {
 
         <main>
         {/* HERO */}
-        <section className="hero" id="top" style={{ borderTop: "none" }}>
+        <section className="hero gcn-grid-bg is-live" id="top" style={{ borderTop: "none" }}>
           <div className="container">
             <div>
               <span className="rating-pill"><span className="stars">★★★★★</span> Rated 4.9/5 by 500+ verified homeowners</span>
-              <h1>Trusted Contractors. <span className="green-text">Real</span> <span className="gold-text shimmer">Accountability.</span></h1>
+              <h1>Trusted Contractors. <span className="gcn-grad-text">Real Accountability.</span></h1>
               <div className="quoteline">A referral-based network for homeowners and contractors — never a lead-bidding marketplace.</div>
               <p className="lead">Get a free AI-powered quote in minutes, then connect with vetted, insured pros in your area. No spam calls, no bidding wars — just trusted work, backed by our network guarantee.</p>
               <div className="actions">
-                <Link to="/schedule-consultation" className="btn btn-green btn-lg">Schedule Consultation <span className="arr">→</span></Link>
-                <Link to="/join" className="btn btn-ghost">Join the Network</Link>
+                <Link to="/schedule-consultation" className="btn btn-green gcn-btn btn-lg">Schedule Consultation <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-ghost gcn-btn-ghost">Join the Network</Link>
                 <Link to="/contractors" className="btn btn-link">I'm a contractor →</Link>
               </div>
               <div className="actions-meta">
@@ -253,7 +253,7 @@ export default function Home() {
             </div>
 
             <div className="hero-card-wrap">
-            <aside className="hero-card" aria-label="What you get" onMouseMove={handleTilt} onMouseLeave={resetTilt}>
+            <aside className="hero-card gcn-panel" aria-label="What you get" onMouseMove={handleTilt} onMouseLeave={resetTilt}>
               <div className="head">
                 <span className="pulse" />
                 <h3>Free for property owners</h3>
@@ -274,7 +274,7 @@ export default function Home() {
               ))}
 
               <div className="cta-block">
-                <Link className="btn btn-green" style={{ justifyContent: "center" }} to="/join">Create Your Free Account <span className="arr">→</span></Link>
+                <Link className="btn btn-green gcn-btn" style={{ justifyContent: "center" }} to="/join">Create Your Free Account <span className="arr">→</span></Link>
                 <span className="free-line">Free • No spam • Cancel anytime</span>
               </div>
             </aside>
@@ -330,7 +330,7 @@ export default function Home() {
               <h2>Working with a <span className="gold-text">GCN Building Consultant?</span></h2>
               <p>If you're already engaged with a GCN Building Consultant directly, skip the public intake and head straight to our help desk for project updates, document uploads, scheduling, and one-on-one support.</p>
               <div className="actions" style={{ justifyContent: "center", marginTop: 24 }}>
-                <a href="https://gcn.support" target="_blank" rel="noopener noreferrer" className="btn btn-green btn-lg">
+                <a href="https://gcn.support" target="_blank" rel="noopener noreferrer" className="btn btn-green gcn-btn btn-lg">
                   GCN Support <span className="arr">→</span>
                 </a>
               </div>
@@ -358,7 +358,7 @@ export default function Home() {
                 { to: "/prep-your-property", color: "ico-teal", title: "Pre-Storm Inspections", desc: "Hurricane prep inspections, roof & exterior reports, and interior inventory for insurance records.", cta: "Get Quote", d: "M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
                 { to: "/services", color: "ico-leaf", title: "Trees & Landscaping", desc: "Professional tree removal, trimming, and landscaping services. Beautify and protect your property.", cta: "Get Quote", svg: <><path d="M12 22V12M5 19c0-7 4-12 7-12s7 5 7 12" /><path d="M5 19h14" /></> },
               ].map((t, i) => (
-                <Link key={i} to={t.to} className="tile reveal">
+                <Link key={i} to={t.to} className="tile reveal gcn-panel">
                   <div className={`tile-ico ${t.color}`}><Svg d={t.d}>{t.svg}</Svg></div>
                   <h3>{t.title}</h3>
                   <p>{t.desc}</p>
@@ -383,7 +383,7 @@ export default function Home() {
                   { color: "ico-green", title: "Job Marketplace", desc: "Post your project with a budget — vetted contractors come to you with offers. No bidding wars.", svg: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h6M7 16h8" /></> },
                   { color: "ico-purple", title: "Homeowner Dashboard", desc: "Organize projects, photos, receipts, warranties, and inspection reports — perfect for storm prep.", svg: <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></> },
                 ].map((t, i) => (
-                  <Link key={i} to="/join" className="tile reveal">
+                  <Link key={i} to="/join" className="tile reveal gcn-panel">
                     <div className={`tile-ico ${t.color}`}><Svg d={t.d}>{t.svg}</Svg></div>
                     <h3>{t.title}</h3>
                     <p>{t.desc}</p>
@@ -392,7 +392,7 @@ export default function Home() {
                 ))}
               </div>
               <div style={{ textAlign: "center", marginTop: 36 }}>
-                <Link to="/join" className="btn btn-green">Create Your Free Account <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-green gcn-btn">Create Your Free Account <span className="arr">→</span></Link>
               </div>
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function Home() {
                 { tier: "$$$", title: "Hire a Virtual Contractor", best: "Best for: most homeowners — a project manager without paying full company markup.", items: ["Real human consultant on your job", "Materials list, permit packet, crew dispatch", "End-to-end project oversight"], recommended: true },
                 { tier: "$$$$", title: "Hire a Full Company", best: "Best for: complex, premium, or time-sensitive jobs where you don't want to think about it.", items: ["Top-rated full-service contractors", "Premium warranties & insurance backing", "Single point of contact, full overhead"] },
               ].map((h, i) => (
-                <div key={i} className={`hire reveal ${h.recommended ? "hire-recommended" : ""}`}>
+                <div key={i} className={`hire reveal gcn-panel ${h.recommended ? "hire-recommended" : ""}`}>
                   {h.recommended && <span className="hire-badge">Most Popular</span>}
                   <div className="hire-tier">{h.tier}</div>
                   <h3>{h.title}</h3>
@@ -450,7 +450,7 @@ export default function Home() {
                     ["Quality over speed", "We finish on time when we can, but we don't cut corners to do it. Inspections and warranties matter."],
                     ["Three sides to a story", "We listen. Most issues come from missed expectations — we set them clearly upfront, in writing."],
                   ].map(([h, p], i) => (
-                    <div className="val" key={i}><h4>{h}</h4><p>{p}</p></div>
+                    <div className="val gcn-panel" key={i}><h4>{h}</h4><p>{p}</p></div>
                   ))}
                 </div>
               </div>
@@ -473,7 +473,7 @@ export default function Home() {
                 ["Crew & permits", "We pull permits, order materials, and assign the right crew. You get one project manager — your point of contact start to finish."],
                 ["Build & warranty", "We build the job, pass inspections, and stand behind it. Final walkthrough and warranty paperwork — in writing."],
               ].map(([h, p], i) => (
-                <div className="step reveal" key={i}><h3>{h}</h3><p>{p}</p></div>
+                <div className="step reveal gcn-panel" key={i}><h3>{h}</h3><p>{p}</p></div>
               ))}
             </div>
           </div>
@@ -487,11 +487,11 @@ export default function Home() {
               <h2 style={{ marginTop: 14 }}>We make insurance claims <span className="gold-text">simple.</span></h2>
               <p>If you have legitimate damage after a storm, you deserve a contractor who handles the moving parts so you can focus on your family. Call your insurance, meet the adjuster, and submit your claim info to our team — we take it from there.</p>
               <div className="actions" style={{ marginTop: 18 }}>
-                <Link to="/join" className="btn btn-gold">Start a Claim Review <span className="arr">→</span></Link>
-                <a href="tel:+10000000000" className="btn btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>Call Storm Response</a>
+                <Link to="/join" className="btn btn-gold gcn-btn">Start a Claim Review <span className="arr">→</span></Link>
+                <a href="tel:+10000000000" className="btn btn-ghost gcn-btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>Call Storm Response</a>
               </div>
             </div>
-            <div className="storm-card reveal">
+            <div className="storm-card reveal gcn-panel">
               <h3 style={{ color: "var(--gcn-ink)", marginBottom: 14 }}>What we handle for you</h3>
               <ol>
                 <li><strong>Free post-storm inspection</strong> — documented with photos and notes</li>
@@ -524,7 +524,7 @@ export default function Home() {
                 { color: "ico-gold", title: "Referral Program", desc: "Earn by referring customers. Get paid for every lead that converts through the network.", badge: ["earn", "Earn $$$"], svg: <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /> },
                 { color: "ico-purple", title: "Door to Door World", desc: "GPS-tracked canvassing with gamified challenges. Earn points for every door you knock.", badge: ["new", "New"], svg: <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1118 0z" /><circle cx="12" cy="10" r="3" /></> },
               ].map((c, i) => (
-                <Link key={i} to="/contractors" className="ctile reveal">
+                <Link key={i} to="/contractors" className="ctile reveal gcn-panel">
                   {c.badge && <span className={`ctile-badge ctile-badge-${c.badge[0]}`}>{c.badge[1]}</span>}
                   <div className={`ctile-ico ${c.color}`}><Svg>{c.svg}</Svg></div>
                   <h3>{c.title}</h3>
@@ -534,7 +534,7 @@ export default function Home() {
               ))}
             </div>
             <div style={{ textAlign: "center", marginTop: 42 }} className="reveal">
-              <Link to="/contractors" className="btn btn-gold">Apply to Join the Network <span className="arr">→</span></Link>
+              <Link to="/contractors" className="btn btn-gold gcn-btn">Apply to Join the Network <span className="arr">→</span></Link>
               <p style={{ marginTop: 12, color: "var(--gcn-ink-3)", fontSize: ".88rem" }}>Plus the GCN App: Estimating + Invoicing • Prospecting • D2D Live Stream • Job Marketplace • Contract Signing • Virtual Rep Card</p>
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function Home() {
                 ["LB", "Linda B.", "Jupiter, FL — Multi-Trade Exterior", "They didn't just do my roof — they coordinated the gutters, soffit, and paint guys too. One contract, one project manager, one bill. Way easier than chasing four different contractors."],
                 ["RC", "Robert C.", "Coral Springs, FL — Inspection & Claim", "Pre-storm inspection paid for itself. When the storm hit, we already had the documentation ready and the claim went smoothly. Worth every dollar."],
               ].map(([initials, name, meta, body], i) => (
-                <div className="review reveal" key={i}>
+                <div className="review reveal gcn-panel" key={i}>
                   <div className="stars">★★★★★</div>
                   <p className="body">"{body}"</p>
                   <div className="author">
@@ -588,7 +588,7 @@ export default function Home() {
                 ["MA", "Marcus A.", "Insurance Claim — Past Customer • Naples, FL • 2024", "They handled my adjuster meeting and got my claim settled fairly. I'd send my neighbors to them in a heartbeat."],
                 ["JV", "Jennifer V.", "HOA Property Manager • South Florida • Multi-property partner", "Reliable, communicative, and they actually answer the phone when something comes up. That's all I need from a contractor."],
               ].map(([initials, name, role, q], i) => (
-                <div className="ref reveal" key={i}>
+                <div className="ref reveal gcn-panel" key={i}>
                   <div className="avatar">{initials}</div>
                   <div>
                     <h4>{name}</h4>
@@ -626,7 +626,7 @@ export default function Home() {
                 ["What's a \"virtual contractor\"?", "A real human consultant assigned to your project. They help you choose materials, build the scope, assemble the permit packet, and dispatch a vetted crew — all without the markup of a full-service contracting company. You stay in control of the budget while we handle the moving parts."],
                 ["Can I store property docs and photos in my account?", "Yes. Your free homeowner profile lets you upload photos, receipts, warranties, inspection reports, and roof/structure documentation. It's especially useful for storm prep and insurance claims — everything in one place when you need it."],
               ].map(([q, a], i) => (
-                <details key={i}>
+                <details key={i} className="gcn-panel reveal">
                   <summary>{q}</summary>
                   <p>{a}</p>
                 </details>
@@ -643,11 +643,11 @@ export default function Home() {
               <h2 style={{ marginTop: 14 }}>Join the network. <span className="gold-text shimmer">Manage your projects for free.</span></h2>
               <p>Free access to AI estimating tools, the job marketplace, permit expediting, virtual contractor services, and a vetted contractor directory. Built on referrals, not lead-selling.</p>
               <div className="joinband-cta">
-                <Link to="/join" className="btn btn-gold">Join the Network <span className="arr">→</span></Link>
-                <Link to="/contractors" className="btn btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>For Contractors <span className="arr">→</span></Link>
+                <Link to="/join" className="btn btn-gold gcn-btn">Join the Network <span className="arr">→</span></Link>
+                <Link to="/contractors" className="btn btn-ghost gcn-btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>For Contractors <span className="arr">→</span></Link>
               </div>
             </div>
-            <div className="joinband-quote reveal">
+            <div className="joinband-quote reveal gcn-panel">
               "We're not another lead-gen site. We're a referral-driven network where good work is the only currency. Contractors get paid for great work — homeowners stop overpaying for overhead."
               <div className="who">— GCN Founder</div>
             </div>
