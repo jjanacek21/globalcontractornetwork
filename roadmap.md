@@ -3,3 +3,4 @@
 - [x] Add persisted light-default theme toggle and pre-paint theme stamp
 - [x] Rebrand all public homepage surfaces and interactions
 - [x] Verify build, desktop/mobile layout, motion, and both themes
+- [x] Replace homepage header and footer marks with the blended animated GCN logo
