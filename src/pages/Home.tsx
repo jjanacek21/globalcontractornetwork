@@ -258,7 +258,7 @@ export default function Home() {
                 <span className="pulse" />
                 <h3>Free for property owners</h3>
               </div>
-              <p style={{ margin: "0 0 6px", color: "var(--muted)", fontSize: ".92rem" }}>Manage your projects with the same tools the pros use:</p>
+              <p style={{ margin: "0 0 6px", color: "var(--gcn-ink-3)", fontSize: ".92rem" }}>Manage your projects with the same tools the pros use:</p>
 
               {[
                 { title: "AI estimating tools", sub: "Instant, realistic numbers for any project — no sales call needed.", d: "M12 2v6m0 12v2M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24" },
@@ -483,16 +483,16 @@ export default function Home() {
         <section className="storm">
           <div className="container">
             <div className="reveal">
-              <span className="eyebrow" style={{ background: "rgba(212,175,55,.15)", color: "var(--gold-400)" }}>Storm Damage?</span>
+              <span className="eyebrow" style={{ background: "var(--gcn-fill-grass)", color: "var(--gcn-ink-grass)" }}>Storm Damage?</span>
               <h2 style={{ marginTop: 14 }}>We make insurance claims <span className="gold-text">simple.</span></h2>
               <p>If you have legitimate damage after a storm, you deserve a contractor who handles the moving parts so you can focus on your family. Call your insurance, meet the adjuster, and submit your claim info to our team — we take it from there.</p>
               <div className="actions" style={{ marginTop: 18 }}>
                 <Link to="/join" className="btn btn-gold">Start a Claim Review <span className="arr">→</span></Link>
-                <a href="tel:+10000000000" className="btn btn-ghost" style={{ background: "rgba(255,255,255,.06)", color: "#fff", borderColor: "rgba(255,255,255,.3)" }}>Call Storm Response</a>
+                <a href="tel:+10000000000" className="btn btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>Call Storm Response</a>
               </div>
             </div>
             <div className="storm-card reveal">
-              <h3 style={{ color: "#fff", marginBottom: 14 }}>What we handle for you</h3>
+              <h3 style={{ color: "var(--gcn-ink)", marginBottom: 14 }}>What we handle for you</h3>
               <ol>
                 <li><strong>Free post-storm inspection</strong> — documented with photos and notes</li>
                 <li><strong>Adjuster meet</strong> — we attend with you and advocate for what's covered</li>
@@ -508,9 +508,9 @@ export default function Home() {
         <section id="contractors" className="contractors">
           <div className="container">
             <div className="section-head reveal">
-              <span className="eyebrow" style={{ background: "rgba(212,175,55,.15)", color: "var(--gold-400)" }}>For Contractors</span>
-              <h2 style={{ color: "#fff" }}>Powerful Tools to <span className="gold-text shimmer">Grow Your Business</span></h2>
-              <p style={{ color: "#cfe1d6" }}>From lead generation to project completion, we provide everything you need to scale your contracting business — without buying shared leads or competing in bidding wars.</p>
+              <span className="eyebrow" style={{ background: "var(--gcn-fill-grass)", color: "var(--gcn-ink-grass)" }}>For Contractors</span>
+              <h2 style={{ color: "var(--gcn-ink)" }}>Powerful Tools to <span className="gold-text shimmer">Grow Your Business</span></h2>
+              <p style={{ color: "var(--gcn-ink-2)" }}>From lead generation to project completion, we provide everything you need to scale your contracting business — without buying shared leads or competing in bidding wars.</p>
             </div>
             <div className="ctile-grid">
               {[
@@ -535,7 +535,7 @@ export default function Home() {
             </div>
             <div style={{ textAlign: "center", marginTop: 42 }} className="reveal">
               <Link to="/contractors" className="btn btn-gold">Apply to Join the Network <span className="arr">→</span></Link>
-              <p style={{ marginTop: 12, color: "#9eb3a4", fontSize: ".88rem" }}>Plus the GCN App: Estimating + Invoicing • Prospecting • D2D Live Stream • Job Marketplace • Contract Signing • Virtual Rep Card</p>
+              <p style={{ marginTop: 12, color: "var(--gcn-ink-3)", fontSize: ".88rem" }}>Plus the GCN App: Estimating + Invoicing • Prospecting • D2D Live Stream • Job Marketplace • Contract Signing • Virtual Rep Card</p>
             </div>
           </div>
         </section>
@@ -598,7 +598,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <p style={{ textAlign: "center", color: "var(--muted)", fontSize: ".9rem", marginTop: 18 }}>
+            <p style={{ textAlign: "center", color: "var(--gcn-ink-3)", fontSize: ".9rem", marginTop: 18 }}>
               <em>Reference profiles are illustrative — real verified references available on request, with direct contact through our platform.</em>
             </p>
           </div>
@@ -639,12 +639,12 @@ export default function Home() {
         <section className="joinband">
           <div className="container">
             <div className="reveal">
-              <span className="eyebrow" style={{ background: "rgba(212,175,55,.15)", color: "var(--gold-400)" }}>Ready When You Are</span>
+              <span className="eyebrow" style={{ background: "var(--gcn-fill-grass)", color: "var(--gcn-ink-grass)" }}>Ready When You Are</span>
               <h2 style={{ marginTop: 14 }}>Join the network. <span className="gold-text shimmer">Manage your projects for free.</span></h2>
               <p>Free access to AI estimating tools, the job marketplace, permit expediting, virtual contractor services, and a vetted contractor directory. Built on referrals, not lead-selling.</p>
               <div className="joinband-cta">
                 <Link to="/join" className="btn btn-gold">Join the Network <span className="arr">→</span></Link>
-                <Link to="/contractors" className="btn btn-ghost" style={{ background: "rgba(255,255,255,.06)", color: "#fff", borderColor: "rgba(255,255,255,.25)" }}>For Contractors <span className="arr">→</span></Link>
+                <Link to="/contractors" className="btn btn-ghost" style={{ background: "var(--gcn-panel-2)", color: "var(--gcn-ink)", borderColor: "var(--gcn-line)" }}>For Contractors <span className="arr">→</span></Link>
               </div>
             </div>
             <div className="joinband-quote reveal">
@@ -661,7 +661,7 @@ export default function Home() {
             <div className="foot-grid">
               <div>
                 <img className="logo-img" src="/gcn-logo.png" alt="The Global Contractor Network" />
-                <p style={{ marginTop: 14, color: "#cdd6cf", fontSize: ".94rem" }}>
+                <p style={{ marginTop: 14, color: "var(--gcn-ink-2)", fontSize: ".94rem" }}>
                   Referred. Verified. Accountable. A network for the homeowners who want trusted contractors and the pros who do the work.
                 </p>
               </div>
