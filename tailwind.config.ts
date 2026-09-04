@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ["class"],
+  darkMode: ["class", '[data-theme="dark"]'],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -56,17 +56,6 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
-        },
-        // GCN Premium Marketing Colors
-        gcn: {
-          black: "hsl(var(--gcn-black))",
-          charcoal: "hsl(var(--gcn-charcoal))",
-          "charcoal-light": "hsl(var(--gcn-charcoal-light))",
-          gold: "hsl(var(--gcn-gold))",
-          "gold-dark": "hsl(var(--gcn-gold-dark))",
-          "gold-light": "hsl(var(--gcn-gold-light))",
-          white: "hsl(var(--gcn-white))",
-          "white-muted": "hsl(var(--gcn-white-muted))",
         },
       },
       borderRadius: {
@@ -123,10 +112,10 @@ export default {
         },
         "glow-pulse": {
           "0%, 100%": {
-            boxShadow: "0 0 20px hsla(45, 100%, 51%, 0.4)",
+            boxShadow: "0 0 20px rgba(23, 194, 122, 0.4)",
           },
           "50%": {
-            boxShadow: "0 0 40px hsla(45, 100%, 51%, 0.7)",
+            boxShadow: "0 0 40px rgba(35, 216, 200, 0.7)",
           },
         },
         float: {
@@ -246,8 +235,8 @@ export default {
         "pop-in": "pop-in 0.3s ease-out forwards",
       },
       fontFamily: {
-        display: ["Inter", "system-ui", "sans-serif"],
-        body: ["Inter", "system-ui", "sans-serif"],
+        display: ["var(--gcn-display)"],
+        body: ["var(--gcn-body)"],
       },
     },
   },

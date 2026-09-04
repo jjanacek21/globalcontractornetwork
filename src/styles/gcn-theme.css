@@ -1,0 +1,81 @@
+:root {
+  --gcn-cyan:#38e8ff; --gcn-blue:#1e6bff; --gcn-grass:#3ce08a; --gcn-grass-2:#17c27a;
+  --gcn-teal:#23d8c8; --gcn-amber:#ffb020; --gcn-red:#ff6b5a;
+  --gcn-grad: linear-gradient(135deg,#3ce08a,#17c27a 52%,#23d8c8);
+
+  --gcn-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --gcn-body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --gcn-mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+
+  --gcn-r-sm:11px; --gcn-r:16px; --gcn-r-lg:22px; --gcn-maxw:1160px;
+
+  /* LIGHT — the default for this site */
+  --gcn-ground:#f5f7fb; --gcn-ground-2:#ffffff;
+  --gcn-panel:#ffffff; --gcn-panel-2:#f7f9fd; --gcn-panel-3:#eef2f9;
+  --gcn-line:rgba(28,58,112,.18); --gcn-line-soft:rgba(28,58,112,.09);
+  --gcn-ink:#0a1020; --gcn-ink-2:#26334c; --gcn-ink-3:#45566f; --gcn-ink-4:#5b6d89;
+  --gcn-ink-grass:#0b6d3f; --gcn-ink-teal:#0a6f66; --gcn-ink-cyan:#0c6a80;
+  --gcn-ink-blue:#14449e; --gcn-ink-amber:#8a5600; --gcn-ink-red:#b3271a;
+  --gcn-fill-grass:rgba(23,194,122,.13); --gcn-fill-teal:rgba(35,216,200,.14);
+  --gcn-fill-cyan:rgba(56,232,255,.16); --gcn-fill-blue:rgba(30,107,255,.11);
+  --gcn-fill-amber:rgba(255,176,32,.16); --gcn-fill-red:rgba(255,107,90,.14);
+  --gcn-shadow:0 1px 2px rgba(15,27,56,.07), 0 18px 44px -28px rgba(15,27,56,.4);
+  --gcn-shadow-glow:0 12px 26px -14px rgba(23,194,122,.5);
+  --gcn-grid:rgba(28,58,112,.06);
+  --gcn-grad-txt:linear-gradient(140deg,#0a1020,#0d5f86 52%,#0b6d3f);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --gcn-ground:#05070e; --gcn-ground-2:#080c15;
+  --gcn-panel:#0d121d; --gcn-panel-2:#131a29; --gcn-panel-3:#18223a;
+  --gcn-line:rgba(126,166,255,.22); --gcn-line-soft:rgba(126,166,255,.11);
+  --gcn-ink:#f4f8ff; --gcn-ink-2:#c3d0e8; --gcn-ink-3:#8fa2c2; --gcn-ink-4:#7d90b0;
+  --gcn-ink-grass:#3ce08a; --gcn-ink-teal:#23d8c8; --gcn-ink-cyan:#38e8ff;
+  --gcn-ink-blue:#7fb0ff; --gcn-ink-amber:#ffb020; --gcn-ink-red:#ff8878;
+  --gcn-fill-grass:rgba(60,224,138,.12); --gcn-fill-teal:rgba(35,216,200,.12);
+  --gcn-fill-cyan:rgba(56,232,255,.12); --gcn-fill-blue:rgba(30,107,255,.18);
+  --gcn-fill-amber:rgba(255,176,32,.12); --gcn-fill-red:rgba(255,107,90,.12);
+  --gcn-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 30px 70px -34px rgba(0,0,0,.9);
+  --gcn-shadow-glow:0 12px 26px -12px rgba(35,216,200,.85);
+  --gcn-grid:rgba(126,166,255,.07);
+  --gcn-grad-txt:linear-gradient(140deg,#eaf3ff,#7fd4ff 55%,#3ce08a);
+  color-scheme: dark;
+}
+
+.gcn-panel{position:relative;border-radius:var(--gcn-r);border:1px solid var(--gcn-line);
+  background:linear-gradient(180deg,var(--gcn-panel-2) 0%,var(--gcn-panel) 58%);
+  box-shadow:var(--gcn-shadow);}
+.gcn-btn{position:relative;overflow:hidden;font-family:var(--gcn-body);font-size:.9rem;
+  font-weight:700;letter-spacing:.01em;padding:13px 24px;border:none;border-radius:13px;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;
+  justify-content:center;gap:9px;white-space:nowrap;color:#04120a;background:var(--gcn-grad);
+  box-shadow:var(--gcn-shadow-glow), inset 0 1px 0 rgba(255,255,255,.35);
+  transition:filter .18s ease, box-shadow .18s ease, transform .08s ease;}
+.gcn-btn:hover{filter:brightness(1.06)}
+.gcn-btn:active{transform:translateY(1px)}
+.gcn-btn:focus-visible{outline:2px solid var(--gcn-ink-teal);outline-offset:2px}
+.gcn-btn-ghost{font-family:var(--gcn-body);font-size:.9rem;font-weight:600;padding:12px 22px;
+  border-radius:13px;cursor:pointer;display:inline-flex;align-items:center;gap:9px;
+  color:var(--gcn-ink);background:var(--gcn-panel-3);border:1px solid var(--gcn-line);
+  transition:background .18s ease;}
+.gcn-btn-ghost:hover{background:var(--gcn-panel-2)}
+.gcn-grad-text{background:var(--gcn-grad-txt);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gcn-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-family:var(--gcn-body);font-size:.8125rem;font-weight:500;border:1px solid transparent}
+.gcn-grid-bg{background-image:
+  linear-gradient(to right,var(--gcn-grid) 1px,transparent 1px),
+  linear-gradient(to bottom,var(--gcn-grid) 1px,transparent 1px);
+  background-size:44px 44px;}
+
+@keyframes gcn-enter-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes gcn-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes gcn-sheen{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+@keyframes gcn-gridmove{to{background-position:44px 44px}}
+.gcn-enter{animation:gcn-enter-up .55s cubic-bezier(.2,.7,.2,1) both}
+.gcn-float{animation:gcn-float 6s ease-in-out infinite}
+.gcn-grid-bg.is-live{animation:gcn-gridmove 9s linear infinite}
+
+@media (prefers-reduced-motion: reduce){
+  .gcn-enter,.gcn-float,.gcn-grid-bg.is-live,.gcn-btn{animation:none!important;transition:none!important}
+}
