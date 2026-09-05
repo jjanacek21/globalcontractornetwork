@@ -61,7 +61,7 @@ const AnimatedLogo = () => {
     const el = imgRef.current;
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    return mountLumaLogo(el, [animatedLogoAsset.url], () => {
+    return mountLumaLogo(el, ["/test-logo.mp4", animatedLogoAsset.url], () => {
       /* Keeps the transparent still in place. */
     });
   }, []);
