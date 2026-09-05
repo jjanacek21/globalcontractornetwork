@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import animatedLogoAsset from "@/assets/gcn-animated-logo.mp4.asset.json";
+import animatedLogoWebm from "@/assets/gcn-animated-logo.webm.asset.json";
 import { mountLumaLogo } from "@/lib/logoVideo";
 
 /* ------------------------------------------------------------------ */
