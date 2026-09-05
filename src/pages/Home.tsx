@@ -62,7 +62,7 @@ const AnimatedLogo = () => {
     const el = imgRef.current;
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    return mountLumaLogo(el, ["/test-logo.webm", animatedLogoWebm.url, animatedLogoAsset.url], () => {
+    return mountLumaLogo(el, [animatedLogoWebm.url, animatedLogoAsset.url], () => {
       /* Keeps the transparent still in place. */
     });
   }, []);
