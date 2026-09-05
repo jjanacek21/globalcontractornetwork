@@ -53,14 +53,24 @@ const Svg = ({ d, children }: { d?: string; children?: React.ReactNode }) => (
   </svg>
 );
 
-const AnimatedLogo = () => (
-  <span className="animated-logo" aria-label="The Global Contractor Network">
-    <video autoPlay muted loop playsInline preload="metadata" poster="/gcn-logo.png" aria-hidden="true">
-      <source src={animatedLogoAsset.url} type="video/mp4" />
-    </video>
-    <img src="/gcn-logo.png" alt="The Global Contractor Network" />
-  </span>
-);
+const AnimatedLogo = () => {
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    return mountLumaLogo(el, [animatedLogoAsset.url], () => {
+      /* Keeps the transparent still in place. */
+    });
+  }, []);
+
+  return (
+    <span className="animated-logo">
+      <img ref={imgRef} src="/gcn-logo.png" alt="The Global Contractor Network" />
+    </span>
+  );
+};
 
 /* --------------------------- ANIMATED COUNT-UP --------------------------- */
 function CountNum({ target, display }: { target: number; display: string }) {
