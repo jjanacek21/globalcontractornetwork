@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import animatedLogoAsset from "@/assets/gcn-animated-logo.mp4.asset.json";
+import { mountLumaLogo } from "@/lib/logoVideo";
 
 /* ------------------------------------------------------------------ */
 /*  Self-contained landing page styled with scoped CSS (gcn- prefix)  */
