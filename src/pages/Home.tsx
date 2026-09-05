@@ -5,6 +5,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import animatedLogoAsset from "@/assets/gcn-animated-logo.mp4.asset.json";
+import animatedLogoWebm from "@/assets/gcn-animated-logo.webm.asset.json";
+import { mountLumaLogo } from "@/lib/logoVideo";
 
 /* ------------------------------------------------------------------ */
 /*  Self-contained landing page styled with scoped CSS (gcn- prefix)  */
@@ -25,7 +27,7 @@ const SCOPED_CSS = `
 .gcn-home .btn-ghost{color:var(--gcn-ink);background:var(--gcn-panel-3);border:1px solid var(--gcn-line);box-shadow:none}.gcn-home .btn-link{background:transparent;color:var(--gcn-ink-teal);padding-inline:5px;text-decoration:underline;text-underline-offset:4px}
 .gcn-home .btn:focus-visible,.gcn-home a:focus-visible,.gcn-home button:focus-visible,.gcn-home summary:focus-visible{outline:2px solid var(--gcn-ink-teal);outline-offset:3px}
 .gcn-home header.site{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--gcn-ground-2) 82%,transparent);backdrop-filter:saturate(150%) blur(16px);border-bottom:1px solid var(--gcn-line-soft);box-shadow:0 8px 30px -26px rgba(15,27,56,.45)}
-.gcn-home .nav{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:96px}.gcn-home .brand{position:relative;display:flex;align-self:stretch;width:260px;flex:none}.gcn-home .animated-logo{position:relative;display:block;width:260px;aspect-ratio:16/9;overflow:visible;isolation:isolate;-webkit-mask-image:radial-gradient(ellipse 112% 108% at center,#000 54%,rgba(0,0,0,.82) 68%,rgba(0,0,0,.35) 84%,transparent 100%);mask-image:radial-gradient(ellipse 112% 108% at center,#000 54%,rgba(0,0,0,.82) 68%,rgba(0,0,0,.35) 84%,transparent 100%)}.gcn-home .animated-logo::before{content:"";position:absolute;inset:2% -5%;z-index:-1;background:radial-gradient(ellipse at center,var(--gcn-ground-2) 0 34%,color-mix(in srgb,var(--gcn-ground-2) 58%,transparent) 58%,transparent 82%);filter:blur(24px);border-radius:50%;opacity:.62}.gcn-home .animated-logo video,.gcn-home .animated-logo img{width:100%;height:100%;display:block;object-fit:contain;object-position:center;mix-blend-mode:screen}.gcn-home .animated-logo img{display:none}.gcn-home .brand .animated-logo{position:absolute;top:0;left:0;transform:translateY(4px);transition:transform .3s ease}.gcn-home .brand .animated-logo::before{background:radial-gradient(ellipse at center,var(--gcn-ground-2) 0 28%,color-mix(in srgb,var(--gcn-ground-2) 70%,var(--gcn-ground)) 52%,color-mix(in srgb,var(--gcn-ground) 32%,transparent) 70%,transparent 86%);opacity:.86}.gcn-home .brand:hover .animated-logo{transform:translateY(4px) scale(1.025)}
+.gcn-home .nav{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:96px}.gcn-home .brand{position:relative;display:flex;align-self:stretch;width:260px;flex:none}.gcn-home .animated-logo{position:relative;display:block;width:260px;aspect-ratio:16/9;overflow:visible}.gcn-home .animated-logo::before{content:"";position:absolute;inset:10% 4%;z-index:-1;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--gcn-grass-2) 26%,transparent) 0 38%,transparent 76%);filter:blur(26px);border-radius:50%;opacity:.5;pointer-events:none}.gcn-home .animated-logo>video,.gcn-home .animated-logo>img,.gcn-home .animated-logo>canvas{width:100%;height:100%;display:block;object-fit:contain;object-position:center}.gcn-home .brand .animated-logo{position:absolute;top:0;left:0;transform:translateY(4px);transition:transform .3s ease}.gcn-home .brand:hover .animated-logo{transform:translateY(4px) scale(1.025)}
 .gcn-home .navlinks{display:flex;gap:22px;align-items:center}.gcn-home .navlinks a{font-weight:650;color:var(--gcn-ink-2);font-size:.91rem}.gcn-home .navlinks a:hover{color:var(--gcn-ink-teal)}.gcn-home .nav-cta{display:flex;gap:9px;align-items:center}.gcn-home .theme-toggle,.gcn-home .mobile-trigger{width:42px;height:42px;display:inline-grid;place-items:center;border:1px solid var(--gcn-line);border-radius:12px;color:var(--gcn-ink);background:var(--gcn-panel-2);cursor:pointer;transition:background .18s ease,transform .18s ease}.gcn-home .theme-toggle:hover,.gcn-home .mobile-trigger:hover{background:var(--gcn-panel-3);transform:translateY(-1px)}.gcn-home .theme-toggle svg,.gcn-home .mobile-trigger svg{width:19px;height:19px}.gcn-home .mobile-trigger{display:none}
 .gcn-home .hero{position:relative;overflow:hidden;padding:94px 0 104px;background-color:var(--gcn-ground);border-top:0}.gcn-home .hero::before{content:"";position:absolute;inset:-20%;pointer-events:none;background:radial-gradient(circle at 22% 38%,rgba(60,224,138,.14),transparent 30%),radial-gradient(circle at 82% 30%,rgba(35,216,200,.14),transparent 32%);filter:blur(46px)}
 .gcn-home .hero .container{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}.gcn-home .rating-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:var(--gcn-panel-2);border:1px solid var(--gcn-line);box-shadow:var(--gcn-shadow);font-size:.84rem;font-weight:650;color:var(--gcn-ink-2)}.gcn-home .rating-pill .stars,.gcn-home .stars{color:var(--gcn-ink-amber);letter-spacing:1px}.gcn-home .hero h1{margin-top:20px}.gcn-home .quoteline{color:var(--gcn-ink-teal);border-left:3px solid var(--gcn-teal);padding:7px 0 7px 14px;margin:12px 0 16px;font-size:1.02rem}.gcn-home .actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap;align-items:center}.gcn-home .actions .btn-lg{padding:17px 29px;font-size:1.02rem}.gcn-home .actions-meta{margin-top:13px;font-size:.85rem;color:var(--gcn-ink-3);display:flex;gap:8px;flex-wrap:wrap}.gcn-home .actions-meta .dot{width:4px;height:4px;border-radius:50%;background:var(--gcn-ink-4);align-self:center}.gcn-home .badge-strip{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:10px 15px;border-radius:12px;background:var(--gcn-fill-grass);border:1px solid var(--gcn-line);box-shadow:var(--gcn-shadow)}.gcn-home .badge-strip svg{width:18px;color:var(--gcn-ink-grass)}.gcn-home .badge-strip strong{color:var(--gcn-ink-grass);font-size:.9rem}.gcn-home .hero-stats{display:flex;gap:30px;margin-top:29px;flex-wrap:wrap}.gcn-home .hstat .num{font:800 1.65rem var(--gcn-display);color:var(--gcn-ink)}.gcn-home .hstat .lbl{color:var(--gcn-ink-3);font-size:.76rem;text-transform:uppercase;letter-spacing:.08em}
@@ -43,7 +45,7 @@ const SCOPED_CSS = `
 @media (max-width:760px){.gcn-home .nav{min-height:76px}.gcn-home .brand{width:180px}.gcn-home .brand .animated-logo{width:180px;transform:translateY(3px)}.gcn-home .brand:hover .animated-logo{transform:translateY(3px) scale(1.025)}.gcn-home .nav-cta>.btn-ghost{display:none}.gcn-home .hero{padding:66px 0 76px}.gcn-home section{padding:70px 0}.gcn-home .tile-grid,.gcn-home .tools-grid,.gcn-home .ctile-grid,.gcn-home .why-grid,.gcn-home .review-grid{grid-template-columns:repeat(2,1fr)}.gcn-home .stats-grid{grid-template-columns:repeat(2,1fr)}.gcn-home .foot-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.gcn-home .container{padding:0 18px}.gcn-home .nav-cta>.btn-green{display:none}.gcn-home .tile-grid,.gcn-home .tools-grid,.gcn-home .ctile-grid,.gcn-home .why-grid,.gcn-home .review-grid,.gcn-home .hire-grid,.gcn-home .process-grid,.gcn-home .ref-grid,.gcn-home .values,.gcn-home .foot-grid{grid-template-columns:1fr}.gcn-home .hero-stats{gap:18px}.gcn-home .actions .btn{width:100%}.gcn-home .foot-bar{flex-direction:column}}
 @media (hover:none),(pointer:coarse){.gcn-home .hero-card{transform:none!important}}
-@media (prefers-reduced-motion:reduce){.gcn-home .hero::after{animation:none}.gcn-home .hero-card,.gcn-home .why-card,.gcn-home .tile,.gcn-home .ctile,.gcn-home .hire,.gcn-home .val,.gcn-home .step,.gcn-home .review,.gcn-home .ref{transition:none}.gcn-home .gcn-enter{animation:none!important}.gcn-home .animated-logo video{display:none}.gcn-home .animated-logo img{display:block;object-fit:contain}}
+@media (prefers-reduced-motion:reduce){.gcn-home .hero::after{animation:none}.gcn-home .hero-card,.gcn-home .why-card,.gcn-home .tile,.gcn-home .ctile,.gcn-home .hire,.gcn-home .val,.gcn-home .step,.gcn-home .review,.gcn-home .ref{transition:none}.gcn-home .gcn-enter{animation:none!important}}
 `;
 
 /* ----------------------------- ICON HELPERS ----------------------------- */
@@ -53,14 +55,24 @@ const Svg = ({ d, children }: { d?: string; children?: React.ReactNode }) => (
   </svg>
 );
 
-const AnimatedLogo = () => (
-  <span className="animated-logo" aria-label="The Global Contractor Network">
-    <video autoPlay muted loop playsInline preload="metadata" poster="/gcn-logo.png" aria-hidden="true">
-      <source src={animatedLogoAsset.url} type="video/mp4" />
-    </video>
-    <img src="/gcn-logo.png" alt="The Global Contractor Network" />
-  </span>
-);
+const AnimatedLogo = () => {
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    return mountLumaLogo(el, [animatedLogoWebm.url, animatedLogoAsset.url], () => {
+      /* Keeps the transparent still in place. */
+    });
+  }, []);
+
+  return (
+    <span className="animated-logo">
+      <img ref={imgRef} src="/gcn-logo.png" alt="The Global Contractor Network" />
+    </span>
+  );
+};
 
 /* --------------------------- ANIMATED COUNT-UP --------------------------- */
 function CountNum({ target, display }: { target: number; display: string }) {
