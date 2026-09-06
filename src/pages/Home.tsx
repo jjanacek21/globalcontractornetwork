@@ -697,7 +697,7 @@ export default function Home() {
           <div className="container">
             <div className="foot-grid">
               <div>
-                <img src="/gcn-logo.png" alt="The Global Contractor Network" />
+                <img src={gcnLogoStillAsset.url} alt="The Global Contractor Network" style={{ width: 200, height: 'auto', display: 'block', background: 'transparent' }} />
                 <p style={{ marginTop: 14, color: "var(--gcn-ink-2)", fontSize: ".94rem" }}>
                   Referred. Verified. Accountable. A network for the homeowners who want trusted contractors and the pros who do the work.
                 </p>
